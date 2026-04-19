@@ -11,8 +11,17 @@ void main() => runApp(const RPGApp());
 int _nextId = 0;
 String uid() => '${++_nextId}';
 
-/// Линейно-ступенчатая прогрессия:
-/// ур. 1–3 → 1000 XP, ур. 4–7 → 2000 XP, ур. 8–10 → 3000 XP, ур. 11+ → 4000 XP
+/// Универсальный рендер иконок и эмодзи
+Widget _buildIcon(dynamic iconData, Color color, double size) {
+  if (iconData is IconData) {
+    return Icon(iconData, color: color, size: size);
+  } else if (iconData is String) {
+    return Text(iconData, style: TextStyle(fontSize: size * 0.85, height: 1.0));
+  }
+  return Icon(Icons.star, color: color, size: size);
+}
+
+/// Линейно-ступенчатая прогрессия
 int xpForLevel(int level) {
   if (level <= 3) {
     return 1000;
@@ -40,8 +49,6 @@ const _typeColor = {
   TaskType.midTerm: Color(0xFFFF9500),
   TaskType.longTerm: Color(0xFFFF3B30),
 };
-
-/// «Визуальный» мягкий лимит XP для каждого типа задачи
 const _typeSoftCap = {
   TaskType.repeating: 100,
   TaskType.shortTerm: 200,
@@ -49,9 +56,37 @@ const _typeSoftCap = {
   TaskType.longTerm: 1000,
 };
 
+enum RepeatFrequency { daily, every3Days, weekly, biweekly, monthly, custom }
+
+const _freqLabel = {
+  RepeatFrequency.daily: '1 раз за 1 день',
+  RepeatFrequency.every3Days: 'раз в 3 дня',
+  RepeatFrequency.weekly: 'раз в неделю',
+  RepeatFrequency.biweekly: 'раз в 2 недели',
+  RepeatFrequency.monthly: 'раз в месяц',
+  RepeatFrequency.custom: 'персональная',
+};
+
+int _freqDays(RepeatFrequency f, int custom) => switch (f) {
+  RepeatFrequency.daily => 1,
+  RepeatFrequency.every3Days => 3,
+  RepeatFrequency.weekly => 7,
+  RepeatFrequency.biweekly => 14,
+  RepeatFrequency.monthly => 30,
+  RepeatFrequency.custom => custom,
+};
+
+/// 3:00 AM через N дней от сейчас
+DateTime _nextReset(RepeatFrequency freq, int customDays) {
+  final d = DateTime.now().add(Duration(days: _freqDays(freq, customDays)));
+  return DateTime(d.year, d.month, d.day, 3, 0, 0);
+}
+
+// Theme helpers
 Color _surface(bool d) => d ? const Color(0xFF1A1A24) : Colors.white;
-Color _text(bool d) => d ? Colors.white : const Color(0xFF0A0A12);
-Color _border(bool d) => d ? const Color(0xFF2A2A35) : const Color(0xFFE0E0E8);
+Color _text(bool d) => d ? const Color(0xFFEEEEF4) : const Color(0xFF0D0D14);
+Color _subtext(bool d) => d ? const Color(0xFF8E8E93) : const Color(0xFF555560);
+Color _border(bool d) => d ? const Color(0xFF2A2A35) : const Color(0xFFD8D8E4);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MODELS
@@ -79,21 +114,17 @@ mixin XPOwner {
 
   void removeXP(int amount) {
     xp = (xp - amount).clamp(0, 999999);
-    // simple clamp, no level-down for UX friendliness
   }
 }
 
 class Skill with XPOwner {
   final String id;
-  String name;
-  String goal;
+  String name, goal;
   List<String> checklist;
   Color color;
-  IconData icon;
+  dynamic icon; // Позволяет хранить как IconData, так и Emoji
   @override
-  int level;
-  @override
-  int xp;
+  int level, xp;
 
   Skill({
     required this.id,
@@ -116,9 +147,10 @@ class Task {
   int xpReward;
   TaskType type;
   bool isDone;
-  int streak;
-  int streakMultiplier;
-  int earnedXP;
+  int streak, streakMultiplier, earnedXP;
+  RepeatFrequency repeatFrequency;
+  int repeatCustomDays;
+  DateTime? nextResetAt;
 
   Task({
     required this.id,
@@ -130,18 +162,42 @@ class Task {
     this.streak = 0,
     this.streakMultiplier = 1,
     this.earnedXP = 0,
+    this.repeatFrequency = RepeatFrequency.daily,
+    this.repeatCustomDays = 1,
+    this.nextResetAt,
   });
 }
 
 class UserProfile with XPOwner {
   String name;
   @override
-  int level;
-  @override
-  int xp;
-
+  int level, xp;
   UserProfile({required this.name, this.level = 1, this.xp = 0});
   String get initial => name.isNotEmpty ? name[0].toUpperCase() : '?';
+}
+
+class HistoryEntry {
+  final String id;
+  final String taskTitle;
+  final String skillId;
+  final String skillName;
+  final Color skillColor;
+  final dynamic skillIcon; // Позволяет хранить как IconData, так и Emoji
+  final int xp;
+  final bool isCompletion;
+  final DateTime at;
+
+  HistoryEntry({
+    required this.id,
+    required this.taskTitle,
+    required this.skillId,
+    required this.skillName,
+    required this.skillColor,
+    required this.skillIcon,
+    required this.xp,
+    required this.isCompletion,
+    required this.at,
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -153,6 +209,7 @@ class AppState extends ChangeNotifier {
   String? selectedSkillId;
 
   final UserProfile profile = UserProfile(name: 'Saijer');
+  final List<HistoryEntry> history = [];
 
   final List<Skill> skills = [
     Skill(
@@ -177,7 +234,7 @@ class AppState extends ChangeNotifier {
       name: 'Геймификация жизни',
       goal: 'Запустить RPGreal.org',
       color: const Color(0xFF34C759),
-      icon: Icons.videogame_asset,
+      icon: Icons.sports_esports,
       xp: 80,
     ),
   ];
@@ -191,6 +248,7 @@ class AppState extends ChangeNotifier {
       type: TaskType.repeating,
       streak: 3,
       streakMultiplier: 2,
+      repeatFrequency: RepeatFrequency.daily,
     ),
     Task(
       id: 't2',
@@ -224,8 +282,32 @@ class AppState extends ChangeNotifier {
     ),
   ];
 
-  List<Task> tasksForSkill(String id) =>
-      tasks.where((t) => t.skillId == id).toList();
+  AppState() {
+    _checkResets();
+  }
+
+  void _checkResets() {
+    final now = DateTime.now();
+    bool changed = false;
+    for (final t in tasks) {
+      if (t.type == TaskType.repeating && t.isDone && t.nextResetAt != null) {
+        if (now.isAfter(t.nextResetAt!)) {
+          t.isDone = false;
+          t.earnedXP = 0;
+          t.nextResetAt = null;
+          changed = true;
+        }
+      }
+    }
+    if (changed) {
+      notifyListeners();
+    }
+  }
+
+  List<Task> tasksForSkill(String id) {
+    _checkResets();
+    return tasks.where((t) => t.skillId == id).toList();
+  }
 
   Skill? get selectedSkill {
     if (selectedSkillId == null) {
@@ -243,10 +325,18 @@ class AppState extends ChangeNotifier {
     if (task == null || task.isDone) {
       return null;
     }
+
     task.isDone = true;
     task.streak++;
     final earned = task.xpReward * task.streakMultiplier;
     task.earnedXP = earned;
+
+    if (task.type == TaskType.repeating) {
+      task.nextResetAt = _nextReset(
+        task.repeatFrequency,
+        task.repeatCustomDays,
+      );
+    }
 
     final globalUp = profile.addXP(earned);
     int skillUp = 0;
@@ -255,7 +345,9 @@ class AppState extends ChangeNotifier {
       skillUp = skill.addXP(earned);
     }
 
+    _recordHistory(task, skill, earned, isCompletion: true);
     notifyListeners();
+
     if (globalUp > 0) {
       return '🎉 Уровень ${profile.level}!';
     }
@@ -274,9 +366,34 @@ class AppState extends ChangeNotifier {
     task.isDone = false;
     task.streak = (task.streak - 1).clamp(0, 9999);
     task.earnedXP = 0;
+    task.nextResetAt = null;
     profile.removeXP(earned);
-    _skillById(task.skillId)?.removeXP(earned);
+    final skill = _skillById(task.skillId);
+    skill?.removeXP(earned);
+    _recordHistory(task, skill, earned, isCompletion: false);
     notifyListeners();
+  }
+
+  void _recordHistory(
+    Task t,
+    Skill? skill,
+    int xp, {
+    required bool isCompletion,
+  }) {
+    history.insert(
+      0,
+      HistoryEntry(
+        id: uid(),
+        taskTitle: t.title,
+        skillId: t.skillId,
+        skillName: skill?.name ?? '—',
+        skillColor: skill?.color ?? const Color(0xFF8E8E93),
+        skillIcon: skill?.icon ?? Icons.bolt,
+        xp: xp,
+        isCompletion: isCompletion,
+        at: DateTime.now(),
+      ),
+    );
   }
 
   void selectSkill(String id) {
@@ -333,7 +450,6 @@ class AppState extends ChangeNotifier {
 // CORNER-REVEAL THEME TRANSITION
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// Клиппер: сжимающийся круг из угла. progress 0→1 = круг от максимума до нуля.
 class _RevealClipper extends CustomClipper<Path> {
   final double progress;
   final Offset corner;
@@ -377,7 +493,7 @@ class _RPGAppState extends State<RPGApp> with SingleTickerProviderStateMixin {
     _state.addListener(_onStateChange);
     _revealCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 580),
+      duration: const Duration(milliseconds: 620),
     );
     _revealAnim = CurvedAnimation(
       parent: _revealCtrl,
@@ -395,14 +511,12 @@ class _RPGAppState extends State<RPGApp> with SingleTickerProviderStateMixin {
     super.dispose();
   }
 
-  /// Смена темы с анимацией раскрытия из угла
   Future<void> _handleThemeToggle() async {
     if (_revealing) {
       return;
     }
     _revealing = true;
 
-    // 1. Захватить текущий кадр
     ui.Image? frame;
     try {
       final boundary =
@@ -420,19 +534,16 @@ class _RPGAppState extends State<RPGApp> with SingleTickerProviderStateMixin {
       return;
     }
 
-    // 2. Определить угол ДО смены темы
     final size = MediaQuery.of(context).size;
     _revealCorner = _state.isDark
-        ? Offset(size.width, 0) // dark→light : из правого верхнего
-        : Offset(0, size.height); // light→dark : из левого нижнего
+        ? Offset(size.width, 0)
+        : Offset(0, size.height);
 
-    // 3. Сменить тему и показать оверлей
     _state.isDark = !_state.isDark;
     setState(() {
       _overlayImage = frame;
     });
 
-    // 4. Анимировать
     if (frame != null) {
       _revealCtrl.value = 0;
       await _revealCtrl.forward();
@@ -547,15 +658,16 @@ class _MainPageState extends State<MainPage> {
   Widget build(BuildContext context) {
     final s = AppStateProvider.of(context);
     final isDark = s.isDark;
-    final bg = isDark ? const Color(0xFF0F0F13) : const Color(0xFFF0F2F8);
 
     return Scaffold(
-      backgroundColor: bg,
+      backgroundColor: isDark
+          ? const Color(0xFF0F0F13)
+          : const Color(0xFFF0F2F8),
       body: Stack(
         children: [
           Column(
             children: [
-              _TopBar(isDark: isDark, onToggle: widget.onToggleTheme),
+              _TopBar(isDark: isDark, onToggle: widget.onToggleTheme, state: s),
               _ProfileBar(profile: s.profile, isDark: isDark),
               Expanded(
                 child: Padding(
@@ -563,10 +675,8 @@ class _MainPageState extends State<MainPage> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Left panel — навыки (380px)
                       SizedBox(width: 380, child: SkillsPanel(state: s)),
                       const SizedBox(width: 12),
-                      // Right panel — задачи выбранного навыка
                       Expanded(
                         child: TasksPanel(state: s, onComplete: _onComplete),
                       ),
@@ -590,20 +700,25 @@ class _MainPageState extends State<MainPage> {
 class _TopBar extends StatelessWidget {
   final bool isDark;
   final VoidCallback onToggle;
-  const _TopBar({required this.isDark, required this.onToggle});
+  final AppState state;
+  const _TopBar({
+    required this.isDark,
+    required this.onToggle,
+    required this.state,
+  });
 
   @override
   Widget build(BuildContext context) {
     final surface = _surface(isDark);
     final textColor = _text(isDark);
-    final sub = const Color(0xFF8E8E93);
+    final sub = _subtext(isDark);
 
     return Container(
       color: surface,
       padding: const EdgeInsets.fromLTRB(24, 38, 24, 12),
       child: Row(
         children: [
-          Icon(Icons.shield_outlined, color: const Color(0xFF4A9EFF), size: 20),
+          const Icon(Icons.security, color: Color(0xFF4A9EFF), size: 20),
           const SizedBox(width: 8),
           Text(
             'RPG To-Do List',
@@ -615,16 +730,22 @@ class _TopBar extends StatelessWidget {
           ),
           const Spacer(),
           _HoverIconBtn(
-            icon: isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+            icon: Icons.history,
+            color: sub,
+            onTap: () => showDialog(
+              context: context,
+              builder: (_) =>
+                  HistoryDialog(history: state.history, isDark: isDark),
+            ),
+          ),
+          const SizedBox(width: 4),
+          _HoverIconBtn(
+            icon: isDark ? Icons.light_mode : Icons.dark_mode,
             color: sub,
             onTap: onToggle,
           ),
           const SizedBox(width: 4),
-          _HoverIconBtn(
-            icon: Icons.settings_outlined,
-            color: sub,
-            onTap: () {},
-          ),
+          _HoverIconBtn(icon: Icons.settings, color: sub, onTap: () {}),
         ],
       ),
     );
@@ -666,6 +787,188 @@ class _HoverIconBtnState extends State<_HoverIconBtn> {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// HISTORY DIALOG
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class HistoryDialog extends StatelessWidget {
+  final List<HistoryEntry> history;
+  final bool isDark;
+  const HistoryDialog({super.key, required this.history, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = _surface(isDark);
+    final txt = _text(isDark);
+    final sub = _subtext(isDark);
+    final bdr = _border(isDark);
+
+    return Dialog(
+      backgroundColor: bg,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: SizedBox(
+        width: 480,
+        height: 560,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(22, 20, 16, 14),
+              child: Row(
+                children: [
+                  Text(
+                    'Полная история персонажа',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: txt,
+                    ),
+                  ),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Icon(Icons.close, color: sub, size: 22),
+                  ),
+                ],
+              ),
+            ),
+            Container(height: 1, color: bdr),
+            Expanded(
+              child: history.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.menu_book, color: sub, size: 38),
+                          const SizedBox(height: 12),
+                          Text(
+                            'История пуста',
+                            style: TextStyle(color: sub, fontSize: 15),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Выполни задачу — она появится здесь',
+                            style: TextStyle(
+                              color: sub.withAlpha(160),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 10,
+                        horizontal: 14,
+                      ),
+                      itemCount: history.length,
+                      itemBuilder: (_, i) =>
+                          _HistoryCard(entry: history[i], isDark: isDark),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HistoryCard extends StatelessWidget {
+  final HistoryEntry entry;
+  final bool isDark;
+  const _HistoryCard({required this.entry, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    final e = entry;
+    final c = e.skillColor;
+    final isGreen = e.isCompletion;
+    final accentBg = isGreen
+        ? c.withAlpha(22)
+        : const Color(0xFFFF3B30).withAlpha(18);
+    final accentBorder = isGreen
+        ? c.withAlpha(80)
+        : const Color(0xFFFF3B30).withAlpha(60);
+    final sub = _subtext(isDark);
+    final txt = _text(isDark);
+
+    final d = e.at;
+    final dateStr =
+        '${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}.${d.year}, '
+        '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}:${d.second.toString().padLeft(2, '0')}';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: accentBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: accentBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  e.taskTitle,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    color: txt,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    isGreen ? 'Цель выполнена' : 'Выполнение отменено',
+                    style: TextStyle(
+                      color: sub,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(dateStr, style: TextStyle(color: sub, fontSize: 11)),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              _buildIcon(e.skillIcon, c, 13),
+              const SizedBox(width: 5),
+              Text('Навык: ', style: TextStyle(color: sub, fontSize: 12)),
+              Text(
+                e.skillName,
+                style: TextStyle(
+                  color: c,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            isGreen ? '+${e.xp} опыта' : '-${e.xp} опыта',
+            style: TextStyle(
+              color: isGreen ? c : const Color(0xFFFF3B30),
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // PROFILE BAR
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -678,14 +981,13 @@ class _ProfileBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final surface = _surface(isDark);
     final textColor = _text(isDark);
-    final sub = const Color(0xFF8E8E93);
+    final sub = _subtext(isDark);
 
     return Container(
       color: surface,
       padding: const EdgeInsets.fromLTRB(24, 6, 24, 14),
       child: Row(
         children: [
-          // Avatar
           Container(
             width: 44,
             height: 44,
@@ -855,7 +1157,7 @@ class SkillsPanel extends StatelessWidget {
     final isDark = state.isDark;
     final surface = _surface(isDark);
     final textColor = _text(isDark);
-    final sub = const Color(0xFF8E8E93);
+    final sub = _subtext(isDark);
     final border = _border(isDark);
 
     return Container(
@@ -866,12 +1168,11 @@ class SkillsPanel extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Header
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 12, 8),
             child: Row(
               children: [
-                Icon(Icons.bolt, color: const Color(0xFF4A9EFF), size: 20),
+                const Icon(Icons.bolt, color: Color(0xFF4A9EFF), size: 20),
                 const SizedBox(width: 6),
                 Text(
                   'Навыки',
@@ -909,7 +1210,6 @@ class SkillsPanel extends StatelessWidget {
             ),
           ),
           Container(height: 1, color: border),
-          // List
           Expanded(
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(vertical: 6),
@@ -945,18 +1245,16 @@ class SkillsPanel extends StatelessWidget {
     context: ctx,
     builder: (_) => AddSkillDialog(
       isDark: state.isDark,
-      onSave: (name, goal, checklist, color, icon) {
-        state.addSkill(
-          Skill(
-            id: uid(),
-            name: name,
-            goal: goal,
-            color: color,
-            icon: icon,
-            checklist: checklist,
-          ),
-        );
-      },
+      onSave: (name, goal, checklist, color, icon) => state.addSkill(
+        Skill(
+          id: uid(),
+          name: name,
+          goal: goal,
+          color: color,
+          icon: icon,
+          checklist: checklist,
+        ),
+      ),
     ),
   );
 
@@ -977,13 +1275,10 @@ class SkillsPanel extends StatelessWidget {
   );
 }
 
-// ─── Skill Card ───────────────────────────────────────────────────────────────
-
 class _SkillCard extends StatefulWidget {
   final Skill skill;
   final int taskCount;
-  final bool isSelected;
-  final bool isDark;
+  final bool isSelected, isDark;
   final VoidCallback onTap, onEdit, onDelete;
   const _SkillCard({
     required this.skill,
@@ -1006,13 +1301,13 @@ class _SkillCardState extends State<_SkillCard> {
     final sk = widget.skill;
     final isDark = widget.isDark;
     final textColor = _text(isDark);
-    final sub = const Color(0xFF8E8E93);
+    final sub = _subtext(isDark);
 
     Color bg = Colors.transparent;
     if (widget.isSelected) {
       bg = sk.color.withAlpha(22);
     } else if (_h) {
-      bg = isDark ? const Color(0xFF22222E) : const Color(0xFFF4F4FA);
+      bg = isDark ? const Color(0xFF22222E) : const Color(0xFFF0F0F8);
     }
 
     return MouseRegion(
@@ -1033,7 +1328,6 @@ class _SkillCardState extends State<_SkillCard> {
           ),
           child: Row(
             children: [
-              // Icon badge
               Container(
                 width: 36,
                 height: 36,
@@ -1041,10 +1335,9 @@ class _SkillCardState extends State<_SkillCard> {
                   color: sk.color.withAlpha(30),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(sk.icon, color: sk.color, size: 18),
+                child: Center(child: _buildIcon(sk.icon, sk.color, 18)),
               ),
               const SizedBox(width: 10),
-              // Name + XP (Expanded — имя гарантированно помещается)
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1060,7 +1353,6 @@ class _SkillCardState extends State<_SkillCard> {
                               color: textColor,
                             ),
                             overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
                           ),
                         ),
                         const SizedBox(width: 6),
@@ -1108,7 +1400,6 @@ class _SkillCardState extends State<_SkillCard> {
                   ],
                 ),
               ),
-              // Actions — анимировано по ширине, не сжимают имя когда скрыты
               AnimatedContainer(
                 duration: const Duration(milliseconds: 150),
                 width: (_h || widget.isSelected) ? 48 : 0,
@@ -1119,7 +1410,7 @@ class _SkillCardState extends State<_SkillCard> {
                     child: Row(
                       children: [
                         _MiniBtn(
-                          icon: Icons.edit_outlined,
+                          icon: Icons.edit,
                           color: sub,
                           onTap: widget.onEdit,
                         ),
@@ -1155,7 +1446,7 @@ class TasksPanel extends StatelessWidget {
     final isDark = state.isDark;
     final surface = _surface(isDark);
     final textColor = _text(isDark);
-    final sub = const Color(0xFF8E8E93);
+    final sub = _subtext(isDark);
     final border = _border(isDark);
     final skill = state.selectedSkill;
 
@@ -1170,16 +1461,20 @@ class TasksPanel extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.arrow_back_ios_new, color: sub, size: 30),
+              Icon(Icons.arrow_back, color: sub, size: 30),
               const SizedBox(height: 12),
               Text(
                 'Выберите навык',
-                style: TextStyle(color: sub, fontSize: 16),
+                style: TextStyle(
+                  color: sub,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
                 'Задачи откроются здесь',
-                style: TextStyle(color: sub.withAlpha(150), fontSize: 13),
+                style: TextStyle(color: sub.withAlpha(160), fontSize: 13),
               ),
             ],
           ),
@@ -1200,7 +1495,6 @@ class TasksPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 12, 8),
             child: Row(
@@ -1212,7 +1506,7 @@ class TasksPanel extends StatelessWidget {
                     color: skill.color.withAlpha(30),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(skill.icon, color: skill.color, size: 16),
+                  child: Center(child: _buildIcon(skill.icon, skill.color, 16)),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -1238,7 +1532,7 @@ class TasksPanel extends StatelessWidget {
                   ),
                 ),
                 _SmallBtn(
-                  label: '  Задача',
+                  label: ' Задача',
                   icon: Icons.add,
                   color: skill.color,
                   onTap: () => _addTask(context, skill),
@@ -1246,7 +1540,6 @@ class TasksPanel extends StatelessWidget {
               ],
             ),
           ),
-          // Skill XP bar
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: Row(
@@ -1267,22 +1560,25 @@ class TasksPanel extends StatelessWidget {
             ),
           ),
           Container(height: 1, color: border),
-          // Task list
           Expanded(
             child: allTasks.isEmpty
                 ? Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.task_alt, color: sub, size: 38),
+                        Icon(Icons.task, color: sub, size: 38),
                         const SizedBox(height: 10),
                         Text(
                           'Нет задач',
-                          style: TextStyle(color: sub, fontSize: 15),
+                          style: TextStyle(
+                            color: sub,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Нажмите «+ Задача»',
+                          'Нажмите « Задача»',
                           style: TextStyle(
                             color: sub.withAlpha(150),
                             fontSize: 12,
@@ -1352,13 +1648,15 @@ class TasksPanel extends StatelessWidget {
     builder: (_) => AddTaskDialog(
       isDark: state.isDark,
       skillColor: skill.color,
-      onSave: (title, xp, type) => state.addTask(
+      onSave: (title, xp, type, freq, customDays) => state.addTask(
         Task(
           id: uid(),
           title: title,
           skillId: skill.id,
           xpReward: xp,
           type: type,
+          repeatFrequency: freq,
+          repeatCustomDays: customDays,
         ),
       ),
     ),
@@ -1370,10 +1668,12 @@ class TasksPanel extends StatelessWidget {
       isDark: state.isDark,
       skillColor: skill.color,
       existing: task,
-      onSave: (title, xp, type) {
+      onSave: (title, xp, type, freq, customDays) {
         task.title = title;
         task.xpReward = xp;
         task.type = type;
+        task.repeatFrequency = freq;
+        task.repeatCustomDays = customDays;
         state.refresh();
       },
     ),
@@ -1405,12 +1705,19 @@ class _TaskTileState extends State<_TaskTile> {
   final _cbKey = GlobalKey();
   bool _h = false;
 
+  String _formatReset(DateTime? dt) {
+    if (dt == null) {
+      return '';
+    }
+    return 'Обновится ${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')} в 03:00';
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = widget.task;
     final isDark = widget.isDark;
     final textColor = _text(isDark);
-    final sub = const Color(0xFF8E8E93);
+    final sub = _subtext(isDark);
     final tileBg = isDark ? const Color(0xFF13131A) : const Color(0xFFF8F8FA);
     final border = _border(isDark);
 
@@ -1422,7 +1729,7 @@ class _TaskTileState extends State<_TaskTile> {
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         decoration: BoxDecoration(
           color: _h
-              ? (isDark ? const Color(0xFF1E1E2A) : const Color(0xFFEEEEF8))
+              ? (isDark ? const Color(0xFF1E1E2A) : const Color(0xFFECECF8))
               : tileBg,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: border),
@@ -1432,7 +1739,6 @@ class _TaskTileState extends State<_TaskTile> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Checkbox
               GestureDetector(
                 key: _cbKey,
                 onTapUp: (d) {
@@ -1462,7 +1768,6 @@ class _TaskTileState extends State<_TaskTile> {
                 ),
               ),
               const SizedBox(width: 12),
-              // Content
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1506,31 +1811,37 @@ class _TaskTileState extends State<_TaskTile> {
                             '${t.streak} д.',
                             style: TextStyle(color: sub, fontSize: 11),
                           ),
+                        if (t.type == TaskType.repeating) ...[
+                          _Badge(
+                            icon: Icons.repeat,
+                            label: _freqLabel[t.repeatFrequency]!,
+                            color: const Color(0xFF4A9EFF),
+                          ),
+                          if (t.isDone && t.nextResetAt != null)
+                            Text(
+                              _formatReset(t.nextResetAt),
+                              style: TextStyle(color: sub, fontSize: 11),
+                            ),
+                        ],
                       ],
                     ),
                   ],
                 ),
               ),
-              // Hover actions
               AnimatedContainer(
                 duration: const Duration(milliseconds: 150),
-                width: _h ? 60 : 0,
+                width: _h ? 44 : 0,
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: SizedBox(
-                    width: 60,
+                    width: 44,
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         _MiniBtn(
-                          icon: Icons.edit_outlined,
+                          icon: Icons.edit,
                           color: sub,
                           onTap: widget.onEdit,
-                        ),
-                        _MiniBtn(
-                          icon: Icons.copy_outlined,
-                          color: sub,
-                          onTap: () {},
                         ),
                         _MiniBtn(
                           icon: Icons.delete_outline,
@@ -1673,16 +1984,16 @@ class _XPBubbleState extends State<_XPBubble>
 const _kIcons = <IconData>[
   Icons.fitness_center,
   Icons.code,
-  Icons.videogame_asset,
+  Icons.sports_esports,
   Icons.menu_book,
   Icons.music_note,
-  Icons.brush,
+  Icons.palette,
   Icons.language,
   Icons.science,
   Icons.directions_run,
   Icons.psychology,
-  Icons.monetization_on,
-  Icons.business,
+  Icons.attach_money,
+  Icons.business_center,
   Icons.camera_alt,
   Icons.flight,
   Icons.favorite,
@@ -1690,11 +2001,24 @@ const _kIcons = <IconData>[
   Icons.school,
   Icons.sports_soccer,
   Icons.restaurant,
-  Icons.health_and_safety,
+  Icons.local_hospital,
   Icons.trending_up,
   Icons.self_improvement,
   Icons.star,
   Icons.public,
+];
+
+const _kEmojis = <String>[
+  '🏠',
+  '🛒',
+  '💼',
+  '🍕',
+  '🏋️‍♂️',
+  '🎨',
+  '🎬',
+  '💡',
+  '🚀',
+  '🐱',
 ];
 
 const _kColors = <Color>[
@@ -1718,7 +2042,7 @@ class AddSkillDialog extends StatefulWidget {
     String goal,
     List<String> checklist,
     Color color,
-    IconData icon,
+    dynamic icon,
   )
   onSave;
   const AddSkillDialog({
@@ -1737,7 +2061,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
   final _checkCtrl = TextEditingController();
   final List<String> _items = [];
   Color _color = const Color(0xFF4A9EFF);
-  IconData _icon = Icons.fitness_center;
+  dynamic _icon = Icons.fitness_center;
 
   @override
   void initState() {
@@ -1765,7 +2089,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
     final bg = _surface(isDark);
     final fBg = isDark ? const Color(0xFF13131A) : const Color(0xFFF5F5F7);
     final txt = _text(isDark);
-    final sub = const Color(0xFF8E8E93);
+    final sub = _subtext(isDark);
     final bdr = _border(isDark);
 
     return Dialog(
@@ -1793,7 +2117,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
                     color: _color.withAlpha(35),
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Icon(_icon, color: _color, size: 30),
+                  child: Center(child: _buildIcon(_icon, _color, 30)),
                 ),
               ),
               const SizedBox(height: 16),
@@ -1821,7 +2145,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
               Wrap(
                 spacing: 6,
                 runSpacing: 6,
-                children: _kIcons.map((ic) {
+                children: [..._kIcons, ..._kEmojis].map((ic) {
                   final sel = ic == _icon;
                   return GestureDetector(
                     onTap: () => setState(() => _icon = ic),
@@ -1836,7 +2160,9 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
                             ? Border.all(color: _color, width: 2)
                             : Border.all(color: bdr),
                       ),
-                      child: Icon(ic, size: 18, color: sel ? _color : sub),
+                      child: Center(
+                        child: _buildIcon(ic, sel ? _color : sub, 18),
+                      ),
                     ),
                   );
                 }).toList(),
@@ -1882,7 +2208,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
                   padding: const EdgeInsets.only(bottom: 6),
                   child: Row(
                     children: [
-                      Icon(Icons.check_box_outline_blank, size: 15, color: sub),
+                      Icon(Icons.check_box, size: 15, color: sub),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -1919,9 +2245,9 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
                   ),
                   GestureDetector(
                     onTap: _addItem,
-                    child: Icon(
+                    child: const Icon(
                       Icons.add_circle_outline,
-                      color: const Color(0xFF4A9EFF),
+                      color: Color(0xFF4A9EFF),
                       size: 20,
                     ),
                   ),
@@ -1959,14 +2285,21 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// ADD TASK DIALOG  — с предупреждениями о мягком лимите XP
+// ADD TASK DIALOG  — с частотой для повторяющихся + предупреждение XP
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class AddTaskDialog extends StatefulWidget {
   final bool isDark;
   final Color skillColor;
   final Task? existing;
-  final Function(String title, int xp, TaskType type) onSave;
+  final Function(
+    String title,
+    int xp,
+    TaskType type,
+    RepeatFrequency freq,
+    int customDays,
+  )
+  onSave;
   const AddTaskDialog({
     super.key,
     required this.isDark,
@@ -1980,8 +2313,10 @@ class AddTaskDialog extends StatefulWidget {
 
 class _AddTaskDialogState extends State<AddTaskDialog> {
   final _titleCtrl = TextEditingController();
+  final _customCtrl = TextEditingController(text: '1');
   int _xp = 20;
   TaskType _type = TaskType.shortTerm;
+  RepeatFrequency _freq = RepeatFrequency.daily;
 
   int get _softCap => _typeSoftCap[_type]!;
   bool get _overCap => _xp > _softCap;
@@ -1993,12 +2328,15 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
       _titleCtrl.text = ex.title;
       _xp = ex.xpReward;
       _type = ex.type;
+      _freq = ex.repeatFrequency;
+      _customCtrl.text = '${ex.repeatCustomDays}';
     }
   }
 
   @override
   void dispose() {
     _titleCtrl.dispose();
+    _customCtrl.dispose();
     super.dispose();
   }
 
@@ -2008,19 +2346,20 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     final bg = _surface(isDark);
     final fBg = isDark ? const Color(0xFF13131A) : const Color(0xFFF5F5F7);
     final txt = _text(isDark);
-    final sub = const Color(0xFF8E8E93);
+    final sub = _subtext(isDark);
     final bdr = _border(isDark);
+    final c = widget.skillColor;
 
     return Dialog(
       backgroundColor: bg,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: SizedBox(
-        width: 420,
-        child: Padding(
+        width: 440,
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               _DlgHeader(
                 title: widget.existing != null
@@ -2038,7 +2377,8 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                 bdr: bdr,
               ),
               const SizedBox(height: 16),
-              // XP слайдер
+
+              // XP
               Row(
                 children: [
                   _SubLbl('Награда XP', sub),
@@ -2049,13 +2389,13 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                       vertical: 3,
                     ),
                     decoration: BoxDecoration(
-                      color: (widget.skillColor).withAlpha(30),
+                      color: c.withAlpha(30),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       '$_xp XP',
                       style: TextStyle(
-                        color: widget.skillColor,
+                        color: c,
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
                       ),
@@ -2068,11 +2408,11 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                 min: 5,
                 max: 1000,
                 divisions: 199,
-                activeColor: widget.skillColor,
-                inactiveColor: widget.skillColor.withAlpha(40),
+                activeColor: c,
+                inactiveColor: c.withAlpha(40),
                 onChanged: (v) => setState(() => _xp = v.round()),
               ),
-              // Предупреждение о мягком лимите
+              // Предупреждение
               AnimatedSize(
                 duration: const Duration(milliseconds: 200),
                 child: _overCap
@@ -2099,7 +2439,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                             const SizedBox(width: 7),
                             Expanded(
                               child: Text(
-                                'Не рекомендуется: для «${_typeLabel[_type]}» задачи лимит ${_softCap} XP.',
+                                'Не рекомендуется: лимит для «${_typeLabel[_type]}» — $_softCap XP.',
                                 style: const TextStyle(
                                   color: Color(0xFFFF9500),
                                   fontSize: 12,
@@ -2111,8 +2451,8 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                       )
                     : const SizedBox.shrink(),
               ),
-              const SizedBox(height: 6),
-              // Тип задачи
+
+              // Тип
               _SubLbl('Тип задачи', sub),
               const SizedBox(height: 8),
               Wrap(
@@ -2120,7 +2460,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                 runSpacing: 8,
                 children: TaskType.values.map((t) {
                   final sel = _type == t;
-                  final c = _typeColor[t]!;
+                  final tc = _typeColor[t]!;
                   return GestureDetector(
                     onTap: () => setState(() => _type = t),
                     child: AnimatedContainer(
@@ -2130,16 +2470,16 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                         vertical: 7,
                       ),
                       decoration: BoxDecoration(
-                        color: sel ? c.withAlpha(40) : fBg,
+                        color: sel ? tc.withAlpha(40) : fBg,
                         borderRadius: BorderRadius.circular(8),
                         border: sel
-                            ? Border.all(color: c)
+                            ? Border.all(color: tc)
                             : Border.all(color: bdr),
                       ),
                       child: Text(
                         _typeLabel[t]!,
                         style: TextStyle(
-                          color: sel ? c : sub,
+                          color: sel ? tc : sub,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
@@ -2148,6 +2488,129 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                   );
                 }).toList(),
               ),
+
+              // Частота — только для повторяющихся
+              if (_type == TaskType.repeating) ...[
+                const SizedBox(height: 16),
+                _SubLbl('Частота выполнения', sub),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: fBg,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: bdr),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: RepeatFrequency.values.map((f) {
+                          final sel = _freq == f;
+                          return GestureDetector(
+                            onTap: () => setState(() => _freq = f),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 130),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: sel
+                                    ? const Color(0xFF4A9EFF).withAlpha(40)
+                                    : (isDark
+                                          ? const Color(0xFF2A2A35)
+                                          : const Color(0xFFEAEAF0)),
+                                borderRadius: BorderRadius.circular(20),
+                                border: sel
+                                    ? Border.all(color: const Color(0xFF4A9EFF))
+                                    : null,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (f == RepeatFrequency.daily ||
+                                      f == RepeatFrequency.custom)
+                                    Icon(
+                                      Icons.repeat,
+                                      size: 12,
+                                      color: sel
+                                          ? const Color(0xFF4A9EFF)
+                                          : sub,
+                                    ),
+                                  if (f == RepeatFrequency.daily ||
+                                      f == RepeatFrequency.custom)
+                                    const SizedBox(width: 4),
+                                  Text(
+                                    _freqLabel[f]!,
+                                    style: TextStyle(
+                                      color: sel
+                                          ? const Color(0xFF4A9EFF)
+                                          : sub,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                      if (_freq == RepeatFrequency.custom) ...[
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Text(
+                              'Каждые',
+                              style: TextStyle(color: txt, fontSize: 13),
+                            ),
+                            const SizedBox(width: 8),
+                            SizedBox(
+                              width: 60,
+                              child: TextField(
+                                controller: _customCtrl,
+                                style: TextStyle(color: txt, fontSize: 13),
+                                keyboardType: TextInputType.number,
+                                decoration: InputDecoration(
+                                  isDense: true,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 8,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(color: bdr),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFF4A9EFF),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'дней',
+                              style: TextStyle(color: txt, fontSize: 13),
+                            ),
+                          ],
+                        ),
+                      ],
+                      const SizedBox(height: 8),
+                      Text(
+                        'Задача обновится в 03:00 через ${_freqDays(_freq, int.tryParse(_customCtrl.text) ?? 1)} дн.',
+                        style: TextStyle(color: sub, fontSize: 11),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
               const SizedBox(height: 22),
               _DlgActions(
                 onCancel: () => Navigator.pop(context),
@@ -2164,7 +2627,8 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     if (_titleCtrl.text.trim().isEmpty) {
       return;
     }
-    widget.onSave(_titleCtrl.text.trim(), _xp, _type);
+    final customDays = int.tryParse(_customCtrl.text) ?? 1;
+    widget.onSave(_titleCtrl.text.trim(), _xp, _type, _freq, customDays);
     Navigator.pop(context);
   }
 }
