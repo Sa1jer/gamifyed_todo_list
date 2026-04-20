@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 int _nextId = 0;
 String uid() => '${++_nextId}';
 
+String _twoDigits(int value) => value.toString().padLeft(2, '0');
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // XP PROGRESSION  (linear-stepped)
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -86,6 +88,18 @@ int freqDays(RepeatFrequency f, int custom) => switch (f) {
 DateTime nextReset(RepeatFrequency freq, int customDays) {
   final d = DateTime.now().add(Duration(days: freqDays(freq, customDays)));
   return DateTime(d.year, d.month, d.day, 3, 0, 0);
+}
+
+String formatDateTime(DateTime dateTime) {
+  return '${_twoDigits(dateTime.day)}.${_twoDigits(dateTime.month)}.'
+      '${dateTime.year}, ${_twoDigits(dateTime.hour)}:'
+      '${_twoDigits(dateTime.minute)}:${_twoDigits(dateTime.second)}';
+}
+
+String formatResetLabel(DateTime? dateTime) {
+  if (dateTime == null) return '';
+  return 'Обновится ${_twoDigits(dateTime.day)}.${_twoDigits(dateTime.month)} '
+      'в ${_twoDigits(dateTime.hour)}:${_twoDigits(dateTime.minute)}';
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

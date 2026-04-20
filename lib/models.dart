@@ -6,8 +6,10 @@ import 'utils.dart';
 // ═══════════════════════════════════════════════════════════════════════════════
 
 mixin XPOwner {
-  int get level; set level(int v);
-  int get xp;    set xp(int v);
+  int get level;
+  set level(int v);
+  int get xp;
+  set xp(int v);
 
   int get xpNeeded => xpForLevel(level);
   double get progress => (xp / xpNeeded).clamp(0.0, 1.0);
@@ -39,11 +41,13 @@ class Skill with XPOwner {
   final String id;
   String name, goal;
   List<String> checklist;
+
   /// Parallel list tracking which checklist items are checked
   List<bool> checklistDone;
   Color color;
   IconData icon;
-  @override int level, xp;
+  @override
+  int level, xp;
 
   Skill({
     required this.id,
@@ -55,15 +59,20 @@ class Skill with XPOwner {
     List<bool>? checklistDone,
     this.level = 1,
     this.xp = 0,
-  })  : checklist = checklist ?? [],
-        checklistDone = checklistDone ?? List.filled((checklist ?? []).length, false);
+  }) : checklist = checklist ?? [],
+       checklistDone =
+           checklistDone ?? List.filled((checklist ?? []).length, false);
 
   String get initial => name.isNotEmpty ? name[0] : '?';
 
   /// Ensure checklistDone stays in sync with checklist length
   void syncChecklistDone() {
-    while (checklistDone.length < checklist.length) checklistDone.add(false);
-    while (checklistDone.length > checklist.length) checklistDone.removeLast();
+    while (checklistDone.length < checklist.length) {
+      checklistDone.add(false);
+    }
+    while (checklistDone.length > checklist.length) {
+      checklistDone.removeLast();
+    }
   }
 
   int get checklistCompletedCount => checklistDone.where((v) => v).length;
@@ -102,7 +111,7 @@ class Task {
   int get activeMultiplier {
     if (type != TaskType.repeating || streak < 2) return 1;
     if (streak >= 14) return 4;
-    if (streak >= 7)  return 3;
+    if (streak >= 7) return 3;
     return 2;
   }
 
@@ -114,7 +123,8 @@ class Task {
 
 class UserProfile with XPOwner {
   String name;
-  @override int level, xp;
+  @override
+  int level, xp;
   UserProfile({required this.name, this.level = 1, this.xp = 0});
   String get initial => name.isNotEmpty ? name[0].toUpperCase() : '?';
 }

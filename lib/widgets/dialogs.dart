@@ -107,11 +107,6 @@ class _HistoryCard extends StatelessWidget {
         ? c.withAlpha(80)
         : const Color(0xFFFF3B30).withAlpha(60);
 
-    final d = e.at;
-    final dateStr =
-        '${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}.${d.year}, '
-        '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}:${d.second.toString().padLeft(2, '0')}';
-
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
@@ -149,7 +144,10 @@ class _HistoryCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 2),
-                  Text(dateStr, style: TextStyle(color: sub, fontSize: 11)),
+                  Text(
+                    formatDateTime(e.at),
+                    style: TextStyle(color: sub, fontSize: 11),
+                  ),
                 ],
               ),
             ],

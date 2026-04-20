@@ -7,73 +7,155 @@ import 'utils.dart';
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class AppState extends ChangeNotifier {
-  bool isDark = true;
+  bool _isDark = true;
   String? selectedSkillId;
+
+  bool get isDark => _isDark;
 
   final UserProfile profile = UserProfile(name: 'Saijer');
   final List<HistoryEntry> history = [];
 
   final List<Skill> skills = [
     Skill(
-      id: 's1', name: 'Подтягивания', goal: 'Подтягиваться 20 раз',
-      color: const Color(0xFFFF9500), icon: Icons.fitness_center, xp: 60,
+      id: 's1',
+      name: 'Подтягивания',
+      goal: 'Подтягиваться 20 раз',
+      color: const Color(0xFFFF9500),
+      icon: Icons.fitness_center,
+      xp: 60,
       checklist: ['3 подхода по 5 раз', 'Без рывков', 'Полная амплитуда'],
     ),
     Skill(
-      id: 's2', name: 'Python', goal: 'Освоить backend на FastAPI',
-      color: const Color(0xFF5856D6), icon: Icons.code, xp: 30, level: 2,
+      id: 's2',
+      name: 'Python',
+      goal: 'Освоить backend на FastAPI',
+      color: const Color(0xFF5856D6),
+      icon: Icons.code,
+      xp: 30,
+      level: 2,
       checklist: ['Изучить async/await', 'Написать CRUD', 'Деплой на сервер'],
     ),
     Skill(
-      id: 's3', name: 'Геймификация жизни', goal: 'Запустить RPGreal.org',
-      color: const Color(0xFF34C759), icon: Icons.sports_esports, xp: 80,
+      id: 's3',
+      name: 'Геймификация жизни',
+      goal: 'Запустить RPGreal.org',
+      color: const Color(0xFF34C759),
+      icon: Icons.sports_esports,
+      xp: 80,
     ),
   ];
 
   final List<Task> tasks = [
-    Task(id: 't1', title: 'Сделать 3 подхода подтягиваний', skillId: 's1',
-        xpReward: 25, type: TaskType.repeating, streak: 3, repeatFrequency: RepeatFrequency.daily),
-    Task(id: 't2', title: 'Выйти на 15 подтягиваний за сет', skillId: 's1',
-        xpReward: 100, type: TaskType.longTerm),
-    Task(id: 't3', title: 'Пройти урок: функции и замыкания', skillId: 's2',
-        xpReward: 20, type: TaskType.shortTerm),
-    Task(id: 't4', title: 'Написать REST API на FastAPI', skillId: 's2',
-        xpReward: 60, type: TaskType.midTerm),
-    Task(id: 't5', title: 'Написать концепцию монетизации', skillId: 's3',
-        xpReward: 50, type: TaskType.midTerm),
+    Task(
+      id: 't1',
+      title: 'Сделать 3 подхода подтягиваний',
+      skillId: 's1',
+      xpReward: 25,
+      type: TaskType.repeating,
+      streak: 3,
+      repeatFrequency: RepeatFrequency.daily,
+    ),
+    Task(
+      id: 't2',
+      title: 'Выйти на 15 подтягиваний за сет',
+      skillId: 's1',
+      xpReward: 100,
+      type: TaskType.longTerm,
+    ),
+    Task(
+      id: 't3',
+      title: 'Пройти урок: функции и замыкания',
+      skillId: 's2',
+      xpReward: 20,
+      type: TaskType.shortTerm,
+    ),
+    Task(
+      id: 't4',
+      title: 'Написать REST API на FastAPI',
+      skillId: 's2',
+      xpReward: 60,
+      type: TaskType.midTerm,
+    ),
+    Task(
+      id: 't5',
+      title: 'Написать концепцию монетизации',
+      skillId: 's3',
+      xpReward: 50,
+      type: TaskType.midTerm,
+    ),
   ];
 
   AppState() {
     _resetExpiredTasks();
-    // Sync all skill checklist done lists on init
-    for (final s in skills) s.syncChecklistDone();
+    _syncSkillChecklists();
   }
 
-  void _resetExpiredTasks() {
-    final now = DateTime.now();
-    for (final t in tasks) {
-      if (t.type == TaskType.repeating && t.isDone && t.nextResetAt != null) {
-        if (now.isAfter(t.nextResetAt!)) {
-          t.isDone = false;
-          t.earnedXP = 0;
-          t.nextResetAt = null;
-        }
-      }
+  void _syncSkillChecklists() {
+    for (final skill in skills) {
+      skill.syncChecklistDone();
     }
   }
 
+  bool _resetExpiredTasks() {
+    final now = DateTime.now();
+    var didResetAnyTask = false;
+
+    for (final t in tasks) {
+      if (!_shouldResetTask(t, now)) continue;
+      t.isDone = false;
+      t.earnedXP = 0;
+      t.nextResetAt = null;
+      didResetAnyTask = true;
+    }
+
+    return didResetAnyTask;
+  }
+
   void checkResets() {
-    _resetExpiredTasks();
+    if (!_resetExpiredTasks()) return;
+    notifyListeners();
+  }
+
+  void toggleTheme() {
+    _isDark = !_isDark;
     notifyListeners();
   }
 
   List<Task> tasksForSkill(String id) =>
       tasks.where((t) => t.skillId == id).toList();
 
+  ({List<Task> active, List<Task> completed}) taskSectionsForSkill(
+    String skillId,
+  ) {
+    final active = <Task>[];
+    final completed = <Task>[];
+
+    for (final task in tasks) {
+      if (task.skillId != skillId) continue;
+      if (task.isDone) {
+        completed.add(task);
+      } else {
+        active.add(task);
+      }
+    }
+
+    return (active: active, completed: completed);
+  }
+
+  Map<String, int> get activeTaskCountsBySkill {
+    final counts = <String, int>{};
+
+    for (final task in tasks) {
+      if (task.isDone) continue;
+      counts.update(task.skillId, (count) => count + 1, ifAbsent: () => 1);
+    }
+
+    return counts;
+  }
+
   Skill? get selectedSkill {
     if (selectedSkillId == null) return null;
-    try { return skills.firstWhere((s) => s.id == selectedSkillId); }
-    catch (_) { return null; }
+    return _skillById(selectedSkillId!);
   }
 
   // ── Task completion ──────────────────────────────────────────────────────────
@@ -99,8 +181,10 @@ class AppState extends ChangeNotifier {
     _addHistory(task, skill, earned, isCompletion: true);
     notifyListeners();
 
-    if (globalUp > 0)                 return '🎉 Уровень ${profile.level}!';
-    if (skillUp > 0 && skill != null) return '⬆️ ${skill.name} → ур.${skill.level}';
+    if (globalUp > 0) return '🎉 Уровень ${profile.level}!';
+    if (skillUp > 0 && skill != null) {
+      return '⬆️ ${skill.name} → ур.${skill.level}';
+    }
     return '+$earned XP';
   }
 
@@ -109,9 +193,9 @@ class AppState extends ChangeNotifier {
     if (task == null || !task.isDone) return;
     final earned = task.earnedXP;
 
-    task.isDone      = false;
-    task.streak      = (task.streak - 1).clamp(0, 9999);
-    task.earnedXP    = 0;
+    task.isDone = false;
+    task.streak = (task.streak - 1).clamp(0, 9999);
+    task.earnedXP = 0;
     task.nextResetAt = null;
 
     profile.removeXP(earned);
@@ -133,11 +217,17 @@ class AppState extends ChangeNotifier {
   // ── CRUD ─────────────────────────────────────────────────────────────────────
 
   void selectSkill(String id) {
-    selectedSkillId = (selectedSkillId == id) ? null : id;
+    final nextSelectedSkillId = selectedSkillId == id ? null : id;
+    if (selectedSkillId == nextSelectedSkillId) return;
+    selectedSkillId = nextSelectedSkillId;
     notifyListeners();
   }
 
-  void addSkill(Skill s) { skills.add(s); notifyListeners(); }
+  void addSkill(Skill s) {
+    s.syncChecklistDone();
+    skills.add(s);
+    notifyListeners();
+  }
 
   void removeSkill(String id) {
     skills.removeWhere((s) => s.id == id);
@@ -146,27 +236,60 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void addTask(Task t)        { tasks.add(t); notifyListeners(); }
-  void removeTask(String id)  { tasks.removeWhere((t) => t.id == id); notifyListeners(); }
-  void refresh()              { notifyListeners(); }
+  void addTask(Task t) {
+    tasks.add(t);
+    notifyListeners();
+  }
+
+  void removeTask(String id) {
+    tasks.removeWhere((t) => t.id == id);
+    notifyListeners();
+  }
+
+  void refresh() {
+    notifyListeners();
+  }
 
   // ── Private ──────────────────────────────────────────────────────────────────
 
   void _addHistory(Task t, Skill? skill, int xp, {required bool isCompletion}) {
-    history.insert(0, HistoryEntry(
-      id: uid(), taskTitle: t.title, skillId: t.skillId,
-      skillName:  skill?.name  ?? '—',
-      skillColor: skill?.color ?? const Color(0xFF8E8E93),
-      skillIcon:  skill?.icon  ?? Icons.bolt,
-      xp: xp, isCompletion: isCompletion, at: DateTime.now(),
-    ));
+    history.insert(
+      0,
+      HistoryEntry(
+        id: uid(),
+        taskTitle: t.title,
+        skillId: t.skillId,
+        skillName: skill?.name ?? '—',
+        skillColor: skill?.color ?? const Color(0xFF8E8E93),
+        skillIcon: skill?.icon ?? Icons.bolt,
+        xp: xp,
+        isCompletion: isCompletion,
+        at: DateTime.now(),
+      ),
+    );
   }
 
   Task? _taskById(String id) {
-    try { return tasks.firstWhere((t) => t.id == id); } catch (_) { return null; }
+    return _firstWhereOrNull(tasks, (task) => task.id == id);
   }
+
   Skill? _skillById(String id) {
-    try { return skills.firstWhere((s) => s.id == id); } catch (_) { return null; }
+    return _firstWhereOrNull(skills, (skill) => skill.id == id);
+  }
+
+  bool _shouldResetTask(Task task, DateTime now) {
+    return task.type == TaskType.repeating &&
+        task.isDone &&
+        task.nextResetAt != null &&
+        now.isAfter(task.nextResetAt!);
+  }
+
+  T? _firstWhereOrNull<T>(Iterable<T> items, bool Function(T item) predicate) {
+    for (final item in items) {
+      if (predicate(item)) return item;
+    }
+
+    return null;
   }
 }
 
@@ -176,7 +299,11 @@ class AppState extends ChangeNotifier {
 
 class AppStateProvider extends InheritedWidget {
   final AppState state;
-  const AppStateProvider({super.key, required this.state, required super.child});
+  const AppStateProvider({
+    super.key,
+    required this.state,
+    required super.child,
+  });
 
   static AppState of(BuildContext ctx) =>
       ctx.dependOnInheritedWidgetOfExactType<AppStateProvider>()!.state;

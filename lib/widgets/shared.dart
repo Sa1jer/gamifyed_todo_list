@@ -1,6 +1,81 @@
 import 'package:flutter/material.dart';
 import '../utils.dart';
 
+const _kPanelRadius = 14.0;
+
+class AppPanel extends StatelessWidget {
+  final bool isDark;
+  final Widget child;
+
+  const AppPanel({super.key, required this.isDark, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: surface(isDark),
+        borderRadius: BorderRadius.circular(_kPanelRadius),
+        border: Border.all(color: borderColor(isDark)),
+      ),
+      child: child,
+    );
+  }
+}
+
+class PanelDivider extends StatelessWidget {
+  final bool isDark;
+
+  const PanelDivider({super.key, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(height: 1, color: borderColor(isDark));
+  }
+}
+
+class EmptyStateMessage extends StatelessWidget {
+  final bool isDark;
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const EmptyStateMessage({
+    super.key,
+    required this.isDark,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final sub = subtext(isDark);
+
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: sub, size: 38),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            style: TextStyle(
+              color: sub,
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: TextStyle(color: sub.withAlpha(160), fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // PRESS FEEDBACK WRAPPER
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -257,14 +332,15 @@ class _XPBarState extends State<XPBar> with SingleTickerProviderStateMixin {
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
     animation: _a,
-    builder: (_, _x) => ClipRRect(
+    builder: (_, child) => ClipRRect(
       borderRadius: BorderRadius.circular(widget.height / 2),
-      child: LinearProgressIndicator(
-        value: _a.value.clamp(0.0, 1.0),
-        minHeight: widget.height,
-        backgroundColor: widget.color.withAlpha(35),
-        valueColor: AlwaysStoppedAnimation(widget.color),
-      ),
+      child: child,
+    ),
+    child: LinearProgressIndicator(
+      value: _a.value.clamp(0.0, 1.0),
+      minHeight: widget.height,
+      backgroundColor: widget.color.withAlpha(35),
+      valueColor: AlwaysStoppedAnimation(widget.color),
     ),
   );
 }
@@ -384,33 +460,31 @@ class _XPBubbleState extends State<XPBubble>
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
     animation: _c,
-    builder: (_, _x) => Positioned(
+    builder: (_, child) => Positioned(
       left: widget.position.dx - 50,
       top: widget.position.dy + _y.value,
-      child: Opacity(
-        opacity: _o.value,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF4A9EFF), Color(0xFF8B5CF6)],
-            ),
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF4A9EFF).withAlpha(100),
-                blurRadius: 12,
-              ),
-            ],
+      child: Opacity(opacity: _o.value, child: child),
+    ),
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF4A9EFF), Color(0xFF8B5CF6)],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF4A9EFF).withAlpha(100),
+            blurRadius: 12,
           ),
-          child: Text(
-            widget.message,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-          ),
+        ],
+      ),
+      child: Text(
+        widget.message,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 14,
         ),
       ),
     ),
