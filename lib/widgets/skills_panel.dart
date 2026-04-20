@@ -10,18 +10,24 @@ import 'dialogs.dart';
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class SkillsPanel extends StatelessWidget {
-  final AppState state;
-  const SkillsPanel({super.key, required this.state});
+  const SkillsPanel({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // Direct consumer — rebuilds immediately on every notifyListeners()
+    final state = AppStateProvider.of(context);
     final isDark = state.isDark;
+    final sfc = surface(isDark);
     final txt = textColor(isDark);
     final sub = subtext(isDark);
-    final activeTaskCounts = state.activeTaskCountsBySkill;
+    final bdr = borderColor(isDark);
 
-    return AppPanel(
-      isDark: isDark,
+    return Container(
+      decoration: BoxDecoration(
+        color: sfc,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: bdr),
+      ),
       child: Column(
         children: [
           // Header
@@ -66,7 +72,7 @@ class SkillsPanel extends StatelessWidget {
               ),
             ),
           ),
-          PanelDivider(isDark: isDark),
+          Container(height: 1, color: bdr),
           // List
           Expanded(
             child: ListView.separated(
@@ -75,13 +81,16 @@ class SkillsPanel extends StatelessWidget {
               separatorBuilder: (_, separator) => Container(
                 height: 1,
                 margin: const EdgeInsets.symmetric(horizontal: 12),
-                color: borderColor(isDark),
+                color: bdr,
               ),
               itemBuilder: (ctx, i) {
                 final sk = state.skills[i];
                 return SkillCard(
                   skill: sk,
-                  taskCount: activeTaskCounts[sk.id] ?? 0,
+                  taskCount: state
+                      .tasksForSkill(sk.id)
+                      .where((t) => !t.isDone)
+                      .length,
                   isSelected: state.selectedSkillId == sk.id,
                   isDark: isDark,
                   onTap: () => state.selectSkill(sk.id),
@@ -98,36 +107,42 @@ class SkillsPanel extends StatelessWidget {
 
   void _addDialog(BuildContext ctx) => showDialog(
     context: ctx,
-    builder: (_) => AddSkillDialog(
-      isDark: state.isDark,
-      onSave: (name, goal, checklist, color, icon) => state.addSkill(
-        Skill(
-          id: uid(),
-          name: name,
-          goal: goal,
-          color: color,
-          icon: icon,
-          checklist: checklist,
+    builder: (_) {
+      final state = AppStateProvider.of(ctx);
+      return AddSkillDialog(
+        isDark: state.isDark,
+        onSave: (name, goal, checklist, color, icon) => state.addSkill(
+          Skill(
+            id: uid(),
+            name: name,
+            goal: goal,
+            color: color,
+            icon: icon,
+            checklist: checklist,
+          ),
         ),
-      ),
-    ),
+      );
+    },
   );
 
   void _editDialog(BuildContext ctx, Skill sk) => showDialog(
     context: ctx,
-    builder: (_) => AddSkillDialog(
-      isDark: state.isDark,
-      existing: sk,
-      onSave: (name, goal, checklist, color, icon) {
-        sk.name = name;
-        sk.goal = goal;
-        sk.checklist = checklist;
-        sk.color = color;
-        sk.icon = icon;
-        sk.syncChecklistDone();
-        state.refresh();
-      },
-    ),
+    builder: (_) {
+      final state = AppStateProvider.of(ctx);
+      return AddSkillDialog(
+        isDark: state.isDark,
+        existing: sk,
+        onSave: (name, goal, checklist, color, icon) {
+          sk.name = name;
+          sk.goal = goal;
+          sk.checklist = checklist;
+          sk.color = color;
+          sk.icon = icon;
+          sk.syncChecklistDone();
+          state.refresh();
+        },
+      );
+    },
   );
 }
 

@@ -5,7 +5,6 @@ import 'shared.dart';
 import 'dialogs.dart';
 import 'skills_panel.dart';
 import 'tasks_panel.dart';
-import '../models.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TOP BAR
@@ -69,15 +68,20 @@ class TopBar extends StatelessWidget {
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PROFILE BAR
+// Reads profile DIRECTLY from AppStateProvider so it rebuilds the moment
+// any notifyListeners() fires — no intermediate widget chain required.
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class ProfileBar extends StatelessWidget {
-  final UserProfile profile;
   final bool isDark;
-  const ProfileBar({super.key, required this.profile, required this.isDark});
+  const ProfileBar({super.key, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
+    // dependOnInheritedWidgetOfExactType registers THIS widget as a direct
+    // dependent, so Flutter rebuilds it immediately when AppStateProvider changes.
+    final profile = AppStateProvider.of(context).profile;
+
     final sfc = surface(isDark);
     final txt = textColor(isDark);
     final sub = subtext(isDark);
@@ -202,18 +206,16 @@ class _MainPageState extends State<MainPage> {
           Column(
             children: [
               TopBar(isDark: isDark, onToggle: widget.onToggleTheme, state: s),
-              ProfileBar(profile: s.profile, isDark: isDark),
+              ProfileBar(isDark: isDark),
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      SizedBox(width: 380, child: SkillsPanel(state: s)),
+                      const SizedBox(width: 380, child: SkillsPanel()),
                       const SizedBox(width: 12),
-                      Expanded(
-                        child: TasksPanel(state: s, onComplete: _onComplete),
-                      ),
+                      Expanded(child: TasksPanel(onComplete: _onComplete)),
                     ],
                   ),
                 ),

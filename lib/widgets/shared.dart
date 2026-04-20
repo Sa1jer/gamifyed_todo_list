@@ -334,13 +334,12 @@ class _XPBarState extends State<XPBar> with SingleTickerProviderStateMixin {
     animation: _a,
     builder: (_, child) => ClipRRect(
       borderRadius: BorderRadius.circular(widget.height / 2),
-      child: child,
-    ),
-    child: LinearProgressIndicator(
-      value: _a.value.clamp(0.0, 1.0),
-      minHeight: widget.height,
-      backgroundColor: widget.color.withAlpha(35),
-      valueColor: AlwaysStoppedAnimation(widget.color),
+      child: LinearProgressIndicator(
+        value: _a.value.clamp(0.0, 1.0),
+        minHeight: widget.height,
+        backgroundColor: widget.color.withAlpha(35),
+        valueColor: AlwaysStoppedAnimation(widget.color),
+      ),
     ),
   );
 }
