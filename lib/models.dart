@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'utils.dart';
 
@@ -41,8 +42,6 @@ class Skill with XPOwner {
   final String id;
   String name, goal;
   List<String> checklist;
-
-  /// Parallel list tracking which checklist items are checked
   List<bool> checklistDone;
   Color color;
   IconData icon;
@@ -65,7 +64,6 @@ class Skill with XPOwner {
 
   String get initial => name.isNotEmpty ? name[0] : '?';
 
-  /// Ensure checklistDone stays in sync with checklist length
   void syncChecklistDone() {
     while (checklistDone.length < checklist.length) {
       checklistDone.add(false);
@@ -107,7 +105,6 @@ class Task {
     this.nextResetAt,
   });
 
-  /// Computed streak multiplier — only for repeating tasks after 2+ completions
   int get activeMultiplier {
     if (type != TaskType.repeating || streak < 2) return 1;
     if (streak >= 14) return 4;
@@ -121,11 +118,42 @@ class Task {
 
 // ─── UserProfile ──────────────────────────────────────────────────────────────
 
+enum Gender { male, female, nonBinary }
+
+const genderLabel = {
+  Gender.male: 'Мужской',
+  Gender.female: 'Женский',
+  Gender.nonBinary: 'Многофункциональный',
+};
+
 class UserProfile with XPOwner {
   String name;
   @override
   int level, xp;
-  UserProfile({required this.name, this.level = 1, this.xp = 0});
+
+  /// Cumulative XP earned all-time — never decreases on uncomplete
+  int totalXpEarned;
+
+  int? age;
+  Gender? gender;
+
+  /// Raw bytes of the user's chosen avatar image (PNG/JPG)
+  Uint8List? avatarBytes;
+
+  /// Raw bytes of the profile banner image (PNG/JPG)
+  Uint8List? bannerBytes;
+
+  UserProfile({
+    required this.name,
+    this.level = 1,
+    this.xp = 0,
+    this.totalXpEarned = 0,
+    this.age,
+    this.gender,
+    this.avatarBytes,
+    this.bannerBytes,
+  });
+
   String get initial => name.isNotEmpty ? name[0].toUpperCase() : '?';
 }
 

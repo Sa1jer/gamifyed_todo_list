@@ -1,10 +1,7 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'models.dart';
 import 'utils.dart';
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// APP STATE
-// ═══════════════════════════════════════════════════════════════════════════════
 
 class AppState extends ChangeNotifier {
   bool _isDark = true;
@@ -12,7 +9,7 @@ class AppState extends ChangeNotifier {
 
   bool get isDark => _isDark;
 
-  final UserProfile profile = UserProfile(name: 'Saijer');
+  final UserProfile profile = UserProfile(name: 'Your Name');
   final List<HistoryEntry> history = [];
 
   final List<Skill> skills = [
@@ -87,39 +84,42 @@ class AppState extends ChangeNotifier {
 
   AppState() {
     _resetExpiredTasks();
-    _syncSkillChecklists();
-  }
-
-  void _syncSkillChecklists() {
-    for (final skill in skills) {
-      skill.syncChecklistDone();
+    for (final s in skills) {
+      s.syncChecklistDone();
     }
   }
 
-  bool _resetExpiredTasks() {
-    final now = DateTime.now();
-    var didResetAnyTask = false;
-
-    for (final t in tasks) {
-      if (!_shouldResetTask(t, now)) continue;
-      t.isDone = false;
-      t.earnedXP = 0;
-      t.nextResetAt = null;
-      didResetAnyTask = true;
-    }
-
-    return didResetAnyTask;
-  }
-
-  void checkResets() {
-    if (!_resetExpiredTasks()) return;
-    notifyListeners();
-  }
+  // ── Theme ────────────────────────────────────────────────────────────────────
 
   void toggleTheme() {
     _isDark = !_isDark;
     notifyListeners();
   }
+
+  // ── Resets ───────────────────────────────────────────────────────────────────
+
+  bool _resetExpiredTasks() {
+    final now = DateTime.now();
+    var changed = false;
+    for (final t in tasks) {
+      if (t.type == TaskType.repeating &&
+          t.isDone &&
+          t.nextResetAt != null &&
+          now.isAfter(t.nextResetAt!)) {
+        t.isDone = false;
+        t.earnedXP = 0;
+        t.nextResetAt = null;
+        changed = true;
+      }
+    }
+    return changed;
+  }
+
+  void checkResets() {
+    if (_resetExpiredTasks()) notifyListeners();
+  }
+
+  // ── Queries ──────────────────────────────────────────────────────────────────
 
   List<Task> tasksForSkill(String id) =>
       tasks.where((t) => t.skillId == id).toList();
@@ -127,36 +127,23 @@ class AppState extends ChangeNotifier {
   ({List<Task> active, List<Task> completed}) taskSectionsForSkill(
     String skillId,
   ) {
-    final active = <Task>[];
-    final completed = <Task>[];
-
-    for (final task in tasks) {
-      if (task.skillId != skillId) continue;
-      if (task.isDone) {
-        completed.add(task);
-      } else {
-        active.add(task);
-      }
+    final active = <Task>[], completed = <Task>[];
+    for (final t in tasks) {
+      if (t.skillId != skillId) continue;
+      (t.isDone ? completed : active).add(t);
     }
-
     return (active: active, completed: completed);
   }
 
-  Map<String, int> get activeTaskCountsBySkill {
-    final counts = <String, int>{};
-
-    for (final task in tasks) {
-      if (task.isDone) continue;
-      counts.update(task.skillId, (count) => count + 1, ifAbsent: () => 1);
-    }
-
-    return counts;
-  }
+  int activeTaskCountForSkill(String skillId) =>
+      tasks.where((t) => t.skillId == skillId && !t.isDone).length;
 
   Skill? get selectedSkill {
     if (selectedSkillId == null) return null;
     return _skillById(selectedSkillId!);
   }
+
+  int get activeSkillCount => skills.length;
 
   // ── Task completion ──────────────────────────────────────────────────────────
 
@@ -172,6 +159,9 @@ class AppState extends ChangeNotifier {
     if (task.type == TaskType.repeating) {
       task.nextResetAt = nextReset(task.repeatFrequency, task.repeatCustomDays);
     }
+
+    // Cumulative total — never decremented on uncomplete
+    profile.totalXpEarned += earned;
 
     final globalUp = profile.addXP(earned);
     int skillUp = 0;
@@ -198,6 +188,7 @@ class AppState extends ChangeNotifier {
     task.earnedXP = 0;
     task.nextResetAt = null;
 
+    // NOTE: totalXpEarned is NOT decremented — it's a historical total
     profile.removeXP(earned);
     _skillById(task.skillId)?.removeXP(earned);
 
@@ -214,12 +205,40 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ── Profile updates ──────────────────────────────────────────────────────────
+
+  void updateProfileName(String name) {
+    if (name.trim().isEmpty) return;
+    profile.name = name.trim();
+    notifyListeners();
+  }
+
+  void updateProfileAge(int? age) {
+    profile.age = age;
+    notifyListeners();
+  }
+
+  void updateProfileGender(Gender? gender) {
+    profile.gender = gender;
+    notifyListeners();
+  }
+
+  void updateProfileAvatar(Uint8List? bytes) {
+    profile.avatarBytes = bytes;
+    notifyListeners();
+  }
+
+  void updateProfileBanner(Uint8List? bytes) {
+    profile.bannerBytes = bytes;
+    notifyListeners();
+  }
+
   // ── CRUD ─────────────────────────────────────────────────────────────────────
 
   void selectSkill(String id) {
-    final nextSelectedSkillId = selectedSkillId == id ? null : id;
-    if (selectedSkillId == nextSelectedSkillId) return;
-    selectedSkillId = nextSelectedSkillId;
+    final next = selectedSkillId == id ? null : id;
+    if (selectedSkillId == next) return;
+    selectedSkillId = next;
     notifyListeners();
   }
 
@@ -270,25 +289,16 @@ class AppState extends ChangeNotifier {
   }
 
   Task? _taskById(String id) {
-    return _firstWhereOrNull(tasks, (task) => task.id == id);
+    for (final t in tasks) {
+      if (t.id == id) return t;
+    }
+    return null;
   }
 
   Skill? _skillById(String id) {
-    return _firstWhereOrNull(skills, (skill) => skill.id == id);
-  }
-
-  bool _shouldResetTask(Task task, DateTime now) {
-    return task.type == TaskType.repeating &&
-        task.isDone &&
-        task.nextResetAt != null &&
-        now.isAfter(task.nextResetAt!);
-  }
-
-  T? _firstWhereOrNull<T>(Iterable<T> items, bool Function(T item) predicate) {
-    for (final item in items) {
-      if (predicate(item)) return item;
+    for (final s in skills) {
+      if (s.id == id) return s;
     }
-
     return null;
   }
 }

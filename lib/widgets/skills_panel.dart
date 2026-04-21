@@ -14,7 +14,6 @@ class SkillsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Direct consumer — rebuilds immediately on every notifyListeners()
     final state = AppStateProvider.of(context);
     final isDark = state.isDark;
     final sfc = surface(isDark);
@@ -30,7 +29,6 @@ class SkillsPanel extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Header
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 12, 8),
             child: Row(
@@ -73,12 +71,11 @@ class SkillsPanel extends StatelessWidget {
             ),
           ),
           Container(height: 1, color: bdr),
-          // List
           Expanded(
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(vertical: 6),
               itemCount: state.skills.length,
-              separatorBuilder: (_, separator) => Container(
+              separatorBuilder: (_, _) => Container(
                 height: 1,
                 margin: const EdgeInsets.symmetric(horizontal: 12),
                 color: bdr,
@@ -87,10 +84,7 @@ class SkillsPanel extends StatelessWidget {
                 final sk = state.skills[i];
                 return SkillCard(
                   skill: sk,
-                  taskCount: state
-                      .tasksForSkill(sk.id)
-                      .where((t) => !t.isDone)
-                      .length,
+                  taskCount: state.activeTaskCountForSkill(sk.id),
                   isSelected: state.selectedSkillId == sk.id,
                   isDark: isDark,
                   onTap: () => state.selectSkill(sk.id),
@@ -184,12 +178,14 @@ class _SkillCardState extends State<SkillCard> {
       bg = isDark ? const Color(0xFF22222E) : const Color(0xFFF0F0F8);
     }
 
+    // FIX: wrap in ClipRect to prevent AnimatedContainer overflow error
     return MouseRegion(
       onEnter: (_) => setState(() => _h = true),
       onExit: (_) => setState(() => _h = false),
       child: GestureDetector(
         onTap: widget.onTap,
         child: AnimatedContainer(
+          clipBehavior: Clip.hardEdge, // ← FIX overflow
           duration: const Duration(milliseconds: 150),
           margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
@@ -233,20 +229,21 @@ class _SkillCardState extends State<SkillCard> {
                         const SizedBox(width: 6),
                         LvlBadge(level: sk.level, color: sk.color),
                         if (widget.taskCount > 0) ...[
-                          const SizedBox(width: 4),
+                          // FIX badge: smaller (15px), light uniform color, slight right offset
+                          const SizedBox(width: 6),
                           Container(
-                            width: 18,
-                            height: 18,
-                            decoration: BoxDecoration(
-                              color: sk.color,
+                            width: 15,
+                            height: 15,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFDDDDEE), // light uniform color
                               shape: BoxShape.circle,
                             ),
                             child: Center(
                               child: Text(
                                 '${widget.taskCount}',
                                 style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
+                                  color: Color(0xFF2A2A40),
+                                  fontSize: 9,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -275,7 +272,7 @@ class _SkillCardState extends State<SkillCard> {
                   ],
                 ),
               ),
-              // Hover actions
+              // Hover actions — use Stack overlay approach to avoid pushing layout
               AnimatedContainer(
                 duration: const Duration(milliseconds: 150),
                 width: (_h || widget.isSelected) ? 48 : 0,
