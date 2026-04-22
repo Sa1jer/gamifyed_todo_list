@@ -83,27 +83,29 @@ class ProfileBar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(24, 6, 24, 14),
       child: Row(children: [
         // Avatar — clickable → profile
-        GestureDetector(
-          onTap: () => _openProfile(context),
-          child: Container(
-            width: 44, height: 44,
-            decoration: BoxDecoration(
-              gradient: profile.avatarBytes == null
-                  ? const LinearGradient(
-                      colors: [Color(0xFF4A9EFF), Color(0xFF8B5CF6)],
-                      begin: Alignment.topLeft, end: Alignment.bottomRight)
+        HoverScale(
+          child: GestureDetector(
+            onTap: () => _openProfile(context),
+            child: Container(
+              width: 44, height: 44,
+              decoration: BoxDecoration(
+                gradient: profile.avatarBytes == null
+                    ? const LinearGradient(
+                        colors: [Color(0xFF4A9EFF), Color(0xFF8B5CF6)],
+                        begin: Alignment.topLeft, end: Alignment.bottomRight)
+                    : null,
+                image: profile.avatarBytes != null
+                    ? DecorationImage(
+                        image: MemoryImage(profile.avatarBytes!), fit: BoxFit.cover)
+                    : null,
+                shape: BoxShape.circle,
+              ),
+              child: profile.avatarBytes == null
+                  ? Center(child: Text(profile.initial,
+                      style: const TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)))
                   : null,
-              image: profile.avatarBytes != null
-                  ? DecorationImage(
-                      image: MemoryImage(profile.avatarBytes!), fit: BoxFit.cover)
-                  : null,
-              shape: BoxShape.circle,
             ),
-            child: profile.avatarBytes == null
-                ? Center(child: Text(profile.initial,
-                    style: const TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)))
-                : null,
           ),
         ),
         const SizedBox(width: 14),

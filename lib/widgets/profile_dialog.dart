@@ -83,43 +83,54 @@ class _ProfileDialogState extends State<ProfileDialog> {
           width: 460,
           constraints: const BoxConstraints(maxHeight: 680),
           color: bg,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+          child: Stack(
+            clipBehavior: Clip.none,
             children: [
-              // ── Banner + Avatar ────────────────────────────────────────────
-              _buildBannerSection(context, s, p, isDark),
-              // ── Scrollable Body ────────────────────────────────────────────
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildNameRow(context, s, p, txt, sub),
-                      const SizedBox(height: 4),
-                      LvlBadge(level: p.level, color: const Color(0xFF4A9EFF)),
-                      const SizedBox(height: 18),
-                      Container(height: 1, color: bdr),
-                      const SizedBox(height: 14),
-                      _buildXPSection(p, sub),
-                      const SizedBox(height: 6),
-                      _buildTotalXP(p, txt, sub),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Изучаю ${s.activeSkillCount} ${_skillWord(s.activeSkillCount)}',
-                        style: TextStyle(color: sub, fontSize: 13),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // ── Banner ─────────────────────────────────────────────────
+                  _buildBannerSection(context, s, p),
+                  // ── Scrollable Body ───────────────────────────────────────
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildNameRow(context, s, p, txt, sub),
+                          const SizedBox(height: 4),
+                          LvlBadge(level: p.level, color: const Color(0xFF4A9EFF)),
+                          const SizedBox(height: 18),
+                          Container(height: 1, color: bdr),
+                          const SizedBox(height: 14),
+                          _buildXPSection(p, sub),
+                          const SizedBox(height: 6),
+                          _buildTotalXP(p, txt, sub),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Изучаю ${s.activeSkillCount} ${_skillWord(s.activeSkillCount)}',
+                            style: TextStyle(color: sub, fontSize: 13),
+                          ),
+                          const SizedBox(height: 18),
+                          Container(height: 1, color: bdr),
+                          const SizedBox(height: 14),
+                          _buildPersonalInfo(context, s, p, isDark, txt, sub, bdr),
+                          const SizedBox(height: 18),
+                          Container(height: 1, color: bdr),
+                          const SizedBox(height: 14),
+                          _buildSkillsSection(context, s, isDark, txt, sub),
+                        ],
                       ),
-                      const SizedBox(height: 18),
-                      Container(height: 1, color: bdr),
-                      const SizedBox(height: 14),
-                      _buildPersonalInfo(context, s, p, isDark, txt, sub, bdr),
-                      const SizedBox(height: 18),
-                      Container(height: 1, color: bdr),
-                      const SizedBox(height: 14),
-                      _buildSkillsSection(context, s, isDark, txt, sub),
-                    ],
+                    ),
                   ),
-                ),
+                ],
+              ),
+              // Keep avatar above the scrollable body during scroll.
+              Positioned(
+                top: 120,
+                left: 24,
+                child: _buildAvatar(context, s, p, isDark),
               ),
             ],
           ),
@@ -134,7 +145,6 @@ class _ProfileDialogState extends State<ProfileDialog> {
     BuildContext context,
     AppState s,
     UserProfile p,
-    bool isDark,
   ) {
     return SizedBox(
       height: 160,
@@ -199,70 +209,73 @@ class _ProfileDialogState extends State<ProfileDialog> {
               ),
             ),
           ),
-          // Avatar (overlaps banner bottom)
-          Positioned(
-            bottom: -40,
-            left: 24,
-            child: GestureDetector(
-              onTap: () async {
-                final bytes = await _pickImage();
-                if (bytes != null && context.mounted) {
-                  s.updateProfileAvatar(bytes);
-                }
-              },
-              child: Stack(
-                children: [
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: surface(isDark), width: 3),
-                      gradient: p.avatarBytes == null
-                          ? const LinearGradient(
-                              colors: [Color(0xFF4A9EFF), Color(0xFF8B5CF6)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            )
-                          : null,
-                      image: p.avatarBytes != null
-                          ? DecorationImage(
-                              image: MemoryImage(p.avatarBytes!),
-                              fit: BoxFit.cover,
-                            )
-                          : null,
-                    ),
-                    child: p.avatarBytes == null
-                        ? Center(
-                            child: Text(
-                              p.initial,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 32,
-                              ),
-                            ),
-                          )
-                        : null,
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      width: 24,
-                      height: 24,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF4A9EFF),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.edit,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAvatar(
+    BuildContext context,
+    AppState s,
+    UserProfile p,
+    bool isDark,
+  ) {
+    return GestureDetector(
+      onTap: () async {
+        final bytes = await _pickImage();
+        if (bytes != null && context.mounted) {
+          s.updateProfileAvatar(bytes);
+        }
+      },
+      child: Stack(
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: surface(isDark), width: 3),
+              gradient: p.avatarBytes == null
+                  ? const LinearGradient(
+                      colors: [Color(0xFF4A9EFF), Color(0xFF8B5CF6)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    )
+                  : null,
+              image: p.avatarBytes != null
+                  ? DecorationImage(
+                      image: MemoryImage(p.avatarBytes!),
+                      fit: BoxFit.cover,
+                    )
+                  : null,
+            ),
+            child: p.avatarBytes == null
+                ? Center(
+                    child: Text(
+                      p.initial,
+                      style: const TextStyle(
                         color: Colors.white,
-                        size: 13,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 32,
                       ),
                     ),
-                  ),
-                ],
+                  )
+                : null,
+          ),
+          Positioned(
+            bottom: 0,
+            right: 0,
+            child: Container(
+              width: 24,
+              height: 24,
+              decoration: const BoxDecoration(
+                color: Color(0xFF4A9EFF),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.edit,
+                color: Colors.white,
+                size: 13,
               ),
             ),
           ),

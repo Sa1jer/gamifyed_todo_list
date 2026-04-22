@@ -117,6 +117,40 @@ class _PressFeedbackState extends State<PressFeedback> {
   );
 }
 
+class HoverScale extends StatefulWidget {
+  final Widget child;
+  final double scale;
+  final Duration duration;
+  final Alignment alignment;
+  const HoverScale({
+    super.key,
+    required this.child,
+    this.scale = 1.068,
+    this.duration = const Duration(milliseconds: 160),
+    this.alignment = Alignment.center,
+  });
+
+  @override
+  State<HoverScale> createState() => _HoverScaleState();
+}
+
+class _HoverScaleState extends State<HoverScale> {
+  bool _h = false;
+
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+    onEnter: (_) => setState(() => _h = true),
+    onExit: (_) => setState(() => _h = false),
+    child: AnimatedScale(
+      scale: _h ? widget.scale : 1.0,
+      alignment: widget.alignment,
+      duration: widget.duration,
+      curve: Curves.easeOutCubic,
+      child: widget.child,
+    ),
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // SMALL BUTTON  (solid color, press = scale + darken)
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -361,7 +395,7 @@ class LvlBadge extends StatelessWidget {
       border: Border.all(color: color.withAlpha(80)),
     ),
     child: Text(
-      'Уровень $level',
+      'Lvl $level',
       style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
     ),
   );

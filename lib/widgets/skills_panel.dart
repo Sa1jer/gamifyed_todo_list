@@ -49,11 +49,13 @@ class SkillsPanel extends StatelessWidget {
                   style: TextStyle(color: sub, fontSize: 13),
                 ),
                 const Spacer(),
-                SmallBtn(
-                  label: 'Добавить',
-                  icon: Icons.add,
-                  color: const Color(0xFF4A9EFF),
-                  onTap: () => _addDialog(context),
+                HoverScale(
+                  child: SmallBtn(
+                    label: 'Добавить',
+                    icon: Icons.add,
+                    color: const Color(0xFF4A9EFF),
+                    onTap: () => _addDialog(context),
+                  ),
                 ),
               ],
             ),
@@ -174,130 +176,134 @@ class _SkillCardState extends State<SkillCard> {
     Color bg = Colors.transparent;
     if (widget.isSelected) {
       bg = sk.color.withAlpha(22);
-    } else if (_h) {
-      bg = isDark ? const Color(0xFF22222E) : const Color(0xFFF0F0F8);
     }
 
     // FIX: wrap in ClipRect to prevent AnimatedContainer overflow error
     return MouseRegion(
       onEnter: (_) => setState(() => _h = true),
       onExit: (_) => setState(() => _h = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: AnimatedContainer(
-          clipBehavior: Clip.hardEdge, // ← FIX overflow
-          duration: const Duration(milliseconds: 150),
-          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(10),
-            border: widget.isSelected
-                ? Border.all(color: sk.color.withAlpha(100))
-                : null,
-          ),
-          child: Row(
-            children: [
-              // Icon badge
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: sk.color.withAlpha(30),
-                  borderRadius: BorderRadius.circular(10),
+      child: AnimatedScale(
+        scale: _h ? 0.989 : 1.026,
+        alignment: Alignment.center,
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOutCubic,
+        child: GestureDetector(
+          onTap: widget.onTap,
+          child: AnimatedContainer(
+            clipBehavior: Clip.hardEdge, // ← FIX overflow
+            duration: const Duration(milliseconds: 150),
+            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(10),
+              border: widget.isSelected
+                  ? Border.all(color: sk.color.withAlpha(100))
+                  : null,
+            ),
+            child: Row(
+              children: [
+                // Icon badge
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: sk.color.withAlpha(30),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(sk.icon, color: sk.color, size: 18),
                 ),
-                child: Icon(sk.icon, color: sk.color, size: 18),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            sk.name,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                              color: txt,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              sk.name,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                                color: txt,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                        const SizedBox(width: 6),
-                        LvlBadge(level: sk.level, color: sk.color),
-                        if (widget.taskCount > 0) ...[
-                          // FIX badge: smaller (15px), light uniform color, slight right offset
                           const SizedBox(width: 6),
-                          Container(
-                            width: 15,
-                            height: 15,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFDDDDEE), // light uniform color
-                              shape: BoxShape.circle,
-                            ),
-                            child: Center(
-                              child: Text(
-                                '${widget.taskCount}',
-                                style: const TextStyle(
-                                  color: Color(0xFF2A2A40),
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
+                          LvlBadge(level: sk.level, color: sk.color),
+                          if (widget.taskCount > 0) ...[
+                            // FIX badge: smaller (15px), light uniform color, slight right offset
+                            const SizedBox(width: 6),
+                            Container(
+                              width: 15,
+                              height: 15,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFDDDDEE), // light uniform color
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '${widget.taskCount}',
+                                  style: const TextStyle(
+                                    color: Color(0xFF2A2A40),
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                             ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 5),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: XPBar(
+                              progress: sk.progress,
+                              color: sk.color,
+                              height: 5,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${sk.xp}/${sk.xpNeeded}',
+                            style: TextStyle(color: sub, fontSize: 10),
                           ),
                         ],
-                      ],
-                    ),
-                    const SizedBox(height: 5),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: XPBar(
-                            progress: sk.progress,
-                            color: sk.color,
-                            height: 5,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          '${sk.xp}/${sk.xpNeeded}',
-                          style: TextStyle(color: sub, fontSize: 10),
-                        ),
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              // Hover actions — use Stack overlay approach to avoid pushing layout
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                width: (_h || widget.isSelected) ? 48 : 0,
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: SizedBox(
-                    width: 48,
-                    child: Row(
-                      children: [
-                        MiniBtn(
-                          icon: Icons.edit,
-                          color: sub,
-                          onTap: widget.onEdit,
-                        ),
-                        MiniBtn(
-                          icon: Icons.delete_outline,
-                          color: const Color(0xFFFF3B30),
-                          onTap: widget.onDelete,
-                        ),
-                      ],
+                // Hover actions — use Stack overlay approach to avoid pushing layout
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  width: (_h || widget.isSelected) ? 50 : 0,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: SizedBox(
+                      width: 50,
+                      child: Row(
+                        children: [
+                          MiniBtn(
+                            icon: Icons.edit,
+                            color: sub,
+                            onTap: widget.onEdit,
+                          ),
+                          MiniBtn(
+                            icon: Icons.delete_outline,
+                            color: const Color(0xFFFF3B30),
+                            onTap: widget.onDelete,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
