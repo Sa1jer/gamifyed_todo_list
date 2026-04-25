@@ -33,10 +33,46 @@ class TopBar extends StatelessWidget {
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: txt)),
         const Spacer(),
         HoverIconBtn(
+          icon: Icons.emoji_events,
+          color: sub,
+          onTap: () => showDialog(
+            context: context,
+            builder: (_) => AchievementsDialog(achievements: state.achievements, isDark: isDark),
+          ),
+        ),
+        const SizedBox(width: 4),
+        HoverIconBtn(
           icon: Icons.history, color: sub,
           onTap: () => showDialog(
             context: context,
             builder: (_) => HistoryDialog(history: state.history, isDark: isDark),
+          ),
+        ),
+        const SizedBox(width: 4),
+        HoverIconBtn(
+          icon: Icons.bar_chart,
+          color: sub,
+          onTap: () => showDialog(
+            context: context,
+            builder: (_) => StatsDialog(state: state),
+          ),
+        ),
+        const SizedBox(width: 4),
+        HoverIconBtn(
+          icon: Icons.shield,
+          color: sub,
+          onTap: () => showDialog(
+            context: context,
+            builder: (_) => BossesDialog(state: state),
+          ),
+        ),
+        const SizedBox(width: 4),
+        HoverIconBtn(
+          icon: Icons.calendar_month,
+          color: sub,
+          onTap: () => showDialog(
+            context: context,
+            builder: (_) => CalendarDialog(state: state),
           ),
         ),
         const SizedBox(width: 4),

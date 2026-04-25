@@ -1,14 +1,24 @@
-// To-Do List RPG 1.0.5
+// To-Do List RPG 1.0.6
 // Entry point — kept minimal (~90 lines)
 
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'storage_service.dart';
+import 'notification_service.dart';
 import 'app_state.dart';
 import 'utils.dart';
 import 'widgets/main_page.dart';
 
-void main() => runApp(const RPGApp());
+final _storage = StorageService();
+final _notifications = NotificationService();
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await _storage.init();
+  await _notifications.init();
+  runApp(RPGApp(storage: _storage));
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CORNER-REVEAL THEME TRANSITION
@@ -36,13 +46,14 @@ class _RevealClipper extends CustomClipper<Path> {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class RPGApp extends StatefulWidget {
-  const RPGApp({super.key});
+  final StorageService storage;
+  const RPGApp({super.key, required this.storage});
   @override
   State<RPGApp> createState() => _RPGAppState();
 }
 
 class _RPGAppState extends State<RPGApp> with SingleTickerProviderStateMixin {
-  final AppState _state = AppState();
+  late AppState _state;
   final _repaintKey = GlobalKey();
 
   late AnimationController _revealCtrl;
@@ -54,6 +65,7 @@ class _RPGAppState extends State<RPGApp> with SingleTickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    _state = AppState(storage: widget.storage);
     _state.addListener(_onStateChange);
     _revealCtrl = AnimationController(
       vsync: this,
@@ -63,6 +75,7 @@ class _RPGAppState extends State<RPGApp> with SingleTickerProviderStateMixin {
       parent: _revealCtrl,
       curve: Curves.easeInOutCubic,
     );
+    _state.loadSavedData();
   }
 
   void _onStateChange() => setState(() {});

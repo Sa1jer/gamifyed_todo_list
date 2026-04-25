@@ -559,6 +559,11 @@ class _TaskTileState extends State<TaskTile> {
                         spacing: 6,
                         runSpacing: 4,
                         children: [
+                          if (t.priority != Priority.medium)
+                            TaskBadge(
+                              label: priorityLabel[t.priority]!,
+                              color: priorityColor[t.priority]!,
+                            ),
                           TaskBadge(
                             label: typeLabel[t.type]!,
                             color: typeColor[t.type]!,
