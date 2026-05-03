@@ -5,6 +5,7 @@ import 'shared.dart';
 import 'dialogs.dart';
 import 'skills_panel.dart';
 import 'tasks_panel.dart';
+import 'today_dashboard.dart';
 import 'profile_dialog.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -30,16 +31,16 @@ class TopBar extends StatelessWidget {
 
     return Container(
       color: sfc,
-      padding: const EdgeInsets.fromLTRB(24, 38, 24, 12),
+      padding: const EdgeInsets.fromLTRB(22, 22, 22, 8),
       child: Row(
         children: [
-          const Icon(Icons.security, color: Color(0xFF4A9EFF), size: 20),
+          const Icon(Icons.security, color: Color(0xFF4A9EFF), size: 18),
           const SizedBox(width: 8),
           Text(
             'RPG To-Do List',
             style: TextStyle(
               fontWeight: FontWeight.bold,
-              fontSize: 18,
+              fontSize: 17,
               color: txt,
             ),
           ),
@@ -135,7 +136,7 @@ class ProfileBar extends StatelessWidget {
 
     return Container(
       color: sfc,
-      padding: const EdgeInsets.fromLTRB(24, 6, 24, 14),
+      padding: const EdgeInsets.fromLTRB(22, 4, 22, 8),
       child: Row(
         children: [
           // Avatar — clickable → profile
@@ -143,8 +144,8 @@ class ProfileBar extends StatelessWidget {
             child: GestureDetector(
               onTap: () => _openProfile(context),
               child: Container(
-                width: 44,
-                height: 44,
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
                   gradient: profile.avatarBytes == null
                       ? const LinearGradient(
@@ -168,7 +169,7 @@ class ProfileBar extends StatelessWidget {
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
-                            fontSize: 18,
+                            fontSize: 16,
                           ),
                         ),
                       )
@@ -176,7 +177,7 @@ class ProfileBar extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -190,7 +191,7 @@ class ProfileBar extends StatelessWidget {
                         profile.name,
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 15,
+                          fontSize: 14,
                           color: txt,
                         ),
                       ),
@@ -206,14 +207,14 @@ class ProfileBar extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 5),
                 Row(
                   children: [
                     Expanded(
                       child: XPBar(
                         progress: profile.progress,
                         color: const Color(0xFF4A9EFF),
-                        height: 8,
+                        height: 7,
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -281,12 +282,22 @@ class _MainPageState extends State<MainPage> {
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Column(
                     children: [
-                      const SizedBox(width: 380, child: SkillsPanel()),
-                      const SizedBox(width: 12),
-                      Expanded(child: TasksPanel(onComplete: _onComplete)),
+                      TodayDashboard(onComplete: _onComplete),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(width: 380, child: SkillsPanel()),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: TasksPanel(onComplete: _onComplete),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
