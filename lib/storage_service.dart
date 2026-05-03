@@ -12,6 +12,11 @@ class StorageService {
   static const String _achievementsBox = 'achievements';
   static const String _statsBox = 'stats';
   static const String _bossesBox = 'bosses';
+  static const String _metaBox = 'meta';
+
+  static const String _skillsSavedKey = 'skillsSaved';
+  static const String _tasksSavedKey = 'tasksSaved';
+  static const String _isDarkKey = 'isDark';
 
   late Box<String> _skills;
   late Box<String> _tasks;
@@ -20,6 +25,7 @@ class StorageService {
   late Box<String> _achievements;
   late Box<String> _stats;
   late Box<String> _bosses;
+  late Box<String> _meta;
 
   bool _initialized = false;
 
@@ -35,6 +41,7 @@ class StorageService {
     _achievements = await Hive.openBox<String>(_achievementsBox);
     _stats = await Hive.openBox<String>(_statsBox);
     _bosses = await Hive.openBox<String>(_bossesBox);
+    _meta = await Hive.openBox<String>(_metaBox);
 
     _initialized = true;
   }
@@ -45,8 +52,31 @@ class StorageService {
     }
   }
 
+  Future<bool> hasSavedSkills() async {
+    _ensureInit();
+    return _meta.get(_skillsSavedKey) == 'true';
+  }
+
+  Future<bool> hasSavedTasks() async {
+    _ensureInit();
+    return _meta.get(_tasksSavedKey) == 'true';
+  }
+
+  Future<bool?> loadTheme() async {
+    _ensureInit();
+    final raw = _meta.get(_isDarkKey);
+    if (raw == null) return null;
+    return raw == 'true';
+  }
+
+  Future<void> saveTheme(bool isDark) async {
+    _ensureInit();
+    await _meta.put(_isDarkKey, isDark ? 'true' : 'false');
+  }
+
   Future<void> saveSkills(List<Skill> skills) async {
     _ensureInit();
+    await _meta.put(_skillsSavedKey, 'true');
     await _skills.clear();
     for (final skill in skills) {
       await _skills.put(skill.id, _encodeSkill(skill));
@@ -67,6 +97,7 @@ class StorageService {
 
   Future<void> saveTasks(List<Task> tasks) async {
     _ensureInit();
+    await _meta.put(_tasksSavedKey, 'true');
     await _tasks.clear();
     for (final task in tasks) {
       await _tasks.put(task.id, _encodeTask(task));
@@ -94,8 +125,12 @@ class StorageService {
       'totalXpEarned': profile.totalXpEarned,
       'age': profile.age,
       'gender': profile.gender?.index,
-      'avatarBytes': profile.avatarBytes != null ? base64Encode(profile.avatarBytes!) : null,
-      'bannerBytes': profile.bannerBytes != null ? base64Encode(profile.bannerBytes!) : null,
+      'avatarBytes': profile.avatarBytes != null
+          ? base64Encode(profile.avatarBytes!)
+          : null,
+      'bannerBytes': profile.bannerBytes != null
+          ? base64Encode(profile.bannerBytes!)
+          : null,
     };
     await _profile.put('profile', jsonEncode(data));
   }
@@ -114,9 +149,15 @@ class StorageService {
       xp: data['xp'] as int? ?? 0,
       totalXpEarned: data['totalXpEarned'] as int? ?? 0,
       age: data['age'] as int?,
-      gender: data['gender'] != null ? Gender.values[data['gender'] as int] : null,
-      avatarBytes: data['avatarBytes'] != null ? base64Decode(data['avatarBytes'] as String) : null,
-      bannerBytes: data['bannerBytes'] != null ? base64Decode(data['bannerBytes'] as String) : null,
+      gender: data['gender'] != null
+          ? Gender.values[data['gender'] as int]
+          : null,
+      avatarBytes: data['avatarBytes'] != null
+          ? base64Decode(data['avatarBytes'] as String)
+          : null,
+      bannerBytes: data['bannerBytes'] != null
+          ? base64Decode(data['bannerBytes'] as String)
+          : null,
     );
   }
 
@@ -199,13 +240,23 @@ class StorageService {
     'checklist': s.checklist,
     'checklistDone': s.checklistDone,
     'color': s.color.toARGB32(),
-    'iconCodePoint': s.icon.codePoint,
+    'iconName': s.icon.codePoint.toString(),
     'level': s.level,
     'xp': s.xp,
   });
 
+  IconData _getIconFromCodePoint(String codePoint) {
+    final cp = int.tryParse(codePoint);
+    if (cp == null) return Icons.bolt;
+    for (final icon in [...kIconsPrimary, ...kIconsExtra]) {
+      if (icon.codePoint == cp) return icon;
+    }
+    return Icons.bolt;
+  }
+
   Skill _decodeSkill(String json) {
     final d = jsonDecode(json) as Map<String, dynamic>;
+    final iconName = d['iconName'] as String;
     return Skill(
       id: d['id'] as String,
       name: d['name'] as String,
@@ -213,7 +264,7 @@ class StorageService {
       checklist: (d['checklist'] as List).cast<String>(),
       checklistDone: (d['checklistDone'] as List).cast<bool>(),
       color: Color(d['color'] as int),
-      icon: IconData(d['iconCodePoint'] as int, fontFamily: 'MaterialIcons'),
+      icon: _getIconFromCodePoint(iconName),
       level: d['level'] as int? ?? 1,
       xp: d['xp'] as int? ?? 0,
     );
@@ -231,6 +282,7 @@ class StorageService {
     'repeatFrequency': t.repeatFrequency.index,
     'repeatCustomDays': t.repeatCustomDays,
     'nextResetAt': t.nextResetAt?.toIso8601String(),
+    'lastCompletedAt': t.lastCompletedAt?.toIso8601String(),
     'priority': t.priority.index,
     'subtasks': t.subtasks,
     'subtaskDone': t.subtaskDone,
@@ -251,9 +303,15 @@ class StorageService {
       isDone: d['isDone'] as bool? ?? false,
       streak: d['streak'] as int? ?? 0,
       earnedXP: d['earnedXP'] as int? ?? 0,
-      repeatFrequency: RepeatFrequency.values[d['repeatFrequency'] as int? ?? 0],
+      repeatFrequency:
+          RepeatFrequency.values[d['repeatFrequency'] as int? ?? 0],
       repeatCustomDays: d['repeatCustomDays'] as int? ?? 1,
-      nextResetAt: d['nextResetAt'] != null ? DateTime.parse(d['nextResetAt'] as String) : null,
+      nextResetAt: d['nextResetAt'] != null
+          ? DateTime.parse(d['nextResetAt'] as String)
+          : null,
+      lastCompletedAt: d['lastCompletedAt'] != null
+          ? DateTime.parse(d['lastCompletedAt'] as String)
+          : null,
       priority: Priority.values[d['priority'] as int? ?? 1],
       subtasks: (d['subtasks'] as List?)?.cast<String>() ?? [],
       subtaskDone: (d['subtaskDone'] as List?)?.cast<bool>() ?? [],
@@ -267,10 +325,11 @@ class StorageService {
   String _encodeHistoryEntry(HistoryEntry e) => jsonEncode({
     'id': e.id,
     'taskTitle': e.taskTitle,
+    'taskId': e.taskId,
     'skillId': e.skillId,
     'skillName': e.skillName,
     'skillColor': e.skillColor.toARGB32(),
-    'skillIconCodePoint': e.skillIcon.codePoint,
+    'skillIconCodePoint': e.skillIcon.codePoint.toString(),
     'xp': e.xp,
     'isCompletion': e.isCompletion,
     'at': e.at.toIso8601String(),
@@ -278,13 +337,15 @@ class StorageService {
 
   HistoryEntry _decodeHistoryEntry(String json) {
     final d = jsonDecode(json) as Map<String, dynamic>;
+    final iconName = d['skillIconCodePoint'] as String;
     return HistoryEntry(
       id: d['id'] as String,
       taskTitle: d['taskTitle'] as String,
+      taskId: d['taskId'] as String?,
       skillId: d['skillId'] as String,
       skillName: d['skillName'] as String,
       skillColor: Color(d['skillColor'] as int),
-      skillIcon: IconData(d['skillIconCodePoint'] as int, fontFamily: 'MaterialIcons'),
+      skillIcon: _getIconFromCodePoint(iconName),
       xp: d['xp'] as int,
       isCompletion: d['isCompletion'] as bool,
       at: DateTime.parse(d['at'] as String),
@@ -305,17 +366,17 @@ class StorageService {
     skillsImproved: d['skillsImproved'] as int,
   );
 
-  String _encodeAchievement(Achievement a) => jsonEncode({
-    'id': a.id,
-    'unlockedAt': a.unlockedAt?.toIso8601String(),
-  });
+  String _encodeAchievement(Achievement a) =>
+      jsonEncode({'id': a.id, 'unlockedAt': a.unlockedAt?.toIso8601String()});
 
   Achievement _decodeAchievement(String json) {
     final d = jsonDecode(json) as Map<String, dynamic>;
     final def = achievementDefinitions.firstWhere((x) => x.id == d['id']);
     return Achievement(
       id: d['id'] as String,
-      unlockedAt: d['unlockedAt'] != null ? DateTime.parse(d['unlockedAt'] as String) : null,
+      unlockedAt: d['unlockedAt'] != null
+          ? DateTime.parse(d['unlockedAt'] as String)
+          : null,
     )..def = def;
   }
 
@@ -342,13 +403,19 @@ class StorageService {
       targetStreak: d['targetStreak'] as int,
       currentStreak: d['currentStreak'] as int? ?? 0,
       isDefeated: d['isDefeated'] as bool? ?? false,
-      defeatedAt: d['defeatedAt'] != null ? DateTime.parse(d['defeatedAt'] as String) : null,
+      defeatedAt: d['defeatedAt'] != null
+          ? DateTime.parse(d['defeatedAt'] as String)
+          : null,
     );
   }
 }
 
 extension ColorValue on Color {
   int toARGB32() {
-    return (a.round() << 24) | (r.round() << 16) | (g.round() << 8) | b.round();
+    int channel(double value) => (value * 255).round().clamp(0, 255).toInt();
+    return (channel(a) << 24) |
+        (channel(r) << 16) |
+        (channel(g) << 8) |
+        channel(b);
   }
 }

@@ -128,15 +128,14 @@ class SkillsPanel extends StatelessWidget {
       return AddSkillDialog(
         isDark: state.isDark,
         existing: sk,
-        onSave: (name, goal, checklist, color, icon) {
-          sk.name = name;
-          sk.goal = goal;
-          sk.checklist = checklist;
-          sk.color = color;
-          sk.icon = icon;
-          sk.syncChecklistDone();
-          state.refresh();
-        },
+        onSave: (name, goal, checklist, color, icon) => state.updateSkill(
+          sk,
+          name: name,
+          goal: goal,
+          checklist: checklist,
+          color: color,
+          icon: icon,
+        ),
       );
     },
   );

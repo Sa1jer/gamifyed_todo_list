@@ -5,7 +5,10 @@ import 'package:flutter/material.dart';
 // ═══════════════════════════════════════════════════════════════════════════════
 
 int _nextId = 0;
-String uid() => '${++_nextId}';
+String uid() {
+  final micros = DateTime.now().microsecondsSinceEpoch;
+  return '${micros}_${++_nextId}';
+}
 
 String _twoDigits(int value) => value.toString().padLeft(2, '0');
 
@@ -82,18 +85,38 @@ int freqDays(RepeatFrequency f, int custom) => switch (f) {
   RepeatFrequency.weekly => 7,
   RepeatFrequency.biweekly => 14,
   RepeatFrequency.monthly => 30,
-  RepeatFrequency.custom => custom,
+  RepeatFrequency.custom => custom < 1 ? 1 : custom,
 };
 
 DateTime nextReset(RepeatFrequency freq, int customDays) {
-  final d = DateTime.now().add(Duration(days: freqDays(freq, customDays)));
+  return nextResetFrom(DateTime.now(), freq, customDays);
+}
+
+DateTime nextResetFrom(DateTime from, RepeatFrequency freq, int customDays) {
+  final d = from.add(Duration(days: freqDays(freq, customDays)));
   return DateTime(d.year, d.month, d.day, 3, 0, 0);
+}
+
+DateTime dateOnly(DateTime dateTime) =>
+    DateTime(dateTime.year, dateTime.month, dateTime.day);
+
+bool isSameDate(DateTime a, DateTime b) {
+  return a.year == b.year && a.month == b.month && a.day == b.day;
 }
 
 String formatDateTime(DateTime dateTime) {
   return '${_twoDigits(dateTime.day)}.${_twoDigits(dateTime.month)}.'
       '${dateTime.year}, ${_twoDigits(dateTime.hour)}:'
       '${_twoDigits(dateTime.minute)}:${_twoDigits(dateTime.second)}';
+}
+
+String formatShortDate(DateTime dateTime) {
+  return '${_twoDigits(dateTime.day)}.${_twoDigits(dateTime.month)}.'
+      '${dateTime.year}';
+}
+
+String formatTime(DateTime dateTime) {
+  return '${_twoDigits(dateTime.hour)}:${_twoDigits(dateTime.minute)}';
 }
 
 String formatResetLabel(DateTime? dateTime) {

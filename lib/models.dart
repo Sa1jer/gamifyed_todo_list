@@ -106,6 +106,7 @@ class Task {
   RepeatFrequency repeatFrequency;
   int repeatCustomDays;
   DateTime? nextResetAt;
+  DateTime? lastCompletedAt;
   Priority priority;
   List<String> subtasks;
   List<bool> subtaskDone;
@@ -126,6 +127,7 @@ class Task {
     this.repeatFrequency = RepeatFrequency.daily,
     this.repeatCustomDays = 1,
     this.nextResetAt,
+    this.lastCompletedAt,
     this.priority = Priority.medium,
     List<String>? subtasks,
     List<bool>? subtaskDone,
@@ -174,7 +176,7 @@ class UserProfile with XPOwner {
   @override
   int level, xp;
 
-  /// Cumulative XP earned all-time — never decreases on uncomplete
+  /// Cumulative credited XP, adjusted when a completion is undone.
   int totalXpEarned;
 
   int? age;
@@ -204,6 +206,7 @@ class UserProfile with XPOwner {
 
 class HistoryEntry {
   final String id, taskTitle, skillId, skillName;
+  final String? taskId;
   final Color skillColor;
   final IconData skillIcon;
   final int xp;
@@ -213,6 +216,7 @@ class HistoryEntry {
   HistoryEntry({
     required this.id,
     required this.taskTitle,
+    this.taskId,
     required this.skillId,
     required this.skillName,
     required this.skillColor,

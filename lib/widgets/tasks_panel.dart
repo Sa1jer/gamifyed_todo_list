@@ -33,8 +33,9 @@ class _TasksPanelState extends State<TasksPanel> {
     if (s.selectedSkillId != _lastSkillId) {
       _lastSkillId = s.selectedSkillId;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _checklistExpanded)
+        if (mounted && _checklistExpanded) {
           setState(() => _checklistExpanded = false);
+        }
       });
     }
 
@@ -283,6 +284,7 @@ class _TasksPanelState extends State<TasksPanel> {
                           task: t,
                           isDark: isDark,
                           skillColor: skill.color,
+                          previewEarnedXP: s.previewEarnedXP(t),
                           onToggle: (pos) => widget.onComplete(t.id, pos),
                           onUncomplete: () => s.uncompleteTask(t.id),
                           onDelete: () => s.removeTask(t.id),
@@ -301,7 +303,7 @@ class _TasksPanelState extends State<TasksPanel> {
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                'Выполнено сегодня (${done.length})',
+                                'Выполнено (${done.length})',
                                 style: TextStyle(
                                   color: sub,
                                   fontSize: 12,
@@ -316,6 +318,7 @@ class _TasksPanelState extends State<TasksPanel> {
                             task: t,
                             isDark: isDark,
                             skillColor: skill.color,
+                            previewEarnedXP: t.earnedXP,
                             onToggle: (_) => s.uncompleteTask(t.id),
                             onUncomplete: () => s.uncompleteTask(t.id),
                             onDelete: () => s.removeTask(t.id),
@@ -338,17 +341,36 @@ class _TasksPanelState extends State<TasksPanel> {
       builder: (_) => AddTaskDialog(
         isDark: s.isDark,
         skillColor: skill.color,
-        onSave: (title, xp, type, freq, customDays) => s.addTask(
-          Task(
-            id: uid(),
-            title: title,
-            skillId: skill.id,
-            xpReward: xp,
-            type: type,
-            repeatFrequency: freq,
-            repeatCustomDays: customDays,
-          ),
-        ),
+        onSave:
+            (
+              title,
+              xp,
+              type,
+              freq,
+              customDays,
+              priority,
+              subtasks,
+              tags,
+              notificationsEnabled,
+              notificationHour,
+              notificationMinute,
+            ) => s.addTask(
+              Task(
+                id: uid(),
+                title: title,
+                skillId: skill.id,
+                xpReward: xp,
+                type: type,
+                repeatFrequency: freq,
+                repeatCustomDays: customDays,
+                priority: priority,
+                subtasks: subtasks,
+                tags: tags,
+                notificationsEnabled: notificationsEnabled,
+                notificationHour: notificationHour,
+                notificationMinute: notificationMinute,
+              ),
+            ),
       ),
     );
   }
@@ -361,14 +383,33 @@ class _TasksPanelState extends State<TasksPanel> {
         isDark: s.isDark,
         skillColor: skill.color,
         existing: task,
-        onSave: (title, xp, type, freq, customDays) {
-          task.title = title;
-          task.xpReward = xp;
-          task.type = type;
-          task.repeatFrequency = freq;
-          task.repeatCustomDays = customDays;
-          s.refresh();
-        },
+        onSave:
+            (
+              title,
+              xp,
+              type,
+              freq,
+              customDays,
+              priority,
+              subtasks,
+              tags,
+              notificationsEnabled,
+              notificationHour,
+              notificationMinute,
+            ) => s.updateTask(
+              task,
+              title: title,
+              xpReward: xp,
+              type: type,
+              repeatFrequency: freq,
+              repeatCustomDays: customDays,
+              priority: priority,
+              subtasks: subtasks,
+              tags: tags,
+              notificationsEnabled: notificationsEnabled,
+              notificationHour: notificationHour,
+              notificationMinute: notificationMinute,
+            ),
       ),
     );
   }
@@ -452,6 +493,7 @@ class TaskTile extends StatefulWidget {
   final Task task;
   final bool isDark;
   final Color skillColor;
+  final int previewEarnedXP;
   final Function(Offset) onToggle;
   final VoidCallback onUncomplete, onDelete, onEdit;
   const TaskTile({
@@ -459,6 +501,7 @@ class TaskTile extends StatefulWidget {
     required this.task,
     required this.isDark,
     required this.skillColor,
+    required this.previewEarnedXP,
     required this.onToggle,
     required this.onUncomplete,
     required this.onDelete,
@@ -480,7 +523,9 @@ class _TaskTileState extends State<TaskTile> {
     final sub = subtext(isDark);
     final tileBg = isDark ? const Color(0xFF13131A) : const Color(0xFFF8F8FA);
     final bdr = borderColor(isDark);
-    final mult = t.activeMultiplier;
+    final previewMultiplier = t.xpReward == 0
+        ? 1
+        : (widget.previewEarnedXP / t.xpReward).round();
 
     return MouseRegion(
       onEnter: (_) => setState(() => _h = true),
@@ -572,13 +617,15 @@ class _TaskTileState extends State<TaskTile> {
                             icon: Icons.auto_awesome,
                             label: t.isDone
                                 ? '-${t.earnedXP} XP'
-                                : '+${t.xpReward * mult} XP',
+                                : '+${widget.previewEarnedXP} XP',
                             color: t.isDone ? sub : const Color(0xFF4A9EFF),
                           ),
-                          if (t.showStreakBadge)
+                          if (!t.isDone &&
+                              t.type == TaskType.repeating &&
+                              previewMultiplier > 1)
                             TaskBadge(
                               icon: Icons.local_fire_department,
-                              label: '×$mult',
+                              label: '×$previewMultiplier',
                               color: const Color(0xFFFF9500),
                             ),
                           if (t.streak > 0 && t.type == TaskType.repeating)
@@ -598,6 +645,28 @@ class _TaskTileState extends State<TaskTile> {
                                 style: TextStyle(color: sub, fontSize: 11),
                               ),
                           ],
+                          if (t.subtasks.isNotEmpty)
+                            TaskBadge(
+                              icon: Icons.checklist,
+                              label:
+                                  '${t.subtaskCompletedCount}/${t.subtasks.length}',
+                              color: const Color(0xFF34C759),
+                            ),
+                          if (t.notificationsEnabled)
+                            TaskBadge(
+                              icon: Icons.notifications_active,
+                              label:
+                                  t.notificationHour != null &&
+                                      t.notificationMinute != null
+                                  ? '${t.notificationHour.toString().padLeft(2, '0')}:${t.notificationMinute.toString().padLeft(2, '0')}'
+                                  : 'Напоминание',
+                              color: const Color(0xFFAF52DE),
+                            ),
+                          ...t.tags
+                              .take(3)
+                              .map(
+                                (tag) => TaskBadge(label: '#$tag', color: sub),
+                              ),
                         ],
                       ),
                     ],

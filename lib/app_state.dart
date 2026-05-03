@@ -1,13 +1,18 @@
+import 'dart:async';
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'models.dart';
 import 'utils.dart';
 import 'storage_service.dart';
+import 'notification_service.dart';
 
 class AppState extends ChangeNotifier {
   bool _isDark = true;
   String? selectedSkillId;
   final StorageService _storage;
+  final NotificationService _notifications;
+  Timer? _resetTimer;
 
   bool get isDark => _isDark;
 
@@ -19,11 +24,24 @@ class AppState extends ChangeNotifier {
   final List<Boss> bosses = [];
   DailyStats? todayStats;
 
-  int _totalTasksCompleted = 0;
   int _bestStreak = 0;
 
-  AppState({required StorageService storage}) : _storage = storage {
+  AppState({
+    required StorageService storage,
+    NotificationService? notifications,
+  }) : _storage = storage,
+       _notifications = notifications ?? NotificationService() {
     _initDefaults();
+    _resetTimer = Timer.periodic(
+      const Duration(minutes: 1),
+      (_) => checkResets(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _resetTimer?.cancel();
+    super.dispose();
   }
 
   void _initDefaults() {
@@ -100,11 +118,16 @@ class AppState extends ChangeNotifier {
     for (final s in skills) {
       s.syncChecklistDone();
     }
+    for (final t in tasks) {
+      t.syncSubtaskDone();
+    }
 
     _initAchievements();
+    _recalculateBestStreakFromTasks();
   }
 
   void _initAchievements() {
+    achievements.clear();
     for (final def in achievementDefinitions) {
       achievements.add(Achievement(id: def.id)..def = def);
     }
@@ -118,23 +141,32 @@ class AppState extends ChangeNotifier {
     final loadedAchievements = await _storage.loadAchievements();
     final loadedStats = await _storage.loadStats();
     final loadedBosses = await _storage.loadBosses();
+    final hasSavedSkills = await _storage.hasSavedSkills();
+    final hasSavedTasks = await _storage.hasSavedTasks();
+    final savedTheme = await _storage.loadTheme();
 
-    if (loadedSkills.isNotEmpty) {
-      skills.clear();
-      skills.addAll(loadedSkills);
-      for (final s in skills) {
-        s.syncChecklistDone();
-      }
+    if (savedTheme != null) {
+      _isDark = savedTheme;
     }
 
-    if (loadedTasks.isNotEmpty) {
+    if (hasSavedSkills || loadedSkills.isNotEmpty) {
+      skills.clear();
+      skills.addAll(loadedSkills);
+    }
+    for (final s in skills) {
+      s.syncChecklistDone();
+    }
+
+    if (hasSavedTasks || loadedTasks.isNotEmpty) {
       tasks.clear();
       tasks.addAll(loadedTasks);
     }
-
-    if (loadedProfile.totalXpEarned > 0) {
-      profile = loadedProfile;
+    for (final t in tasks) {
+      t.syncSubtaskDone();
+      if (t.repeatCustomDays < 1) t.repeatCustomDays = 1;
     }
+
+    profile = loadedProfile;
 
     if (loadedHistory.isNotEmpty) {
       history.clear();
@@ -144,33 +176,49 @@ class AppState extends ChangeNotifier {
     if (loadedAchievements.isNotEmpty) {
       achievements.clear();
       achievements.addAll(loadedAchievements);
-      for (final a in achievements) {
-        if (a.def == null) {
-          final def = achievementDefinitions.where((d) => d.id == a.id).firstOrNull;
-          if (def != null) a.def = def;
-        }
-      }
+      _ensureAchievementDefinitions();
     } else {
       _initAchievements();
     }
 
-    if (loadedStats != null) {
-      todayStats = loadedStats;
+    todayStats = loadedStats;
+    _resetDailyStatsIfNeeded();
+
+    bosses.clear();
+    bosses.addAll(loadedBosses);
+
+    if (selectedSkillId != null && _skillById(selectedSkillId!) == null) {
+      selectedSkillId = null;
     }
 
-    if (loadedBosses.isNotEmpty) {
-      bosses.clear();
-      bosses.addAll(loadedBosses);
+    _recalculateBestStreakFromTasks();
+    final changed = _resetExpiredTasks();
+    _syncAllBosses();
+    _checkAchievements();
+    if (changed) {
+      await _saveAll();
     }
 
-    _totalTasksCompleted = profile.totalXpEarned > 0 ? loadedHistory.where((h) => h.isCompletion).length : 0;
-    _bestStreak = loadedTasks.where((t) => t.type == TaskType.repeating).fold(0, (max, t) => t.streak > max ? t.streak : max);
+    for (final task in tasks) {
+      _syncTaskNotification(task);
+    }
 
-    _resetExpiredTasks();
     notifyListeners();
   }
 
+  void _ensureAchievementDefinitions() {
+    for (final a in achievements) {
+      a.def ??= achievementDefinitions.where((d) => d.id == a.id).firstOrNull;
+    }
+    for (final def in achievementDefinitions) {
+      if (!achievements.any((a) => a.id == def.id)) {
+        achievements.add(Achievement(id: def.id)..def = def);
+      }
+    }
+  }
+
   Future<void> _saveAll() async {
+    await _storage.saveTheme(_isDark);
     await _storage.saveSkills(skills);
     await _storage.saveTasks(tasks);
     await _storage.saveProfile(profile);
@@ -185,6 +233,7 @@ class AppState extends ChangeNotifier {
   void toggleTheme() {
     _isDark = !_isDark;
     notifyListeners();
+    _storage.saveTheme(_isDark);
   }
 
   // ── Resets ───────────────────────────────────────────────────────────────────
@@ -192,22 +241,59 @@ class AppState extends ChangeNotifier {
   bool _resetExpiredTasks() {
     final now = DateTime.now();
     var changed = false;
+
     for (final t in tasks) {
-      if (t.type == TaskType.repeating &&
-          t.isDone &&
-          t.nextResetAt != null &&
-          now.isAfter(t.nextResetAt!)) {
-        t.isDone = false;
-        t.earnedXP = 0;
-        t.nextResetAt = null;
+      if (t.type != TaskType.repeating) continue;
+      if (t.repeatCustomDays < 1) {
+        t.repeatCustomDays = 1;
         changed = true;
       }
+
+      if (t.isDone && t.nextResetAt != null && !now.isBefore(t.nextResetAt!)) {
+        final resetFrom = t.nextResetAt!;
+        t.isDone = false;
+        t.earnedXP = 0;
+        t.nextResetAt = nextResetFrom(
+          resetFrom,
+          t.repeatFrequency,
+          t.repeatCustomDays,
+        );
+        changed = true;
+      }
+
+      if (!t.isDone && t.nextResetAt != null) {
+        var missedPeriod = false;
+        var guard = 0;
+        while (!now.isBefore(t.nextResetAt!) && guard < 3700) {
+          missedPeriod = true;
+          t.nextResetAt = nextResetFrom(
+            t.nextResetAt!,
+            t.repeatFrequency,
+            t.repeatCustomDays,
+          );
+          guard++;
+        }
+
+        if (missedPeriod) {
+          if (t.streak != 0) {
+            t.streak = 0;
+          }
+          changed = true;
+        }
+      }
+    }
+
+    if (changed) {
+      _syncAllBosses();
     }
     return changed;
   }
 
   void checkResets() {
-    if (_resetExpiredTasks()) notifyListeners();
+    if (_resetExpiredTasks()) {
+      notifyListeners();
+      _saveAll();
+    }
   }
 
   // ── Queries ──────────────────────────────────────────────────────────────────
@@ -229,6 +315,53 @@ class AppState extends ChangeNotifier {
   int activeTaskCountForSkill(String skillId) =>
       tasks.where((t) => t.skillId == skillId && !t.isDone).length;
 
+  Map<DateTime, List<HistoryEntry>> get completionHistoryByDate {
+    final orderedHistory = [...history]..sort((a, b) => a.at.compareTo(b.at));
+    final effectiveCompletionsByTask = <String, List<HistoryEntry>>{};
+
+    for (final entry in orderedHistory) {
+      final taskKey = _historyTaskKey(entry);
+      final taskCompletions = effectiveCompletionsByTask.putIfAbsent(
+        taskKey,
+        () => <HistoryEntry>[],
+      );
+
+      if (entry.isCompletion) {
+        taskCompletions.add(entry);
+      } else if (taskCompletions.isNotEmpty) {
+        taskCompletions.removeLast();
+      }
+    }
+
+    final completionsByDate = <DateTime, List<HistoryEntry>>{};
+
+    for (final taskCompletions in effectiveCompletionsByTask.values) {
+      for (final completion in taskCompletions) {
+        final day = dateOnly(completion.at);
+        completionsByDate
+            .putIfAbsent(day, () => <HistoryEntry>[])
+            .add(completion);
+      }
+    }
+
+    for (final dayCompletions in completionsByDate.values) {
+      dayCompletions.sort((a, b) => a.at.compareTo(b.at));
+    }
+
+    return completionsByDate;
+  }
+
+  List<HistoryEntry> completionHistoryForDate(DateTime date) {
+    final day = dateOnly(date);
+    final dayCompletions = completionHistoryByDate[day];
+    if (dayCompletions == null) return const <HistoryEntry>[];
+    return List.unmodifiable(dayCompletions);
+  }
+
+  bool hasCompletionOnDate(DateTime date) {
+    return completionHistoryByDate.containsKey(dateOnly(date));
+  }
+
   Skill? get selectedSkill {
     if (selectedSkillId == null) return null;
     return _skillById(selectedSkillId!);
@@ -236,37 +369,60 @@ class AppState extends ChangeNotifier {
 
   int get activeSkillCount => skills.length;
 
+  int previewEarnedXP(Task task) {
+    final nextStreak = task.type == TaskType.repeating
+        ? task.streak + 1
+        : task.streak;
+    return task.xpReward * _multiplierFor(task.type, nextStreak);
+  }
+
   // ── Task completion ──────────────────────────────────────────────────────────
 
   String? completeTask(String taskId) {
+    final hadResetChanges = _resetExpiredTasks();
     final task = _taskById(taskId);
-    if (task == null || task.isDone) return null;
+    if (task == null || task.isDone) {
+      if (hadResetChanges) {
+        notifyListeners();
+        _saveAll();
+      }
+      return null;
+    }
+
+    final now = DateTime.now();
+    final skill = _skillById(task.skillId);
+    final nextStreak = task.type == TaskType.repeating
+        ? task.streak + 1
+        : task.streak;
+    final earned = task.xpReward * _multiplierFor(task.type, nextStreak);
 
     task.isDone = true;
-    task.streak++;
-    final earned = task.xpReward * task.activeMultiplier;
     task.earnedXP = earned;
+    task.lastCompletedAt = now;
 
     if (task.type == TaskType.repeating) {
-      task.nextResetAt = nextReset(task.repeatFrequency, task.repeatCustomDays);
+      task.streak = nextStreak;
+      task.nextResetAt = nextResetFrom(
+        now,
+        task.repeatFrequency,
+        task.repeatCustomDays,
+      );
     }
 
     profile.totalXpEarned += earned;
-    _totalTasksCompleted++;
-
     if (task.streak > _bestStreak) {
       _bestStreak = task.streak;
     }
 
     final globalUp = profile.addXP(earned);
     int skillUp = 0;
-    final skill = _skillById(task.skillId);
     if (skill != null) skillUp = skill.addXP(earned);
 
-    _updateDailyStats(earned);
+    _updateDailyStats(earned, skillUp);
     _addHistory(task, skill, earned, isCompletion: true);
     _checkAchievements();
     _checkBosses(task);
+    _syncTaskNotification(task);
     notifyListeners();
     _saveAll();
 
@@ -277,26 +433,41 @@ class AppState extends ChangeNotifier {
     return '+$earned XP';
   }
 
-  void _updateDailyStats(int xp) {
+  void _updateDailyStats(int xp, [int skillUp = 0]) {
+    _resetDailyStatsIfNeeded();
+    todayStats!.tasksCompleted++;
+    todayStats!.xpEarned += xp;
+    todayStats!.skillsImproved += skillUp;
+  }
+
+  void _resetDailyStatsIfNeeded() {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
-    if (todayStats == null || todayStats!.date.day != today.day) {
+    if (todayStats == null || !isSameDate(todayStats!.date, today)) {
       todayStats = DailyStats(date: today);
     }
-    todayStats!.tasksCompleted++;
-    todayStats!.xpEarned += xp;
   }
 
   void _checkAchievements() {
-    _unlockAchievement('first_task', _totalTasksCompleted >= 1);
-    _unlockAchievement('tasks_100', _totalTasksCompleted >= 100);
-    _unlockAchievement('tasks_500', _totalTasksCompleted >= 500);
+    _unlockAchievement('first_task', totalTasksCompleted >= 1);
+    _unlockAchievement('tasks_100', totalTasksCompleted >= 100);
+    _unlockAchievement('tasks_500', totalTasksCompleted >= 500);
     _unlockAchievement('streak_7', _bestStreak >= 7);
     _unlockAchievement('streak_30', _bestStreak >= 30);
     _unlockAchievement('level_5', profile.level >= 5);
     _unlockAchievement('level_10', profile.level >= 10);
     _unlockAchievement('skills_3', skills.length >= 3);
+    _unlockAchievement('all_checklist', _hasFullyCompletedChecklist());
+  }
+
+  bool _hasFullyCompletedChecklist() {
+    return skills.any(
+      (s) =>
+          s.checklist.isNotEmpty &&
+          s.checklistDone.length == s.checklist.length &&
+          s.checklistDone.every((done) => done),
+    );
   }
 
   void _unlockAchievement(String id, bool condition) {
@@ -309,14 +480,29 @@ class AppState extends ChangeNotifier {
 
   void _checkBosses(Task task) {
     if (task.type != TaskType.repeating) return;
+    _syncBossesForSkill(task.skillId);
+  }
+
+  void _syncAllBosses() {
+    final skillIds = bosses.map((b) => b.skillId).toSet();
+    for (final skillId in skillIds) {
+      _syncBossesForSkill(skillId);
+    }
+  }
+
+  void _syncBossesForSkill(String skillId) {
+    final skillStreak = tasks
+        .where((t) => t.skillId == skillId && t.type == TaskType.repeating)
+        .fold<int>(0, (max, t) => math.max(max, t.streak));
 
     for (final boss in bosses) {
-      if (boss.isDefeated || boss.skillId != task.skillId) continue;
+      if (boss.skillId != skillId || boss.isDefeated) continue;
+      boss.currentStreak = skillStreak;
+      boss.hp = ((1 - boss.currentStreak / boss.targetStreak) * boss.maxHp)
+          .round()
+          .clamp(0, boss.maxHp);
 
-      boss.currentStreak = task.streak;
-      boss.hp = ((1 - boss.currentStreak / boss.targetStreak) * boss.maxHp).round().clamp(0, boss.maxHp);
-
-      if (boss.currentStreak >= boss.targetStreak && !boss.isDefeated) {
+      if (boss.currentStreak >= boss.targetStreak) {
         boss.isDefeated = true;
         boss.defeatedAt = DateTime.now();
         boss.hp = 0;
@@ -328,17 +514,32 @@ class AppState extends ChangeNotifier {
   void uncompleteTask(String taskId) {
     final task = _taskById(taskId);
     if (task == null || !task.isDone) return;
+
     final earned = task.earnedXP;
+    final completedToday =
+        task.lastCompletedAt != null &&
+        isSameDate(task.lastCompletedAt!, DateTime.now());
+    final skill = _skillById(task.skillId);
+    final skillLevelBefore = skill?.level ?? 1;
 
     task.isDone = false;
-    task.streak = (task.streak - 1).clamp(0, 9999);
+    if (task.type == TaskType.repeating) {
+      task.streak = math.max(0, task.streak - 1);
+    }
     task.earnedXP = 0;
-    task.nextResetAt = null;
+    task.lastCompletedAt = null;
 
+    profile.totalXpEarned = math.max(0, profile.totalXpEarned - earned);
     profile.removeXP(earned);
-    _skillById(task.skillId)?.removeXP(earned);
+    skill?.removeXP(earned);
+    final skillLevelsLost = math.max(0, skillLevelBefore - (skill?.level ?? 1));
 
-    _addHistory(task, _skillById(task.skillId), earned, isCompletion: false);
+    if (completedToday) {
+      _decrementDailyStats(earned, skillLevelsLost);
+    }
+    _addHistory(task, skill, earned, isCompletion: false);
+    _syncBossesForSkill(task.skillId);
+    _syncTaskNotification(task);
     notifyListeners();
     _saveAll();
   }
@@ -347,9 +548,13 @@ class AppState extends ChangeNotifier {
 
   void toggleChecklistItem(String skillId, int index) {
     final skill = _skillById(skillId);
-    if (skill == null || index >= skill.checklistDone.length) return;
+    if (skill == null || index < 0 || index >= skill.checklistDone.length) {
+      return;
+    }
     skill.checklistDone[index] = !skill.checklistDone[index];
+    _checkAchievements();
     notifyListeners();
+    _saveAll();
   }
 
   // ── Profile updates ──────────────────────────────────────────────────────────
@@ -402,9 +607,37 @@ class AppState extends ChangeNotifier {
     _saveAll();
   }
 
+  void updateSkill(
+    Skill skill, {
+    required String name,
+    required String goal,
+    required List<String> checklist,
+    required Color color,
+    required IconData icon,
+  }) {
+    skill.name = name;
+    skill.goal = goal;
+    skill.checklist = checklist;
+    skill.color = color;
+    skill.icon = icon;
+    skill.syncChecklistDone();
+    _checkAchievements();
+    notifyListeners();
+    _saveAll();
+  }
+
   void removeSkill(String id) {
+    final removedTaskIds = tasks
+        .where((t) => t.skillId == id)
+        .map((t) => t.id)
+        .toList();
+    for (final taskId in removedTaskIds) {
+      _notifications.cancelNotification(_notificationId(taskId));
+    }
+
     skills.removeWhere((s) => s.id == id);
     tasks.removeWhere((t) => t.skillId == id);
+    bosses.removeWhere((b) => b.skillId == id);
     if (selectedSkillId == id) selectedSkillId = null;
     notifyListeners();
     _saveAll();
@@ -412,20 +645,76 @@ class AppState extends ChangeNotifier {
 
   void addTask(Task t) {
     t.syncSubtaskDone();
+    if (t.repeatCustomDays < 1) t.repeatCustomDays = 1;
     tasks.add(t);
+    _syncTaskNotification(t);
+    notifyListeners();
+    _saveAll();
+  }
+
+  void updateTask(
+    Task task, {
+    required String title,
+    required int xpReward,
+    required TaskType type,
+    required RepeatFrequency repeatFrequency,
+    required int repeatCustomDays,
+    required Priority priority,
+    required List<String> subtasks,
+    required List<String> tags,
+    required bool notificationsEnabled,
+    required int? notificationHour,
+    required int? notificationMinute,
+  }) {
+    final oldType = task.type;
+    final hadNotification = task.notificationsEnabled;
+    task.title = title;
+    task.xpReward = xpReward;
+    task.type = type;
+    task.repeatFrequency = repeatFrequency;
+    task.repeatCustomDays = repeatCustomDays < 1 ? 1 : repeatCustomDays;
+    task.priority = priority;
+    task.subtasks = subtasks;
+    task.syncSubtaskDone();
+    task.tags = tags;
+    task.notificationsEnabled = notificationsEnabled;
+    task.notificationHour = notificationHour;
+    task.notificationMinute = notificationMinute;
+
+    if (oldType == TaskType.repeating && type != TaskType.repeating) {
+      task.streak = 0;
+      task.nextResetAt = null;
+    } else if (type == TaskType.repeating && task.isDone) {
+      task.nextResetAt = nextResetFrom(
+        task.lastCompletedAt ?? DateTime.now(),
+        task.repeatFrequency,
+        task.repeatCustomDays,
+      );
+    }
+
+    _syncBossesForSkill(task.skillId);
+    if (hadNotification && !task.notificationsEnabled) {
+      _notifications.cancelNotification(_notificationId(task.id));
+    }
+    _syncTaskNotification(task);
     notifyListeners();
     _saveAll();
   }
 
   void removeTask(String id) {
+    final task = _taskById(id);
+    if (task != null) {
+      _notifications.cancelNotification(_notificationId(task.id));
+    }
     tasks.removeWhere((t) => t.id == id);
+    if (task != null) _syncBossesForSkill(task.skillId);
     notifyListeners();
     _saveAll();
   }
 
   void toggleSubtask(String taskId, int index) {
     final task = _taskById(taskId);
-    if (task == null || index >= task.subtaskDone.length) return;
+    if (task == null || index < 0 || index >= task.subtaskDone.length) return;
     task.subtaskDone[index] = !task.subtaskDone[index];
     notifyListeners();
     _saveAll();
@@ -435,6 +724,7 @@ class AppState extends ChangeNotifier {
 
   void addBoss(Boss b) {
     bosses.add(b);
+    _syncBossesForSkill(b.skillId);
     notifyListeners();
     _saveAll();
   }
@@ -447,20 +737,65 @@ class AppState extends ChangeNotifier {
 
   // ── Statistics helpers ───────────────────────────────────────────────────────
 
-  int get totalTasksCompleted => _totalTasksCompleted;
+  int get totalTasksCompleted {
+    final effectiveCompletionsByTask = <String, List<HistoryEntry>>{};
+    final orderedHistory = [...history]..sort((a, b) => a.at.compareTo(b.at));
+
+    for (final entry in orderedHistory) {
+      final taskKey = _historyTaskKey(entry);
+      final list = effectiveCompletionsByTask.putIfAbsent(taskKey, () => []);
+      if (entry.isCompletion) {
+        list.add(entry);
+      } else if (list.isNotEmpty) {
+        list.removeLast();
+      }
+    }
+    return effectiveCompletionsByTask.values.fold(
+      0,
+      (sum, list) => sum + list.length,
+    );
+  }
+
   int get bestStreak => _bestStreak;
 
   void refresh() {
     notifyListeners();
+    _saveAll();
   }
 
   // ── Private ──────────────────────────────────────────────────────────────────
+
+  int _multiplierFor(TaskType type, int streak) {
+    if (type != TaskType.repeating || streak < 2) return 1;
+    if (streak >= 14) return 4;
+    if (streak >= 7) return 3;
+    return 2;
+  }
+
+  void _recalculateBestStreakFromTasks() {
+    _bestStreak = tasks
+        .where((t) => t.type == TaskType.repeating)
+        .fold(0, (max, t) => math.max(max, t.streak));
+  }
+
+  void _decrementDailyStats(int xp, [int skillLevelsLost = 0]) {
+    if (todayStats == null) return;
+    if (!isSameDate(todayStats!.date, DateTime.now())) return;
+
+    todayStats!.tasksCompleted = math.max(0, todayStats!.tasksCompleted - 1);
+    todayStats!.xpEarned = math.max(0, todayStats!.xpEarned - xp);
+    todayStats!.skillsImproved = math.max(
+      0,
+      todayStats!.skillsImproved - skillLevelsLost,
+    );
+  }
 
   void _addHistory(Task t, Skill? skill, int xp, {required bool isCompletion}) {
     history.insert(
       0,
       HistoryEntry(
         id: uid(),
+        taskId: t.id,
         taskTitle: t.title,
         skillId: t.skillId,
         skillName: skill?.name ?? '—',
@@ -485,6 +820,60 @@ class AppState extends ChangeNotifier {
       if (s.id == id) return s;
     }
     return null;
+  }
+
+  String _historyTaskKey(HistoryEntry entry) {
+    return entry.taskId ?? '${entry.skillId}::${entry.taskTitle}';
+  }
+
+  int _notificationId(String taskId) {
+    var hash = 0x811c9dc5;
+    for (final codeUnit in taskId.codeUnits) {
+      hash ^= codeUnit;
+      hash = (hash * 0x01000193) & 0x7fffffff;
+    }
+    return hash;
+  }
+
+  void _syncTaskNotification(Task task) {
+    final notificationId = _notificationId(task.id);
+    final hour = task.notificationHour;
+    final minute = task.notificationMinute;
+
+    if (!task.notificationsEnabled) {
+      return;
+    }
+
+    if (hour == null || minute == null || task.isDone) {
+      _notifications.cancelNotification(notificationId);
+      return;
+    }
+
+    _notifications.requestPermissions().then((granted) {
+      if (!granted) return;
+
+      final now = DateTime.now();
+      var scheduledTime = DateTime(now.year, now.month, now.day, hour, minute);
+      if (!scheduledTime.isAfter(now)) {
+        scheduledTime = scheduledTime.add(const Duration(days: 1));
+      }
+
+      if (task.type == TaskType.repeating) {
+        _notifications.scheduleRepeatingTask(
+          id: notificationId,
+          title: 'Напоминание: ${task.title}',
+          body: 'Пора выполнить повторяющуюся задачу.',
+          interval: scheduledTime.difference(now),
+        );
+      } else {
+        _notifications.scheduleTaskReminder(
+          id: notificationId,
+          title: 'Напоминание: ${task.title}',
+          body: 'Не забудь выполнить задачу.',
+          scheduledTime: scheduledTime,
+        );
+      }
+    });
   }
 }
 

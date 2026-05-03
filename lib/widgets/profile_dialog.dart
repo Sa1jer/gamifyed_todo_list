@@ -100,7 +100,10 @@ class _ProfileDialogState extends State<ProfileDialog> {
                         children: [
                           _buildNameRow(context, s, p, txt, sub),
                           const SizedBox(height: 4),
-                          LvlBadge(level: p.level, color: const Color(0xFF4A9EFF)),
+                          LvlBadge(
+                            level: p.level,
+                            color: const Color(0xFF4A9EFF),
+                          ),
                           const SizedBox(height: 18),
                           Container(height: 1, color: bdr),
                           const SizedBox(height: 14),
@@ -115,7 +118,15 @@ class _ProfileDialogState extends State<ProfileDialog> {
                           const SizedBox(height: 18),
                           Container(height: 1, color: bdr),
                           const SizedBox(height: 14),
-                          _buildPersonalInfo(context, s, p, isDark, txt, sub, bdr),
+                          _buildPersonalInfo(
+                            context,
+                            s,
+                            p,
+                            isDark,
+                            txt,
+                            sub,
+                            bdr,
+                          ),
                           const SizedBox(height: 18),
                           Container(height: 1, color: bdr),
                           const SizedBox(height: 14),
@@ -141,11 +152,7 @@ class _ProfileDialogState extends State<ProfileDialog> {
 
   // ── Banner + Avatar ────────────────────────────────────────────────────────
 
-  Widget _buildBannerSection(
-    BuildContext context,
-    AppState s,
-    UserProfile p,
-  ) {
+  Widget _buildBannerSection(BuildContext context, AppState s, UserProfile p) {
     return SizedBox(
       height: 160,
       child: Stack(
@@ -272,11 +279,7 @@ class _ProfileDialogState extends State<ProfileDialog> {
                 color: Color(0xFF4A9EFF),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.edit,
-                color: Colors.white,
-                size: 13,
-              ),
+              child: const Icon(Icons.edit, color: Colors.white, size: 13),
             ),
           ),
         ],
@@ -446,6 +449,10 @@ class _ProfileDialogState extends State<ProfileDialog> {
                           isDense: true,
                           contentPadding: EdgeInsets.zero,
                         ),
+                        onChanged: (v) {
+                          final age = int.tryParse(v.trim());
+                          s.updateProfileAge(age);
+                        },
                         onSubmitted: (v) {
                           final age = int.tryParse(v.trim());
                           s.updateProfileAge(age);
