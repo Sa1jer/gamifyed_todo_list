@@ -247,21 +247,32 @@ class MainPage extends StatefulWidget {
 class _MainPageState extends State<MainPage> {
   final List<XPBubble> _bubbles = [];
 
-  void _onComplete(String taskId, Offset pos) {
-    final s = AppStateProvider.of(context);
-    final msg = s.completeTask(taskId);
-    if (msg == null) return;
+  void _showBubble(String message, Offset pos) {
     setState(() {
       _bubbles.add(
         XPBubble(
           key: UniqueKey(),
-          message: msg,
+          message: message,
           position: pos,
           onDone: (k) =>
               setState(() => _bubbles.removeWhere((b) => b.key == k)),
         ),
       );
     });
+  }
+
+  void _onComplete(String taskId, Offset pos) {
+    final s = AppStateProvider.of(context);
+    final msg = s.completeTask(taskId);
+    if (msg == null) return;
+    _showBubble(msg, pos);
+  }
+
+  void _onMinimumAction(String taskId, Offset pos) {
+    final s = AppStateProvider.of(context);
+    final msg = s.completeMinimumAction(taskId);
+    if (msg == null) return;
+    _showBubble(msg, pos);
   }
 
   @override
@@ -284,7 +295,10 @@ class _MainPageState extends State<MainPage> {
                   padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
                   child: Column(
                     children: [
-                      TodayDashboard(onComplete: _onComplete),
+                      TodayDashboard(
+                        onComplete: _onComplete,
+                        onMinimumAction: _onMinimumAction,
+                      ),
                       const SizedBox(height: 8),
                       Expanded(
                         child: Row(
@@ -293,7 +307,10 @@ class _MainPageState extends State<MainPage> {
                             const SizedBox(width: 380, child: SkillsPanel()),
                             const SizedBox(width: 12),
                             Expanded(
-                              child: TasksPanel(onComplete: _onComplete),
+                              child: TasksPanel(
+                                onComplete: _onComplete,
+                                onMinimumAction: _onMinimumAction,
+                              ),
                             ),
                           ],
                         ),

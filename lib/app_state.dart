@@ -8,6 +8,8 @@ import 'storage_service.dart';
 import 'notification_service.dart';
 
 class AppState extends ChangeNotifier {
+  static const double _minimumActionRatio = 0.3;
+
   bool _isDark = true;
   String? selectedSkillId;
   final StorageService _storage;
@@ -105,6 +107,7 @@ class AppState extends ChangeNotifier {
         skillId: skills[1].id,
         xpReward: 60,
         type: TaskType.midTerm,
+        minimumAction: 'Создать первый endpoint и проверить ответ 200 OK',
       ),
       Task(
         id: uid(),
@@ -370,10 +373,22 @@ class AppState extends ChangeNotifier {
   int get activeSkillCount => skills.length;
 
   int previewEarnedXP(Task task) {
-    final nextStreak = task.type == TaskType.repeating
-        ? task.streak + 1
-        : task.streak;
-    return task.xpReward * _multiplierFor(task.type, nextStreak);
+    final totalReward = _totalRewardFor(task);
+    if (task.type == TaskType.repeating) {
+      return totalReward;
+    }
+    return math.max(0, totalReward - task.minimumActionEarnedXP);
+  }
+
+  int previewMinimumActionXP(Task task) {
+    if (!task.hasMinimumAction || task.isMinimumActionDone || task.isDone) {
+      return 0;
+    }
+    return math.max(1, (_totalRewardFor(task) * _minimumActionRatio).round());
+  }
+
+  bool canCompleteMinimumAction(Task task) {
+    return task.hasMinimumAction && !task.isDone && !task.isMinimumActionDone;
   }
 
   // ── Task completion ──────────────────────────────────────────────────────────
@@ -394,10 +409,14 @@ class AppState extends ChangeNotifier {
     final nextStreak = task.type == TaskType.repeating
         ? task.streak + 1
         : task.streak;
-    final earned = task.xpReward * _multiplierFor(task.type, nextStreak);
+    final totalReward = _totalRewardFor(task);
+    final alreadyEarned = task.type == TaskType.repeating
+        ? 0
+        : task.minimumActionEarnedXP.clamp(0, totalReward);
+    final earned = math.max(0, totalReward - alreadyEarned);
 
     task.isDone = true;
-    task.earnedXP = earned;
+    task.earnedXP = totalReward;
     task.lastCompletedAt = now;
 
     if (task.type == TaskType.repeating) {
@@ -426,16 +445,84 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     _saveAll();
 
-    if (globalUp > 0) return '🎉 Уровень ${profile.level}!';
-    if (skillUp > 0 && skill != null) {
-      return '⬆️ ${skill.name} → ур.${skill.level}';
+    return _xpMessage(skill, globalUp, skillUp, earned);
+  }
+
+  String? completeMinimumAction(String taskId) {
+    final hadResetChanges = _resetExpiredTasks();
+    final task = _taskById(taskId);
+    if (task == null || !canCompleteMinimumAction(task)) {
+      if (hadResetChanges) {
+        notifyListeners();
+        _saveAll();
+      }
+      return null;
     }
-    return '+$earned XP';
+
+    final now = DateTime.now();
+    final skill = _skillById(task.skillId);
+    final earned = previewMinimumActionXP(task);
+    final nextStreak = task.type == TaskType.repeating
+        ? task.streak + 1
+        : task.streak;
+
+    task.minimumActionDoneAt = now;
+    task.minimumActionEarnedXP = earned;
+
+    if (task.type == TaskType.repeating) {
+      task.isDone = true;
+      task.earnedXP = earned;
+      task.lastCompletedAt = now;
+      task.streak = nextStreak;
+      task.nextResetAt = nextResetFrom(
+        now,
+        task.repeatFrequency,
+        task.repeatCustomDays,
+      );
+    }
+
+    profile.totalXpEarned += earned;
+    if (task.streak > _bestStreak) {
+      _bestStreak = task.streak;
+    }
+
+    final globalUp = profile.addXP(earned);
+    int skillUp = 0;
+    if (skill != null) {
+      skillUp = skill.addXP(earned);
+    }
+
+    if (task.type == TaskType.repeating) {
+      _updateDailyStats(earned, skillUp);
+      _addHistory(task, skill, earned, isCompletion: true);
+      _checkBosses(task);
+    } else {
+      _updateDailyXp(earned, skillUp);
+    }
+
+    _checkAchievements();
+    _syncTaskNotification(task);
+    notifyListeners();
+    _saveAll();
+
+    return _xpMessage(
+      skill,
+      globalUp,
+      skillUp,
+      earned,
+      fallbackLabel: task.type == TaskType.repeating ? 'Лёгкий старт' : 'Старт',
+    );
   }
 
   void _updateDailyStats(int xp, [int skillUp = 0]) {
     _resetDailyStatsIfNeeded();
     todayStats!.tasksCompleted++;
+    todayStats!.xpEarned += xp;
+    todayStats!.skillsImproved += skillUp;
+  }
+
+  void _updateDailyXp(int xp, [int skillUp = 0]) {
+    _resetDailyStatsIfNeeded();
     todayStats!.xpEarned += xp;
     todayStats!.skillsImproved += skillUp;
   }
@@ -515,7 +602,13 @@ class AppState extends ChangeNotifier {
     final task = _taskById(taskId);
     if (task == null || !task.isDone) return;
 
-    final earned = task.earnedXP;
+    final restoresMinimumProgress =
+        task.type != TaskType.repeating &&
+        task.minimumActionDoneAt != null &&
+        task.minimumActionEarnedXP > 0;
+    final earned = restoresMinimumProgress
+        ? math.max(0, task.earnedXP - task.minimumActionEarnedXP)
+        : task.earnedXP;
     final completedToday =
         task.lastCompletedAt != null &&
         isSameDate(task.lastCompletedAt!, DateTime.now());
@@ -528,6 +621,10 @@ class AppState extends ChangeNotifier {
     }
     task.earnedXP = 0;
     task.lastCompletedAt = null;
+    if (!restoresMinimumProgress) {
+      task.minimumActionDoneAt = null;
+      task.minimumActionEarnedXP = 0;
+    }
 
     profile.totalXpEarned = math.max(0, profile.totalXpEarned - earned);
     profile.removeXP(earned);
@@ -660,6 +757,7 @@ class AppState extends ChangeNotifier {
     required RepeatFrequency repeatFrequency,
     required int repeatCustomDays,
     required Priority priority,
+    required String minimumAction,
     required List<String> subtasks,
     required List<String> tags,
     required bool notificationsEnabled,
@@ -668,12 +766,19 @@ class AppState extends ChangeNotifier {
   }) {
     final oldType = task.type;
     final hadNotification = task.notificationsEnabled;
+    final oldMinimumAction = task.minimumAction;
     task.title = title;
     task.xpReward = xpReward;
     task.type = type;
     task.repeatFrequency = repeatFrequency;
     task.repeatCustomDays = repeatCustomDays < 1 ? 1 : repeatCustomDays;
     task.priority = priority;
+    final nextMinimumAction = minimumAction.trim();
+    if (nextMinimumAction.isEmpty && task.isMinimumActionDone) {
+      task.minimumAction = oldMinimumAction;
+    } else {
+      task.minimumAction = nextMinimumAction;
+    }
     task.subtasks = subtasks;
     task.syncSubtaskDone();
     task.tags = tags;
@@ -772,6 +877,13 @@ class AppState extends ChangeNotifier {
     return 2;
   }
 
+  int _totalRewardFor(Task task) {
+    final nextStreak = task.type == TaskType.repeating
+        ? task.streak + 1
+        : task.streak;
+    return task.xpReward * _multiplierFor(task.type, nextStreak);
+  }
+
   void _recalculateBestStreakFromTasks() {
     _bestStreak = tasks
         .where((t) => t.type == TaskType.repeating)
@@ -833,6 +945,23 @@ class AppState extends ChangeNotifier {
       hash = (hash * 0x01000193) & 0x7fffffff;
     }
     return hash;
+  }
+
+  String _xpMessage(
+    Skill? skill,
+    int globalUp,
+    int skillUp,
+    int earned, {
+    String? fallbackLabel,
+  }) {
+    if (globalUp > 0) return '🎉 Уровень ${profile.level}!';
+    if (skillUp > 0 && skill != null) {
+      return '⬆️ ${skill.name} → ур.${skill.level}';
+    }
+    if (fallbackLabel == null || fallbackLabel.isEmpty) {
+      return '+$earned XP';
+    }
+    return '$fallbackLabel: +$earned XP';
   }
 
   void _syncTaskNotification(Task task) {

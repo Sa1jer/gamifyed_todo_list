@@ -11,7 +11,12 @@ import 'dialogs.dart';
 
 class TasksPanel extends StatefulWidget {
   final Function(String id, Offset pos) onComplete;
-  const TasksPanel({super.key, required this.onComplete});
+  final Function(String id, Offset pos) onMinimumAction;
+  const TasksPanel({
+    super.key,
+    required this.onComplete,
+    required this.onMinimumAction,
+  });
   @override
   State<TasksPanel> createState() => _TasksPanelState();
 }
@@ -286,6 +291,8 @@ class _TasksPanelState extends State<TasksPanel> {
                           skillColor: skill.color,
                           previewEarnedXP: s.previewEarnedXP(t),
                           onToggle: (pos) => widget.onComplete(t.id, pos),
+                          onMinimumAction: (pos) =>
+                              widget.onMinimumAction(t.id, pos),
                           onUncomplete: () => s.uncompleteTask(t.id),
                           onDelete: () => s.removeTask(t.id),
                           onEdit: () => _editTask(context, skill, t),
@@ -320,6 +327,7 @@ class _TasksPanelState extends State<TasksPanel> {
                             skillColor: skill.color,
                             previewEarnedXP: t.earnedXP,
                             onToggle: (_) => s.uncompleteTask(t.id),
+                            onMinimumAction: (_) {},
                             onUncomplete: () => s.uncompleteTask(t.id),
                             onDelete: () => s.removeTask(t.id),
                             onEdit: () => _editTask(context, skill, t),
@@ -349,6 +357,7 @@ class _TasksPanelState extends State<TasksPanel> {
               freq,
               customDays,
               priority,
+              minimumAction,
               subtasks,
               tags,
               notificationsEnabled,
@@ -364,6 +373,7 @@ class _TasksPanelState extends State<TasksPanel> {
                 repeatFrequency: freq,
                 repeatCustomDays: customDays,
                 priority: priority,
+                minimumAction: minimumAction,
                 subtasks: subtasks,
                 tags: tags,
                 notificationsEnabled: notificationsEnabled,
@@ -391,6 +401,7 @@ class _TasksPanelState extends State<TasksPanel> {
               freq,
               customDays,
               priority,
+              minimumAction,
               subtasks,
               tags,
               notificationsEnabled,
@@ -404,6 +415,7 @@ class _TasksPanelState extends State<TasksPanel> {
               repeatFrequency: freq,
               repeatCustomDays: customDays,
               priority: priority,
+              minimumAction: minimumAction,
               subtasks: subtasks,
               tags: tags,
               notificationsEnabled: notificationsEnabled,
@@ -495,6 +507,7 @@ class TaskTile extends StatefulWidget {
   final Color skillColor;
   final int previewEarnedXP;
   final Function(Offset) onToggle;
+  final Function(Offset) onMinimumAction;
   final VoidCallback onUncomplete, onDelete, onEdit;
   const TaskTile({
     super.key,
@@ -503,6 +516,7 @@ class TaskTile extends StatefulWidget {
     required this.skillColor,
     required this.previewEarnedXP,
     required this.onToggle,
+    required this.onMinimumAction,
     required this.onUncomplete,
     required this.onDelete,
     required this.onEdit,
@@ -513,6 +527,7 @@ class TaskTile extends StatefulWidget {
 
 class _TaskTileState extends State<TaskTile> {
   final _cbKey = GlobalKey();
+  final _minKey = GlobalKey();
   bool _h = false;
 
   @override
@@ -526,6 +541,9 @@ class _TaskTileState extends State<TaskTile> {
     final previewMultiplier = t.xpReward == 0
         ? 1
         : (widget.previewEarnedXP / t.xpReward).round();
+    final canStartMinimum =
+        t.hasMinimumAction && !t.isDone && !t.isMinimumActionDone;
+    final showStartedBadge = t.isMinimumActionDone && !t.isDone;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _h = true),
@@ -582,6 +600,72 @@ class _TaskTileState extends State<TaskTile> {
                         : null,
                   ),
                 ),
+                if (t.hasMinimumAction) ...[
+                  const SizedBox(width: 8),
+                  canStartMinimum
+                      ? PressFeedback(
+                          scale: 0.9,
+                          onTap: () {
+                            final box =
+                                _minKey.currentContext?.findRenderObject()
+                                    as RenderBox?;
+                            widget.onMinimumAction(
+                              box?.localToGlobal(Offset.zero) ?? Offset.zero,
+                            );
+                          },
+                          child: Container(
+                            key: _minKey,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 9,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: widget.skillColor.withAlpha(16),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: widget.skillColor.withAlpha(78),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.play_arrow_rounded,
+                                  color: widget.skillColor,
+                                  size: 14,
+                                ),
+                                const SizedBox(width: 2),
+                                Text(
+                                  'Минимум',
+                                  style: TextStyle(
+                                    color: widget.skillColor,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 9,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF34C759).withAlpha(16),
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(
+                              color: const Color(0xFF34C759).withAlpha(76),
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.bolt_rounded,
+                            color: Color(0xFF34C759),
+                            size: 14,
+                          ),
+                        ),
+                ],
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -599,6 +683,21 @@ class _TaskTileState extends State<TaskTile> {
                           decorationColor: sub,
                         ),
                       ),
+                      if (t.hasMinimumAction) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Минимум: ${t.minimumAction}',
+                          style: TextStyle(
+                            color: showStartedBadge
+                                ? widget.skillColor
+                                : sub.withAlpha(220),
+                            fontSize: 12,
+                            height: 1.2,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                       const SizedBox(height: 5),
                       Wrap(
                         spacing: 6,
@@ -620,6 +719,18 @@ class _TaskTileState extends State<TaskTile> {
                                 : '+${widget.previewEarnedXP} XP',
                             color: t.isDone ? sub : const Color(0xFF4A9EFF),
                           ),
+                          if (showStartedBadge)
+                            TaskBadge(
+                              icon: Icons.play_circle_fill,
+                              label: 'Старт сделан',
+                              color: const Color(0xFF34C759),
+                            ),
+                          if (showStartedBadge)
+                            TaskBadge(
+                              icon: Icons.bolt,
+                              label: '+${t.minimumActionEarnedXP} XP',
+                              color: widget.skillColor,
+                            ),
                           if (!t.isDone &&
                               t.type == TaskType.repeating &&
                               previewMultiplier > 1)

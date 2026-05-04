@@ -284,6 +284,9 @@ class StorageService {
     'nextResetAt': t.nextResetAt?.toIso8601String(),
     'lastCompletedAt': t.lastCompletedAt?.toIso8601String(),
     'priority': t.priority.index,
+    'minimumAction': t.minimumAction,
+    'minimumActionDoneAt': t.minimumActionDoneAt?.toIso8601String(),
+    'minimumActionEarnedXP': t.minimumActionEarnedXP,
     'subtasks': t.subtasks,
     'subtaskDone': t.subtaskDone,
     'tags': t.tags,
@@ -313,6 +316,11 @@ class StorageService {
           ? DateTime.parse(d['lastCompletedAt'] as String)
           : null,
       priority: Priority.values[d['priority'] as int? ?? 1],
+      minimumAction: d['minimumAction'] as String? ?? '',
+      minimumActionDoneAt: d['minimumActionDoneAt'] != null
+          ? DateTime.parse(d['minimumActionDoneAt'] as String)
+          : null,
+      minimumActionEarnedXP: d['minimumActionEarnedXP'] as int? ?? 0,
       subtasks: (d['subtasks'] as List?)?.cast<String>() ?? [],
       subtaskDone: (d['subtaskDone'] as List?)?.cast<bool>() ?? [],
       tags: (d['tags'] as List?)?.cast<String>() ?? [],

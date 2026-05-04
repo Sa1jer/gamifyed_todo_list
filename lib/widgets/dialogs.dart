@@ -739,6 +739,7 @@ class AddTaskDialog extends StatefulWidget {
     RepeatFrequency freq,
     int customDays,
     Priority priority,
+    String minimumAction,
     List<String> subtasks,
     List<String> tags,
     bool notificationsEnabled,
@@ -759,6 +760,7 @@ class AddTaskDialog extends StatefulWidget {
 
 class _AddTaskDialogState extends State<AddTaskDialog> {
   final _titleCtrl = TextEditingController();
+  final _minimumActionCtrl = TextEditingController();
   final _customCtrl = TextEditingController(text: '1');
   final _subtaskCtrl = TextEditingController();
   final _tagCtrl = TextEditingController();
@@ -773,12 +775,50 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
 
   int get _softCap => typeSoftCap[_type]!;
   bool get _overCap => _xp > _softCap;
+  bool get _hasMinimumAction => _minimumActionCtrl.text.trim().isNotEmpty;
+  bool get _looksBigTask =>
+      _type == TaskType.midTerm ||
+      _type == TaskType.longTerm ||
+      _xp >= 80 ||
+      _titleCtrl.text.trim().length >= 28;
+  bool get _hasSpecificTitle {
+    final title = _titleCtrl.text.trim();
+    if (title.length < 8) return false;
+    final words = title.split(RegExp(r'\s+'));
+    if (words.length < 2) return false;
+    final generic = {
+      'сделать',
+      'улучшить',
+      'заняться',
+      'поработать',
+      'прокачать',
+    };
+    return !generic.contains(title.toLowerCase());
+  }
+
+  String get _qualityStatus {
+    if (_looksBigTask && !_hasMinimumAction && _subtasks.isEmpty) {
+      return 'Сложно начать';
+    }
+    if (_looksBigTask && (!_hasMinimumAction || _subtasks.isEmpty)) {
+      return 'Лучше разбить';
+    }
+    if (!_hasSpecificTitle) return 'Уточни действие';
+    return 'Хорошая задача';
+  }
+
+  void _refreshDraft() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     if (widget.existing case final ex?) {
       _titleCtrl.text = ex.title;
+      _minimumActionCtrl.text = ex.minimumAction;
       _xp = ex.xpReward;
       _type = ex.type;
       _freq = ex.repeatFrequency;
@@ -794,11 +834,14 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
         );
       }
     }
+    _titleCtrl.addListener(_refreshDraft);
+    _minimumActionCtrl.addListener(_refreshDraft);
   }
 
   @override
   void dispose() {
     _titleCtrl.dispose();
+    _minimumActionCtrl.dispose();
     _customCtrl.dispose();
     _subtaskCtrl.dispose();
     _tagCtrl.dispose();
@@ -840,6 +883,21 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                 txt: txt,
                 sub: sub,
                 bdr: bdr,
+              ),
+              const SizedBox(height: 16),
+              DlgField(
+                label: 'Минимальное действие',
+                ctrl: _minimumActionCtrl,
+                fBg: fBg,
+                txt: txt,
+                sub: sub,
+                bdr: bdr,
+                min: 2,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Например: открыть проект и сделать первый endpoint.',
+                style: TextStyle(color: sub, fontSize: 11),
               ),
               const SizedBox(height: 16),
               Row(
@@ -1095,6 +1153,8 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                 sub: sub,
               ),
               const SizedBox(height: 16),
+              _buildQualityCheck(fBg, txt, sub, bdr, c),
+              const SizedBox(height: 16),
               _buildTextListEditor(
                 title: 'Теги',
                 hint: '+ Добавить тег',
@@ -1176,6 +1236,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
               child: TextField(
                 controller: ctrl,
                 style: TextStyle(color: txt, fontSize: 13),
+                onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(
                   hintText: hint,
                   hintStyle: TextStyle(color: sub, fontSize: 13),
@@ -1190,6 +1251,145 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
               child: Icon(Icons.add_circle_outline, color: color, size: 20),
             ),
           ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQualityCheck(
+    Color fBg,
+    Color txt,
+    Color sub,
+    Color bdr,
+    Color color,
+  ) {
+    final qualityColor = switch (_qualityStatus) {
+      'Хорошая задача' => const Color(0xFF34C759),
+      'Уточни действие' => const Color(0xFFFFCC00),
+      _ => const Color(0xFFFF9500),
+    };
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: fBg,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: bdr),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.rule_folder_outlined, color: qualityColor, size: 16),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Качество задачи',
+                  style: TextStyle(
+                    color: txt,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: qualityColor.withAlpha(18),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: qualityColor.withAlpha(70)),
+                ),
+                child: Text(
+                  _qualityStatus,
+                  style: TextStyle(
+                    color: qualityColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _qualityRow(
+            ok: _hasSpecificTitle,
+            okLabel: 'Есть понятное действие',
+            warnLabel: 'Название слишком общее',
+            txt: txt,
+            sub: sub,
+          ),
+          const SizedBox(height: 6),
+          _qualityRow(
+            ok: _hasMinimumAction,
+            okLabel: 'Есть минимальный старт',
+            warnLabel: 'Добавь лёгкий старт',
+            txt: txt,
+            sub: sub,
+          ),
+          const SizedBox(height: 6),
+          _qualityRow(
+            ok: _xp > 0,
+            okLabel: 'Есть XP-награда',
+            warnLabel: 'Нужна XP-награда',
+            txt: txt,
+            sub: sub,
+          ),
+          const SizedBox(height: 6),
+          _qualityRow(
+            ok: !_looksBigTask || _subtasks.isNotEmpty,
+            okLabel: 'Структура уже разбита на шаги',
+            warnLabel: 'Для большой задачи лучше добавить 2–3 шага',
+            txt: txt,
+            sub: sub,
+          ),
+          if (_looksBigTask && (!_hasMinimumAction || _subtasks.isEmpty)) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: color.withAlpha(16),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: color.withAlpha(48)),
+              ),
+              child: Text(
+                'Эта задача выглядит большой. Разбей её на 2–3 шага, чтобы легче начать.',
+                style: TextStyle(color: txt, fontSize: 11.5, height: 1.25),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _qualityRow({
+    required bool ok,
+    required String okLabel,
+    required String warnLabel,
+    required Color txt,
+    required Color sub,
+  }) {
+    final rowColor = ok ? const Color(0xFF34C759) : const Color(0xFFFF9500);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          ok ? Icons.check_circle : Icons.error_outline,
+          color: rowColor,
+          size: 15,
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            ok ? okLabel : warnLabel,
+            style: TextStyle(
+              color: ok ? txt : sub,
+              fontSize: 11.5,
+              fontWeight: ok ? FontWeight.w500 : FontWeight.w400,
+              height: 1.2,
+            ),
+          ),
         ),
       ],
     );
@@ -1301,6 +1501,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
       _freq,
       _customDays,
       _priority,
+      _minimumActionCtrl.text.trim(),
       List.of(_subtasks),
       List.of(_tags),
       _notificationsEnabled,

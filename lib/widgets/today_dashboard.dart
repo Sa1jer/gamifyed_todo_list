@@ -6,8 +6,13 @@ import 'shared.dart';
 
 class TodayDashboard extends StatefulWidget {
   final Function(String id, Offset pos) onComplete;
+  final Function(String id, Offset pos) onMinimumAction;
 
-  const TodayDashboard({super.key, required this.onComplete});
+  const TodayDashboard({
+    super.key,
+    required this.onComplete,
+    required this.onMinimumAction,
+  });
 
   static Skill? _skillFor(AppState state, Task task) {
     return state.skills.where((skill) => skill.id == task.skillId).firstOrNull;
@@ -63,6 +68,16 @@ class TodayDashboard extends StatefulWidget {
     TaskType.midTerm => 3,
     TaskType.longTerm => 4,
   };
+
+  static bool _shouldRecommendMinimumAction(Task task) {
+    return task.hasMinimumAction &&
+        !task.isDone &&
+        !task.isMinimumActionDone &&
+        (task.type == TaskType.midTerm ||
+            task.type == TaskType.longTerm ||
+            task.subtasks.length >= 3 ||
+            task.xpReward >= 80);
+  }
 
   @override
   State<TodayDashboard> createState() => _TodayDashboardState();
@@ -151,6 +166,7 @@ class _TodayDashboardState extends State<TodayDashboard> {
                         todayXp: stats?.xpEarned ?? 0,
                         isDark: isDark,
                         onComplete: widget.onComplete,
+                        onMinimumAction: widget.onMinimumAction,
                       );
 
                       if (constraints.maxWidth >= 960) return content;
@@ -180,6 +196,7 @@ class _DashboardContent extends StatelessWidget {
   final int todayXp;
   final bool isDark;
   final Function(String id, Offset pos) onComplete;
+  final Function(String id, Offset pos) onMinimumAction;
 
   const _DashboardContent({
     required this.state,
@@ -191,6 +208,7 @@ class _DashboardContent extends StatelessWidget {
     required this.todayXp,
     required this.isDark,
     required this.onComplete,
+    required this.onMinimumAction,
   });
 
   @override
@@ -208,6 +226,7 @@ class _DashboardContent extends StatelessWidget {
                 : TodayDashboard._skillFor(state, nextTask!),
             isDark: isDark,
             onComplete: onComplete,
+            onMinimumAction: onMinimumAction,
           ),
         ),
         const SizedBox(width: 10),
@@ -240,6 +259,7 @@ class _DashboardContent extends StatelessWidget {
                 : riskyTasks.take(3).toList(),
             isDark: isDark,
             onComplete: onComplete,
+            onMinimumAction: onMinimumAction,
           ),
         ),
       ],
@@ -253,6 +273,7 @@ class _NextActionCard extends StatelessWidget {
   final Skill? skill;
   final bool isDark;
   final Function(String id, Offset pos) onComplete;
+  final Function(String id, Offset pos) onMinimumAction;
 
   const _NextActionCard({
     required this.state,
@@ -260,6 +281,7 @@ class _NextActionCard extends StatelessWidget {
     required this.skill,
     required this.isDark,
     required this.onComplete,
+    required this.onMinimumAction,
   });
 
   @override
@@ -296,6 +318,18 @@ class _NextActionCard extends StatelessWidget {
     }
 
     final earnedXp = state.previewEarnedXP(task!);
+    final recommendsMinimum =
+        state.canCompleteMinimumAction(task!) &&
+        TodayDashboard._shouldRecommendMinimumAction(task!);
+    final displayedXp = recommendsMinimum
+        ? state.previewMinimumActionXP(task!)
+        : earnedXp;
+    final headline = recommendsMinimum
+        ? 'Минимум: ${task!.minimumAction}'
+        : task!.title;
+    final footer = recommendsMinimum
+        ? 'Лёгкий старт к квесту «${task!.title}».'
+        : 'Один маленький квест — и поток запущен.';
 
     return _SoftCard(
       isDark: isDark,
@@ -323,26 +357,29 @@ class _NextActionCard extends StatelessWidget {
               const SizedBox(width: 6),
               TaskBadge(
                 icon: Icons.auto_awesome,
-                label: '+$earnedXp XP',
+                label: '+$displayedXp XP',
                 color: const Color(0xFF4A9EFF),
               ),
               const SizedBox(width: 6),
-              _CompleteButton(
+              _QuickActionButton(
                 task: task!,
                 color: accent,
-                onComplete: onComplete,
+                label: recommendsMinimum ? 'Начать' : 'Выполнить',
+                icon: recommendsMinimum ? Icons.play_arrow : Icons.check,
+                compact: false,
+                onTrigger: recommendsMinimum ? onMinimumAction : onComplete,
               ),
             ],
           ),
           const SizedBox(height: 7),
           Text(
-            task!.title,
+            headline,
             style: TextStyle(
               color: txt,
               fontSize: 15,
               fontWeight: FontWeight.bold,
             ),
-            maxLines: 1,
+            maxLines: recommendsMinimum ? 2 : 1,
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 5),
@@ -352,6 +389,12 @@ class _NextActionCard extends StatelessWidget {
             children: [
               if (skill != null)
                 TaskBadge(icon: skill!.icon, label: skill!.name, color: accent),
+              if (recommendsMinimum)
+                TaskBadge(
+                  icon: Icons.play_circle_fill,
+                  label: 'Лёгкий старт',
+                  color: accent,
+                ),
               TaskBadge(
                 label: typeLabel[task!.type]!,
                 color: typeColor[task!.type]!,
@@ -365,7 +408,7 @@ class _NextActionCard extends StatelessWidget {
           ),
           const Spacer(),
           Text(
-            'Один маленький квест — и поток запущен.',
+            footer,
             style: TextStyle(color: sub, fontSize: 11, height: 1.2),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -458,6 +501,7 @@ class _QuestQueue extends StatelessWidget {
   final List<Task> tasks;
   final bool isDark;
   final Function(String id, Offset pos) onComplete;
+  final Function(String id, Offset pos) onMinimumAction;
 
   const _QuestQueue({
     required this.state,
@@ -466,6 +510,7 @@ class _QuestQueue extends StatelessWidget {
     required this.tasks,
     required this.isDark,
     required this.onComplete,
+    required this.onMinimumAction,
   });
 
   @override
@@ -518,8 +563,10 @@ class _QuestQueue extends StatelessWidget {
                     task: task,
                     skill: skill,
                     xp: state.previewEarnedXP(task),
+                    minimumXp: state.previewMinimumActionXP(task),
                     isDark: isDark,
                     onComplete: onComplete,
+                    onMinimumAction: onMinimumAction,
                   );
                 },
               ),
@@ -534,15 +581,19 @@ class _QuestMiniRow extends StatelessWidget {
   final Task task;
   final Skill? skill;
   final int xp;
+  final int minimumXp;
   final bool isDark;
   final Function(String id, Offset pos) onComplete;
+  final Function(String id, Offset pos) onMinimumAction;
 
   const _QuestMiniRow({
     required this.task,
     required this.skill,
     required this.xp,
+    required this.minimumXp,
     required this.isDark,
     required this.onComplete,
+    required this.onMinimumAction,
   });
 
   @override
@@ -550,6 +601,15 @@ class _QuestMiniRow extends StatelessWidget {
     final txt = textColor(isDark);
     final sub = subtext(isDark);
     final accent = skill?.color ?? const Color(0xFF4A9EFF);
+    final recommendsMinimum = TodayDashboard._shouldRecommendMinimumAction(
+      task,
+    );
+    final title = recommendsMinimum
+        ? 'Минимум: ${task.minimumAction}'
+        : task.title;
+    final subtitle = recommendsMinimum
+        ? 'Лёгкий старт • ${task.title} • +$minimumXp XP'
+        : '${typeLabel[task.type]} • +$xp XP';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -567,39 +627,54 @@ class _QuestMiniRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  task.title,
+                  title,
                   style: TextStyle(
                     color: txt,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
-                  maxLines: 1,
+                  maxLines: recommendsMinimum ? 2 : 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${typeLabel[task.type]} • +$xp XP',
+                  subtitle,
                   style: TextStyle(color: sub, fontSize: 10),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
-          _CompleteButton(task: task, color: accent, onComplete: onComplete),
+          _QuickActionButton(
+            task: task,
+            color: accent,
+            label: recommendsMinimum ? 'Старт' : 'OK',
+            icon: recommendsMinimum ? Icons.play_arrow : Icons.check,
+            compact: true,
+            onTrigger: recommendsMinimum ? onMinimumAction : onComplete,
+          ),
         ],
       ),
     );
   }
 }
 
-class _CompleteButton extends StatelessWidget {
+class _QuickActionButton extends StatelessWidget {
   final Task task;
   final Color color;
-  final Function(String id, Offset pos) onComplete;
+  final String label;
+  final IconData icon;
+  final bool compact;
+  final Function(String id, Offset pos) onTrigger;
 
-  const _CompleteButton({
+  const _QuickActionButton({
     required this.task,
     required this.color,
-    required this.onComplete,
+    required this.label,
+    required this.icon,
+    required this.compact,
+    required this.onTrigger,
   });
 
   @override
@@ -608,15 +683,34 @@ class _CompleteButton extends StatelessWidget {
       scale: 0.9,
       onTap: () {
         final box = context.findRenderObject() as RenderBox?;
-        onComplete(task.id, box?.localToGlobal(Offset.zero) ?? Offset.zero);
+        onTrigger(task.id, box?.localToGlobal(Offset.zero) ?? Offset.zero);
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 8 : 10,
+          vertical: compact ? 7 : 8,
+        ),
         decoration: BoxDecoration(
           color: color,
           borderRadius: BorderRadius.circular(9),
         ),
-        child: const Icon(Icons.check, color: Colors.white, size: 15),
+        child: compact
+            ? Icon(icon, color: Colors.white, size: 15)
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, color: Colors.white, size: 15),
+                  const SizedBox(width: 4),
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
       ),
     );
   }

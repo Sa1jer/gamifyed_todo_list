@@ -108,6 +108,9 @@ class Task {
   DateTime? nextResetAt;
   DateTime? lastCompletedAt;
   Priority priority;
+  String minimumAction;
+  DateTime? minimumActionDoneAt;
+  int minimumActionEarnedXP;
   List<String> subtasks;
   List<bool> subtaskDone;
   List<String> tags;
@@ -129,6 +132,9 @@ class Task {
     this.nextResetAt,
     this.lastCompletedAt,
     this.priority = Priority.medium,
+    this.minimumAction = '',
+    this.minimumActionDoneAt,
+    this.minimumActionEarnedXP = 0,
     List<String>? subtasks,
     List<bool>? subtaskDone,
     List<String>? tags,
@@ -148,6 +154,11 @@ class Task {
 
   bool get showStreakBadge =>
       type == TaskType.repeating && streak >= 2 && !isDone;
+
+  bool get hasMinimumAction => minimumAction.trim().isNotEmpty;
+
+  bool get isMinimumActionDone =>
+      minimumActionDoneAt != null && minimumActionEarnedXP > 0;
 
   int get subtaskCompletedCount => subtaskDone.where((v) => v).length;
 
