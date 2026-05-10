@@ -44,6 +44,98 @@ Color borderColor(bool d) =>
     d ? const Color(0xFF2A2A35) : const Color(0xFFD8D8E4);
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// RANKS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class RankInfo {
+  final String code;
+  final String label;
+  final Color color;
+  final int minLevel;
+
+  const RankInfo({
+    required this.code,
+    required this.label,
+    required this.color,
+    required this.minLevel,
+  });
+}
+
+const profileRankTiers = <RankInfo>[
+  RankInfo(code: 'E', label: 'E-rank', color: Color(0xFF8E8E93), minLevel: 1),
+  RankInfo(code: 'D', label: 'D-rank', color: Color(0xFF4A9EFF), minLevel: 3),
+  RankInfo(code: 'C', label: 'C-rank', color: Color(0xFF34C759), minLevel: 5),
+  RankInfo(code: 'B', label: 'B-rank', color: Color(0xFFFF9500), minLevel: 7),
+  RankInfo(code: 'A', label: 'A-rank', color: Color(0xFFFF2D55), minLevel: 9),
+  RankInfo(code: 'S', label: 'S-rank', color: Color(0xFFFFCC00), minLevel: 11),
+];
+
+const skillRankTiers = <RankInfo>[
+  RankInfo(
+    code: 'novice',
+    label: 'Новичок',
+    color: Color(0xFF8E8E93),
+    minLevel: 1,
+  ),
+  RankInfo(
+    code: 'apprentice',
+    label: 'Ученик',
+    color: Color(0xFF4A9EFF),
+    minLevel: 3,
+  ),
+  RankInfo(
+    code: 'practitioner',
+    label: 'Практик',
+    color: Color(0xFF34C759),
+    minLevel: 5,
+  ),
+  RankInfo(
+    code: 'specialist',
+    label: 'Специалист',
+    color: Color(0xFFFF9500),
+    minLevel: 7,
+  ),
+  RankInfo(
+    code: 'master',
+    label: 'Мастер',
+    color: Color(0xFFAF52DE),
+    minLevel: 9,
+  ),
+  RankInfo(
+    code: 'legend',
+    label: 'Легенда',
+    color: Color(0xFFFFCC00),
+    minLevel: 11,
+  ),
+];
+
+RankInfo _rankForLevel(List<RankInfo> tiers, int level) {
+  final normalizedLevel = level < 1 ? 1 : level;
+  return tiers.lastWhere((tier) => normalizedLevel >= tier.minLevel);
+}
+
+RankInfo? _nextRankForLevel(List<RankInfo> tiers, int level) {
+  final current = _rankForLevel(tiers, level);
+  for (final tier in tiers) {
+    if (tier.minLevel > current.minLevel) {
+      return tier;
+    }
+  }
+  return null;
+}
+
+RankInfo profileRankForLevel(int level) =>
+    _rankForLevel(profileRankTiers, level);
+
+RankInfo? nextProfileRankForLevel(int level) =>
+    _nextRankForLevel(profileRankTiers, level);
+
+RankInfo skillRankForLevel(int level) => _rankForLevel(skillRankTiers, level);
+
+RankInfo? nextSkillRankForLevel(int level) =>
+    _nextRankForLevel(skillRankTiers, level);
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // ENUMS
 // ═══════════════════════════════════════════════════════════════════════════════
 

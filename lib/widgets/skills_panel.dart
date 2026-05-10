@@ -90,6 +90,7 @@ class SkillsPanel extends StatelessWidget {
                   isSelected: state.selectedSkillId == sk.id,
                   isDark: isDark,
                   onTap: () => state.selectSkill(sk.id),
+                  onTree: () => _treeDialog(context, sk),
                   onEdit: () => _editDialog(context, sk),
                   onDelete: () => state.removeSkill(sk.id),
                 );
@@ -139,6 +140,14 @@ class SkillsPanel extends StatelessWidget {
       );
     },
   );
+
+  void _treeDialog(BuildContext ctx, Skill sk) => showDialog(
+    context: ctx,
+    builder: (_) {
+      final state = AppStateProvider.of(ctx);
+      return SkillTreeDialog(state: state, skill: sk);
+    },
+  );
 }
 
 // ─── Skill Card ───────────────────────────────────────────────────────────────
@@ -147,7 +156,7 @@ class SkillCard extends StatefulWidget {
   final Skill skill;
   final int taskCount;
   final bool isSelected, isDark;
-  final VoidCallback onTap, onEdit, onDelete;
+  final VoidCallback onTap, onTree, onEdit, onDelete;
   const SkillCard({
     super.key,
     required this.skill,
@@ -155,6 +164,7 @@ class SkillCard extends StatefulWidget {
     required this.isSelected,
     required this.isDark,
     required this.onTap,
+    required this.onTree,
     required this.onEdit,
     required this.onDelete,
   });
@@ -168,6 +178,7 @@ class _SkillCardState extends State<SkillCard> {
   @override
   Widget build(BuildContext context) {
     final sk = widget.skill;
+    final skillRank = skillRankForLevel(sk.level);
     final isDark = widget.isDark;
     final txt = textColor(isDark);
     final sub = subtext(isDark);
@@ -259,6 +270,28 @@ class _SkillCardState extends State<SkillCard> {
                       const SizedBox(height: 5),
                       Row(
                         children: [
+                          Text(
+                            skillRank.label,
+                            style: TextStyle(
+                              color: sk.color.withAlpha(220),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          if (sk.treeNodes.isNotEmpty) ...[
+                            Icon(Icons.account_tree, size: 11, color: sub),
+                            const SizedBox(width: 3),
+                            Text(
+                              '${sk.masteredTreeNodeCount}/${sk.treeNodes.length}',
+                              style: TextStyle(
+                                color: sub,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                          ],
                           Expanded(
                             child: XPBar(
                               progress: sk.progress,
@@ -279,13 +312,18 @@ class _SkillCardState extends State<SkillCard> {
                 // Hover actions — use Stack overlay approach to avoid pushing layout
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 150),
-                  width: (_h || widget.isSelected) ? 50 : 0,
+                  width: (_h || widget.isSelected) ? 75 : 0,
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: SizedBox(
-                      width: 50,
+                      width: 75,
                       child: Row(
                         children: [
+                          MiniBtn(
+                            icon: Icons.account_tree,
+                            color: sk.color,
+                            onTap: widget.onTree,
+                          ),
                           MiniBtn(
                             icon: Icons.edit,
                             color: sub,

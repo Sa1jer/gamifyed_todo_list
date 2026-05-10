@@ -725,6 +725,729 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// SKILL TREE DIALOG
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class SkillTreeDialog extends StatefulWidget {
+  final AppState state;
+  final Skill skill;
+
+  const SkillTreeDialog({super.key, required this.state, required this.skill});
+
+  @override
+  State<SkillTreeDialog> createState() => _SkillTreeDialogState();
+}
+
+class _SkillTreeDialogState extends State<SkillTreeDialog> {
+  Skill get _skill =>
+      widget.state.skills
+          .where((item) => item.id == widget.skill.id)
+          .firstOrNull ??
+      widget.skill;
+
+  @override
+  Widget build(BuildContext context) {
+    final skill = _skill;
+    final isDark = widget.state.isDark;
+    final bg = surface(isDark);
+    final txt = textColor(isDark);
+    final sub = subtext(isDark);
+    final bdr = borderColor(isDark);
+
+    return Dialog(
+      backgroundColor: bg,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: SizedBox(
+        width: 560,
+        height: 640,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(22, 20, 16, 14),
+              child: Row(
+                children: [
+                  Icon(Icons.account_tree, color: skill.color, size: 22),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Дерево: ${skill.name}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        color: txt,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  SmallBtn(
+                    label: 'Узел',
+                    icon: Icons.add,
+                    color: skill.color,
+                    onTap: () => _showAddNode(context, skill),
+                  ),
+                  const SizedBox(width: 10),
+                  PressFeedback(
+                    scale: 0.85,
+                    onTap: () => Navigator.pop(context),
+                    child: Icon(Icons.close, color: sub, size: 22),
+                  ),
+                ],
+              ),
+            ),
+            Container(height: 1, color: bdr),
+            Padding(
+              padding: const EdgeInsets.all(14),
+              child: _SkillTreeSummary(skill: skill, isDark: isDark),
+            ),
+            Expanded(
+              child: skill.treeNodes.isEmpty
+                  ? _SkillTreeEmptyState(
+                      isDark: isDark,
+                      color: skill.color,
+                      onAdd: () => _showAddNode(context, skill),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                      itemCount: skill.treeNodes.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 10),
+                      itemBuilder: (_, index) {
+                        final node = skill.treeNodes[index];
+                        return _SkillTreeNodeCard(
+                          skill: skill,
+                          node: node,
+                          state: widget.state,
+                          isDark: isDark,
+                          onChanged: () => setState(() {}),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAddNode(BuildContext context, Skill skill) {
+    showDialog(
+      context: context,
+      builder: (_) => _AddSkillTreeNodeDialog(
+        isDark: widget.state.isDark,
+        skill: skill,
+        onSave: (title, description, xpReward, prerequisiteId, checklist) {
+          widget.state.addSkillTreeNode(
+            skill.id,
+            SkillTreeNode(
+              id: uid(),
+              title: title,
+              description: description,
+              xpReward: xpReward,
+              prerequisiteIds: prerequisiteId == null ? [] : [prerequisiteId],
+              checklist: checklist,
+            ),
+          );
+          setState(() {});
+        },
+      ),
+    );
+  }
+}
+
+class _SkillTreeSummary extends StatelessWidget {
+  final Skill skill;
+  final bool isDark;
+
+  const _SkillTreeSummary({required this.skill, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    final txt = textColor(isDark);
+    final sub = subtext(isDark);
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: skill.color.withAlpha(14),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: skill.color.withAlpha(50)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Icon(skill.icon, color: skill.color, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '${skill.masteredTreeNodeCount}/${skill.treeNodes.length} узлов освоено',
+                  style: TextStyle(
+                    color: txt,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+              TaskBadge(
+                icon: Icons.lock_open,
+                label: '${skill.activeTreeNodeCount} активно',
+                color: skill.color,
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: XPBar(
+                  progress: skill.treeProgress,
+                  color: skill.color,
+                  height: 7,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                '${(skill.treeProgress * 100).round()}%',
+                style: TextStyle(color: sub, fontSize: 11),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SkillTreeNodeCard extends StatelessWidget {
+  final AppState state;
+  final Skill skill;
+  final SkillTreeNode node;
+  final bool isDark;
+  final VoidCallback onChanged;
+
+  const _SkillTreeNodeCard({
+    required this.state,
+    required this.skill,
+    required this.node,
+    required this.isDark,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final txt = textColor(isDark);
+    final sub = subtext(isDark);
+    final status = skill.treeNodeStatus(node);
+    final statusColor = skillTreeNodeStatusColor[status]!;
+    final canMaster = state.canMasterSkillTreeNode(skill.id, node.id);
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: statusColor.withAlpha(
+          status == SkillTreeNodeStatus.locked ? 8 : 14,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: statusColor.withAlpha(55)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: statusColor.withAlpha(26),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(_statusIcon(status), color: statusColor, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      node.title,
+                      style: TextStyle(
+                        color: txt,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (node.description.trim().isNotEmpty)
+                      Text(
+                        node.description,
+                        style: TextStyle(color: sub, fontSize: 11.5),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                  ],
+                ),
+              ),
+              TaskBadge(
+                label: skillTreeNodeStatusLabel[status]!,
+                color: statusColor,
+              ),
+              const SizedBox(width: 6),
+              GestureDetector(
+                onTap: () {
+                  state.removeSkillTreeNode(skill.id, node.id);
+                  onChanged();
+                },
+                child: Icon(Icons.delete_outline, color: sub, size: 18),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              TaskBadge(
+                icon: Icons.auto_awesome,
+                label: '+${node.xpReward} XP',
+                color: const Color(0xFFFFCC00),
+              ),
+              if (node.prerequisiteIds.isNotEmpty)
+                TaskBadge(
+                  icon: Icons.lock,
+                  label: _prereqLabel(skill, node),
+                  color: const Color(0xFF8E8E93),
+                ),
+              if (node.checklist.isNotEmpty)
+                TaskBadge(
+                  icon: Icons.checklist,
+                  label:
+                      '${node.checklistCompletedCount}/${node.checklist.length}',
+                  color: skill.color,
+                ),
+            ],
+          ),
+          if (node.checklist.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            ...node.checklist.asMap().entries.map((entry) {
+              final index = entry.key;
+              final done = node.checklistDone[index];
+              return GestureDetector(
+                onTap: node.isMastered
+                    ? null
+                    : () {
+                        state.toggleSkillTreeNodeChecklist(
+                          skill.id,
+                          node.id,
+                          index,
+                        );
+                        onChanged();
+                      },
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 5),
+                  child: Row(
+                    children: [
+                      Icon(
+                        done ? Icons.check_box : Icons.check_box_outline_blank,
+                        color: done ? skill.color : sub,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          entry.value,
+                          style: TextStyle(
+                            color: done ? txt : sub,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ],
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: XPBar(
+                  progress: node.isMastered ? 1.0 : node.progress,
+                  color: statusColor,
+                  height: 6,
+                ),
+              ),
+              const SizedBox(width: 10),
+              _MasterNodeButton(
+                enabled: canMaster,
+                mastered: node.isMastered,
+                color: skill.color,
+                onTap: () {
+                  final message = state.masterSkillTreeNode(skill.id, node.id);
+                  if (message != null) {
+                    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+                      SnackBar(
+                        content: Text(message),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                  onChanged();
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  IconData _statusIcon(SkillTreeNodeStatus status) {
+    return switch (status) {
+      SkillTreeNodeStatus.locked => Icons.lock,
+      SkillTreeNodeStatus.active => Icons.play_arrow_rounded,
+      SkillTreeNodeStatus.mastered => Icons.workspace_premium,
+    };
+  }
+
+  String _prereqLabel(Skill skill, SkillTreeNode node) {
+    final names = node.prerequisiteIds
+        .map(
+          (id) => skill.treeNodes
+              .where((candidate) => candidate.id == id)
+              .firstOrNull,
+        )
+        .whereType<SkillTreeNode>()
+        .map((item) => item.title)
+        .toList();
+    if (names.isEmpty) return 'Есть условие';
+    if (names.length == 1) return names.first;
+    return '${names.length} условий';
+  }
+}
+
+class _MasterNodeButton extends StatelessWidget {
+  final bool enabled;
+  final bool mastered;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _MasterNodeButton({
+    required this.enabled,
+    required this.mastered,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (mastered) {
+      return TaskBadge(
+        icon: Icons.check_circle,
+        label: 'Готово',
+        color: const Color(0xFF34C759),
+      );
+    }
+
+    return GestureDetector(
+      onTap: enabled ? onTap : null,
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 120),
+        opacity: enabled ? 1 : 0.45,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.workspace_premium, color: Colors.white, size: 14),
+              SizedBox(width: 4),
+              Text(
+                'Освоить',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SkillTreeEmptyState extends StatelessWidget {
+  final bool isDark;
+  final Color color;
+  final VoidCallback onAdd;
+
+  const _SkillTreeEmptyState({
+    required this.isDark,
+    required this.color,
+    required this.onAdd,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final sub = subtext(isDark);
+
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.account_tree_outlined, color: sub, size: 42),
+          const SizedBox(height: 12),
+          Text(
+            'Дерево пока пустое',
+            style: TextStyle(color: sub, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Добавьте первый узел мастерства.',
+            style: TextStyle(color: sub.withAlpha(170), fontSize: 12),
+          ),
+          const SizedBox(height: 14),
+          SmallBtn(
+            label: 'Добавить узел',
+            icon: Icons.add,
+            color: color,
+            onTap: onAdd,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AddSkillTreeNodeDialog extends StatefulWidget {
+  final bool isDark;
+  final Skill skill;
+  final Function(
+    String title,
+    String description,
+    int xpReward,
+    String? prerequisiteId,
+    List<String> checklist,
+  )
+  onSave;
+
+  const _AddSkillTreeNodeDialog({
+    required this.isDark,
+    required this.skill,
+    required this.onSave,
+  });
+
+  @override
+  State<_AddSkillTreeNodeDialog> createState() =>
+      _AddSkillTreeNodeDialogState();
+}
+
+class _AddSkillTreeNodeDialogState extends State<_AddSkillTreeNodeDialog> {
+  final _titleCtrl = TextEditingController();
+  final _descriptionCtrl = TextEditingController();
+  final _checkCtrl = TextEditingController();
+  final List<String> _checklist = [];
+  String? _prerequisiteId;
+  int _xpReward = 30;
+
+  @override
+  void dispose() {
+    _titleCtrl.dispose();
+    _descriptionCtrl.dispose();
+    _checkCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = widget.isDark;
+    final bg = surface(isDark);
+    final fBg = isDark ? const Color(0xFF13131A) : const Color(0xFFF5F5F7);
+    final txt = textColor(isDark);
+    final sub = subtext(isDark);
+    final bdr = borderColor(isDark);
+    final color = widget.skill.color;
+
+    return Dialog(
+      backgroundColor: bg,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: SizedBox(
+        width: 420,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DlgHeader(title: 'Новый узел дерева', txtColor: txt),
+              const SizedBox(height: 16),
+              DlgField(
+                label: 'Название узла',
+                ctrl: _titleCtrl,
+                fBg: fBg,
+                txt: txt,
+                sub: sub,
+                bdr: bdr,
+              ),
+              const SizedBox(height: 12),
+              DlgField(
+                label: 'Описание',
+                ctrl: _descriptionCtrl,
+                fBg: fBg,
+                txt: txt,
+                sub: sub,
+                bdr: bdr,
+                min: 2,
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  SubLbl('Награда', sub),
+                  const Spacer(),
+                  TaskBadge(
+                    icon: Icons.auto_awesome,
+                    label: '$_xpReward XP',
+                    color: color,
+                  ),
+                ],
+              ),
+              Slider(
+                value: _xpReward.toDouble(),
+                min: 10,
+                max: 200,
+                divisions: 19,
+                activeColor: color,
+                inactiveColor: color.withAlpha(40),
+                onChanged: (value) => setState(() => _xpReward = value.round()),
+              ),
+              SubLbl('Требует узел', sub),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: fBg,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: bdr),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String?>(
+                    value: _prerequisiteId,
+                    isExpanded: true,
+                    dropdownColor: surface(isDark),
+                    items: [
+                      DropdownMenuItem<String?>(
+                        value: null,
+                        child: Text(
+                          'Без условия',
+                          style: TextStyle(color: sub, fontSize: 13),
+                        ),
+                      ),
+                      ...widget.skill.treeNodes.map(
+                        (node) => DropdownMenuItem<String?>(
+                          value: node.id,
+                          child: Text(
+                            node.title,
+                            style: TextStyle(color: txt, fontSize: 13),
+                          ),
+                        ),
+                      ),
+                    ],
+                    onChanged: (value) =>
+                        setState(() => _prerequisiteId = value),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              SubLbl('Чеклист узла', sub),
+              const SizedBox(height: 8),
+              ..._checklist.asMap().entries.map(
+                (entry) => Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Row(
+                    children: [
+                      Icon(Icons.check_box_outline_blank, color: sub, size: 15),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          entry.value,
+                          style: TextStyle(color: txt, fontSize: 13),
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () =>
+                            setState(() => _checklist.removeAt(entry.key)),
+                        child: const Icon(
+                          Icons.close,
+                          color: Color(0xFFFF3B30),
+                          size: 15,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _checkCtrl,
+                      style: TextStyle(color: txt, fontSize: 13),
+                      decoration: InputDecoration(
+                        hintText: '+ Добавить пункт',
+                        hintStyle: TextStyle(color: sub, fontSize: 13),
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      onSubmitted: (_) => _addChecklistItem(),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: _addChecklistItem,
+                    child: Icon(
+                      Icons.add_circle_outline,
+                      color: color,
+                      size: 20,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              DlgActions(onCancel: () => Navigator.pop(context), onSave: _save),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _addChecklistItem() {
+    final value = _checkCtrl.text.trim();
+    if (value.isEmpty) return;
+    setState(() {
+      _checklist.add(value);
+      _checkCtrl.clear();
+    });
+  }
+
+  void _save() {
+    final title = _titleCtrl.text.trim();
+    if (title.isEmpty) return;
+    widget.onSave(
+      title,
+      _descriptionCtrl.text.trim(),
+      _xpReward,
+      _prerequisiteId,
+      List.of(_checklist),
+    );
+    Navigator.pop(context);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // ADD TASK DIALOG  (unchanged from uploaded version)
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1597,10 +2320,14 @@ class StatsDialog extends StatelessWidget {
                       children: [
                         Expanded(
                           child: _StatCard(
-                            title: 'Уровень',
-                            value: '${state.profile.level}',
+                            title: 'Ранг профиля',
+                            value: profileRankForLevel(
+                              state.profile.level,
+                            ).label,
                             icon: Icons.trending_up,
-                            color: const Color(0xFF5856D6),
+                            color: profileRankForLevel(
+                              state.profile.level,
+                            ).color,
                             isDark: isDark,
                           ),
                         ),
@@ -1648,6 +2375,7 @@ class StatsDialog extends StatelessWidget {
           final completed = skillTasks.where((t) => t.isDone).length;
           final total = skillTasks.length;
           final percent = total > 0 ? (completed / total * 100).round() : 0;
+          final skillRank = skillRankForLevel(sk.level);
           return Container(
             margin: const EdgeInsets.only(bottom: 8),
             padding: const EdgeInsets.all(12),
@@ -1665,7 +2393,7 @@ class StatsDialog extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        sk.name,
+                        '${sk.name} • ${skillRank.label}',
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
                           color: txt,
@@ -1841,6 +2569,421 @@ class _TodayStatItem extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// REWARDS DIALOG
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class RewardsDialog extends StatefulWidget {
+  final AppState state;
+  const RewardsDialog({super.key, required this.state});
+
+  @override
+  State<RewardsDialog> createState() => _RewardsDialogState();
+}
+
+class _RewardsDialogState extends State<RewardsDialog> {
+  @override
+  Widget build(BuildContext context) {
+    final isDark = widget.state.isDark;
+    final bg = surface(isDark);
+    final txt = textColor(isDark);
+    final sub = subtext(isDark);
+    final bdr = borderColor(isDark);
+    final unopened = widget.state.unopenedRewardChests;
+    final buffs = widget.state.activeBuffs;
+
+    return Dialog(
+      backgroundColor: bg,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: SizedBox(
+        width: 500,
+        height: 620,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(22, 20, 16, 14),
+              child: Row(
+                children: [
+                  const Icon(Icons.redeem, color: Color(0xFFFFCC00), size: 22),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Награды и баффы',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: txt,
+                    ),
+                  ),
+                  const Spacer(),
+                  PressFeedback(
+                    scale: 0.85,
+                    onTap: () => Navigator.pop(context),
+                    child: Icon(Icons.close, color: sub, size: 22),
+                  ),
+                ],
+              ),
+            ),
+            Container(height: 1, color: bdr),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _StatCard(
+                            title: 'Неоткрыто',
+                            value: '${unopened.length}',
+                            icon: Icons.inventory_2,
+                            color: const Color(0xFFFFCC00),
+                            isDark: isDark,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _StatCard(
+                            title: 'Активные баффы',
+                            value: '${buffs.length}',
+                            icon: Icons.bolt,
+                            color: const Color(0xFF34C759),
+                            isDark: isDark,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Сундуки открываются за боевые рывки: сейчас это 5 квестов за день и победы над боссами.',
+                      style: TextStyle(color: sub, fontSize: 12, height: 1.35),
+                    ),
+                    const SizedBox(height: 18),
+                    Text(
+                      'Сундуки',
+                      style: TextStyle(
+                        color: txt,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    if (unopened.isEmpty)
+                      _RewardsEmptyState(
+                        icon: Icons.inventory_2_outlined,
+                        title: 'Пока нет сундуков',
+                        subtitle:
+                            'Сделай 5 квестов за день или победи босса, чтобы получить награду.',
+                        isDark: isDark,
+                      )
+                    else
+                      ...unopened.map(
+                        (chest) => _RewardChestCard(
+                          chest: chest,
+                          skill: chest.skillId == null
+                              ? null
+                              : widget.state.skills
+                                    .where((skill) => skill.id == chest.skillId)
+                                    .firstOrNull,
+                          isDark: isDark,
+                          onOpen: () => _openChest(context, chest.id),
+                        ),
+                      ),
+                    const SizedBox(height: 18),
+                    Text(
+                      'Активные баффы',
+                      style: TextStyle(
+                        color: txt,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    if (buffs.isEmpty)
+                      _RewardsEmptyState(
+                        icon: Icons.bolt_outlined,
+                        title: 'Нет активных баффов',
+                        subtitle:
+                            'Открой сундук, чтобы получить временное усиление на XP.',
+                        isDark: isDark,
+                      )
+                    else
+                      ...buffs.map(
+                        (buff) => _ActiveBuffCard(
+                          buff: buff,
+                          skill: buff.skillId == null
+                              ? null
+                              : widget.state.skills
+                                    .where((skill) => skill.id == buff.skillId)
+                                    .firstOrNull,
+                          isDark: isDark,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openChest(BuildContext context, String chestId) {
+    final message = widget.state.openRewardChest(chestId);
+    if (message == null) return;
+    setState(() {});
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
+    );
+  }
+}
+
+class _RewardChestCard extends StatelessWidget {
+  final RewardChest chest;
+  final Skill? skill;
+  final bool isDark;
+  final VoidCallback onOpen;
+
+  const _RewardChestCard({
+    required this.chest,
+    required this.skill,
+    required this.isDark,
+    required this.onOpen,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final txt = textColor(isDark);
+    final sub = subtext(isDark);
+    final rarityColor = rewardRarityColor[chest.rarity]!;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: rarityColor.withAlpha(14),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: rarityColor.withAlpha(55)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: rarityColor.withAlpha(26),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(Icons.inventory_2, color: rarityColor, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        chest.title,
+                        style: TextStyle(
+                          color: txt,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    TaskBadge(
+                      label: rewardRarityLabel[chest.rarity]!,
+                      color: rarityColor,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  chest.description,
+                  style: TextStyle(color: sub, fontSize: 11.5, height: 1.3),
+                ),
+                if (skill != null) ...[
+                  const SizedBox(height: 6),
+                  TaskBadge(
+                    icon: skill!.icon,
+                    label: skill!.name,
+                    color: skill!.color,
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          SmallBtn(
+            label: 'Открыть',
+            icon: Icons.auto_awesome,
+            color: rarityColor,
+            onTap: onOpen,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActiveBuffCard extends StatelessWidget {
+  final Buff buff;
+  final Skill? skill;
+  final bool isDark;
+
+  const _ActiveBuffCard({
+    required this.buff,
+    required this.skill,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final txt = textColor(isDark);
+    final sub = subtext(isDark);
+    final accent = skill?.color ?? const Color(0xFF34C759);
+    final expiresAt = buff.expiresAt;
+    final expiryLabel = expiresAt == null
+        ? null
+        : 'до ${expiresAt.hour.toString().padLeft(2, '0')}:${expiresAt.minute.toString().padLeft(2, '0')}';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: accent.withAlpha(14),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: accent.withAlpha(48)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: accent.withAlpha(24),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(Icons.bolt, color: accent, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      buff.title,
+                      style: TextStyle(
+                        color: txt,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      buff.description,
+                      style: TextStyle(color: sub, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+              TaskBadge(
+                icon: Icons.auto_awesome,
+                label: '+${buff.bonusPercent}%',
+                color: accent,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              TaskBadge(
+                icon: Icons.flash_on,
+                label: '${buff.charges} заряд',
+                color: accent,
+              ),
+              TaskBadge(
+                icon: Icons.tune,
+                label: buffTypeLabel[buff.type]!,
+                color: const Color(0xFF4A9EFF),
+              ),
+              if (expiryLabel != null)
+                TaskBadge(
+                  icon: Icons.schedule,
+                  label: expiryLabel,
+                  color: const Color(0xFFFF9500),
+                ),
+              if (skill != null)
+                TaskBadge(
+                  icon: skill!.icon,
+                  label: skill!.name,
+                  color: skill!.color,
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RewardsEmptyState extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool isDark;
+
+  const _RewardsEmptyState({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final sub = subtext(isDark);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: (isDark ? const Color(0xFF13131A) : const Color(0xFFF5F5F7)),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor(isDark)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: sub, size: 30),
+          const SizedBox(height: 10),
+          Text(
+            title,
+            style: TextStyle(
+              color: sub,
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: sub.withAlpha(170), fontSize: 11.5),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // BOSSES DIALOG
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1959,7 +3102,7 @@ class _BossesDialogState extends State<BossesDialog> {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'Босс — это плохая привычка или негативная черта, которую вы хотите побороть. Создайте босса для навыка и поставьте цель — выполнять задачи несколько дней подряд.',
+                      'Босс — это плохая привычка или негативная черта. Теперь он слабеет не только от стрика, но и от high-priority задач, лёгких стартов и общего прогресса по навыку.',
                       style: TextStyle(color: sub, fontSize: 12, height: 1.4),
                     ),
                     const SizedBox(height: 10),
@@ -1967,9 +3110,9 @@ class _BossesDialogState extends State<BossesDialog> {
                       children: [
                         _buildTip(Icons.local_fire_department, 'Стрик', sub),
                         const SizedBox(width: 16),
-                        _buildTip(Icons.whatshot, 'HP босса', sub),
+                        _buildTip(Icons.flag, 'Фокус', sub),
                         const SizedBox(width: 16),
-                        _buildTip(Icons.emoji_events, 'Победа', sub),
+                        _buildTip(Icons.play_circle_fill, 'Старт', sub),
                       ],
                     ),
                   ],
@@ -2005,6 +3148,9 @@ class _BossesDialogState extends State<BossesDialog> {
                       itemCount: widget.state.bosses.length,
                       itemBuilder: (_, i) => _BossCard(
                         boss: widget.state.bosses[i],
+                        snapshot: widget.state.bossSnapshot(
+                          widget.state.bosses[i],
+                        ),
                         skills: widget.state.skills,
                         isDark: isDark,
                         onDelete: () {
@@ -2078,11 +3224,13 @@ class _BossesDialogState extends State<BossesDialog> {
 
 class _BossCard extends StatelessWidget {
   final Boss boss;
+  final BossSnapshot snapshot;
   final List<Skill> skills;
   final bool isDark;
   final VoidCallback onDelete;
   const _BossCard({
     required this.boss,
+    required this.snapshot,
     required this.skills,
     required this.isDark,
     required this.onDelete,
@@ -2157,13 +3305,17 @@ class _BossCard extends StatelessWidget {
                     vertical: 3,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFF2D55).withAlpha(25),
+                    color: snapshot.isUnderAttack
+                        ? const Color(0xFFFF3B30).withAlpha(25)
+                        : c.withAlpha(20),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
-                    '${boss.currentStreak}/${boss.targetStreak}',
-                    style: const TextStyle(
-                      color: Color(0xFFFF2D55),
+                    snapshot.phaseLabel,
+                    style: TextStyle(
+                      color: snapshot.isUnderAttack
+                          ? const Color(0xFFFF3B30)
+                          : c,
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                     ),
@@ -2212,7 +3364,7 @@ class _BossCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '${boss.hp} HP',
+                  '${boss.hp} HP  •  ${snapshot.impactPercent}%',
                   style: TextStyle(
                     color: c,
                     fontSize: 11,
@@ -2222,12 +3374,85 @@ class _BossCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                _BossMetricChip(
+                  label: 'Стрик',
+                  value: '${snapshot.currentStreak}/${snapshot.targetStreak}',
+                  color: const Color(0xFFFF9500),
+                ),
+                _BossMetricChip(
+                  label: 'Фокус',
+                  value: '${snapshot.priorityPercent}%',
+                  color: const Color(0xFFFF2D55),
+                ),
+                _BossMetricChip(
+                  label: 'Старт',
+                  value: '${snapshot.startPercent}%',
+                  color: const Color(0xFF4A9EFF),
+                ),
+                if (snapshot.totalTreeNodes > 0)
+                  _BossMetricChip(
+                    label: 'Дерево',
+                    value:
+                        '${snapshot.masteredTreeNodes}/${snapshot.totalTreeNodes}',
+                    color: const Color(0xFF34C759),
+                  ),
+                if (snapshot.stalledHighPriorityTasks > 0)
+                  _BossMetricChip(
+                    label: 'Риск',
+                    value: '${snapshot.stalledHighPriorityTasks} high',
+                    color: const Color(0xFFFF3B30),
+                  ),
+                if (snapshot.urgentRepeatingTasks > 0)
+                  _BossMetricChip(
+                    label: 'Срок',
+                    value: '${snapshot.urgentRepeatingTasks} daily',
+                    color: const Color(0xFFFF3B30),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
             Text(
-              'Стрик: ${boss.currentStreak} дней из ${boss.targetStreak}',
+              snapshot.recommendation,
               style: TextStyle(color: sub, fontSize: 11),
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _BossMetricChip extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _BossMetricChip({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withAlpha(18),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withAlpha(60)),
+      ),
+      child: Text(
+        '$label: $value',
+        style: TextStyle(
+          color: color,
+          fontSize: 10.5,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
@@ -2324,7 +3549,7 @@ class _AddBossDialogState extends State<_AddBossDialog> {
               const SizedBox(height: 14),
               Row(
                 children: [
-                  SubLbl('Требуемый стрик', sub),
+                  SubLbl('Базовый порог стрика', sub),
                   const Spacer(),
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -2354,6 +3579,10 @@ class _AddBossDialogState extends State<_AddBossDialog> {
                 activeColor: const Color(0xFFFF2D55),
                 inactiveColor: const Color(0xFFFF2D55).withAlpha(40),
                 onChanged: (v) => setState(() => _streak = v.round()),
+              ),
+              Text(
+                'Стрик остаётся главным рычагом, но босс также слабеет от high-priority задач, лёгких стартов и прогресса по навыку.',
+                style: TextStyle(color: sub, fontSize: 11, height: 1.3),
               ),
               const SizedBox(height: 16),
               DlgActions(onCancel: () => Navigator.pop(context), onSave: _save),

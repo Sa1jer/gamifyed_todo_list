@@ -92,6 +92,10 @@ class _TodayDashboardState extends State<TodayDashboard> {
     final isDark = state.isDark;
     final txt = textColor(isDark);
     final sub = subtext(isDark);
+    final nextRank = nextProfileRankForLevel(state.profile.level);
+    final activeBossThreats = state.activeBossThreatCount;
+    final activeBuffs = state.activeBuffs.length;
+    final unopenedChests = state.unopenedRewardChests.length;
     final activeTasks = state.tasks.where((task) => !task.isDone).toList();
     final dailyTasks = activeTasks
         .where((task) => task.type == TaskType.repeating)
@@ -139,10 +143,38 @@ class _TodayDashboardState extends State<TodayDashboard> {
                   const SizedBox(width: 12),
                   if (_expanded)
                     _TinyProgressLabel(
-                      label: 'до уровня',
-                      value: '${state.profile.xpNeeded - state.profile.xp} XP',
-                      color: const Color(0xFF4A9EFF),
+                      label: nextRank == null
+                          ? 'пик ранга'
+                          : 'до ${nextRank.label}',
+                      value: nextRank == null
+                          ? 'max'
+                          : '${state.profile.xpNeeded - state.profile.xp} XP',
+                      color: nextRank?.color ?? const Color(0xFFFFCC00),
                     ),
+                  if (_expanded && activeBossThreats > 0) ...[
+                    const SizedBox(width: 8),
+                    _TinyProgressLabel(
+                      label: 'боссы',
+                      value: '$activeBossThreats атакуют',
+                      color: const Color(0xFFFF3B30),
+                    ),
+                  ],
+                  if (_expanded && activeBuffs > 0) ...[
+                    const SizedBox(width: 8),
+                    _TinyProgressLabel(
+                      label: 'баффы',
+                      value: '$activeBuffs активно',
+                      color: const Color(0xFF34C759),
+                    ),
+                  ],
+                  if (_expanded && unopenedChests > 0) ...[
+                    const SizedBox(width: 8),
+                    _TinyProgressLabel(
+                      label: 'награды',
+                      value: '$unopenedChests сундук',
+                      color: const Color(0xFFFFCC00),
+                    ),
+                  ],
                   const SizedBox(width: 8),
                   _CollapseButton(
                     expanded: _expanded,
@@ -321,9 +353,10 @@ class _NextActionCard extends StatelessWidget {
     final recommendsMinimum =
         state.canCompleteMinimumAction(task!) &&
         TodayDashboard._shouldRecommendMinimumAction(task!);
+    final buffBonus = recommendsMinimum ? 0 : state.previewBuffBonusXP(task!);
     final displayedXp = recommendsMinimum
         ? state.previewMinimumActionXP(task!)
-        : earnedXp;
+        : earnedXp + buffBonus;
     final headline = recommendsMinimum
         ? 'Минимум: ${task!.minimumAction}'
         : task!.title;
@@ -360,6 +393,14 @@ class _NextActionCard extends StatelessWidget {
                 label: '+$displayedXp XP',
                 color: const Color(0xFF4A9EFF),
               ),
+              if (!recommendsMinimum && buffBonus > 0) ...[
+                const SizedBox(width: 6),
+                TaskBadge(
+                  icon: Icons.bolt,
+                  label: 'бафф +$buffBonus',
+                  color: const Color(0xFF34C759),
+                ),
+              ],
               const SizedBox(width: 6),
               _QuickActionButton(
                 task: task!,
@@ -563,6 +604,7 @@ class _QuestQueue extends StatelessWidget {
                     task: task,
                     skill: skill,
                     xp: state.previewEarnedXP(task),
+                    buffBonus: state.previewBuffBonusXP(task),
                     minimumXp: state.previewMinimumActionXP(task),
                     isDark: isDark,
                     onComplete: onComplete,
@@ -581,6 +623,7 @@ class _QuestMiniRow extends StatelessWidget {
   final Task task;
   final Skill? skill;
   final int xp;
+  final int buffBonus;
   final int minimumXp;
   final bool isDark;
   final Function(String id, Offset pos) onComplete;
@@ -590,6 +633,7 @@ class _QuestMiniRow extends StatelessWidget {
     required this.task,
     required this.skill,
     required this.xp,
+    required this.buffBonus,
     required this.minimumXp,
     required this.isDark,
     required this.onComplete,
@@ -609,6 +653,8 @@ class _QuestMiniRow extends StatelessWidget {
         : task.title;
     final subtitle = recommendsMinimum
         ? 'Лёгкий старт • ${task.title} • +$minimumXp XP'
+        : buffBonus > 0
+        ? '${typeLabel[task.type]} • +${xp + buffBonus} XP • бафф +$buffBonus'
         : '${typeLabel[task.type]} • +$xp XP';
 
     return Container(

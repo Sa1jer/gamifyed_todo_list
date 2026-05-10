@@ -382,6 +382,39 @@ class _XPBarState extends State<XPBar> with SingleTickerProviderStateMixin {
 // LEVEL BADGE
 // ═══════════════════════════════════════════════════════════════════════════════
 
+class RankBadge extends StatelessWidget {
+  final String label;
+  final Color color;
+  final double fontSize;
+  final EdgeInsetsGeometry padding;
+
+  const RankBadge({
+    super.key,
+    required this.label,
+    required this.color,
+    this.fontSize = 10.5,
+    this.padding = const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+  });
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: padding,
+    decoration: BoxDecoration(
+      color: color.withAlpha(18),
+      borderRadius: BorderRadius.circular(999),
+      border: Border.all(color: color.withAlpha(65)),
+    ),
+    child: Text(
+      label,
+      style: TextStyle(
+        color: color,
+        fontSize: fontSize,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+  );
+}
+
 class LvlBadge extends StatelessWidget {
   final int level;
   final Color color;

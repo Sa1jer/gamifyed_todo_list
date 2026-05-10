@@ -68,6 +68,7 @@ class _ProfileDialogState extends State<ProfileDialog> {
   Widget build(BuildContext context) {
     final s = AppStateProvider.of(context);
     final p = s.profile;
+    final profileRank = profileRankForLevel(p.level);
     final isDark = s.isDark;
     final bg = surface(isDark);
     final txt = textColor(isDark);
@@ -100,9 +101,18 @@ class _ProfileDialogState extends State<ProfileDialog> {
                         children: [
                           _buildNameRow(context, s, p, txt, sub),
                           const SizedBox(height: 4),
-                          LvlBadge(
-                            level: p.level,
-                            color: const Color(0xFF4A9EFF),
+                          Row(
+                            children: [
+                              RankBadge(
+                                label: profileRank.label,
+                                color: profileRank.color,
+                              ),
+                              const SizedBox(width: 8),
+                              LvlBadge(
+                                level: p.level,
+                                color: const Color(0xFF4A9EFF),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 18),
                           Container(height: 1, color: bdr),
@@ -360,21 +370,36 @@ class _ProfileDialogState extends State<ProfileDialog> {
   // ── XP section ────────────────────────────────────────────────────────────
 
   Widget _buildXPSection(UserProfile p, Color sub) {
-    return Row(
+    final currentRank = profileRankForLevel(p.level);
+    final nextRank = nextProfileRankForLevel(p.level);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Опыт', style: TextStyle(color: sub, fontSize: 13)),
-        const SizedBox(width: 16),
-        Expanded(
-          child: XPBar(
-            progress: p.progress,
-            color: const Color(0xFF4A9EFF),
-            height: 8,
-          ),
+        Row(
+          children: [
+            Text('Опыт', style: TextStyle(color: sub, fontSize: 13)),
+            const SizedBox(width: 16),
+            Expanded(
+              child: XPBar(
+                progress: p.progress,
+                color: const Color(0xFF4A9EFF),
+                height: 8,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              '${p.xp} / ${p.xpNeeded}',
+              style: TextStyle(color: sub, fontSize: 12),
+            ),
+          ],
         ),
-        const SizedBox(width: 10),
+        const SizedBox(height: 8),
         Text(
-          '${p.xp} / ${p.xpNeeded}',
-          style: TextStyle(color: sub, fontSize: 12),
+          nextRank == null
+              ? 'Текущий ранг: ${currentRank.label}. Пиковый ранг уже достигнут.'
+              : 'Текущий ранг: ${currentRank.label}. Следующий — ${nextRank.label} на ур.${nextRank.minLevel}.',
+          style: TextStyle(color: sub, fontSize: 12, height: 1.25),
         ),
       ],
     );
@@ -623,6 +648,7 @@ class _SkillChipState extends State<_SkillChip> {
   @override
   Widget build(BuildContext context) {
     final sk = widget.skill;
+    final skillRank = skillRankForLevel(sk.level);
     final sub = subtext(widget.isDark);
 
     return GestureDetector(
@@ -657,11 +683,16 @@ class _SkillChipState extends State<_SkillChip> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Ур.${sk.level}',
+                    skillRank.label,
                     style: TextStyle(color: sub, fontSize: 10),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    'Ур.${sk.level}',
+                    style: TextStyle(color: sub.withAlpha(190), fontSize: 9.5),
                   ),
                   SizedBox(
-                    width: 60,
+                    width: 78,
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(2),
                       child: LinearProgressIndicator(

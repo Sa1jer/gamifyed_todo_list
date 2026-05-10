@@ -1,7 +1,11 @@
+import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:todo_list_app/app_state.dart';
 import 'package:todo_list_app/models.dart';
 import 'package:todo_list_app/storage_service.dart';
+import 'package:todo_list_app/utils.dart';
 
 class _InMemoryStorageService extends StorageService {
   bool? _theme;
@@ -64,6 +68,18 @@ class _InMemoryStorageService extends StorageService {
 
   @override
   Future<void> saveBosses(List<Boss> bosses) async {}
+
+  @override
+  Future<List<RewardChest>> loadRewardChests() async => [];
+
+  @override
+  Future<void> saveRewardChests(List<RewardChest> rewardChests) async {}
+
+  @override
+  Future<List<Buff>> loadBuffs() async => [];
+
+  @override
+  Future<void> saveBuffs(List<Buff> buffs) async {}
 }
 
 void main() {
@@ -121,6 +137,316 @@ void main() {
       expect(state.previewEarnedXP(task), 42);
       expect(state.todayStats?.tasksCompleted, 0);
       expect(state.todayStats?.xpEarned, 18);
+    });
+  });
+
+  group('boss improvements', () {
+    late AppState state;
+    late Skill skill;
+    late Task task;
+    late Boss boss;
+
+    setUp(() {
+      state = AppState(storage: _InMemoryStorageService());
+      skill = state.skills.firstWhere((item) => item.name == 'Python');
+      task = state.tasks.firstWhere(
+        (candidate) => candidate.title == 'Написать REST API на FastAPI',
+      );
+
+      state.updateTask(
+        task,
+        title: task.title,
+        xpReward: task.xpReward,
+        type: task.type,
+        repeatFrequency: task.repeatFrequency,
+        repeatCustomDays: task.repeatCustomDays,
+        priority: Priority.high,
+        minimumAction: task.minimumAction,
+        subtasks: List.of(task.subtasks),
+        tags: List.of(task.tags),
+        notificationsEnabled: false,
+        notificationHour: null,
+        notificationMinute: null,
+      );
+
+      boss = Boss(
+        id: 'python-boss',
+        title: 'Прокрастинация',
+        skillId: skill.id,
+        targetStreak: 7,
+      );
+      state.addBoss(boss);
+    });
+
+    tearDown(() {
+      state.dispose();
+    });
+
+    test('boss starts attacking when high priority task is stalled', () {
+      final snapshot = state.bossSnapshot(boss);
+
+      expect(snapshot.stalledHighPriorityTasks, 1);
+      expect(snapshot.isUnderAttack, isTrue);
+      expect(snapshot.phaseLabel, 'Атакует');
+      expect(boss.hp, 100);
+    });
+
+    test('minimum action relieves pressure and damages boss', () {
+      state.completeMinimumAction(task.id);
+      final snapshot = state.bossSnapshot(boss);
+
+      expect(snapshot.stalledHighPriorityTasks, 0);
+      expect(snapshot.startPercent, greaterThan(0));
+      expect(snapshot.priorityPercent, 100);
+      expect(snapshot.isUnderAttack, isFalse);
+      expect(boss.hp, lessThan(100));
+    });
+  });
+
+  group('skill tree', () {
+    late AppState state;
+    late Skill skill;
+
+    setUp(() {
+      state = AppState(storage: _InMemoryStorageService());
+      skill = Skill(
+        id: 'backend',
+        name: 'Backend',
+        goal: 'Build production APIs',
+        color: const Color(0xFF4A9EFF),
+        icon: Icons.code,
+        treeNodes: [
+          SkillTreeNode(
+            id: 'basics',
+            title: 'API basics',
+            xpReward: 20,
+            checklist: ['Create first endpoint'],
+          ),
+          SkillTreeNode(
+            id: 'auth',
+            title: 'JWT auth',
+            xpReward: 30,
+            prerequisiteIds: ['basics'],
+            checklist: ['Protect route'],
+          ),
+        ],
+      );
+      state.addSkill(skill);
+    });
+
+    tearDown(() {
+      state.dispose();
+    });
+
+    test('unlocks dependent nodes and awards xp on mastery', () {
+      final basics = skill.treeNodes.first;
+      final auth = skill.treeNodes.last;
+
+      expect(skill.treeNodeStatus(basics), SkillTreeNodeStatus.active);
+      expect(skill.treeNodeStatus(auth), SkillTreeNodeStatus.locked);
+      expect(state.canMasterSkillTreeNode(skill.id, basics.id), isFalse);
+
+      state.toggleSkillTreeNodeChecklist(skill.id, basics.id, 0);
+      final message = state.masterSkillTreeNode(skill.id, basics.id);
+
+      expect(message, 'Узел освоен: +20 XP');
+      expect(basics.isMastered, isTrue);
+      expect(skill.treeNodeStatus(auth), SkillTreeNodeStatus.active);
+      expect(skill.masteredTreeNodeCount, 1);
+      expect(skill.treeProgress, 0.5);
+      expect(state.profile.totalXpEarned, 20);
+      expect(state.todayStats?.xpEarned, 20);
+    });
+
+    test('tree mastery contributes to boss progress', () {
+      final boss = Boss(
+        id: 'backend-boss',
+        title: 'Fear of complexity',
+        skillId: skill.id,
+        targetStreak: 7,
+      );
+      state.addBoss(boss);
+
+      state.toggleSkillTreeNodeChecklist(skill.id, 'basics', 0);
+      state.masterSkillTreeNode(skill.id, 'basics');
+
+      final snapshot = state.bossSnapshot(boss);
+
+      expect(snapshot.masteredTreeNodes, 1);
+      expect(snapshot.totalTreeNodes, 2);
+      expect(snapshot.treePercent, 50);
+      expect(snapshot.impactPercent, 50);
+      expect(boss.hp, lessThan(100));
+    });
+  });
+
+  group('rewards and buffs', () {
+    late AppState state;
+
+    setUp(() {
+      state = AppState(
+        storage: _InMemoryStorageService(),
+        random: math.Random(1),
+      );
+    });
+
+    tearDown(() {
+      state.dispose();
+    });
+
+    test('unlocks a daily reward chest after five completed quests', () {
+      final questIds = state.tasks.map((task) => task.id).toList();
+
+      for (final questId in questIds) {
+        state.completeTask(questId);
+      }
+
+      expect(state.todayStats?.tasksCompleted, 5);
+      expect(state.unopenedRewardChests, hasLength(1));
+      expect(state.unopenedRewardChests.first.title, 'Сундук дисциплины');
+      expect(state.consumeRewardChestNotifications(), hasLength(1));
+      expect(state.consumeRewardChestNotifications(), isEmpty);
+
+      final rewardMessage = state.openRewardChest(
+        state.unopenedRewardChests.first.id,
+      );
+
+      expect(rewardMessage, contains('Сундук дисциплины'));
+      expect(state.unopenedRewardChests, isEmpty);
+      final chestBuff = state.activeBuffs.firstWhere(
+        (buff) => buff.sourceChestId != null,
+      );
+      expect(chestBuff.expiresAt, isNotNull);
+      expect(chestBuff.expiresAt!.isAfter(DateTime.now()), isTrue);
+    });
+
+    test('grants a focus buff after two same-skill quests in a row', () {
+      final pullUpTasks = state.tasks
+          .where((task) => task.skillId == state.skills.first.id)
+          .take(2)
+          .toList();
+
+      state.completeTask(pullUpTasks[0].id);
+      state.completeTask(pullUpTasks[1].id);
+
+      final focusBuff = state.activeBuffs.firstWhere(
+        (buff) => buff.title == 'Фокус',
+      );
+
+      expect(focusBuff.type, BuffType.skillFocusXpBoost);
+      expect(focusBuff.skillId, state.skills.first.id);
+      expect(focusBuff.bonusPercent, 12);
+      expect(state.consumeBuffNotifications().last.title, 'Фокус');
+    });
+
+    test('grants a flow buff after three completed quests in a day', () {
+      final questIds = state.tasks.take(3).map((task) => task.id).toList();
+
+      for (final questId in questIds) {
+        state.completeTask(questId);
+      }
+
+      final flowBuff = state.activeBuffs.firstWhere(
+        (buff) => buff.title == 'Поток',
+      );
+
+      expect(flowBuff.type, BuffType.questRushXpBoost);
+      expect(flowBuff.charges, 2);
+      expect(flowBuff.bonusPercent, 10);
+      expect(
+        state.consumeBuffNotifications().any((buff) => buff.title == 'Поток'),
+        isTrue,
+      );
+    });
+
+    test('unlocks a streak chest on important repeating milestones', () {
+      final task = state.tasks.firstWhere(
+        (candidate) => candidate.title == 'Сделать 3 подхода подтягиваний',
+      );
+      task.streak = 6;
+
+      state.completeTask(task.id);
+
+      expect(task.streak, 7);
+      expect(state.unopenedRewardChests, hasLength(1));
+      expect(state.unopenedRewardChests.first.title, 'Сундук стрика');
+      expect(state.unopenedRewardChests.first.rarity, RewardRarity.rare);
+      expect(
+        state.consumeRewardChestNotifications().first.title,
+        'Сундук стрика',
+      );
+    });
+
+    test('defeating a stronger boss unlocks an epic chest', () {
+      final skill = Skill(
+        id: 'discipline',
+        name: 'Discipline',
+        goal: 'Hold the line',
+        color: const Color(0xFF34C759),
+        icon: Icons.shield,
+      );
+      state.addSkill(skill);
+
+      final task = Task(
+        id: 'discipline-daily',
+        title: 'Daily discipline quest',
+        skillId: skill.id,
+        xpReward: 10,
+        type: TaskType.repeating,
+        streak: 13,
+      );
+      state.addTask(task);
+
+      final boss = Boss(
+        id: 'discipline-boss',
+        title: 'Resistance',
+        skillId: skill.id,
+        targetStreak: 14,
+      );
+      state.addBoss(boss);
+
+      state.completeTask(task.id);
+
+      expect(boss.isDefeated, isTrue);
+      expect(state.unopenedRewardChests, hasLength(1));
+      expect(state.unopenedRewardChests.first.title, 'Эпический сундук победы');
+      expect(state.unopenedRewardChests.first.rarity, RewardRarity.epic);
+    });
+
+    test('buff increases xp on completion and is restored on undo', () {
+      final task = state.tasks.firstWhere(
+        (candidate) => candidate.title == 'Пройти урок: функции и замыкания',
+      );
+
+      state.buffs.add(
+        Buff(
+          id: 'buff-1',
+          type: BuffType.nextQuestXpBoost,
+          title: 'Импульс',
+          description: 'Следующий квест даст +20% XP.',
+          bonusPercent: 20,
+          charges: 1,
+          createdAt: DateTime.now(),
+        ),
+      );
+
+      expect(state.previewBuffBonusXP(task), 4);
+
+      final message = state.completeTask(task.id);
+
+      expect(message, contains('бафф +4'));
+      expect(task.earnedXP, 24);
+      expect(task.bonusXpEarned, 4);
+      expect(state.activeBuffs, isEmpty);
+
+      state.uncompleteTask(task.id);
+
+      expect(task.isDone, isFalse);
+      expect(task.bonusXpEarned, 0);
+      expect(task.consumedBuffIds, isEmpty);
+      expect(state.activeBuffs, hasLength(1));
+      expect(state.activeBuffs.first.charges, 1);
+      expect(state.previewBuffBonusXP(task), 4);
     });
   });
 }

@@ -12,6 +12,8 @@ class StorageService {
   static const String _achievementsBox = 'achievements';
   static const String _statsBox = 'stats';
   static const String _bossesBox = 'bosses';
+  static const String _rewardChestsBox = 'reward_chests';
+  static const String _buffsBox = 'buffs';
   static const String _metaBox = 'meta';
 
   static const String _skillsSavedKey = 'skillsSaved';
@@ -25,6 +27,8 @@ class StorageService {
   late Box<String> _achievements;
   late Box<String> _stats;
   late Box<String> _bosses;
+  late Box<String> _rewardChests;
+  late Box<String> _buffs;
   late Box<String> _meta;
 
   bool _initialized = false;
@@ -41,6 +45,8 @@ class StorageService {
     _achievements = await Hive.openBox<String>(_achievementsBox);
     _stats = await Hive.openBox<String>(_statsBox);
     _bosses = await Hive.openBox<String>(_bossesBox);
+    _rewardChests = await Hive.openBox<String>(_rewardChestsBox);
+    _buffs = await Hive.openBox<String>(_buffsBox);
     _meta = await Hive.openBox<String>(_metaBox);
 
     _initialized = true;
@@ -233,12 +239,53 @@ class StorageService {
     return result;
   }
 
+  Future<void> saveRewardChests(List<RewardChest> rewardChests) async {
+    _ensureInit();
+    await _rewardChests.clear();
+    for (final chest in rewardChests) {
+      await _rewardChests.put(chest.id, _encodeRewardChest(chest));
+    }
+  }
+
+  Future<List<RewardChest>> loadRewardChests() async {
+    _ensureInit();
+    final result = <RewardChest>[];
+    for (final key in _rewardChests.keys) {
+      final json = _rewardChests.get(key);
+      if (json != null) {
+        result.add(_decodeRewardChest(json));
+      }
+    }
+    return result;
+  }
+
+  Future<void> saveBuffs(List<Buff> buffs) async {
+    _ensureInit();
+    await _buffs.clear();
+    for (final buff in buffs) {
+      await _buffs.put(buff.id, _encodeBuff(buff));
+    }
+  }
+
+  Future<List<Buff>> loadBuffs() async {
+    _ensureInit();
+    final result = <Buff>[];
+    for (final key in _buffs.keys) {
+      final json = _buffs.get(key);
+      if (json != null) {
+        result.add(_decodeBuff(json));
+      }
+    }
+    return result;
+  }
+
   String _encodeSkill(Skill s) => jsonEncode({
     'id': s.id,
     'name': s.name,
     'goal': s.goal,
     'checklist': s.checklist,
     'checklistDone': s.checklistDone,
+    'treeNodes': s.treeNodes.map(_encodeSkillTreeNode).toList(),
     'color': s.color.toARGB32(),
     'iconName': s.icon.codePoint.toString(),
     'level': s.level,
@@ -263,10 +310,43 @@ class StorageService {
       goal: d['goal'] as String,
       checklist: (d['checklist'] as List).cast<String>(),
       checklistDone: (d['checklistDone'] as List).cast<bool>(),
+      treeNodes:
+          (d['treeNodes'] as List?)
+              ?.map((raw) => _decodeSkillTreeNode(raw as Map<String, dynamic>))
+              .toList() ??
+          [],
       color: Color(d['color'] as int),
       icon: _getIconFromCodePoint(iconName),
       level: d['level'] as int? ?? 1,
       xp: d['xp'] as int? ?? 0,
+    );
+  }
+
+  Map<String, dynamic> _encodeSkillTreeNode(SkillTreeNode node) => {
+    'id': node.id,
+    'title': node.title,
+    'description': node.description,
+    'xpReward': node.xpReward,
+    'prerequisiteIds': node.prerequisiteIds,
+    'checklist': node.checklist,
+    'checklistDone': node.checklistDone,
+    'isMastered': node.isMastered,
+    'masteredAt': node.masteredAt?.toIso8601String(),
+  };
+
+  SkillTreeNode _decodeSkillTreeNode(Map<String, dynamic> d) {
+    return SkillTreeNode(
+      id: d['id'] as String,
+      title: d['title'] as String,
+      description: d['description'] as String? ?? '',
+      xpReward: d['xpReward'] as int? ?? 20,
+      prerequisiteIds: (d['prerequisiteIds'] as List?)?.cast<String>() ?? [],
+      checklist: (d['checklist'] as List?)?.cast<String>() ?? [],
+      checklistDone: (d['checklistDone'] as List?)?.cast<bool>() ?? [],
+      isMastered: d['isMastered'] as bool? ?? false,
+      masteredAt: d['masteredAt'] != null
+          ? DateTime.parse(d['masteredAt'] as String)
+          : null,
     );
   }
 
@@ -287,6 +367,8 @@ class StorageService {
     'minimumAction': t.minimumAction,
     'minimumActionDoneAt': t.minimumActionDoneAt?.toIso8601String(),
     'minimumActionEarnedXP': t.minimumActionEarnedXP,
+    'bonusXpEarned': t.bonusXpEarned,
+    'consumedBuffIds': t.consumedBuffIds,
     'subtasks': t.subtasks,
     'subtaskDone': t.subtaskDone,
     'tags': t.tags,
@@ -321,6 +403,8 @@ class StorageService {
           ? DateTime.parse(d['minimumActionDoneAt'] as String)
           : null,
       minimumActionEarnedXP: d['minimumActionEarnedXP'] as int? ?? 0,
+      bonusXpEarned: d['bonusXpEarned'] as int? ?? 0,
+      consumedBuffIds: (d['consumedBuffIds'] as List?)?.cast<String>() ?? [],
       subtasks: (d['subtasks'] as List?)?.cast<String>() ?? [],
       subtaskDone: (d['subtaskDone'] as List?)?.cast<bool>() ?? [],
       tags: (d['tags'] as List?)?.cast<String>() ?? [],
@@ -413,6 +497,66 @@ class StorageService {
       isDefeated: d['isDefeated'] as bool? ?? false,
       defeatedAt: d['defeatedAt'] != null
           ? DateTime.parse(d['defeatedAt'] as String)
+          : null,
+    );
+  }
+
+  String _encodeRewardChest(RewardChest chest) => jsonEncode({
+    'id': chest.id,
+    'title': chest.title,
+    'description': chest.description,
+    'rarity': chest.rarity.index,
+    'sourceKey': chest.sourceKey,
+    'skillId': chest.skillId,
+    'unlockedAt': chest.unlockedAt.toIso8601String(),
+    'openedAt': chest.openedAt?.toIso8601String(),
+  });
+
+  RewardChest _decodeRewardChest(String json) {
+    final d = jsonDecode(json) as Map<String, dynamic>;
+    return RewardChest(
+      id: d['id'] as String,
+      title: d['title'] as String,
+      description: d['description'] as String,
+      rarity: RewardRarity.values[d['rarity'] as int? ?? 0],
+      sourceKey: d['sourceKey'] as String,
+      skillId: d['skillId'] as String?,
+      unlockedAt: DateTime.parse(d['unlockedAt'] as String),
+      openedAt: d['openedAt'] != null
+          ? DateTime.parse(d['openedAt'] as String)
+          : null,
+    );
+  }
+
+  String _encodeBuff(Buff buff) => jsonEncode({
+    'id': buff.id,
+    'type': buff.type.index,
+    'title': buff.title,
+    'description': buff.description,
+    'bonusPercent': buff.bonusPercent,
+    'charges': buff.charges,
+    'skillId': buff.skillId,
+    'sourceChestId': buff.sourceChestId,
+    'sourceKey': buff.sourceKey,
+    'createdAt': buff.createdAt.toIso8601String(),
+    'expiresAt': buff.expiresAt?.toIso8601String(),
+  });
+
+  Buff _decodeBuff(String json) {
+    final d = jsonDecode(json) as Map<String, dynamic>;
+    return Buff(
+      id: d['id'] as String,
+      type: BuffType.values[d['type'] as int? ?? 0],
+      title: d['title'] as String,
+      description: d['description'] as String,
+      bonusPercent: d['bonusPercent'] as int? ?? 0,
+      charges: d['charges'] as int? ?? 0,
+      skillId: d['skillId'] as String?,
+      sourceChestId: d['sourceChestId'] as String?,
+      sourceKey: d['sourceKey'] as String?,
+      createdAt: DateTime.parse(d['createdAt'] as String),
+      expiresAt: d['expiresAt'] != null
+          ? DateTime.parse(d['expiresAt'] as String)
           : null,
     );
   }

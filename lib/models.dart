@@ -36,6 +36,68 @@ mixin XPOwner {
   }
 }
 
+// ─── Skill Tree ───────────────────────────────────────────────────────────────
+
+enum SkillTreeNodeStatus { locked, active, mastered }
+
+const skillTreeNodeStatusLabel = {
+  SkillTreeNodeStatus.locked: 'Закрыто',
+  SkillTreeNodeStatus.active: 'Активно',
+  SkillTreeNodeStatus.mastered: 'Освоено',
+};
+
+const skillTreeNodeStatusColor = {
+  SkillTreeNodeStatus.locked: Color(0xFF8E8E93),
+  SkillTreeNodeStatus.active: Color(0xFF4A9EFF),
+  SkillTreeNodeStatus.mastered: Color(0xFF34C759),
+};
+
+class SkillTreeNode {
+  final String id;
+  String title;
+  String description;
+  int xpReward;
+  List<String> prerequisiteIds;
+  List<String> checklist;
+  List<bool> checklistDone;
+  bool isMastered;
+  DateTime? masteredAt;
+
+  SkillTreeNode({
+    required this.id,
+    required this.title,
+    this.description = '',
+    this.xpReward = 20,
+    List<String>? prerequisiteIds,
+    List<String>? checklist,
+    List<bool>? checklistDone,
+    this.isMastered = false,
+    this.masteredAt,
+  }) : prerequisiteIds = prerequisiteIds ?? [],
+       checklist = checklist ?? [],
+       checklistDone =
+           checklistDone ?? List.filled((checklist ?? []).length, false);
+
+  int get checklistCompletedCount => checklistDone.where((done) => done).length;
+
+  bool get isChecklistReady =>
+      checklist.isEmpty || checklistDone.every((done) => done);
+
+  double get progress {
+    if (checklist.isEmpty) return isMastered ? 1.0 : 0.0;
+    return (checklistCompletedCount / checklist.length).clamp(0.0, 1.0);
+  }
+
+  void syncChecklistDone() {
+    while (checklistDone.length < checklist.length) {
+      checklistDone.add(false);
+    }
+    while (checklistDone.length > checklist.length) {
+      checklistDone.removeLast();
+    }
+  }
+}
+
 // ─── Skill ────────────────────────────────────────────────────────────────────
 
 class Skill with XPOwner {
@@ -43,6 +105,7 @@ class Skill with XPOwner {
   String name, goal;
   List<String> checklist;
   List<bool> checklistDone;
+  List<SkillTreeNode> treeNodes;
   Color color;
   IconData icon;
   @override
@@ -56,9 +119,11 @@ class Skill with XPOwner {
     required this.icon,
     List<String>? checklist,
     List<bool>? checklistDone,
+    List<SkillTreeNode>? treeNodes,
     this.level = 1,
     this.xp = 0,
   }) : checklist = checklist ?? [],
+       treeNodes = treeNodes ?? [],
        checklistDone =
            checklistDone ?? List.filled((checklist ?? []).length, false);
 
@@ -74,6 +139,35 @@ class Skill with XPOwner {
   }
 
   int get checklistCompletedCount => checklistDone.where((v) => v).length;
+
+  int get masteredTreeNodeCount => treeNodes.where((n) => n.isMastered).length;
+
+  int get activeTreeNodeCount => treeNodes
+      .where((node) => treeNodeStatus(node) == SkillTreeNodeStatus.active)
+      .length;
+
+  double get treeProgress {
+    if (treeNodes.isEmpty) return 0.0;
+    return (masteredTreeNodeCount / treeNodes.length).clamp(0.0, 1.0);
+  }
+
+  SkillTreeNodeStatus treeNodeStatus(SkillTreeNode node) {
+    if (node.isMastered) return SkillTreeNodeStatus.mastered;
+    final masteredIds = treeNodes
+        .where((candidate) => candidate.isMastered)
+        .map((candidate) => candidate.id)
+        .toSet();
+    final unlocked = node.prerequisiteIds.every(masteredIds.contains);
+    return unlocked ? SkillTreeNodeStatus.active : SkillTreeNodeStatus.locked;
+  }
+
+  void syncTreeNodes() {
+    final validIds = treeNodes.map((node) => node.id).toSet();
+    for (final node in treeNodes) {
+      node.syncChecklistDone();
+      node.prerequisiteIds.removeWhere((id) => !validIds.contains(id));
+    }
+  }
 }
 
 // ─── Priority ──────────────────────────────────────────────────────────────────
@@ -111,6 +205,8 @@ class Task {
   String minimumAction;
   DateTime? minimumActionDoneAt;
   int minimumActionEarnedXP;
+  int bonusXpEarned;
+  List<String> consumedBuffIds;
   List<String> subtasks;
   List<bool> subtaskDone;
   List<String> tags;
@@ -135,6 +231,8 @@ class Task {
     this.minimumAction = '',
     this.minimumActionDoneAt,
     this.minimumActionEarnedXP = 0,
+    this.bonusXpEarned = 0,
+    List<String>? consumedBuffIds,
     List<String>? subtasks,
     List<bool>? subtaskDone,
     List<String>? tags,
@@ -142,6 +240,7 @@ class Task {
     this.notificationHour,
     this.notificationMinute,
   }) : subtasks = subtasks ?? [],
+       consumedBuffIds = consumedBuffIds ?? [],
        subtaskDone = subtaskDone ?? List.filled((subtasks ?? []).length, false),
        tags = tags ?? [];
 
@@ -355,6 +454,87 @@ const achievementDefinitions = <AchievementDef>[
   ),
 ];
 
+// ─── Rewards & Buffs ─────────────────────────────────────────────────────────
+
+enum RewardRarity { common, rare, epic }
+
+const rewardRarityLabel = {
+  RewardRarity.common: 'Обычный',
+  RewardRarity.rare: 'Редкий',
+  RewardRarity.epic: 'Эпический',
+};
+
+const rewardRarityColor = {
+  RewardRarity.common: Color(0xFF4A9EFF),
+  RewardRarity.rare: Color(0xFFFF9500),
+  RewardRarity.epic: Color(0xFFAF52DE),
+};
+
+enum BuffType { nextQuestXpBoost, skillFocusXpBoost, questRushXpBoost }
+
+const buffTypeLabel = {
+  BuffType.nextQuestXpBoost: 'Следующий квест',
+  BuffType.skillFocusXpBoost: 'Фокус навыка',
+  BuffType.questRushXpBoost: 'Серия квестов',
+};
+
+class RewardChest {
+  final String id;
+  String title;
+  String description;
+  RewardRarity rarity;
+  String sourceKey;
+  String? skillId;
+  DateTime unlockedAt;
+  DateTime? openedAt;
+
+  RewardChest({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.rarity,
+    required this.sourceKey,
+    required this.unlockedAt,
+    this.skillId,
+    this.openedAt,
+  });
+
+  bool get isOpened => openedAt != null;
+}
+
+class Buff {
+  final String id;
+  BuffType type;
+  String title;
+  String description;
+  int bonusPercent;
+  int charges;
+  String? skillId;
+  String? sourceChestId;
+  String? sourceKey;
+  DateTime createdAt;
+  DateTime? expiresAt;
+
+  Buff({
+    required this.id,
+    required this.type,
+    required this.title,
+    required this.description,
+    required this.bonusPercent,
+    required this.charges,
+    required this.createdAt,
+    this.skillId,
+    this.sourceChestId,
+    this.sourceKey,
+    this.expiresAt,
+  });
+
+  bool get isExpired =>
+      expiresAt != null && !DateTime.now().isBefore(expiresAt!);
+
+  bool get isActive => !isExpired && charges > 0;
+}
+
 // ─── Boss ─────────────────────────────────────────────────────────────────────
 
 class Boss {
@@ -381,4 +561,62 @@ class Boss {
   });
 
   double get hpPercent => (hp / maxHp).clamp(0.0, 1.0);
+}
+
+class BossSnapshot {
+  final int currentStreak;
+  final int targetStreak;
+  final int completedTasks;
+  final int totalTasks;
+  final int startedTasks;
+  final int startableTasks;
+  final int checklistCompleted;
+  final int checklistTotal;
+  final int masteredTreeNodes;
+  final int totalTreeNodes;
+  final int urgentRepeatingTasks;
+  final int stalledHighPriorityTasks;
+  final double impactProgress;
+  final double streakProgress;
+  final double priorityProgress;
+  final double startProgress;
+  final double completionProgress;
+  final double checklistProgress;
+  final double treeProgress;
+  final bool isUnderAttack;
+  final String phaseLabel;
+  final String recommendation;
+
+  const BossSnapshot({
+    required this.currentStreak,
+    required this.targetStreak,
+    required this.completedTasks,
+    required this.totalTasks,
+    required this.startedTasks,
+    required this.startableTasks,
+    required this.checklistCompleted,
+    required this.checklistTotal,
+    required this.masteredTreeNodes,
+    required this.totalTreeNodes,
+    required this.urgentRepeatingTasks,
+    required this.stalledHighPriorityTasks,
+    required this.impactProgress,
+    required this.streakProgress,
+    required this.priorityProgress,
+    required this.startProgress,
+    required this.completionProgress,
+    required this.checklistProgress,
+    required this.treeProgress,
+    required this.isUnderAttack,
+    required this.phaseLabel,
+    required this.recommendation,
+  });
+
+  int get impactPercent => (impactProgress * 100).round().clamp(0, 100);
+  int get streakPercent => (streakProgress * 100).round().clamp(0, 100);
+  int get priorityPercent => (priorityProgress * 100).round().clamp(0, 100);
+  int get startPercent => (startProgress * 100).round().clamp(0, 100);
+  int get completionPercent => (completionProgress * 100).round().clamp(0, 100);
+  int get checklistPercent => (checklistProgress * 100).round().clamp(0, 100);
+  int get treePercent => (treeProgress * 100).round().clamp(0, 100);
 }

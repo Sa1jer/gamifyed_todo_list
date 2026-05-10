@@ -80,6 +80,7 @@ class _TasksPanelState extends State<TasksPanel> {
     final active = allTasks.where((t) => !t.isDone).toList();
     final done = allTasks.where((t) => t.isDone).toList();
     final hasChecklist = skill.checklist.isNotEmpty;
+    final skillRank = skillRankForLevel(skill.level);
 
     return Container(
       decoration: BoxDecoration(
@@ -171,7 +172,7 @@ class _TasksPanelState extends State<TasksPanel> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '${skill.xp} / ${skill.xpNeeded} XP  •  Ур.${skill.level}',
+                  '${skill.xp} / ${skill.xpNeeded} XP  •  ${skillRank.label}  •  Ур.${skill.level}',
                   style: TextStyle(color: sub, fontSize: 11),
                 ),
               ],
@@ -290,6 +291,7 @@ class _TasksPanelState extends State<TasksPanel> {
                           isDark: isDark,
                           skillColor: skill.color,
                           previewEarnedXP: s.previewEarnedXP(t),
+                          previewBuffBonus: s.previewBuffBonusXP(t),
                           onToggle: (pos) => widget.onComplete(t.id, pos),
                           onMinimumAction: (pos) =>
                               widget.onMinimumAction(t.id, pos),
@@ -326,6 +328,7 @@ class _TasksPanelState extends State<TasksPanel> {
                             isDark: isDark,
                             skillColor: skill.color,
                             previewEarnedXP: t.earnedXP,
+                            previewBuffBonus: t.bonusXpEarned,
                             onToggle: (_) => s.uncompleteTask(t.id),
                             onMinimumAction: (_) {},
                             onUncomplete: () => s.uncompleteTask(t.id),
@@ -506,6 +509,7 @@ class TaskTile extends StatefulWidget {
   final bool isDark;
   final Color skillColor;
   final int previewEarnedXP;
+  final int previewBuffBonus;
   final Function(Offset) onToggle;
   final Function(Offset) onMinimumAction;
   final VoidCallback onUncomplete, onDelete, onEdit;
@@ -515,6 +519,7 @@ class TaskTile extends StatefulWidget {
     required this.isDark,
     required this.skillColor,
     required this.previewEarnedXP,
+    required this.previewBuffBonus,
     required this.onToggle,
     required this.onMinimumAction,
     required this.onUncomplete,
@@ -719,6 +724,18 @@ class _TaskTileState extends State<TaskTile> {
                                 : '+${widget.previewEarnedXP} XP',
                             color: t.isDone ? sub : const Color(0xFF4A9EFF),
                           ),
+                          if (!t.isDone && widget.previewBuffBonus > 0)
+                            TaskBadge(
+                              icon: Icons.bolt,
+                              label: 'бафф +${widget.previewBuffBonus}',
+                              color: const Color(0xFF34C759),
+                            ),
+                          if (t.isDone && t.bonusXpEarned > 0)
+                            TaskBadge(
+                              icon: Icons.bolt,
+                              label: '+${t.bonusXpEarned} бонус',
+                              color: const Color(0xFF34C759),
+                            ),
                           if (showStartedBadge)
                             TaskBadge(
                               icon: Icons.play_circle_fill,

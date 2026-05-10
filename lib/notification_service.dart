@@ -29,7 +29,10 @@ class NotificationService {
       macOS: macOSSettings,
     );
 
-    await _notifications.initialize(initSettings);
+    await _notifications.initialize(
+      settings: initSettings,
+      onDidReceiveNotificationResponse: (response) {},
+    );
     _initialized = true;
   }
 
@@ -71,11 +74,11 @@ class NotificationService {
     final scheduledDate = tz.TZDateTime.now(tz.local).add(interval);
 
     await _notifications.zonedSchedule(
-      id,
-      title,
-      body,
-      scheduledDate,
-      NotificationDetails(
+      id: id,
+      title: title,
+      body: body,
+      scheduledDate: scheduledDate,
+      notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
           'task_reminders',
           'Напоминания о задачах',
@@ -92,8 +95,6 @@ class NotificationService {
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.time,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
     );
   }
 
@@ -106,11 +107,11 @@ class NotificationService {
     final tzTime = tz.TZDateTime.from(scheduledTime, tz.local);
 
     await _notifications.zonedSchedule(
-      id,
-      title,
-      body,
-      tzTime,
-      NotificationDetails(
+      id: id,
+      title: title,
+      body: body,
+      scheduledDate: tzTime,
+      notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
           'task_reminders',
           'Напоминания о задачах',
@@ -131,13 +132,11 @@ class NotificationService {
         ),
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
     );
   }
 
   Future<void> cancelNotification(int id) async {
-    await _notifications.cancel(id);
+    await _notifications.cancel(id: id);
   }
 
   Future<void> cancelAllNotifications() async {
@@ -150,10 +149,10 @@ class NotificationService {
     required String body,
   }) async {
     await _notifications.show(
-      id,
-      title,
-      body,
-      NotificationDetails(
+      id: id,
+      title: title,
+      body: body,
+      notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
           'task_reminders',
           'Напоминания о задачах',

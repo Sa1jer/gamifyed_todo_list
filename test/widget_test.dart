@@ -65,6 +65,18 @@ class InMemoryStorageService extends StorageService {
 
   @override
   Future<void> saveBosses(List<Boss> bosses) async {}
+
+  @override
+  Future<List<RewardChest>> loadRewardChests() async => [];
+
+  @override
+  Future<void> saveRewardChests(List<RewardChest> rewardChests) async {}
+
+  @override
+  Future<List<Buff>> loadBuffs() async => [];
+
+  @override
+  Future<void> saveBuffs(List<Buff> buffs) async {}
 }
 
 void main() {

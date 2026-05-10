@@ -14,6 +14,7 @@ class AppState extends ChangeNotifier {
   String? selectedSkillId;
   final StorageService _storage;
   final NotificationService _notifications;
+  final math.Random _random;
   Timer? _resetTimer;
 
   bool get isDark => _isDark;
@@ -24,6 +25,10 @@ class AppState extends ChangeNotifier {
   final List<Task> tasks = [];
   final List<Achievement> achievements = [];
   final List<Boss> bosses = [];
+  final List<RewardChest> rewardChests = [];
+  final List<Buff> buffs = [];
+  final List<RewardChest> _pendingRewardNotifications = [];
+  final List<Buff> _pendingBuffNotifications = [];
   DailyStats? todayStats;
 
   int _bestStreak = 0;
@@ -31,8 +36,10 @@ class AppState extends ChangeNotifier {
   AppState({
     required StorageService storage,
     NotificationService? notifications,
+    math.Random? random,
   }) : _storage = storage,
-       _notifications = notifications ?? NotificationService() {
+       _notifications = notifications ?? NotificationService(),
+       _random = random ?? math.Random() {
     _initDefaults();
     _resetTimer = Timer.periodic(
       const Duration(minutes: 1),
@@ -47,6 +54,13 @@ class AppState extends ChangeNotifier {
   }
 
   void _initDefaults() {
+    final pullTechnique = uid();
+    final pullVolume = uid();
+    final pythonSyntax = uid();
+    final pythonApi = uid();
+    final gamificationLoop = uid();
+    final gamificationRewards = uid();
+
     skills.addAll([
       Skill(
         id: uid(),
@@ -56,6 +70,23 @@ class AppState extends ChangeNotifier {
         icon: Icons.fitness_center,
         xp: 60,
         checklist: ['3 подхода по 5 раз', 'Без рывков', 'Полная амплитуда'],
+        treeNodes: [
+          SkillTreeNode(
+            id: pullTechnique,
+            title: 'Чистая техника',
+            description: 'Закрепить амплитуду и контроль движения.',
+            xpReward: 25,
+            checklist: ['Полная амплитуда', 'Без рывков'],
+          ),
+          SkillTreeNode(
+            id: pullVolume,
+            title: 'Рабочий объём',
+            description: 'Собрать базу для выхода на 20 повторений.',
+            xpReward: 40,
+            prerequisiteIds: [pullTechnique],
+            checklist: ['3 подхода', 'Отдых не больше 2 минут'],
+          ),
+        ],
       ),
       Skill(
         id: uid(),
@@ -66,6 +97,27 @@ class AppState extends ChangeNotifier {
         xp: 30,
         level: 2,
         checklist: ['Изучить async/await', 'Написать CRUD', 'Деплой на сервер'],
+        treeNodes: [
+          SkillTreeNode(
+            id: pythonSyntax,
+            title: 'Основы backend',
+            description: 'Синтаксис, функции и работа с проектом.',
+            xpReward: 30,
+            checklist: ['Функции', 'Модули', 'Виртуальное окружение'],
+          ),
+          SkillTreeNode(
+            id: pythonApi,
+            title: 'FastAPI CRUD',
+            description: 'Первый рабочий API с роутами и моделями.',
+            xpReward: 60,
+            prerequisiteIds: [pythonSyntax],
+            checklist: [
+              'Создать endpoint',
+              'Подключить модели',
+              'Проверить CRUD',
+            ],
+          ),
+        ],
       ),
       Skill(
         id: uid(),
@@ -74,6 +126,23 @@ class AppState extends ChangeNotifier {
         color: const Color(0xFF34C759),
         icon: Icons.sports_esports,
         xp: 80,
+        treeNodes: [
+          SkillTreeNode(
+            id: gamificationLoop,
+            title: 'Core loop',
+            description: 'Навык, квест, XP, обратная связь.',
+            xpReward: 35,
+            checklist: ['Квесты', 'XP', 'Профиль'],
+          ),
+          SkillTreeNode(
+            id: gamificationRewards,
+            title: 'Rewards layer',
+            description: 'Сундуки, баффы и приятное усиление прогресса.',
+            xpReward: 55,
+            prerequisiteIds: [gamificationLoop],
+            checklist: ['Сундуки', 'Баффы', 'Уведомления'],
+          ),
+        ],
       ),
     ]);
 
@@ -120,6 +189,7 @@ class AppState extends ChangeNotifier {
 
     for (final s in skills) {
       s.syncChecklistDone();
+      s.syncTreeNodes();
     }
     for (final t in tasks) {
       t.syncSubtaskDone();
@@ -144,6 +214,8 @@ class AppState extends ChangeNotifier {
     final loadedAchievements = await _storage.loadAchievements();
     final loadedStats = await _storage.loadStats();
     final loadedBosses = await _storage.loadBosses();
+    final loadedRewardChests = await _storage.loadRewardChests();
+    final loadedBuffs = await _storage.loadBuffs();
     final hasSavedSkills = await _storage.hasSavedSkills();
     final hasSavedTasks = await _storage.hasSavedTasks();
     final savedTheme = await _storage.loadTheme();
@@ -158,6 +230,7 @@ class AppState extends ChangeNotifier {
     }
     for (final s in skills) {
       s.syncChecklistDone();
+      s.syncTreeNodes();
     }
 
     if (hasSavedTasks || loadedTasks.isNotEmpty) {
@@ -184,8 +257,15 @@ class AppState extends ChangeNotifier {
       _initAchievements();
     }
 
+    rewardChests.clear();
+    rewardChests.addAll(loadedRewardChests);
+
+    buffs.clear();
+    buffs.addAll(loadedBuffs);
+
     todayStats = loadedStats;
     _resetDailyStatsIfNeeded();
+    _maybeUnlockDailyRewardChest(notify: false);
 
     bosses.clear();
     bosses.addAll(loadedBosses);
@@ -229,6 +309,8 @@ class AppState extends ChangeNotifier {
     await _storage.saveAchievements(achievements);
     await _storage.saveStats(todayStats ?? DailyStats(date: DateTime.now()));
     await _storage.saveBosses(bosses);
+    await _storage.saveRewardChests(rewardChests);
+    await _storage.saveBuffs(buffs);
   }
 
   // ── Theme ────────────────────────────────────────────────────────────────────
@@ -365,6 +447,34 @@ class AppState extends ChangeNotifier {
     return completionHistoryByDate.containsKey(dateOnly(date));
   }
 
+  List<Boss> get activeBosses =>
+      bosses.where((boss) => !boss.isDefeated).toList(growable: false);
+
+  int get activeBossThreatCount =>
+      activeBosses.where((boss) => bossSnapshot(boss).isUnderAttack).length;
+
+  BossSnapshot bossSnapshot(Boss boss) => _buildBossSnapshot(boss);
+
+  List<RewardChest> get unopenedRewardChests =>
+      rewardChests.where((chest) => !chest.isOpened).toList(growable: false)
+        ..sort((a, b) => b.unlockedAt.compareTo(a.unlockedAt));
+
+  List<Buff> get activeBuffs =>
+      buffs.where((buff) => buff.isActive).toList(growable: false)
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+  List<RewardChest> consumeRewardChestNotifications() {
+    final result = List<RewardChest>.of(_pendingRewardNotifications);
+    _pendingRewardNotifications.clear();
+    return result;
+  }
+
+  List<Buff> consumeBuffNotifications() {
+    final result = List<Buff>.of(_pendingBuffNotifications);
+    _pendingBuffNotifications.clear();
+    return result;
+  }
+
   Skill? get selectedSkill {
     if (selectedSkillId == null) return null;
     return _skillById(selectedSkillId!);
@@ -380,6 +490,12 @@ class AppState extends ChangeNotifier {
     return math.max(0, totalReward - task.minimumActionEarnedXP);
   }
 
+  int previewBuffBonusXP(Task task) {
+    final baseEarned = previewEarnedXP(task);
+    if (baseEarned <= 0 || task.isDone) return 0;
+    return _previewBuffOutcome(task, baseEarned).bonusXp;
+  }
+
   int previewMinimumActionXP(Task task) {
     if (!task.hasMinimumAction || task.isMinimumActionDone || task.isDone) {
       return 0;
@@ -389,6 +505,20 @@ class AppState extends ChangeNotifier {
 
   bool canCompleteMinimumAction(Task task) {
     return task.hasMinimumAction && !task.isDone && !task.isMinimumActionDone;
+  }
+
+  String? openRewardChest(String chestId) {
+    final chest = rewardChests.where((item) => item.id == chestId).firstOrNull;
+    if (chest == null || chest.isOpened) return null;
+
+    chest.openedAt = DateTime.now();
+    final buff = _createBuffFromChest(chest);
+    buffs.add(buff);
+
+    notifyListeners();
+    _saveAll();
+
+    return '🎁 ${chest.title}: ${buff.title}';
   }
 
   // ── Task completion ──────────────────────────────────────────────────────────
@@ -406,6 +536,10 @@ class AppState extends ChangeNotifier {
 
     final now = DateTime.now();
     final skill = _skillById(task.skillId);
+    final profileRankBefore = profileRankForLevel(profile.level);
+    final skillRankBefore = skill != null
+        ? skillRankForLevel(skill.level)
+        : null;
     final nextStreak = task.type == TaskType.repeating
         ? task.streak + 1
         : task.streak;
@@ -413,10 +547,14 @@ class AppState extends ChangeNotifier {
     final alreadyEarned = task.type == TaskType.repeating
         ? 0
         : task.minimumActionEarnedXP.clamp(0, totalReward);
-    final earned = math.max(0, totalReward - alreadyEarned);
+    final baseEarned = math.max(0, totalReward - alreadyEarned);
+    final buffOutcome = _consumeBuffsForTask(task, baseEarned);
+    final earned = baseEarned + buffOutcome.bonusXp;
 
     task.isDone = true;
-    task.earnedXP = totalReward;
+    task.earnedXP = alreadyEarned + earned;
+    task.bonusXpEarned = buffOutcome.bonusXp;
+    task.consumedBuffIds = List.of(buffOutcome.buffIds);
     task.lastCompletedAt = now;
 
     if (task.type == TaskType.repeating) {
@@ -432,6 +570,7 @@ class AppState extends ChangeNotifier {
     if (task.streak > _bestStreak) {
       _bestStreak = task.streak;
     }
+    _maybeUnlockStreakRewardChest(task);
 
     final globalUp = profile.addXP(earned);
     int skillUp = 0;
@@ -439,13 +578,22 @@ class AppState extends ChangeNotifier {
 
     _updateDailyStats(earned, skillUp);
     _addHistory(task, skill, earned, isCompletion: true);
+    _maybeGrantBehaviorBuffs(task);
     _checkAchievements();
     _checkBosses(task);
     _syncTaskNotification(task);
     notifyListeners();
     _saveAll();
 
-    return _xpMessage(skill, globalUp, skillUp, earned);
+    return _xpMessage(
+      skill,
+      globalUp,
+      skillUp,
+      earned,
+      bonusXp: buffOutcome.bonusXp,
+      profileRankBefore: profileRankBefore,
+      skillRankBefore: skillRankBefore,
+    );
   }
 
   String? completeMinimumAction(String taskId) {
@@ -461,6 +609,10 @@ class AppState extends ChangeNotifier {
 
     final now = DateTime.now();
     final skill = _skillById(task.skillId);
+    final profileRankBefore = profileRankForLevel(profile.level);
+    final skillRankBefore = skill != null
+        ? skillRankForLevel(skill.level)
+        : null;
     final earned = previewMinimumActionXP(task);
     final nextStreak = task.type == TaskType.repeating
         ? task.streak + 1
@@ -468,6 +620,8 @@ class AppState extends ChangeNotifier {
 
     task.minimumActionDoneAt = now;
     task.minimumActionEarnedXP = earned;
+    task.bonusXpEarned = 0;
+    task.consumedBuffIds = const <String>[];
 
     if (task.type == TaskType.repeating) {
       task.isDone = true;
@@ -485,6 +639,7 @@ class AppState extends ChangeNotifier {
     if (task.streak > _bestStreak) {
       _bestStreak = task.streak;
     }
+    _maybeUnlockStreakRewardChest(task);
 
     final globalUp = profile.addXP(earned);
     int skillUp = 0;
@@ -495,11 +650,11 @@ class AppState extends ChangeNotifier {
     if (task.type == TaskType.repeating) {
       _updateDailyStats(earned, skillUp);
       _addHistory(task, skill, earned, isCompletion: true);
-      _checkBosses(task);
     } else {
       _updateDailyXp(earned, skillUp);
     }
 
+    _checkBosses(task);
     _checkAchievements();
     _syncTaskNotification(task);
     notifyListeners();
@@ -510,6 +665,9 @@ class AppState extends ChangeNotifier {
       globalUp,
       skillUp,
       earned,
+      bonusXp: 0,
+      profileRankBefore: profileRankBefore,
+      skillRankBefore: skillRankBefore,
       fallbackLabel: task.type == TaskType.repeating ? 'Лёгкий старт' : 'Старт',
     );
   }
@@ -519,6 +677,7 @@ class AppState extends ChangeNotifier {
     todayStats!.tasksCompleted++;
     todayStats!.xpEarned += xp;
     todayStats!.skillsImproved += skillUp;
+    _maybeUnlockDailyRewardChest();
   }
 
   void _updateDailyXp(int xp, [int skillUp = 0]) {
@@ -566,7 +725,6 @@ class AppState extends ChangeNotifier {
   }
 
   void _checkBosses(Task task) {
-    if (task.type != TaskType.repeating) return;
     _syncBossesForSkill(task.skillId);
   }
 
@@ -578,22 +736,33 @@ class AppState extends ChangeNotifier {
   }
 
   void _syncBossesForSkill(String skillId) {
-    final skillStreak = tasks
-        .where((t) => t.skillId == skillId && t.type == TaskType.repeating)
-        .fold<int>(0, (max, t) => math.max(max, t.streak));
-
     for (final boss in bosses) {
       if (boss.skillId != skillId || boss.isDefeated) continue;
-      boss.currentStreak = skillStreak;
-      boss.hp = ((1 - boss.currentStreak / boss.targetStreak) * boss.maxHp)
-          .round()
-          .clamp(0, boss.maxHp);
+      final snapshot = _buildBossSnapshot(boss);
+      boss.currentStreak = snapshot.currentStreak;
+      boss.hp = ((1 - snapshot.impactProgress) * boss.maxHp).round().clamp(
+        0,
+        boss.maxHp,
+      );
 
-      if (boss.currentStreak >= boss.targetStreak) {
+      if (boss.hp <= 0 || snapshot.impactProgress >= 0.999) {
         boss.isDefeated = true;
         boss.defeatedAt = DateTime.now();
         boss.hp = 0;
         _unlockAchievement('first_boss', true);
+        final rarity = boss.targetStreak >= 14
+            ? RewardRarity.epic
+            : RewardRarity.rare;
+        _unlockRewardChest(
+          sourceKey: 'boss:${boss.id}',
+          title: rarity == RewardRarity.epic
+              ? 'Эпический сундук победы'
+              : 'Сундук победы',
+          description:
+              'Награда за победу над боссом ${boss.title}. Внутри усиление для следующего рывка.',
+          rarity: rarity,
+          skillId: boss.skillId,
+        );
       }
     }
   }
@@ -620,11 +789,14 @@ class AppState extends ChangeNotifier {
       task.streak = math.max(0, task.streak - 1);
     }
     task.earnedXP = 0;
+    task.bonusXpEarned = 0;
     task.lastCompletedAt = null;
     if (!restoresMinimumProgress) {
       task.minimumActionDoneAt = null;
       task.minimumActionEarnedXP = 0;
     }
+    _restoreConsumedBuffs(task.consumedBuffIds);
+    task.consumedBuffIds = const <String>[];
 
     profile.totalXpEarned = math.max(0, profile.totalXpEarned - earned);
     profile.removeXP(earned);
@@ -649,6 +821,7 @@ class AppState extends ChangeNotifier {
       return;
     }
     skill.checklistDone[index] = !skill.checklistDone[index];
+    _syncBossesForSkill(skillId);
     _checkAchievements();
     notifyListeners();
     _saveAll();
@@ -698,6 +871,7 @@ class AppState extends ChangeNotifier {
 
   void addSkill(Skill s) {
     s.syncChecklistDone();
+    s.syncTreeNodes();
     skills.add(s);
     _checkAchievements();
     notifyListeners();
@@ -718,9 +892,103 @@ class AppState extends ChangeNotifier {
     skill.color = color;
     skill.icon = icon;
     skill.syncChecklistDone();
+    skill.syncTreeNodes();
     _checkAchievements();
     notifyListeners();
     _saveAll();
+  }
+
+  void addSkillTreeNode(String skillId, SkillTreeNode node) {
+    final skill = _skillById(skillId);
+    if (skill == null) return;
+    node.syncChecklistDone();
+    skill.treeNodes.add(node);
+    skill.syncTreeNodes();
+    _syncBossesForSkill(skillId);
+    notifyListeners();
+    _saveAll();
+  }
+
+  void removeSkillTreeNode(String skillId, String nodeId) {
+    final skill = _skillById(skillId);
+    if (skill == null) return;
+    skill.treeNodes.removeWhere((node) => node.id == nodeId);
+    for (final node in skill.treeNodes) {
+      node.prerequisiteIds.remove(nodeId);
+    }
+    skill.syncTreeNodes();
+    _syncBossesForSkill(skillId);
+    notifyListeners();
+    _saveAll();
+  }
+
+  void toggleSkillTreeNodeChecklist(String skillId, String nodeId, int index) {
+    final skill = _skillById(skillId);
+    final node = skill?.treeNodes
+        .where((item) => item.id == nodeId)
+        .firstOrNull;
+    if (skill == null ||
+        node == null ||
+        index < 0 ||
+        index >= node.checklistDone.length ||
+        node.isMastered) {
+      return;
+    }
+
+    node.checklistDone[index] = !node.checklistDone[index];
+    _syncBossesForSkill(skillId);
+    notifyListeners();
+    _saveAll();
+  }
+
+  bool canMasterSkillTreeNode(String skillId, String nodeId) {
+    final skill = _skillById(skillId);
+    final node = skill?.treeNodes
+        .where((item) => item.id == nodeId)
+        .firstOrNull;
+    if (skill == null || node == null) return false;
+    return skill.treeNodeStatus(node) == SkillTreeNodeStatus.active &&
+        node.isChecklistReady;
+  }
+
+  String? masterSkillTreeNode(String skillId, String nodeId) {
+    final skill = _skillById(skillId);
+    final node = skill?.treeNodes
+        .where((item) => item.id == nodeId)
+        .firstOrNull;
+    if (skill == null ||
+        node == null ||
+        !canMasterSkillTreeNode(skillId, nodeId)) {
+      return null;
+    }
+
+    final profileRankBefore = profileRankForLevel(profile.level);
+    final skillRankBefore = skillRankForLevel(skill.level);
+    final earned = node.xpReward;
+
+    node.isMastered = true;
+    node.masteredAt = DateTime.now();
+
+    profile.totalXpEarned += earned;
+    final globalUp = profile.addXP(earned);
+    final skillUp = skill.addXP(earned);
+
+    _updateDailyXp(earned, skillUp);
+    _syncBossesForSkill(skillId);
+    _checkAchievements();
+    notifyListeners();
+    _saveAll();
+
+    return _xpMessage(
+      skill,
+      globalUp,
+      skillUp,
+      earned,
+      bonusXp: 0,
+      profileRankBefore: profileRankBefore,
+      skillRankBefore: skillRankBefore,
+      fallbackLabel: 'Узел освоен',
+    );
   }
 
   void removeSkill(String id) {
@@ -735,6 +1003,8 @@ class AppState extends ChangeNotifier {
     skills.removeWhere((s) => s.id == id);
     tasks.removeWhere((t) => t.skillId == id);
     bosses.removeWhere((b) => b.skillId == id);
+    rewardChests.removeWhere((chest) => chest.skillId == id);
+    buffs.removeWhere((buff) => buff.skillId == id);
     if (selectedSkillId == id) selectedSkillId = null;
     notifyListeners();
     _saveAll();
@@ -884,6 +1154,467 @@ class AppState extends ChangeNotifier {
     return task.xpReward * _multiplierFor(task.type, nextStreak);
   }
 
+  ({int bonusXp, int bonusPercent}) _previewBuffOutcome(
+    Task task,
+    int baseEarned,
+  ) {
+    if (baseEarned <= 0) return (bonusXp: 0, bonusPercent: 0);
+
+    final applicableBuffs = activeBuffs
+        .where((buff) => _buffAppliesToTask(buff, task))
+        .toList(growable: false);
+    final bonusPercent = applicableBuffs.fold<int>(
+      0,
+      (sum, buff) => sum + buff.bonusPercent,
+    );
+    final bonusXp = bonusPercent <= 0
+        ? 0
+        : math.max(1, (baseEarned * bonusPercent / 100).round());
+    return (bonusXp: bonusXp, bonusPercent: bonusPercent);
+  }
+
+  ({int bonusXp, int bonusPercent, List<String> buffIds}) _consumeBuffsForTask(
+    Task task,
+    int baseEarned,
+  ) {
+    final outcome = _previewBuffOutcome(task, baseEarned);
+    if (outcome.bonusXp == 0) {
+      return (bonusXp: 0, bonusPercent: 0, buffIds: const <String>[]);
+    }
+
+    final consumedBuffIds = <String>[];
+    for (final buff in buffs.where((buff) => buff.isActive).toList()) {
+      if (!_buffAppliesToTask(buff, task)) continue;
+      buff.charges = math.max(0, buff.charges - 1);
+      consumedBuffIds.add(buff.id);
+    }
+    return (
+      bonusXp: outcome.bonusXp,
+      bonusPercent: outcome.bonusPercent,
+      buffIds: consumedBuffIds,
+    );
+  }
+
+  bool _buffAppliesToTask(Buff buff, Task task) {
+    return switch (buff.type) {
+      BuffType.nextQuestXpBoost => true,
+      BuffType.questRushXpBoost => true,
+      BuffType.skillFocusXpBoost =>
+        buff.skillId == null || buff.skillId == task.skillId,
+    };
+  }
+
+  void _maybeUnlockDailyRewardChest({bool notify = true}) {
+    final stats = todayStats;
+    if (stats == null || stats.tasksCompleted < 5) return;
+
+    final dayKey =
+        '${stats.date.year.toString().padLeft(4, '0')}-'
+        '${stats.date.month.toString().padLeft(2, '0')}-'
+        '${stats.date.day.toString().padLeft(2, '0')}';
+    _unlockRewardChest(
+      sourceKey: 'daily5:$dayKey',
+      title: 'Сундук дисциплины',
+      description:
+          'Пять закрытых квестов за день. Внутри бафф, который усилит следующий рывок.',
+      rarity: RewardRarity.common,
+      notify: notify,
+    );
+
+    if (stats.tasksCompleted < 10) return;
+    _unlockRewardChest(
+      sourceKey: 'daily10:$dayKey',
+      title: 'Редкий сундук продуктивности',
+      description:
+          'Десять закрытых квестов за день. Внутри более сильный бафф на серию задач.',
+      rarity: RewardRarity.rare,
+      notify: notify,
+    );
+  }
+
+  void _maybeUnlockStreakRewardChest(Task task, {bool notify = true}) {
+    if (task.type != TaskType.repeating) return;
+
+    final milestone = switch (task.streak) {
+      7 => (rarity: RewardRarity.rare, title: 'Сундук стрика'),
+      30 => (rarity: RewardRarity.epic, title: 'Эпический сундук стрика'),
+      _ => null,
+    };
+    if (milestone == null) return;
+
+    _unlockRewardChest(
+      sourceKey: 'streak:${task.id}:${task.streak}',
+      title: milestone.title,
+      description:
+          'Награда за стрик ${task.streak} дней по квесту «${task.title}».',
+      rarity: milestone.rarity,
+      skillId: task.skillId,
+      notify: notify,
+    );
+  }
+
+  void _maybeGrantBehaviorBuffs(Task task) {
+    final stats = todayStats;
+    if (stats == null) return;
+
+    final dayKey = _dayKey(stats.date);
+    final expiresAt = _endOfDay(stats.date);
+
+    if (stats.tasksCompleted >= 3) {
+      _grantBehaviorBuff(
+        sourceKey: 'flow3:$dayKey',
+        type: BuffType.questRushXpBoost,
+        title: 'Поток',
+        description:
+            'Три квеста за день запустили поток: следующие 2 квеста дадут +10% XP.',
+        bonusPercent: 10,
+        charges: 2,
+        expiresAt: expiresAt,
+      );
+    }
+
+    final completions = completionHistoryForDate(stats.date);
+    if (completions.length < 2) return;
+
+    final last = completions.last;
+    final previous = completions[completions.length - 2];
+    if (last.skillId != task.skillId || previous.skillId != task.skillId) {
+      return;
+    }
+
+    _grantBehaviorBuff(
+      sourceKey: 'focus:$dayKey:${task.skillId}',
+      type: BuffType.skillFocusXpBoost,
+      title: 'Фокус',
+      description:
+          'Две задачи одного навыка подряд: следующий квест этого навыка даст +12% XP.',
+      bonusPercent: 12,
+      charges: 1,
+      skillId: task.skillId,
+      expiresAt: expiresAt,
+    );
+  }
+
+  void _grantBehaviorBuff({
+    required String sourceKey,
+    required BuffType type,
+    required String title,
+    required String description,
+    required int bonusPercent,
+    required int charges,
+    required DateTime expiresAt,
+    String? skillId,
+  }) {
+    final alreadyGranted = buffs.any((buff) => buff.sourceKey == sourceKey);
+    if (alreadyGranted) return;
+
+    final buff = Buff(
+      id: uid(),
+      type: type,
+      title: title,
+      description: description,
+      bonusPercent: bonusPercent,
+      charges: charges,
+      skillId: skillId,
+      sourceKey: sourceKey,
+      createdAt: DateTime.now(),
+      expiresAt: expiresAt,
+    );
+
+    buffs.add(buff);
+    _pendingBuffNotifications.add(buff);
+  }
+
+  void _unlockRewardChest({
+    required String sourceKey,
+    required String title,
+    required String description,
+    required RewardRarity rarity,
+    String? skillId,
+    bool notify = true,
+  }) {
+    final alreadyUnlocked = rewardChests.any(
+      (chest) => chest.sourceKey == sourceKey,
+    );
+    if (alreadyUnlocked) return;
+
+    final chest = RewardChest(
+      id: uid(),
+      title: title,
+      description: description,
+      rarity: rarity,
+      sourceKey: sourceKey,
+      skillId: skillId,
+      unlockedAt: DateTime.now(),
+    );
+    rewardChests.add(chest);
+    if (notify) {
+      _pendingRewardNotifications.add(chest);
+    }
+  }
+
+  Buff _createBuffFromChest(RewardChest chest) {
+    final skill = chest.skillId == null ? null : _skillById(chest.skillId!);
+    final now = DateTime.now();
+    final expiresAt = _endOfDay(now);
+
+    switch (chest.rarity) {
+      case RewardRarity.common:
+        return _random.nextBool()
+            ? Buff(
+                id: uid(),
+                type: BuffType.nextQuestXpBoost,
+                title: 'Импульс',
+                description: 'Следующий квест даст +15% XP до конца дня.',
+                bonusPercent: 15,
+                charges: 1,
+                createdAt: now,
+                expiresAt: expiresAt,
+                sourceChestId: chest.id,
+                sourceKey: 'chest:${chest.id}',
+              )
+            : Buff(
+                id: uid(),
+                type: BuffType.questRushXpBoost,
+                title: 'Темп',
+                description:
+                    'Следующие 2 квеста дадут по +10% XP до конца дня.',
+                bonusPercent: 10,
+                charges: 2,
+                createdAt: now,
+                expiresAt: expiresAt,
+                sourceChestId: chest.id,
+                sourceKey: 'chest:${chest.id}',
+              );
+      case RewardRarity.rare:
+        if (skill != null && _random.nextBool()) {
+          return Buff(
+            id: uid(),
+            type: BuffType.skillFocusXpBoost,
+            title: 'Резонанс навыка',
+            description:
+                'Следующий квест по навыку ${skill.name} даст +25% XP до конца дня.',
+            bonusPercent: 25,
+            charges: 1,
+            skillId: skill.id,
+            createdAt: now,
+            expiresAt: expiresAt,
+            sourceChestId: chest.id,
+            sourceKey: 'chest:${chest.id}',
+          );
+        }
+        return Buff(
+          id: uid(),
+          type: BuffType.questRushXpBoost,
+          title: 'Боевой ритм',
+          description: 'Следующие 2 квеста дадут по +15% XP до конца дня.',
+          bonusPercent: 15,
+          charges: 2,
+          createdAt: now,
+          expiresAt: expiresAt,
+          sourceChestId: chest.id,
+          sourceKey: 'chest:${chest.id}',
+        );
+      case RewardRarity.epic:
+        return Buff(
+          id: uid(),
+          type: BuffType.questRushXpBoost,
+          title: 'Критический заряд',
+          description: 'Следующие 2 квеста дадут по +35% XP до конца дня.',
+          bonusPercent: 35,
+          charges: 2,
+          createdAt: now,
+          expiresAt: expiresAt,
+          sourceChestId: chest.id,
+          sourceKey: 'chest:${chest.id}',
+        );
+    }
+  }
+
+  DateTime _endOfDay(DateTime date) {
+    return DateTime(date.year, date.month, date.day + 1);
+  }
+
+  String _dayKey(DateTime date) {
+    return '${date.year.toString().padLeft(4, '0')}-'
+        '${date.month.toString().padLeft(2, '0')}-'
+        '${date.day.toString().padLeft(2, '0')}';
+  }
+
+  void _restoreConsumedBuffs(List<String> buffIds) {
+    if (buffIds.isEmpty) return;
+    for (final buffId in buffIds) {
+      final buff = buffs.where((item) => item.id == buffId).firstOrNull;
+      if (buff != null) {
+        buff.charges += 1;
+      }
+    }
+  }
+
+  BossSnapshot _buildBossSnapshot(Boss boss) {
+    final now = DateTime.now();
+    final targetStreak = boss.targetStreak < 1 ? 1 : boss.targetStreak;
+    final skill = _skillById(boss.skillId);
+    final skillTasks = tasks
+        .where((task) => task.skillId == boss.skillId)
+        .toList();
+    final repeatingTasks = skillTasks
+        .where((task) => task.type == TaskType.repeating)
+        .toList();
+    final highPriorityTasks = skillTasks
+        .where((task) => task.priority == Priority.high)
+        .toList();
+    final minimumTasks = skillTasks
+        .where((task) => task.hasMinimumAction)
+        .toList();
+
+    final currentStreak = repeatingTasks.fold<int>(
+      0,
+      (max, task) => math.max(max, task.streak),
+    );
+    final completedTasks = skillTasks.where((task) => task.isDone).length;
+    final startedTasks = minimumTasks
+        .where((task) => task.isMinimumActionDone || task.isDone)
+        .length;
+    final relievedHighPriorityTasks = highPriorityTasks
+        .where((task) => task.isDone || task.isMinimumActionDone)
+        .length;
+    final checklistTotal = skill?.checklist.length ?? 0;
+    final checklistCompleted = skill?.checklistCompletedCount ?? 0;
+    final totalTreeNodes = skill?.treeNodes.length ?? 0;
+    final masteredTreeNodes = skill?.masteredTreeNodeCount ?? 0;
+    final urgentRepeatingTasks = repeatingTasks
+        .where((task) => !task.isDone)
+        .where((task) {
+          final nextResetAt = task.nextResetAt;
+          if (nextResetAt == null) return false;
+          return nextResetAt.difference(now) <= const Duration(hours: 24);
+        })
+        .length;
+    final stalledHighPriorityTasks = highPriorityTasks
+        .where((task) => !task.isDone && !task.isMinimumActionDone)
+        .length;
+
+    final contributions = <({double value, double weight})>[
+      if (repeatingTasks.isNotEmpty)
+        (value: (currentStreak / targetStreak).clamp(0.0, 1.0), weight: 0.32),
+      if (highPriorityTasks.isNotEmpty)
+        (
+          value: (relievedHighPriorityTasks / highPriorityTasks.length).clamp(
+            0.0,
+            1.0,
+          ),
+          weight: 0.26,
+        ),
+      if (minimumTasks.isNotEmpty)
+        (
+          value: (startedTasks / minimumTasks.length).clamp(0.0, 1.0),
+          weight: 0.18,
+        ),
+      if (skillTasks.isNotEmpty)
+        (
+          value: (completedTasks / skillTasks.length).clamp(0.0, 1.0),
+          weight: 0.12,
+        ),
+      if (checklistTotal > 0)
+        (
+          value: (checklistCompleted / checklistTotal).clamp(0.0, 1.0),
+          weight: 0.10,
+        ),
+      if (totalTreeNodes > 0)
+        (
+          value: (masteredTreeNodes / totalTreeNodes).clamp(0.0, 1.0),
+          weight: 0.14,
+        ),
+    ];
+
+    final totalWeight = contributions.fold<double>(
+      0,
+      (sum, item) => sum + item.weight,
+    );
+    final weightedScore = contributions.fold<double>(
+      0,
+      (sum, item) => sum + item.value * item.weight,
+    );
+    final impactProgress = totalWeight == 0
+        ? 0.0
+        : (weightedScore / totalWeight).clamp(0.0, 1.0);
+
+    final streakProgress = repeatingTasks.isEmpty
+        ? 0.0
+        : (currentStreak / targetStreak).clamp(0.0, 1.0);
+    final priorityProgress = highPriorityTasks.isEmpty
+        ? 0.0
+        : (relievedHighPriorityTasks / highPriorityTasks.length).clamp(
+            0.0,
+            1.0,
+          );
+    final startProgress = minimumTasks.isEmpty
+        ? 0.0
+        : (startedTasks / minimumTasks.length).clamp(0.0, 1.0);
+    final completionProgress = skillTasks.isEmpty
+        ? 0.0
+        : (completedTasks / skillTasks.length).clamp(0.0, 1.0);
+    final checklistProgress = checklistTotal == 0
+        ? 0.0
+        : (checklistCompleted / checklistTotal).clamp(0.0, 1.0);
+    final treeProgress = totalTreeNodes == 0
+        ? 0.0
+        : (masteredTreeNodes / totalTreeNodes).clamp(0.0, 1.0);
+
+    final isUnderAttack =
+        urgentRepeatingTasks > 0 || stalledHighPriorityTasks > 0;
+
+    final phaseLabel = boss.isDefeated
+        ? 'Побеждён'
+        : impactProgress >= 0.85
+        ? 'При смерти'
+        : impactProgress >= 0.6
+        ? 'Ослабевает'
+        : isUnderAttack
+        ? 'Атакует'
+        : impactProgress >= 0.3
+        ? 'Выжидает'
+        : 'Силен';
+
+    final recommendation = urgentRepeatingTasks > 0
+        ? 'Удержи repeating-квесты: босс восстановится, если пропустить день.'
+        : stalledHighPriorityTasks > 0
+        ? 'Закрой high-priority задачу по навыку, чтобы сбить давление.'
+        : minimumTasks.any(canCompleteMinimumAction)
+        ? 'Сделай лёгкий старт по крупной задаче — это тоже наносит урон.'
+        : totalTreeNodes > 0 && masteredTreeNodes < totalTreeNodes
+        ? 'Освой следующий узел дерева навыка — это сильно ослабит босса.'
+        : checklistTotal > 0 && checklistCompleted < checklistTotal
+        ? 'Продвигай чеклист навыка — он тоже ослабляет босса.'
+        : 'Поддерживай темп по навыку: любой прогресс добивает босса.';
+
+    return BossSnapshot(
+      currentStreak: currentStreak,
+      targetStreak: targetStreak,
+      completedTasks: completedTasks,
+      totalTasks: skillTasks.length,
+      startedTasks: startedTasks,
+      startableTasks: minimumTasks.length,
+      checklistCompleted: checklistCompleted,
+      checklistTotal: checklistTotal,
+      masteredTreeNodes: masteredTreeNodes,
+      totalTreeNodes: totalTreeNodes,
+      urgentRepeatingTasks: urgentRepeatingTasks,
+      stalledHighPriorityTasks: stalledHighPriorityTasks,
+      impactProgress: impactProgress,
+      streakProgress: streakProgress,
+      priorityProgress: priorityProgress,
+      startProgress: startProgress,
+      completionProgress: completionProgress,
+      checklistProgress: checklistProgress,
+      treeProgress: treeProgress,
+      isUnderAttack: isUnderAttack,
+      phaseLabel: phaseLabel,
+      recommendation: recommendation,
+    );
+  }
+
   void _recalculateBestStreakFromTasks() {
     _bestStreak = tasks
         .where((t) => t.type == TaskType.repeating)
@@ -952,16 +1683,37 @@ class AppState extends ChangeNotifier {
     int globalUp,
     int skillUp,
     int earned, {
+    required int bonusXp,
+    RankInfo? profileRankBefore,
+    RankInfo? skillRankBefore,
     String? fallbackLabel,
   }) {
-    if (globalUp > 0) return '🎉 Уровень ${profile.level}!';
+    if (globalUp > 0) {
+      final profileRankAfter = profileRankForLevel(profile.level);
+      if (profileRankBefore != null &&
+          profileRankAfter.code != profileRankBefore.code) {
+        return '🏅 Достигнут ${profileRankAfter.label}!';
+      }
+      return bonusXp > 0
+          ? '🎉 Уровень ${profile.level}! • бафф +$bonusXp XP'
+          : '🎉 Уровень ${profile.level}!';
+    }
     if (skillUp > 0 && skill != null) {
-      return '⬆️ ${skill.name} → ур.${skill.level}';
+      final skillRankAfter = skillRankForLevel(skill.level);
+      if (skillRankBefore != null &&
+          skillRankAfter.code != skillRankBefore.code) {
+        return '🏅 ${skill.name} → ${skillRankAfter.label}';
+      }
+      return bonusXp > 0
+          ? '⬆️ ${skill.name} → ур.${skill.level} • бафф +$bonusXp XP'
+          : '⬆️ ${skill.name} → ур.${skill.level}';
     }
     if (fallbackLabel == null || fallbackLabel.isEmpty) {
-      return '+$earned XP';
+      return bonusXp > 0 ? '+$earned XP • бафф +$bonusXp' : '+$earned XP';
     }
-    return '$fallbackLabel: +$earned XP';
+    return bonusXp > 0
+        ? '$fallbackLabel: +$earned XP • бафф +$bonusXp'
+        : '$fallbackLabel: +$earned XP';
   }
 
   void _syncTaskNotification(Task task) {

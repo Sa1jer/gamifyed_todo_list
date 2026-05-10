@@ -86,6 +86,15 @@ class TopBar extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           HoverIconBtn(
+            icon: Icons.redeem,
+            color: sub,
+            onTap: () => showDialog(
+              context: context,
+              builder: (_) => RewardsDialog(state: state),
+            ),
+          ),
+          const SizedBox(width: 4),
+          HoverIconBtn(
             icon: Icons.calendar_month,
             color: sub,
             onTap: () => showDialog(
@@ -130,6 +139,7 @@ class ProfileBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final profile = AppStateProvider.of(context).profile;
+    final rank = profileRankForLevel(profile.level);
     final sfc = surface(isDark);
     final txt = textColor(isDark);
     final sub = subtext(isDark);
@@ -200,9 +210,16 @@ class ProfileBar extends StatelessWidget {
                     // Level badge — clickable → profile
                     GestureDetector(
                       onTap: () => _openProfile(context),
-                      child: LvlBadge(
-                        level: profile.level,
-                        color: const Color(0xFF4A9EFF),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          RankBadge(label: rank.label, color: rank.color),
+                          const SizedBox(width: 6),
+                          LvlBadge(
+                            level: profile.level,
+                            color: const Color(0xFF4A9EFF),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -261,11 +278,44 @@ class _MainPageState extends State<MainPage> {
     });
   }
 
+  void _showRewardNotifications(AppState state) {
+    final chests = state.consumeRewardChestNotifications();
+    final buffs = state.consumeBuffNotifications();
+    if ((chests.isEmpty && buffs.isEmpty) || !mounted) return;
+
+    final chestMessage = chests.length == 1
+        ? 'Получен сундук: ${chests.first.title}'
+        : chests.isEmpty
+        ? null
+        : 'Получено сундуков: ${chests.length}';
+    final buffMessage = buffs.length == 1
+        ? 'Активирован бафф: ${buffs.first.title}'
+        : buffs.isEmpty
+        ? null
+        : 'Активировано баффов: ${buffs.length}';
+    final message = [chestMessage, buffMessage].whereType<String>().join(' • ');
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 4),
+        action: SnackBarAction(
+          label: 'Открыть',
+          onPressed: () => showDialog(
+            context: context,
+            builder: (_) => RewardsDialog(state: state),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _onComplete(String taskId, Offset pos) {
     final s = AppStateProvider.of(context);
     final msg = s.completeTask(taskId);
     if (msg == null) return;
     _showBubble(msg, pos);
+    _showRewardNotifications(s);
   }
 
   void _onMinimumAction(String taskId, Offset pos) {
@@ -273,6 +323,7 @@ class _MainPageState extends State<MainPage> {
     final msg = s.completeMinimumAction(taskId);
     if (msg == null) return;
     _showBubble(msg, pos);
+    _showRewardNotifications(s);
   }
 
   @override
