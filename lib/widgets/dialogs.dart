@@ -53,6 +53,7 @@ class AchievementsDialog extends StatelessWidget {
                   const Spacer(),
                   PressFeedback(
                     scale: 0.85,
+                    tooltip: 'Закрыть достижения',
                     onTap: () => Navigator.pop(context),
                     child: Icon(Icons.close, color: sub, size: 22),
                   ),
@@ -291,6 +292,7 @@ class HistoryDialog extends StatelessWidget {
                   const Spacer(),
                   PressFeedback(
                     scale: 0.85,
+                    tooltip: 'Закрыть историю',
                     onTap: () => Navigator.pop(context),
                     child: Icon(Icons.close, color: sub, size: 22),
                   ),
@@ -661,12 +663,15 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
                           style: TextStyle(color: txt, fontSize: 13),
                         ),
                       ),
-                      GestureDetector(
-                        onTap: () => setState(() => _items.removeAt(e.key)),
-                        child: const Icon(
-                          Icons.close,
-                          size: 15,
-                          color: Color(0xFFFF3B30),
+                      Tooltip(
+                        message: 'Удалить пункт чек-листа',
+                        child: GestureDetector(
+                          onTap: () => setState(() => _items.removeAt(e.key)),
+                          child: const Icon(
+                            Icons.close,
+                            size: 15,
+                            color: Color(0xFFFF3B30),
+                          ),
                         ),
                       ),
                     ],
@@ -688,12 +693,15 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
                       onSubmitted: (_) => _addItem(),
                     ),
                   ),
-                  GestureDetector(
-                    onTap: _addItem,
-                    child: const Icon(
-                      Icons.add_circle_outline,
-                      color: Color(0xFF4A9EFF),
-                      size: 20,
+                  Tooltip(
+                    message: 'Добавить пункт чек-листа',
+                    child: GestureDetector(
+                      onTap: _addItem,
+                      child: const Icon(
+                        Icons.add_circle_outline,
+                        color: Color(0xFF4A9EFF),
+                        size: 20,
+                      ),
                     ),
                   ),
                 ],
@@ -780,14 +788,16 @@ class _SkillTreeDialogState extends State<SkillTreeDialog> {
                     ),
                   ),
                   SmallBtn(
-                    label: 'Узел',
+                    label: 'Новый узел',
                     icon: Icons.add,
                     color: skill.color,
+                    tooltip: 'Добавить узел в дерево навыка',
                     onTap: () => _showAddNode(context, skill),
                   ),
                   const SizedBox(width: 10),
                   PressFeedback(
                     scale: 0.85,
+                    tooltip: 'Закрыть дерево навыка',
                     onTap: () => Navigator.pop(context),
                     child: Icon(Icons.close, color: sub, size: 22),
                   ),
@@ -991,12 +1001,15 @@ class _SkillTreeNodeCard extends StatelessWidget {
                 color: statusColor,
               ),
               const SizedBox(width: 6),
-              GestureDetector(
-                onTap: () {
-                  state.removeSkillTreeNode(skill.id, node.id);
-                  onChanged();
-                },
-                child: Icon(Icons.delete_outline, color: sub, size: 18),
+              Tooltip(
+                message: 'Удалить узел дерева',
+                child: GestureDetector(
+                  onTap: () {
+                    state.removeSkillTreeNode(skill.id, node.id);
+                    onChanged();
+                  },
+                  child: Icon(Icons.delete_outline, color: sub, size: 18),
+                ),
               ),
             ],
           ),
@@ -1377,13 +1390,16 @@ class _AddSkillTreeNodeDialogState extends State<_AddSkillTreeNodeDialog> {
                           style: TextStyle(color: txt, fontSize: 13),
                         ),
                       ),
-                      GestureDetector(
-                        onTap: () =>
-                            setState(() => _checklist.removeAt(entry.key)),
-                        child: const Icon(
-                          Icons.close,
-                          color: Color(0xFFFF3B30),
-                          size: 15,
+                      Tooltip(
+                        message: 'Удалить пункт чеклиста узла',
+                        child: GestureDetector(
+                          onTap: () =>
+                              setState(() => _checklist.removeAt(entry.key)),
+                          child: const Icon(
+                            Icons.close,
+                            color: Color(0xFFFF3B30),
+                            size: 15,
+                          ),
                         ),
                       ),
                     ],
@@ -1405,12 +1421,15 @@ class _AddSkillTreeNodeDialogState extends State<_AddSkillTreeNodeDialog> {
                       onSubmitted: (_) => _addChecklistItem(),
                     ),
                   ),
-                  GestureDetector(
-                    onTap: _addChecklistItem,
-                    child: Icon(
-                      Icons.add_circle_outline,
-                      color: color,
-                      size: 20,
+                  Tooltip(
+                    message: 'Добавить пункт чеклиста узла',
+                    child: GestureDetector(
+                      onTap: _addChecklistItem,
+                      child: Icon(
+                        Icons.add_circle_outline,
+                        color: color,
+                        size: 20,
+                      ),
                     ),
                   ),
                 ],
@@ -1939,12 +1958,15 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                       style: TextStyle(color: txt, fontSize: 12),
                     ),
                     const SizedBox(width: 6),
-                    GestureDetector(
-                      onTap: () => setState(() => items.removeAt(entry.key)),
-                      child: const Icon(
-                        Icons.close,
-                        color: Color(0xFFFF3B30),
-                        size: 13,
+                    Tooltip(
+                      message: 'Удалить элемент списка',
+                      child: GestureDetector(
+                        onTap: () => setState(() => items.removeAt(entry.key)),
+                        child: const Icon(
+                          Icons.close,
+                          color: Color(0xFFFF3B30),
+                          size: 13,
+                        ),
                       ),
                     ),
                   ],
@@ -1969,9 +1991,12 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                 onSubmitted: (_) => _addListItem(items, ctrl),
               ),
             ),
-            GestureDetector(
-              onTap: () => _addListItem(items, ctrl),
-              child: Icon(Icons.add_circle_outline, color: color, size: 20),
+            Tooltip(
+              message: 'Добавить элемент списка',
+              child: GestureDetector(
+                onTap: () => _addListItem(items, ctrl),
+                child: Icon(Icons.add_circle_outline, color: color, size: 20),
+              ),
             ),
           ],
         ),
@@ -2159,29 +2184,32 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
           ),
           if (_notificationsEnabled) ...[
             const SizedBox(height: 8),
-            GestureDetector(
-              onTap: _pickNotificationTime,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: color.withAlpha(20),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: color.withAlpha(70)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.schedule, color: color, size: 16),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Время: ${_formatTimeOfDay(_notificationTime)}',
-                      style: TextStyle(color: color, fontSize: 13),
-                    ),
-                    const Spacer(),
-                    Icon(Icons.edit_outlined, color: color, size: 15),
-                  ],
+            Tooltip(
+              message: 'Выбрать время напоминания',
+              child: GestureDetector(
+                onTap: _pickNotificationTime,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: color.withAlpha(20),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: color.withAlpha(70)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.schedule, color: color, size: 16),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Время: ${_formatTimeOfDay(_notificationTime)}',
+                        style: TextStyle(color: color, fontSize: 13),
+                      ),
+                      const Spacer(),
+                      Icon(Icons.edit_outlined, color: color, size: 15),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -2280,6 +2308,7 @@ class StatsDialog extends StatelessWidget {
                   const Spacer(),
                   PressFeedback(
                     scale: 0.85,
+                    tooltip: 'Закрыть статистику',
                     onTap: () => Navigator.pop(context),
                     child: Icon(Icons.close, color: sub, size: 22),
                   ),
@@ -2581,6 +2610,8 @@ class RewardsDialog extends StatefulWidget {
 }
 
 class _RewardsDialogState extends State<RewardsDialog> {
+  String? _lastOpenMessage;
+
   @override
   Widget build(BuildContext context) {
     final isDark = widget.state.isDark;
@@ -2616,6 +2647,7 @@ class _RewardsDialogState extends State<RewardsDialog> {
                   const Spacer(),
                   PressFeedback(
                     scale: 0.85,
+                    tooltip: 'Закрыть награды и баффы',
                     onTap: () => Navigator.pop(context),
                     child: Icon(Icons.close, color: sub, size: 22),
                   ),
@@ -2657,7 +2689,18 @@ class _RewardsDialogState extends State<RewardsDialog> {
                       'Сундуки открываются за боевые рывки: сейчас это 5 квестов за день и победы над боссами.',
                       style: TextStyle(color: sub, fontSize: 12, height: 1.35),
                     ),
-                    const SizedBox(height: 18),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      child: _lastOpenMessage == null
+                          ? const SizedBox(height: 18)
+                          : Padding(
+                              padding: const EdgeInsets.only(top: 12),
+                              child: _RewardInlineNotice(
+                                message: _lastOpenMessage!,
+                                isDark: isDark,
+                              ),
+                            ),
+                    ),
                     Text(
                       'Сундуки',
                       style: TextStyle(
@@ -2731,9 +2774,43 @@ class _RewardsDialogState extends State<RewardsDialog> {
   void _openChest(BuildContext context, String chestId) {
     final message = widget.state.openRewardChest(chestId);
     if (message == null) return;
-    setState(() {});
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
+    setState(() => _lastOpenMessage = message);
+  }
+}
+
+class _RewardInlineNotice extends StatelessWidget {
+  final String message;
+  final bool isDark;
+
+  const _RewardInlineNotice({required this.message, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 18),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF34C759).withAlpha(16),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF34C759).withAlpha(60)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.bolt, color: Color(0xFF34C759), size: 17),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                color: textColor(isDark),
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -2821,6 +2898,7 @@ class _RewardChestCard extends StatelessWidget {
             label: 'Открыть',
             icon: Icons.auto_awesome,
             color: rarityColor,
+            tooltip: 'Открыть сундук и получить награду',
             onTap: onOpen,
           ),
         ],
@@ -3032,6 +3110,7 @@ class _BossesDialogState extends State<BossesDialog> {
                   const Spacer(),
                   PressFeedback(
                     scale: 0.85,
+                    tooltip: 'Закрыть боссов',
                     onTap: () => Navigator.pop(context),
                     child: Icon(Icons.close, color: sub, size: 22),
                   ),
@@ -3042,24 +3121,27 @@ class _BossesDialogState extends State<BossesDialog> {
 
             // Collapsible Explanation
             if (!_expanded)
-              GestureDetector(
-                onTap: () => setState(() => _expanded = true),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 10,
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.info_outline, color: sub, size: 16),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Что такое боссы?',
-                        style: TextStyle(color: sub, fontSize: 12),
-                      ),
-                      const Spacer(),
-                      Icon(Icons.expand_more, color: sub, size: 18),
-                    ],
+              Tooltip(
+                message: 'Показать объяснение механики боссов',
+                child: GestureDetector(
+                  onTap: () => setState(() => _expanded = true),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, color: sub, size: 16),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Что такое боссы?',
+                          style: TextStyle(color: sub, fontSize: 12),
+                        ),
+                        const Spacer(),
+                        Icon(Icons.expand_more, color: sub, size: 18),
+                      ],
+                    ),
                   ),
                 ),
               )
@@ -3094,9 +3176,16 @@ class _BossesDialogState extends State<BossesDialog> {
                           ),
                         ),
                         const Spacer(),
-                        GestureDetector(
-                          onTap: () => setState(() => _expanded = false),
-                          child: Icon(Icons.expand_less, color: sub, size: 18),
+                        Tooltip(
+                          message: 'Скрыть объяснение',
+                          child: GestureDetector(
+                            onTap: () => setState(() => _expanded = false),
+                            child: Icon(
+                              Icons.expand_less,
+                              color: sub,
+                              size: 18,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -3171,6 +3260,7 @@ class _BossesDialogState extends State<BossesDialog> {
                         label: 'Добавить босса',
                         icon: Icons.add,
                         color: const Color(0xFFFF2D55),
+                        tooltip: 'Создать босса-привычку',
                         onTap: () => _showAddBoss(context, widget.state),
                       ),
                     ),
@@ -3341,9 +3431,12 @@ class _BossCard extends StatelessWidget {
                   ),
                 ),
               const SizedBox(width: 8),
-              GestureDetector(
-                onTap: onDelete,
-                child: Icon(Icons.delete_outline, color: sub, size: 18),
+              Tooltip(
+                message: 'Удалить босса',
+                child: GestureDetector(
+                  onTap: onDelete,
+                  child: Icon(Icons.delete_outline, color: sub, size: 18),
+                ),
               ),
             ],
           ),
@@ -3484,6 +3577,10 @@ class _AddBossDialogState extends State<_AddBossDialog> {
     final txt = textColor(isDark);
     final sub = subtext(isDark);
     final bdr = borderColor(isDark);
+    final skills = _uniqueSkills(widget.skills);
+    final selectedSkillId = skills.any((skill) => skill.id == _skillId)
+        ? _skillId
+        : null;
 
     return Dialog(
       backgroundColor: bg,
@@ -3518,14 +3615,14 @@ class _AddBossDialogState extends State<_AddBossDialog> {
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
-                    value: _skillId,
+                    value: selectedSkillId,
                     hint: Text(
                       'Выберите навык',
                       style: TextStyle(color: sub, fontSize: 14),
                     ),
                     isExpanded: true,
                     dropdownColor: surface(isDark),
-                    items: widget.skills
+                    items: skills
                         .map(
                           (sk) => DropdownMenuItem(
                             value: sk.id,
@@ -3593,9 +3690,22 @@ class _AddBossDialogState extends State<_AddBossDialog> {
     );
   }
 
+  List<Skill> _uniqueSkills(List<Skill> skills) {
+    final seen = <String>{};
+    return [
+      for (final skill in skills)
+        if (seen.add(skill.id)) skill,
+    ];
+  }
+
   void _save() {
-    if (_titleCtrl.text.trim().isEmpty || _skillId == null) return;
-    widget.onSave(_titleCtrl.text.trim(), _skillId!, _streak);
+    final skillId = _skillId;
+    if (_titleCtrl.text.trim().isEmpty ||
+        skillId == null ||
+        !_uniqueSkills(widget.skills).any((skill) => skill.id == skillId)) {
+      return;
+    }
+    widget.onSave(_titleCtrl.text.trim(), skillId, _streak);
     Navigator.pop(context);
   }
 }
@@ -3659,6 +3769,7 @@ class _CalendarDialogState extends State<CalendarDialog> {
                   const Spacer(),
                   PressFeedback(
                     scale: 0.85,
+                    tooltip: 'Закрыть календарь',
                     onTap: () => Navigator.pop(context),
                     child: Icon(Icons.close, color: sub, size: 22),
                   ),
@@ -3696,10 +3807,13 @@ class _CalendarDialogState extends State<CalendarDialog> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          GestureDetector(
-            onTap: () =>
-                _selectMonth(_selectedMonth.year, _selectedMonth.month - 1),
-            child: Icon(Icons.chevron_left, color: sub),
+          Tooltip(
+            message: 'Предыдущий месяц',
+            child: GestureDetector(
+              onTap: () =>
+                  _selectMonth(_selectedMonth.year, _selectedMonth.month - 1),
+              child: Icon(Icons.chevron_left, color: sub),
+            ),
           ),
           Text(
             '${_monthName(_selectedMonth.month)} ${_selectedMonth.year}',
@@ -3709,10 +3823,13 @@ class _CalendarDialogState extends State<CalendarDialog> {
               fontSize: 16,
             ),
           ),
-          GestureDetector(
-            onTap: () =>
-                _selectMonth(_selectedMonth.year, _selectedMonth.month + 1),
-            child: Icon(Icons.chevron_right, color: sub),
+          Tooltip(
+            message: 'Следующий месяц',
+            child: GestureDetector(
+              onTap: () =>
+                  _selectMonth(_selectedMonth.year, _selectedMonth.month + 1),
+              child: Icon(Icons.chevron_right, color: sub),
+            ),
           ),
         ],
       ),

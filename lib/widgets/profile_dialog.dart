@@ -169,60 +169,66 @@ class _ProfileDialogState extends State<ProfileDialog> {
         clipBehavior: Clip.none,
         children: [
           // Banner
-          GestureDetector(
-            onTap: () async {
-              final bytes = await _pickImage();
-              if (bytes != null && context.mounted) {
-                s.updateProfileBanner(bytes);
-              }
-            },
-            child: Stack(
-              children: [
-                SizedBox(
-                  width: double.infinity,
-                  height: 160,
-                  child: p.bannerBytes != null
-                      ? Image.memory(p.bannerBytes!, fit: BoxFit.cover)
-                      : Container(
-                          decoration: const BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [Color(0xFF4A9EFF), Color(0xFF8B5CF6)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
+          Tooltip(
+            message: 'Изменить баннер профиля',
+            child: GestureDetector(
+              onTap: () async {
+                final bytes = await _pickImage();
+                if (bytes != null && context.mounted) {
+                  s.updateProfileBanner(bytes);
+                }
+              },
+              child: Stack(
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    height: 160,
+                    child: p.bannerBytes != null
+                        ? Image.memory(p.bannerBytes!, fit: BoxFit.cover)
+                        : Container(
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [Color(0xFF4A9EFF), Color(0xFF8B5CF6)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
                             ),
                           ),
+                  ),
+                  // Dim overlay + hint
+                  Positioned.fill(
+                    child: Container(
+                      color: Colors.black.withAlpha(40),
+                      child: Center(
+                        child: Icon(
+                          Icons.add_a_photo_outlined,
+                          color: Colors.white.withAlpha(120),
+                          size: 28,
                         ),
-                ),
-                // Dim overlay + hint
-                Positioned.fill(
-                  child: Container(
-                    color: Colors.black.withAlpha(40),
-                    child: Center(
-                      child: Icon(
-                        Icons.add_a_photo_outlined,
-                        color: Colors.white.withAlpha(120),
-                        size: 28,
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           // Close button
           Positioned(
             top: 12,
             right: 12,
-            child: GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: Container(
-                width: 30,
-                height: 30,
-                decoration: BoxDecoration(
-                  color: Colors.black.withAlpha(120),
-                  shape: BoxShape.circle,
+            child: Tooltip(
+              message: 'Закрыть профиль',
+              child: GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withAlpha(120),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close, color: Colors.white, size: 16),
                 ),
-                child: const Icon(Icons.close, color: Colors.white, size: 16),
               ),
             ),
           ),
@@ -237,62 +243,65 @@ class _ProfileDialogState extends State<ProfileDialog> {
     UserProfile p,
     bool isDark,
   ) {
-    return GestureDetector(
-      onTap: () async {
-        final bytes = await _pickImage();
-        if (bytes != null && context.mounted) {
-          s.updateProfileAvatar(bytes);
-        }
-      },
-      child: Stack(
-        children: [
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: surface(isDark), width: 3),
-              gradient: p.avatarBytes == null
-                  ? const LinearGradient(
-                      colors: [Color(0xFF4A9EFF), Color(0xFF8B5CF6)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    )
-                  : null,
-              image: p.avatarBytes != null
-                  ? DecorationImage(
-                      image: MemoryImage(p.avatarBytes!),
-                      fit: BoxFit.cover,
-                    )
-                  : null,
-            ),
-            child: p.avatarBytes == null
-                ? Center(
-                    child: Text(
-                      p.initial,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 32,
-                      ),
-                    ),
-                  )
-                : null,
-          ),
-          Positioned(
-            bottom: 0,
-            right: 0,
-            child: Container(
-              width: 24,
-              height: 24,
-              decoration: const BoxDecoration(
-                color: Color(0xFF4A9EFF),
+    return Tooltip(
+      message: 'Изменить аватар',
+      child: GestureDetector(
+        onTap: () async {
+          final bytes = await _pickImage();
+          if (bytes != null && context.mounted) {
+            s.updateProfileAvatar(bytes);
+          }
+        },
+        child: Stack(
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
+                border: Border.all(color: surface(isDark), width: 3),
+                gradient: p.avatarBytes == null
+                    ? const LinearGradient(
+                        colors: [Color(0xFF4A9EFF), Color(0xFF8B5CF6)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )
+                    : null,
+                image: p.avatarBytes != null
+                    ? DecorationImage(
+                        image: MemoryImage(p.avatarBytes!),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
               ),
-              child: const Icon(Icons.edit, color: Colors.white, size: 13),
+              child: p.avatarBytes == null
+                  ? Center(
+                      child: Text(
+                        p.initial,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 32,
+                        ),
+                      ),
+                    )
+                  : null,
             ),
-          ),
-        ],
+            Positioned(
+              bottom: 0,
+              right: 0,
+              child: Container(
+                width: 24,
+                height: 24,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF4A9EFF),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.edit, color: Colors.white, size: 13),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -333,20 +342,24 @@ class _ProfileDialogState extends State<ProfileDialog> {
             )
           else
             Expanded(
-              child: GestureDetector(
-                onTap: () => setState(() => _editingName = true),
-                child: Text(
-                  p.name,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 22,
-                    color: txt,
+              child: Tooltip(
+                message: 'Редактировать имя профиля',
+                child: GestureDetector(
+                  onTap: () => setState(() => _editingName = true),
+                  child: Text(
+                    p.name,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 22,
+                      color: txt,
+                    ),
                   ),
                 ),
               ),
             ),
           if (_editingName)
             IconButton(
+              tooltip: 'Сохранить имя',
               icon: const Icon(
                 Icons.check_circle,
                 color: Color(0xFF4A9EFF),
@@ -358,9 +371,12 @@ class _ProfileDialogState extends State<ProfileDialog> {
               },
             )
           else
-            GestureDetector(
-              onTap: () => setState(() => _editingName = true),
-              child: Icon(Icons.edit_outlined, color: sub, size: 18),
+            Tooltip(
+              message: 'Редактировать имя профиля',
+              child: GestureDetector(
+                onTap: () => setState(() => _editingName = true),
+                child: Icon(Icons.edit_outlined, color: sub, size: 18),
+              ),
             ),
         ],
       ),
@@ -491,38 +507,41 @@ class _ProfileDialogState extends State<ProfileDialog> {
             const SizedBox(width: 8),
             // Gender picker
             Expanded(
-              child: GestureDetector(
-                onTap: () => _showGenderPicker(context, s, p, isDark, sub),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 11,
-                  ),
-                  decoration: BoxDecoration(
-                    color: fBg,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: bdr),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.person_outline,
-                        size: 16,
-                        color: Color(0xFF8E8E93),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          p.gender != null ? genderLabel[p.gender]! : 'Пол',
-                          style: TextStyle(
-                            color: p.gender != null ? txt : sub,
-                            fontSize: 13,
-                          ),
-                          overflow: TextOverflow.ellipsis,
+              child: Tooltip(
+                message: 'Выбрать пол',
+                child: GestureDetector(
+                  onTap: () => _showGenderPicker(context, s, p, isDark, sub),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 11,
+                    ),
+                    decoration: BoxDecoration(
+                      color: fBg,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: bdr),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.person_outline,
+                          size: 16,
+                          color: Color(0xFF8E8E93),
                         ),
-                      ),
-                      Icon(Icons.arrow_drop_down, color: sub, size: 18),
-                    ],
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            p.gender != null ? genderLabel[p.gender]! : 'Пол',
+                            style: TextStyle(
+                              color: p.gender != null ? txt : sub,
+                              fontSize: 13,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Icon(Icons.arrow_drop_down, color: sub, size: 18),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -607,12 +626,15 @@ class _ProfileDialogState extends State<ProfileDialog> {
           runSpacing: 8,
           children: s.skills
               .map(
-                (sk) => GestureDetector(
-                  onTap: () {
-                    s.selectSkill(sk.id);
-                    Navigator.pop(context);
-                  },
-                  child: _SkillChip(skill: sk, isDark: isDark),
+                (sk) => Tooltip(
+                  message: 'Перейти к навыку “${sk.name}”',
+                  child: GestureDetector(
+                    onTap: () {
+                      s.selectSkill(sk.id);
+                      Navigator.pop(context);
+                    },
+                    child: _SkillChip(skill: sk, isDark: isDark),
+                  ),
                 ),
               )
               .toList(),

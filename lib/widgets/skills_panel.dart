@@ -51,9 +51,10 @@ class SkillsPanel extends StatelessWidget {
                 const Spacer(),
                 HoverScale(
                   child: SmallBtn(
-                    label: 'Добавить',
+                    label: 'Навык',
                     icon: Icons.add,
                     color: const Color(0xFF4A9EFF),
+                    tooltip: 'Создать навык, который будет получать XP',
                     onTap: () => _addDialog(context),
                   ),
                 ),
@@ -322,16 +323,19 @@ class _SkillCardState extends State<SkillCard> {
                           MiniBtn(
                             icon: Icons.account_tree,
                             color: sk.color,
+                            tooltip: 'Открыть дерево навыка',
                             onTap: widget.onTree,
                           ),
                           MiniBtn(
                             icon: Icons.edit,
                             color: sub,
+                            tooltip: 'Редактировать навык',
                             onTap: widget.onEdit,
                           ),
                           MiniBtn(
                             icon: Icons.delete_outline,
                             color: const Color(0xFFFF3B30),
+                            tooltip: 'Удалить навык',
                             onTap: widget.onDelete,
                           ),
                         ],

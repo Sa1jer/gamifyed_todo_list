@@ -103,85 +103,91 @@ class _TodayDashboardState extends State<TodayDashboard> {
     final nextTask = TodayDashboard._pickNextTask(state, activeTasks);
     final riskyTasks = TodayDashboard._riskTasks(dailyTasks);
     final stats = state.todayStats;
+    final statusLabels = _todayStatusLabels(
+      state: state,
+      nextRank: nextRank,
+      activeBossThreats: activeBossThreats,
+      activeBuffs: activeBuffs,
+      unopenedChests: unopenedChests,
+    );
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 180),
       curve: Curves.easeInOutCubic,
-      height: _expanded ? 242 : 58,
+      height: _expanded ? 258 : 68,
       child: AppPanel(
         isDark: isDark,
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: EdgeInsets.fromLTRB(12, _expanded ? 12 : 9, 12, 8),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  const Icon(Icons.auto_awesome, color: Color(0xFFFFCC00)),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Сегодня',
-                          style: TextStyle(
-                            color: txt,
-                            fontSize: 17,
-                            fontWeight: FontWeight.bold,
-                          ),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final pinActions = constraints.maxWidth >= 1100;
+                  final titleBlock = Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Действовать сегодня',
+                        style: TextStyle(
+                          color: txt,
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
                         ),
-                        Text(
-                          'Один понятный следующий шаг вместо бесконечного списка',
-                          style: TextStyle(color: sub, fontSize: 11),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        'Сначала следующий квест. Аналитика и трофеи живут в “Прогрессе”.',
+                        style: TextStyle(color: sub, fontSize: 11),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  );
+                  final statusRow = _TodayStatusRow(
+                    labels: statusLabels,
+                    compact: !_expanded,
+                  );
+
+                  return SizedBox(
+                    width: constraints.maxWidth,
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.auto_awesome,
+                          color: Color(0xFFFFCC00),
+                        ),
+                        const SizedBox(width: 8),
+                        if (pinActions) ...[
+                          Flexible(fit: FlexFit.loose, child: titleBlock),
+                          const Spacer(),
+                          statusRow,
+                        ] else ...[
+                          Expanded(child: titleBlock),
+                          const SizedBox(width: 12),
+                          Flexible(
+                            fit: FlexFit.tight,
+                            flex: 2,
+                            child: Align(
+                              alignment: Alignment.centerRight,
+                              child: SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                reverse: true,
+                                child: statusRow,
+                              ),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(width: 8),
+                        _CollapseButton(
+                          expanded: _expanded,
+                          color: sub,
+                          onTap: () => setState(() => _expanded = !_expanded),
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  if (_expanded)
-                    _TinyProgressLabel(
-                      label: nextRank == null
-                          ? 'пик ранга'
-                          : 'до ${nextRank.label}',
-                      value: nextRank == null
-                          ? 'max'
-                          : '${state.profile.xpNeeded - state.profile.xp} XP',
-                      color: nextRank?.color ?? const Color(0xFFFFCC00),
-                    ),
-                  if (_expanded && activeBossThreats > 0) ...[
-                    const SizedBox(width: 8),
-                    _TinyProgressLabel(
-                      label: 'боссы',
-                      value: '$activeBossThreats атакуют',
-                      color: const Color(0xFFFF3B30),
-                    ),
-                  ],
-                  if (_expanded && activeBuffs > 0) ...[
-                    const SizedBox(width: 8),
-                    _TinyProgressLabel(
-                      label: 'баффы',
-                      value: '$activeBuffs активно',
-                      color: const Color(0xFF34C759),
-                    ),
-                  ],
-                  if (_expanded && unopenedChests > 0) ...[
-                    const SizedBox(width: 8),
-                    _TinyProgressLabel(
-                      label: 'награды',
-                      value: '$unopenedChests сундук',
-                      color: const Color(0xFFFFCC00),
-                    ),
-                  ],
-                  const SizedBox(width: 8),
-                  _CollapseButton(
-                    expanded: _expanded,
-                    color: sub,
-                    onTap: () => setState(() => _expanded = !_expanded),
-                  ),
-                ],
+                  );
+                },
               ),
               if (_expanded) const SizedBox(height: 8),
               if (_expanded)
@@ -215,6 +221,42 @@ class _TodayDashboardState extends State<TodayDashboard> {
         ),
       ),
     );
+  }
+
+  List<_TodayStatusLabelData> _todayStatusLabels({
+    required AppState state,
+    required RankInfo? nextRank,
+    required int activeBossThreats,
+    required int activeBuffs,
+    required int unopenedChests,
+  }) {
+    return [
+      _TodayStatusLabelData(
+        label: nextRank == null ? 'пик ранга' : 'до ${nextRank.label}',
+        value: nextRank == null
+            ? 'max'
+            : '${state.profile.xpNeeded - state.profile.xp} XP',
+        color: nextRank?.color ?? const Color(0xFFFFCC00),
+      ),
+      if (activeBossThreats > 0)
+        _TodayStatusLabelData(
+          label: 'боссы',
+          value: '$activeBossThreats атакуют',
+          color: const Color(0xFFFF3B30),
+        ),
+      if (activeBuffs > 0)
+        _TodayStatusLabelData(
+          label: 'баффы',
+          value: '$activeBuffs активно',
+          color: const Color(0xFF34C759),
+        ),
+      if (unopenedChests > 0)
+        _TodayStatusLabelData(
+          label: 'награды',
+          value: '$unopenedChests сундук',
+          color: const Color(0xFFFFCC00),
+        ),
+    ];
   }
 }
 
@@ -350,38 +392,35 @@ class _NextActionCard extends StatelessWidget {
     }
 
     final earnedXp = state.previewEarnedXP(task!);
+    final canStartMinimum = state.canCompleteMinimumAction(task!);
     final recommendsMinimum =
-        state.canCompleteMinimumAction(task!) &&
-        TodayDashboard._shouldRecommendMinimumAction(task!);
-    final buffBonus = recommendsMinimum ? 0 : state.previewBuffBonusXP(task!);
-    final displayedXp = recommendsMinimum
-        ? state.previewMinimumActionXP(task!)
-        : earnedXp + buffBonus;
-    final headline = recommendsMinimum
-        ? 'Минимум: ${task!.minimumAction}'
-        : task!.title;
-    final footer = recommendsMinimum
-        ? 'Лёгкий старт к квесту «${task!.title}».'
+        canStartMinimum && TodayDashboard._shouldRecommendMinimumAction(task!);
+    final buffBonus = state.previewBuffBonusXP(task!);
+    final fullDisplayedXp = earnedXp + buffBonus;
+    final minimumXp = canStartMinimum ? state.previewMinimumActionXP(task!) : 0;
+    final footer = canStartMinimum
+        ? 'Выбери вход: быстрый минимум или полное закрытие квеста.'
         : 'Один маленький квест — и поток запущен.';
 
     return _SoftCard(
       isDark: isDark,
       accent: accent,
-      padding: const EdgeInsets.all(10),
+      prominent: true,
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.flag, color: accent, size: 16),
+              Icon(Icons.flag, color: accent, size: 17),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  'Следующий шаг',
+                  'Следующий квест',
                   style: TextStyle(
                     color: accent,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w900,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -390,10 +429,18 @@ class _NextActionCard extends StatelessWidget {
               const SizedBox(width: 6),
               TaskBadge(
                 icon: Icons.auto_awesome,
-                label: '+$displayedXp XP',
+                label: '+$fullDisplayedXp XP',
                 color: const Color(0xFF4A9EFF),
               ),
-              if (!recommendsMinimum && buffBonus > 0) ...[
+              if (canStartMinimum) ...[
+                const SizedBox(width: 6),
+                TaskBadge(
+                  icon: Icons.play_circle_fill,
+                  label: 'мин +$minimumXp',
+                  color: accent,
+                ),
+              ],
+              if (buffBonus > 0) ...[
                 const SizedBox(width: 6),
                 TaskBadge(
                   icon: Icons.bolt,
@@ -401,36 +448,36 @@ class _NextActionCard extends StatelessWidget {
                   color: const Color(0xFF34C759),
                 ),
               ],
-              const SizedBox(width: 6),
-              _QuickActionButton(
-                task: task!,
-                color: accent,
-                label: recommendsMinimum ? 'Начать' : 'Выполнить',
-                icon: recommendsMinimum ? Icons.play_arrow : Icons.check,
-                compact: false,
-                onTrigger: recommendsMinimum ? onMinimumAction : onComplete,
-              ),
             ],
           ),
-          const SizedBox(height: 7),
+          const SizedBox(height: 8),
           Text(
-            headline,
+            task!.title,
             style: TextStyle(
               color: txt,
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
+              fontSize: 16.5,
+              fontWeight: FontWeight.w900,
+              height: 1.12,
             ),
-            maxLines: recommendsMinimum ? 2 : 1,
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 5),
+          if (canStartMinimum) ...[
+            const SizedBox(height: 5),
+            _MinimumActionHint(
+              text: task!.minimumAction,
+              color: accent,
+              isDark: isDark,
+            ),
+          ],
+          const SizedBox(height: 7),
           Wrap(
             spacing: 6,
             runSpacing: 4,
             children: [
               if (skill != null)
                 TaskBadge(icon: skill!.icon, label: skill!.name, color: accent),
-              if (recommendsMinimum)
+              if (canStartMinimum)
                 TaskBadge(
                   icon: Icons.play_circle_fill,
                   label: 'Лёгкий старт',
@@ -448,11 +495,84 @@ class _NextActionCard extends StatelessWidget {
             ],
           ),
           const Spacer(),
-          Text(
-            footer,
-            style: TextStyle(color: sub, fontSize: 11, height: 1.2),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  footer,
+                  style: TextStyle(color: sub, fontSize: 11.5, height: 1.25),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 10),
+              if (canStartMinimum) ...[
+                _QuickActionButton(
+                  task: task!,
+                  color: accent,
+                  label: 'Минимум',
+                  tooltip: 'Сделать лёгкий старт и получить частичный XP',
+                  icon: Icons.play_arrow,
+                  compact: false,
+                  primary: recommendsMinimum,
+                  onTrigger: onMinimumAction,
+                ),
+                const SizedBox(width: 8),
+              ],
+              _QuickActionButton(
+                task: task!,
+                color: accent,
+                label: 'Выполнить',
+                tooltip: 'Закрыть квест полностью и начислить XP',
+                icon: Icons.check,
+                compact: false,
+                primary: !recommendsMinimum,
+                onTrigger: onComplete,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MinimumActionHint extends StatelessWidget {
+  final String text;
+  final Color color;
+  final bool isDark;
+
+  const _MinimumActionHint({
+    required this.text,
+    required this.color,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withAlpha(12),
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: color.withAlpha(34)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.play_arrow_rounded, color: color.withAlpha(220), size: 14),
+          const SizedBox(width: 5),
+          Expanded(
+            child: Text(
+              'Минимум: $text',
+              style: TextStyle(
+                color: textColor(isDark).withAlpha(210),
+                fontSize: 11.2,
+                fontWeight: FontWeight.w700,
+                height: 1.15,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
       ),
@@ -489,6 +609,7 @@ class _StatsGrid extends StatelessWidget {
                   value: '$todayTasks',
                   icon: Icons.check_circle,
                   color: const Color(0xFF34C759),
+                  muted: true,
                 ),
               ),
               const SizedBox(width: 8),
@@ -499,6 +620,7 @@ class _StatsGrid extends StatelessWidget {
                   value: '$todayXp',
                   icon: Icons.bolt,
                   color: const Color(0xFFFFCC00),
+                  muted: true,
                 ),
               ),
             ],
@@ -515,6 +637,7 @@ class _StatsGrid extends StatelessWidget {
                   value: '$activeQuests',
                   icon: Icons.list_alt,
                   color: const Color(0xFF4A9EFF),
+                  muted: true,
                 ),
               ),
               const SizedBox(width: 8),
@@ -525,6 +648,7 @@ class _StatsGrid extends StatelessWidget {
                   value: '$dailyQuests',
                   icon: Icons.repeat,
                   color: const Color(0xFFFF9500),
+                  muted: true,
                 ),
               ),
             ],
@@ -658,11 +782,11 @@ class _QuestMiniRow extends StatelessWidget {
         : '${typeLabel[task.type]} • +$xp XP';
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
       decoration: BoxDecoration(
-        color: accent.withAlpha(14),
+        color: isDark ? Colors.white.withAlpha(8) : Colors.black.withAlpha(4),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: accent.withAlpha(38)),
+        border: Border.all(color: accent.withAlpha(26)),
       ),
       child: Row(
         children: [
@@ -670,23 +794,24 @@ class _QuestMiniRow extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
                   style: TextStyle(
                     color: txt,
-                    fontSize: 12,
+                    fontSize: 11.5,
                     fontWeight: FontWeight.w600,
                   ),
-                  maxLines: recommendsMinimum ? 2 : 1,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 1),
                 Text(
                   subtitle,
-                  style: TextStyle(color: sub, fontSize: 10),
-                  maxLines: 2,
+                  style: TextStyle(color: sub, fontSize: 9.5),
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
@@ -696,8 +821,12 @@ class _QuestMiniRow extends StatelessWidget {
             task: task,
             color: accent,
             label: recommendsMinimum ? 'Старт' : 'OK',
+            tooltip: recommendsMinimum
+                ? 'Сделать лёгкий старт: ${task.minimumAction}'
+                : 'Выполнить квест “${task.title}”',
             icon: recommendsMinimum ? Icons.play_arrow : Icons.check,
             compact: true,
+            primary: false,
             onTrigger: recommendsMinimum ? onMinimumAction : onComplete,
           ),
         ],
@@ -710,53 +839,71 @@ class _QuickActionButton extends StatelessWidget {
   final Task task;
   final Color color;
   final String label;
+  final String tooltip;
   final IconData icon;
   final bool compact;
+  final bool primary;
   final Function(String id, Offset pos) onTrigger;
 
   const _QuickActionButton({
     required this.task,
     required this.color,
     required this.label,
+    required this.tooltip,
     required this.icon,
     required this.compact,
+    this.primary = true,
     required this.onTrigger,
   });
 
   @override
   Widget build(BuildContext context) {
-    return PressFeedback(
-      scale: 0.9,
-      onTap: () {
-        final box = context.findRenderObject() as RenderBox?;
-        onTrigger(task.id, box?.localToGlobal(Offset.zero) ?? Offset.zero);
-      },
-      child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: compact ? 8 : 10,
-          vertical: compact ? 7 : 8,
-        ),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(9),
-        ),
-        child: compact
-            ? Icon(icon, color: Colors.white, size: 15)
-            : Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(icon, color: Colors.white, size: 15),
-                  const SizedBox(width: 4),
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w700,
+    final fg = primary ? Colors.white : color;
+    return Tooltip(
+      message: tooltip,
+      child: PressFeedback(
+        scale: 0.9,
+        onTap: () {
+          final box = context.findRenderObject() as RenderBox?;
+          onTrigger(task.id, box?.localToGlobal(Offset.zero) ?? Offset.zero);
+        },
+        child: Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: compact ? 8 : 10,
+            vertical: compact ? 7 : 8,
+          ),
+          decoration: BoxDecoration(
+            color: primary ? color : color.withAlpha(18),
+            borderRadius: BorderRadius.circular(9),
+            border: primary ? null : Border.all(color: color.withAlpha(50)),
+            boxShadow: primary
+                ? [
+                    BoxShadow(
+                      color: color.withAlpha(58),
+                      blurRadius: 18,
+                      offset: const Offset(0, 8),
                     ),
-                  ),
-                ],
-              ),
+                  ]
+                : null,
+          ),
+          child: compact
+              ? Icon(icon, color: fg, size: 15)
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(icon, color: fg, size: 15),
+                    const SizedBox(width: 4),
+                    Text(
+                      label,
+                      style: TextStyle(
+                        color: fg,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+        ),
       ),
     );
   }
@@ -768,6 +915,7 @@ class _StatTile extends StatelessWidget {
   final String value;
   final IconData icon;
   final Color color;
+  final bool muted;
 
   const _StatTile({
     required this.isDark,
@@ -775,6 +923,7 @@ class _StatTile extends StatelessWidget {
     required this.value,
     required this.icon,
     required this.color,
+    this.muted = false,
   });
 
   @override
@@ -784,13 +933,13 @@ class _StatTile extends StatelessWidget {
 
     return _SoftCard(
       isDark: isDark,
-      accent: color,
-      padding: const EdgeInsets.all(10),
+      accent: muted ? null : color,
+      padding: const EdgeInsets.all(8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Icon(icon, color: color, size: 16),
+          Icon(icon, color: color.withAlpha(muted ? 185 : 255), size: 16),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -798,8 +947,8 @@ class _StatTile extends StatelessWidget {
                 value,
                 style: TextStyle(
                   color: txt,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 17,
+                  fontWeight: muted ? FontWeight.w800 : FontWeight.bold,
                 ),
               ),
               Text(
@@ -828,20 +977,25 @@ class _CollapseButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return PressFeedback(
-      scale: 0.86,
-      onTap: onTap,
-      child: Container(
-        width: 28,
-        height: 28,
-        decoration: BoxDecoration(
-          color: color.withAlpha(24),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(
-          expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-          color: color,
-          size: 19,
+    return Tooltip(
+      message: expanded
+          ? 'Свернуть блок “Действовать сегодня”'
+          : 'Показать блок “Действовать сегодня”',
+      child: PressFeedback(
+        scale: 0.86,
+        onTap: onTap,
+        child: Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: color.withAlpha(24),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+            color: color,
+            size: 19,
+          ),
         ),
       ),
     );
@@ -889,17 +1043,59 @@ class _TinyProgressLabel extends StatelessWidget {
   }
 }
 
+class _TodayStatusLabelData {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _TodayStatusLabelData({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+}
+
+class _TodayStatusRow extends StatelessWidget {
+  final List<_TodayStatusLabelData> labels;
+  final bool compact;
+
+  const _TodayStatusRow({required this.labels, required this.compact});
+
+  @override
+  Widget build(BuildContext context) {
+    if (labels.isEmpty) return const SizedBox.shrink();
+
+    final visibleLabels = compact ? labels.take(3).toList() : labels;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 0; i < visibleLabels.length; i++) ...[
+          if (i > 0) const SizedBox(width: 8),
+          _TinyProgressLabel(
+            label: visibleLabels[i].label,
+            value: visibleLabels[i].value,
+            color: visibleLabels[i].color,
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 class _SoftCard extends StatelessWidget {
   final bool isDark;
   final Widget child;
   final Color? accent;
   final EdgeInsetsGeometry padding;
+  final bool prominent;
 
   const _SoftCard({
     required this.isDark,
     required this.child,
     this.accent,
     this.padding = const EdgeInsets.all(12),
+    this.prominent = false,
   });
 
   @override
@@ -910,7 +1106,24 @@ class _SoftCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF13131A) : const Color(0xFFF8F8FA),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withAlpha(accent == null ? 55 : 65)),
+        border: Border.all(
+          color: color.withAlpha(
+            prominent
+                ? 120
+                : accent == null
+                ? 48
+                : 65,
+          ),
+        ),
+        boxShadow: prominent
+            ? [
+                BoxShadow(
+                  color: color.withAlpha(isDark ? 28 : 22),
+                  blurRadius: 24,
+                  offset: const Offset(0, 12),
+                ),
+              ]
+            : null,
       ),
       child: child,
     );

@@ -320,6 +320,35 @@ void main() {
       expect(chestBuff.expiresAt!.isAfter(DateTime.now()), isTrue);
     });
 
+    test('undo removes an invalid daily chest and its opened buff', () {
+      final questIds = state.tasks.map((task) => task.id).toList();
+
+      for (final questId in questIds) {
+        state.completeTask(questId);
+      }
+
+      final chest = state.rewardChests.firstWhere(
+        (item) => item.sourceKey.startsWith('daily5:'),
+      );
+      final chestId = chest.id;
+      state.openRewardChest(chestId);
+
+      expect(state.rewardChests.any((item) => item.id == chestId), isTrue);
+      expect(state.buffs.any((buff) => buff.sourceChestId == chestId), isTrue);
+
+      state.uncompleteTask(questIds.last);
+
+      expect(state.todayStats?.tasksCompleted, 4);
+      expect(state.rewardChests.any((item) => item.id == chestId), isFalse);
+      expect(state.buffs.any((buff) => buff.sourceChestId == chestId), isFalse);
+      expect(
+        state.consumeRewardChestNotifications().any(
+          (item) => item.id == chestId,
+        ),
+        isFalse,
+      );
+    });
+
     test('grants a focus buff after two same-skill quests in a row', () {
       final pullUpTasks = state.tasks
           .where((task) => task.skillId == state.skills.first.id)
@@ -337,6 +366,28 @@ void main() {
       expect(focusBuff.skillId, state.skills.first.id);
       expect(focusBuff.bonusPercent, 12);
       expect(state.consumeBuffNotifications().last.title, 'Фокус');
+    });
+
+    test('undo removes focus buff when same-skill chain is broken', () {
+      final pullUpTasks = state.tasks
+          .where((task) => task.skillId == state.skills.first.id)
+          .take(2)
+          .toList();
+
+      state.completeTask(pullUpTasks[0].id);
+      state.completeTask(pullUpTasks[1].id);
+
+      final focusBuff = state.activeBuffs.firstWhere(
+        (buff) => buff.title == 'Фокус',
+      );
+
+      state.uncompleteTask(pullUpTasks[1].id);
+
+      expect(state.buffs.any((buff) => buff.id == focusBuff.id), isFalse);
+      expect(
+        state.consumeBuffNotifications().any((buff) => buff.id == focusBuff.id),
+        isFalse,
+      );
     });
 
     test('grants a flow buff after three completed quests in a day', () {
@@ -359,6 +410,27 @@ void main() {
       );
     });
 
+    test('undo removes flow buff when daily count drops below trigger', () {
+      final questIds = state.tasks.take(3).map((task) => task.id).toList();
+
+      for (final questId in questIds) {
+        state.completeTask(questId);
+      }
+
+      final flowBuff = state.activeBuffs.firstWhere(
+        (buff) => buff.title == 'Поток',
+      );
+
+      state.uncompleteTask(questIds.last);
+
+      expect(state.todayStats?.tasksCompleted, 2);
+      expect(state.buffs.any((buff) => buff.id == flowBuff.id), isFalse);
+      expect(
+        state.consumeBuffNotifications().any((buff) => buff.id == flowBuff.id),
+        isFalse,
+      );
+    });
+
     test('unlocks a streak chest on important repeating milestones', () {
       final task = state.tasks.firstWhere(
         (candidate) => candidate.title == 'Сделать 3 подхода подтягиваний',
@@ -375,6 +447,13 @@ void main() {
         state.consumeRewardChestNotifications().first.title,
         'Сундук стрика',
       );
+
+      final chestId = state.rewardChests.first.id;
+
+      state.uncompleteTask(task.id);
+
+      expect(task.streak, 6);
+      expect(state.rewardChests.any((chest) => chest.id == chestId), isFalse);
     });
 
     test('defeating a stronger boss unlocks an epic chest', () {
@@ -411,6 +490,14 @@ void main() {
       expect(state.unopenedRewardChests, hasLength(1));
       expect(state.unopenedRewardChests.first.title, 'Эпический сундук победы');
       expect(state.unopenedRewardChests.first.rarity, RewardRarity.epic);
+
+      final chestId = state.unopenedRewardChests.first.id;
+
+      state.uncompleteTask(task.id);
+
+      expect(boss.isDefeated, isFalse);
+      expect(boss.hp, greaterThan(0));
+      expect(state.rewardChests.any((chest) => chest.id == chestId), isFalse);
     });
 
     test('buff increases xp on completion and is restored on undo', () {

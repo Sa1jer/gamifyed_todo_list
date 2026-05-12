@@ -88,6 +88,22 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
 
     expect(find.text('RPG To-Do List'), findsOneWidget);
+    expect(find.text('Действовать сегодня'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.dashboard_customize).first);
+    await tester.pump();
+
+    expect(find.text('Центр прогресса'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.edit_note).first);
+    await tester.pump();
+
+    expect(find.text('Планировать систему'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.help_outline));
+    await tester.pump();
+
+    expect(find.text('Гид по RPG To-Do List'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();

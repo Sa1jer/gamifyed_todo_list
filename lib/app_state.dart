@@ -737,15 +737,24 @@ class AppState extends ChangeNotifier {
 
   void _syncBossesForSkill(String skillId) {
     for (final boss in bosses) {
-      if (boss.skillId != skillId || boss.isDefeated) continue;
+      if (boss.skillId != skillId) continue;
       final snapshot = _buildBossSnapshot(boss);
       boss.currentStreak = snapshot.currentStreak;
-      boss.hp = ((1 - snapshot.impactProgress) * boss.maxHp).round().clamp(
+      final nextHp = ((1 - snapshot.impactProgress) * boss.maxHp).round().clamp(
         0,
         boss.maxHp,
       );
+      final shouldBeDefeated = nextHp <= 0 || snapshot.impactProgress >= 0.999;
 
-      if (boss.hp <= 0 || snapshot.impactProgress >= 0.999) {
+      if (!shouldBeDefeated) {
+        boss.isDefeated = false;
+        boss.defeatedAt = null;
+        boss.hp = nextHp;
+        continue;
+      }
+
+      boss.hp = 0;
+      if (!boss.isDefeated) {
         boss.isDefeated = true;
         boss.defeatedAt = DateTime.now();
         boss.hp = 0;
@@ -771,6 +780,8 @@ class AppState extends ChangeNotifier {
     final task = _taskById(taskId);
     if (task == null || !task.isDone) return;
 
+    final completedAt = task.lastCompletedAt;
+    final previousStreak = task.streak;
     final restoresMinimumProgress =
         task.type != TaskType.repeating &&
         task.minimumActionDoneAt != null &&
@@ -808,6 +819,11 @@ class AppState extends ChangeNotifier {
     }
     _addHistory(task, skill, earned, isCompletion: false);
     _syncBossesForSkill(task.skillId);
+    _rollbackInvalidRewardsAfterUndo(
+      task,
+      completedAt: completedAt,
+      previousStreak: previousStreak,
+    );
     _syncTaskNotification(task);
     notifyListeners();
     _saveAll();
@@ -1448,6 +1464,101 @@ class AppState extends ChangeNotifier {
       if (buff != null) {
         buff.charges += 1;
       }
+    }
+  }
+
+  void _rollbackInvalidRewardsAfterUndo(
+    Task task, {
+    required DateTime? completedAt,
+    required int previousStreak,
+  }) {
+    final sourceKeys = <String>{};
+
+    if (completedAt != null) {
+      final dayKey = _dayKey(completedAt);
+      final dayCompletions = completionHistoryForDate(completedAt);
+
+      if (dayCompletions.length < 5) {
+        sourceKeys.add('daily5:$dayKey');
+      }
+      if (dayCompletions.length < 10) {
+        sourceKeys.add('daily10:$dayKey');
+      }
+      if (dayCompletions.length < 3) {
+        sourceKeys.add('flow3:$dayKey');
+      }
+      if (!_hasFocusRewardCondition(completedAt, task.skillId)) {
+        sourceKeys.add('focus:$dayKey:${task.skillId}');
+      }
+    }
+
+    if (previousStreak == 7 || previousStreak == 30) {
+      sourceKeys.add('streak:${task.id}:$previousStreak');
+    }
+
+    for (final boss in bosses.where((boss) => boss.skillId == task.skillId)) {
+      if (!boss.isDefeated) {
+        sourceKeys.add('boss:${boss.id}');
+      }
+    }
+
+    for (final sourceKey in sourceKeys) {
+      _removeRewardChestBySourceKey(sourceKey);
+      _removeBuffsBySourceKey(sourceKey);
+    }
+  }
+
+  bool _hasFocusRewardCondition(DateTime date, String skillId) {
+    final completions = completionHistoryForDate(date);
+    for (var i = 1; i < completions.length; i++) {
+      if (completions[i - 1].skillId == skillId &&
+          completions[i].skillId == skillId) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  void _removeRewardChestBySourceKey(String sourceKey) {
+    final removedChestIds = rewardChests
+        .where((chest) => chest.sourceKey == sourceKey)
+        .map((chest) => chest.id)
+        .toSet();
+    if (removedChestIds.isEmpty) return;
+
+    rewardChests.removeWhere((chest) => removedChestIds.contains(chest.id));
+    _pendingRewardNotifications.removeWhere(
+      (chest) =>
+          removedChestIds.contains(chest.id) || chest.sourceKey == sourceKey,
+    );
+    _removeBuffsWhere(
+      (buff) =>
+          removedChestIds.contains(buff.sourceChestId) ||
+          removedChestIds.any((id) => buff.sourceKey == 'chest:$id'),
+    );
+  }
+
+  void _removeBuffsBySourceKey(String sourceKey) {
+    _removeBuffsWhere((buff) => buff.sourceKey == sourceKey);
+  }
+
+  void _removeBuffsWhere(bool Function(Buff buff) shouldRemove) {
+    final removedBuffIds = buffs
+        .where(shouldRemove)
+        .map((buff) => buff.id)
+        .toSet();
+    if (removedBuffIds.isEmpty) return;
+
+    buffs.removeWhere((buff) => removedBuffIds.contains(buff.id));
+    _pendingBuffNotifications.removeWhere(
+      (buff) => removedBuffIds.contains(buff.id),
+    );
+
+    for (final task in tasks) {
+      if (!task.consumedBuffIds.any(removedBuffIds.contains)) continue;
+      task.consumedBuffIds = task.consumedBuffIds
+          .where((id) => !removedBuffIds.contains(id))
+          .toList();
     }
   }
 

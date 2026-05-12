@@ -148,9 +148,10 @@ class _TasksPanelState extends State<TasksPanel> {
                   ),
                 HoverScale(
                   child: SmallBtn(
-                    label: ' Задача',
+                    label: 'Новая задача',
                     icon: Icons.add,
                     color: skill.color,
+                    tooltip: 'Создать квест для навыка “${skill.name}”',
                     onTap: () => _addTask(context, skill),
                   ),
                 ),
@@ -454,45 +455,50 @@ class _ChecklistBtnState extends State<_ChecklistBtn> {
   @override
   Widget build(BuildContext context) {
     final accent = widget.expanded ? darken(widget.color) : widget.color;
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _p = true),
-      onTapUp: (_) {
-        setState(() => _p = false);
-        widget.onTap();
-      },
-      onTapCancel: () => setState(() => _p = false),
-      child: AnimatedScale(
-        scale: _p ? 0.92 : 1.0,
-        duration: const Duration(milliseconds: 80),
-        curve: Curves.easeOut,
-        child: AnimatedContainer(
+    return Tooltip(
+      message: widget.expanded
+          ? 'Скрыть чек-лист цели'
+          : 'Показать чек-лист цели',
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _p = true),
+        onTapUp: (_) {
+          setState(() => _p = false);
+          widget.onTap();
+        },
+        onTapCancel: () => setState(() => _p = false),
+        child: AnimatedScale(
+          scale: _p ? 0.92 : 1.0,
           duration: const Duration(milliseconds: 80),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: _p ? accent.withAlpha(24) : Colors.transparent,
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: accent, width: 1.2),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                widget.expanded
-                    ? Icons.check_box
-                    : Icons.check_box_outline_blank,
-                color: accent,
-                size: 10,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                '${widget.done}/${widget.total}',
-                style: TextStyle(
+          curve: Curves.easeOut,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 80),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: _p ? accent.withAlpha(24) : Colors.transparent,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: accent, width: 1.2),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  widget.expanded
+                      ? Icons.check_box
+                      : Icons.check_box_outline_blank,
                   color: accent,
-                  fontSize: 9,
-                  fontWeight: FontWeight.w600,
+                  size: 10,
                 ),
-              ),
-            ],
+                const SizedBox(width: 4),
+                Text(
+                  '${widget.done}/${widget.total}',
+                  style: TextStyle(
+                    color: accent,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -573,101 +579,124 @@ class _TaskTileState extends State<TaskTile> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                PressFeedback(
-                  scale: 0.85,
-                  onTap: () {
-                    if (t.isDone) {
-                      widget.onUncomplete();
-                    } else {
-                      final box =
-                          _cbKey.currentContext?.findRenderObject()
-                              as RenderBox?;
-                      widget.onToggle(
-                        box?.localToGlobal(Offset.zero) ?? Offset.zero,
-                      );
-                    }
-                  },
-                  child: AnimatedContainer(
-                    key: _cbKey,
-                    duration: const Duration(milliseconds: 200),
-                    width: 22,
-                    height: 22,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: t.isDone ? widget.skillColor : sub,
-                        width: 2,
+                Tooltip(
+                  message: t.isDone
+                      ? 'Вернуть задачу в активные и откатить XP'
+                      : 'Выполнить задачу и начислить XP',
+                  child: PressFeedback(
+                    scale: 0.85,
+                    onTap: () {
+                      if (t.isDone) {
+                        widget.onUncomplete();
+                      } else {
+                        final box =
+                            _cbKey.currentContext?.findRenderObject()
+                                as RenderBox?;
+                        widget.onToggle(
+                          box?.localToGlobal(Offset.zero) ?? Offset.zero,
+                        );
+                      }
+                    },
+                    child: AnimatedContainer(
+                      key: _cbKey,
+                      duration: const Duration(milliseconds: 200),
+                      width: 22,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: t.isDone
+                              ? widget.skillColor
+                              : _h
+                              ? widget.skillColor
+                              : sub.withAlpha(145),
+                          width: 2,
+                        ),
+                        color: t.isDone
+                            ? widget.skillColor
+                            : _h
+                            ? widget.skillColor.withAlpha(18)
+                            : Colors.transparent,
                       ),
-                      color: t.isDone ? widget.skillColor : Colors.transparent,
+                      child: t.isDone
+                          ? const Icon(
+                              Icons.check,
+                              size: 13,
+                              color: Colors.white,
+                            )
+                          : null,
                     ),
-                    child: t.isDone
-                        ? const Icon(Icons.check, size: 13, color: Colors.white)
-                        : null,
                   ),
                 ),
                 if (t.hasMinimumAction) ...[
                   const SizedBox(width: 8),
                   canStartMinimum
-                      ? PressFeedback(
-                          scale: 0.9,
-                          onTap: () {
-                            final box =
-                                _minKey.currentContext?.findRenderObject()
-                                    as RenderBox?;
-                            widget.onMinimumAction(
-                              box?.localToGlobal(Offset.zero) ?? Offset.zero,
-                            );
-                          },
+                      ? Tooltip(
+                          message: 'Сделать лёгкий старт: ${t.minimumAction}',
+                          child: PressFeedback(
+                            scale: 0.9,
+                            onTap: () {
+                              final box =
+                                  _minKey.currentContext?.findRenderObject()
+                                      as RenderBox?;
+                              widget.onMinimumAction(
+                                box?.localToGlobal(Offset.zero) ?? Offset.zero,
+                              );
+                            },
+                            child: Container(
+                              key: _minKey,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 9,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: widget.skillColor.withAlpha(10),
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(
+                                  color: widget.skillColor.withAlpha(46),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.play_arrow_rounded,
+                                    color: widget.skillColor.withAlpha(210),
+                                    size: 14,
+                                  ),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    'Минимум',
+                                    style: TextStyle(
+                                      color: widget.skillColor,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        )
+                      : Tooltip(
+                          message: 'Лёгкий старт уже сделан',
                           child: Container(
-                            key: _minKey,
                             padding: const EdgeInsets.symmetric(
                               horizontal: 9,
                               vertical: 6,
                             ),
                             decoration: BoxDecoration(
-                              color: widget.skillColor.withAlpha(16),
+                              color: const Color(0xFF34C759).withAlpha(16),
                               borderRadius: BorderRadius.circular(999),
                               border: Border.all(
-                                color: widget.skillColor.withAlpha(78),
+                                color: const Color(0xFF34C759).withAlpha(76),
                               ),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.play_arrow_rounded,
-                                  color: widget.skillColor,
-                                  size: 14,
-                                ),
-                                const SizedBox(width: 2),
-                                Text(
-                                  'Минимум',
-                                  style: TextStyle(
-                                    color: widget.skillColor,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
+                            child: const Icon(
+                              Icons.bolt_rounded,
+                              color: Color(0xFF34C759),
+                              size: 14,
                             ),
-                          ),
-                        )
-                      : Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 9,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF34C759).withAlpha(16),
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(
-                              color: const Color(0xFF34C759).withAlpha(76),
-                            ),
-                          ),
-                          child: const Icon(
-                            Icons.bolt_rounded,
-                            color: Color(0xFF34C759),
-                            size: 14,
                           ),
                         ),
                 ],
@@ -813,11 +842,13 @@ class _TaskTileState extends State<TaskTile> {
                           MiniBtn(
                             icon: Icons.edit,
                             color: sub,
+                            tooltip: 'Редактировать задачу',
                             onTap: widget.onEdit,
                           ),
                           MiniBtn(
                             icon: Icons.delete_outline,
                             color: const Color(0xFFFF3B30),
+                            tooltip: 'Удалить задачу',
                             onTap: widget.onDelete,
                           ),
                         ],

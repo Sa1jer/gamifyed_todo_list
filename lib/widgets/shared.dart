@@ -84,11 +84,13 @@ class PressFeedback extends StatefulWidget {
   final Widget child;
   final VoidCallback onTap;
   final double scale;
+  final String? tooltip;
   const PressFeedback({
     super.key,
     required this.child,
     required this.onTap,
     this.scale = 0.93,
+    this.tooltip,
   });
   @override
   State<PressFeedback> createState() => _PressFeedbackState();
@@ -97,24 +99,29 @@ class PressFeedback extends StatefulWidget {
 class _PressFeedbackState extends State<PressFeedback> {
   bool _p = false;
   @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTapDown: (_) => setState(() => _p = true),
-    onTapUp: (_) {
-      setState(() => _p = false);
-      widget.onTap();
-    },
-    onTapCancel: () => setState(() => _p = false),
-    child: AnimatedScale(
-      scale: _p ? widget.scale : 1.0,
-      duration: const Duration(milliseconds: 80),
-      curve: Curves.easeOut,
-      child: AnimatedOpacity(
-        opacity: _p ? 0.82 : 1.0,
+  Widget build(BuildContext context) {
+    final button = GestureDetector(
+      onTapDown: (_) => setState(() => _p = true),
+      onTapUp: (_) {
+        setState(() => _p = false);
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _p = false),
+      child: AnimatedScale(
+        scale: _p ? widget.scale : 1.0,
         duration: const Duration(milliseconds: 80),
-        child: widget.child,
+        curve: Curves.easeOut,
+        child: AnimatedOpacity(
+          opacity: _p ? 0.82 : 1.0,
+          duration: const Duration(milliseconds: 80),
+          child: widget.child,
+        ),
       ),
-    ),
-  );
+    );
+
+    if (widget.tooltip == null) return button;
+    return Tooltip(message: widget.tooltip!, child: button);
+  }
 }
 
 class HoverScale extends StatefulWidget {
@@ -160,12 +167,14 @@ class SmallBtn extends StatefulWidget {
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
+  final String? tooltip;
   const SmallBtn({
     super.key,
     required this.label,
     required this.icon,
     required this.color,
     required this.onTap,
+    this.tooltip,
   });
   @override
   State<SmallBtn> createState() => _SmallBtnState();
@@ -174,42 +183,47 @@ class SmallBtn extends StatefulWidget {
 class _SmallBtnState extends State<SmallBtn> {
   bool _p = false;
   @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTapDown: (_) => setState(() => _p = true),
-    onTapUp: (_) {
-      setState(() => _p = false);
-      widget.onTap();
-    },
-    onTapCancel: () => setState(() => _p = false),
-    child: AnimatedScale(
-      scale: _p ? 0.92 : 1.0,
-      duration: const Duration(milliseconds: 80),
-      curve: Curves.easeOut,
-      child: AnimatedContainer(
+  Widget build(BuildContext context) {
+    final button = GestureDetector(
+      onTapDown: (_) => setState(() => _p = true),
+      onTapUp: (_) {
+        setState(() => _p = false);
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _p = false),
+      child: AnimatedScale(
+        scale: _p ? 0.92 : 1.0,
         duration: const Duration(milliseconds: 80),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(
-          color: _p ? darken(widget.color) : widget.color,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(widget.icon, color: Colors.white, size: 15),
-            const SizedBox(width: 4),
-            Text(
-              widget.label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
+        curve: Curves.easeOut,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 80),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            color: _p ? darken(widget.color) : widget.color,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(widget.icon, color: Colors.white, size: 15),
+              const SizedBox(width: 4),
+              Text(
+                widget.label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+
+    if (widget.tooltip == null) return button;
+    return Tooltip(message: widget.tooltip!, child: button);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -220,11 +234,13 @@ class MiniBtn extends StatefulWidget {
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
+  final String? tooltip;
   const MiniBtn({
     super.key,
     required this.icon,
     required this.color,
     required this.onTap,
+    this.tooltip,
   });
   @override
   State<MiniBtn> createState() => _MiniBtnState();
@@ -233,26 +249,31 @@ class MiniBtn extends StatefulWidget {
 class _MiniBtnState extends State<MiniBtn> {
   bool _p = false;
   @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTapDown: (_) => setState(() => _p = true),
-    onTapUp: (_) {
-      setState(() => _p = false);
-      widget.onTap();
-    },
-    onTapCancel: () => setState(() => _p = false),
-    child: AnimatedScale(
-      scale: _p ? 0.78 : 1.0,
-      duration: const Duration(milliseconds: 80),
-      child: AnimatedOpacity(
-        opacity: _p ? 0.55 : 1.0,
+  Widget build(BuildContext context) {
+    final button = GestureDetector(
+      onTapDown: (_) => setState(() => _p = true),
+      onTapUp: (_) {
+        setState(() => _p = false);
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _p = false),
+      child: AnimatedScale(
+        scale: _p ? 0.78 : 1.0,
         duration: const Duration(milliseconds: 80),
-        child: Padding(
-          padding: const EdgeInsets.all(4),
-          child: Icon(widget.icon, size: 17, color: widget.color),
+        child: AnimatedOpacity(
+          opacity: _p ? 0.55 : 1.0,
+          duration: const Duration(milliseconds: 80),
+          child: Padding(
+            padding: const EdgeInsets.all(4),
+            child: Icon(widget.icon, size: 17, color: widget.color),
+          ),
         ),
       ),
-    ),
-  );
+    );
+
+    if (widget.tooltip == null) return button;
+    return Tooltip(message: widget.tooltip!, child: button);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -263,11 +284,13 @@ class HoverIconBtn extends StatefulWidget {
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
+  final String? tooltip;
   const HoverIconBtn({
     super.key,
     required this.icon,
     required this.color,
     required this.onTap,
+    this.tooltip,
   });
   @override
   State<HoverIconBtn> createState() => _HoverIconBtnState();
@@ -276,34 +299,39 @@ class HoverIconBtn extends StatefulWidget {
 class _HoverIconBtnState extends State<HoverIconBtn> {
   bool _h = false, _p = false;
   @override
-  Widget build(BuildContext context) => MouseRegion(
-    onEnter: (_) => setState(() => _h = true),
-    onExit: (_) => setState(() {
-      _h = false;
-      _p = false;
-    }),
-    child: GestureDetector(
-      onTapDown: (_) => setState(() => _p = true),
-      onTapUp: (_) {
-        setState(() => _p = false);
-        widget.onTap();
-      },
-      onTapCancel: () => setState(() => _p = false),
-      child: AnimatedScale(
-        scale: _p ? 0.88 : 1.0,
-        duration: const Duration(milliseconds: 80),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 130),
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: _h || _p ? widget.color.withAlpha(30) : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
+  Widget build(BuildContext context) {
+    final button = MouseRegion(
+      onEnter: (_) => setState(() => _h = true),
+      onExit: (_) => setState(() {
+        _h = false;
+        _p = false;
+      }),
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _p = true),
+        onTapUp: (_) {
+          setState(() => _p = false);
+          widget.onTap();
+        },
+        onTapCancel: () => setState(() => _p = false),
+        child: AnimatedScale(
+          scale: _p ? 0.88 : 1.0,
+          duration: const Duration(milliseconds: 80),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 130),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: _h || _p ? widget.color.withAlpha(30) : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(widget.icon, color: widget.color, size: 20),
           ),
-          child: Icon(widget.icon, color: widget.color, size: 20),
         ),
       ),
-    ),
-  );
+    );
+
+    if (widget.tooltip == null) return button;
+    return Tooltip(message: widget.tooltip!, child: button);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
