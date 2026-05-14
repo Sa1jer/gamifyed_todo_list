@@ -213,6 +213,8 @@ class Task {
   bool notificationsEnabled;
   int? notificationHour;
   int? notificationMinute;
+  DateTime createdAt;
+  DateTime updatedAt;
 
   Task({
     required this.id,
@@ -239,10 +241,14 @@ class Task {
     this.notificationsEnabled = false,
     this.notificationHour,
     this.notificationMinute,
+    DateTime? createdAt,
+    DateTime? updatedAt,
   }) : subtasks = subtasks ?? [],
        consumedBuffIds = consumedBuffIds ?? [],
        subtaskDone = subtaskDone ?? List.filled((subtasks ?? []).length, false),
-       tags = tags ?? [];
+       tags = tags ?? [],
+       createdAt = createdAt ?? DateTime.now(),
+       updatedAt = updatedAt ?? createdAt ?? DateTime.now();
 
   int get activeMultiplier {
     if (type != TaskType.repeating || streak < 2) return 1;
@@ -351,6 +357,52 @@ class DailyStats {
     this.xpEarned = 0,
     this.skillsImproved = 0,
   });
+}
+
+// ─── Weekly Goal / OKR ────────────────────────────────────────────────────────
+
+class WeeklyKeyResult {
+  final String id;
+  String title;
+  bool isDone;
+  DateTime? completedAt;
+
+  WeeklyKeyResult({
+    required this.id,
+    required this.title,
+    this.isDone = false,
+    this.completedAt,
+  });
+}
+
+class WeeklyGoal {
+  final String id;
+  DateTime weekStart;
+  String title;
+  List<WeeklyKeyResult> keyResults;
+  DateTime createdAt;
+  DateTime updatedAt;
+
+  WeeklyGoal({
+    required this.id,
+    required this.weekStart,
+    required this.title,
+    List<WeeklyKeyResult>? keyResults,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) : keyResults = keyResults ?? [],
+       createdAt = createdAt ?? DateTime.now(),
+       updatedAt = updatedAt ?? DateTime.now();
+
+  int get completedKeyResults =>
+      keyResults.where((result) => result.isDone).length;
+
+  double get progress {
+    if (keyResults.isEmpty) return 0.0;
+    return (completedKeyResults / keyResults.length).clamp(0.0, 1.0);
+  }
+
+  bool get isCompleted => keyResults.isNotEmpty && progress >= 1.0;
 }
 
 // ─── Achievement Definition ────────────────────────────────────────────────────

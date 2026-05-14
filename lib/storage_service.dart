@@ -14,6 +14,7 @@ class StorageService {
   static const String _bossesBox = 'bosses';
   static const String _rewardChestsBox = 'reward_chests';
   static const String _buffsBox = 'buffs';
+  static const String _weeklyGoalsBox = 'weekly_goals';
   static const String _metaBox = 'meta';
 
   static const String _skillsSavedKey = 'skillsSaved';
@@ -29,6 +30,7 @@ class StorageService {
   late Box<String> _bosses;
   late Box<String> _rewardChests;
   late Box<String> _buffs;
+  late Box<String> _weeklyGoals;
   late Box<String> _meta;
 
   bool _initialized = false;
@@ -47,6 +49,7 @@ class StorageService {
     _bosses = await Hive.openBox<String>(_bossesBox);
     _rewardChests = await Hive.openBox<String>(_rewardChestsBox);
     _buffs = await Hive.openBox<String>(_buffsBox);
+    _weeklyGoals = await Hive.openBox<String>(_weeklyGoalsBox);
     _meta = await Hive.openBox<String>(_metaBox);
 
     _initialized = true;
@@ -279,6 +282,26 @@ class StorageService {
     return result;
   }
 
+  Future<void> saveWeeklyGoals(List<WeeklyGoal> goals) async {
+    _ensureInit();
+    await _weeklyGoals.clear();
+    for (final goal in goals) {
+      await _weeklyGoals.put(goal.id, _encodeWeeklyGoal(goal));
+    }
+  }
+
+  Future<List<WeeklyGoal>> loadWeeklyGoals() async {
+    _ensureInit();
+    final result = <WeeklyGoal>[];
+    for (final key in _weeklyGoals.keys) {
+      final json = _weeklyGoals.get(key);
+      if (json != null) {
+        result.add(_decodeWeeklyGoal(json));
+      }
+    }
+    return result;
+  }
+
   String _encodeSkill(Skill s) => jsonEncode({
     'id': s.id,
     'name': s.name,
@@ -375,6 +398,8 @@ class StorageService {
     'notificationsEnabled': t.notificationsEnabled,
     'notificationHour': t.notificationHour,
     'notificationMinute': t.notificationMinute,
+    'createdAt': t.createdAt.toIso8601String(),
+    'updatedAt': t.updatedAt.toIso8601String(),
   });
 
   Task _decodeTask(String json) {
@@ -411,6 +436,12 @@ class StorageService {
       notificationsEnabled: d['notificationsEnabled'] as bool? ?? false,
       notificationHour: d['notificationHour'] as int?,
       notificationMinute: d['notificationMinute'] as int?,
+      createdAt: d['createdAt'] != null
+          ? DateTime.parse(d['createdAt'] as String)
+          : null,
+      updatedAt: d['updatedAt'] != null
+          ? DateTime.parse(d['updatedAt'] as String)
+          : null,
     );
   }
 
@@ -558,6 +589,52 @@ class StorageService {
       expiresAt: d['expiresAt'] != null
           ? DateTime.parse(d['expiresAt'] as String)
           : null,
+    );
+  }
+
+  String _encodeWeeklyGoal(WeeklyGoal goal) => jsonEncode({
+    'id': goal.id,
+    'weekStart': goal.weekStart.toIso8601String(),
+    'title': goal.title,
+    'createdAt': goal.createdAt.toIso8601String(),
+    'updatedAt': goal.updatedAt.toIso8601String(),
+    'keyResults': goal.keyResults
+        .map(
+          (result) => {
+            'id': result.id,
+            'title': result.title,
+            'isDone': result.isDone,
+            'completedAt': result.completedAt?.toIso8601String(),
+          },
+        )
+        .toList(),
+  });
+
+  WeeklyGoal _decodeWeeklyGoal(String json) {
+    final d = jsonDecode(json) as Map<String, dynamic>;
+    return WeeklyGoal(
+      id: d['id'] as String,
+      weekStart: DateTime.parse(d['weekStart'] as String),
+      title: d['title'] as String? ?? '',
+      createdAt: d['createdAt'] != null
+          ? DateTime.parse(d['createdAt'] as String)
+          : null,
+      updatedAt: d['updatedAt'] != null
+          ? DateTime.parse(d['updatedAt'] as String)
+          : null,
+      keyResults:
+          (d['keyResults'] as List?)?.map((raw) {
+            final item = raw as Map<String, dynamic>;
+            return WeeklyKeyResult(
+              id: item['id'] as String,
+              title: item['title'] as String? ?? '',
+              isDone: item['isDone'] as bool? ?? false,
+              completedAt: item['completedAt'] != null
+                  ? DateTime.parse(item['completedAt'] as String)
+                  : null,
+            );
+          }).toList() ??
+          [],
     );
   }
 }

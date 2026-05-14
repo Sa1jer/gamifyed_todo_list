@@ -9,6 +9,7 @@ import 'today_dashboard.dart';
 import 'profile_dialog.dart';
 import 'faq_dialog.dart';
 import 'progress_hub_dialog.dart';
+import 'weekly_analytics_dialog.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TOP BAR
@@ -704,6 +705,10 @@ class _MainPageState extends State<MainPage> {
                         key: const ValueKey('progress-workspace'),
                         state: s,
                         isDark: isDark,
+                        onOpenWeekly: () => showDialog(
+                          context: context,
+                          builder: (_) => WeeklyAnalyticsDialog(state: s),
+                        ),
                         onOpenStats: () => showDialog(
                           context: context,
                           builder: (_) => StatsDialog(state: s),
@@ -820,6 +825,7 @@ class _PlanWorkspace extends StatelessWidget {
 class _ProgressWorkspace extends StatelessWidget {
   final AppState state;
   final bool isDark;
+  final VoidCallback onOpenWeekly;
   final VoidCallback onOpenStats;
   final VoidCallback onOpenCalendar;
   final VoidCallback onOpenBosses;
@@ -831,6 +837,7 @@ class _ProgressWorkspace extends StatelessWidget {
     super.key,
     required this.state,
     required this.isDark,
+    required this.onOpenWeekly,
     required this.onOpenStats,
     required this.onOpenCalendar,
     required this.onOpenBosses,
@@ -847,6 +854,7 @@ class _ProgressWorkspace extends StatelessWidget {
         isDark: isDark,
         subtitle:
             'Здесь живут аналитика, календарь, боссы, достижения и награды. Режим без срочности: только понять прогресс.',
+        onOpenWeekly: onOpenWeekly,
         onOpenStats: onOpenStats,
         onOpenCalendar: onOpenCalendar,
         onOpenBosses: onOpenBosses,

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import '../app_state.dart';
+import '../models.dart';
 import '../utils.dart';
 import 'shared.dart';
 
 class ProgressHubDialog extends StatelessWidget {
   final AppState state;
   final bool isDark;
+  final VoidCallback onOpenWeekly;
   final VoidCallback onOpenStats;
   final VoidCallback onOpenCalendar;
   final VoidCallback onOpenBosses;
@@ -17,6 +19,7 @@ class ProgressHubDialog extends StatelessWidget {
     super.key,
     required this.state,
     required this.isDark,
+    required this.onOpenWeekly,
     required this.onOpenStats,
     required this.onOpenCalendar,
     required this.onOpenBosses,
@@ -39,6 +42,7 @@ class ProgressHubDialog extends StatelessWidget {
         subtitle:
             'Вторичные RPG-разделы собраны здесь, чтобы главный экран оставался про действие.',
         onClose: () => Navigator.pop(context),
+        onOpenWeekly: onOpenWeekly,
         onOpenStats: onOpenStats,
         onOpenCalendar: onOpenCalendar,
         onOpenBosses: onOpenBosses,
@@ -58,6 +62,7 @@ class ProgressHubContent extends StatelessWidget {
   final bool showCloseButton;
   final String subtitle;
   final VoidCallback? onClose;
+  final VoidCallback onOpenWeekly;
   final VoidCallback onOpenStats;
   final VoidCallback onOpenCalendar;
   final VoidCallback onOpenBosses;
@@ -75,6 +80,7 @@ class ProgressHubContent extends StatelessWidget {
     this.subtitle =
         'Статистика, календарь, боссы и трофеи собраны отдельно от режима действия.',
     this.onClose,
+    required this.onOpenWeekly,
     required this.onOpenStats,
     required this.onOpenCalendar,
     required this.onOpenBosses,
@@ -93,6 +99,11 @@ class ProgressHubContent extends StatelessWidget {
         .where((achievement) => achievement.isUnlocked)
         .length;
     final completedDays = state.completionHistoryByDate.length;
+    final currentWeekEntries = _currentWeekEntries(state);
+    final currentWeekXp = currentWeekEntries.fold<int>(
+      0,
+      (sum, entry) => sum + entry.xp,
+    );
 
     return Container(
       width: width,
@@ -175,8 +186,23 @@ class ProgressHubContent extends StatelessWidget {
               childAspectRatio: 2.34,
               children: [
                 MotionListItem(
-                  key: const ValueKey('progress-card-stats'),
+                  key: const ValueKey('progress-card-weekly'),
                   index: 0,
+                  child: _ProgressHubCard(
+                    isDark: isDark,
+                    icon: Icons.calendar_view_week,
+                    color: const Color(0xFF34C759),
+                    title: 'Неделя',
+                    subtitle: 'XP, квесты, навыки и streak-risk',
+                    value: currentWeekEntries.isEmpty
+                        ? 'пока пусто'
+                        : '$currentWeekXp XP • ${currentWeekEntries.length} квест.',
+                    onTap: onOpenWeekly,
+                  ),
+                ),
+                MotionListItem(
+                  key: const ValueKey('progress-card-stats'),
+                  index: 1,
                   child: _ProgressHubCard(
                     isDark: isDark,
                     icon: Icons.bar_chart,
@@ -189,7 +215,7 @@ class ProgressHubContent extends StatelessWidget {
                 ),
                 MotionListItem(
                   key: const ValueKey('progress-card-calendar'),
-                  index: 1,
+                  index: 2,
                   child: _ProgressHubCard(
                     isDark: isDark,
                     icon: Icons.calendar_month,
@@ -202,7 +228,7 @@ class ProgressHubContent extends StatelessWidget {
                 ),
                 MotionListItem(
                   key: const ValueKey('progress-card-bosses'),
-                  index: 2,
+                  index: 3,
                   child: _ProgressHubCard(
                     isDark: isDark,
                     icon: Icons.shield,
@@ -217,7 +243,7 @@ class ProgressHubContent extends StatelessWidget {
                 ),
                 MotionListItem(
                   key: const ValueKey('progress-card-achievements'),
-                  index: 3,
+                  index: 4,
                   child: _ProgressHubCard(
                     isDark: isDark,
                     icon: Icons.emoji_events,
@@ -231,7 +257,7 @@ class ProgressHubContent extends StatelessWidget {
                 ),
                 MotionListItem(
                   key: const ValueKey('progress-card-history'),
-                  index: 4,
+                  index: 5,
                   child: _ProgressHubCard(
                     isDark: isDark,
                     icon: Icons.history,
@@ -244,7 +270,7 @@ class ProgressHubContent extends StatelessWidget {
                 ),
                 MotionListItem(
                   key: const ValueKey('progress-card-rewards'),
-                  index: 5,
+                  index: 6,
                   child: _ProgressHubCard(
                     isDark: isDark,
                     icon: Icons.redeem,
@@ -293,6 +319,21 @@ class ProgressHubContent extends StatelessWidget {
       ),
     );
   }
+}
+
+List<HistoryEntry> _currentWeekEntries(AppState state) {
+  final now = DateTime.now();
+  final today = dateOnly(now);
+  final weekStart = today.subtract(Duration(days: today.weekday - 1));
+  final completionHistoryByDate = state.completionHistoryByDate;
+  final entries = <HistoryEntry>[];
+
+  for (var i = 0; i < 7; i++) {
+    final day = weekStart.add(Duration(days: i));
+    entries.addAll(completionHistoryByDate[day] ?? const <HistoryEntry>[]);
+  }
+
+  return entries;
 }
 
 class _ProgressHubCard extends StatefulWidget {

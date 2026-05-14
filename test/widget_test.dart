@@ -77,6 +77,12 @@ class InMemoryStorageService extends StorageService {
 
   @override
   Future<void> saveBuffs(List<Buff> buffs) async {}
+
+  @override
+  Future<List<WeeklyGoal>> loadWeeklyGoals() async => [];
+
+  @override
+  Future<void> saveWeeklyGoals(List<WeeklyGoal> goals) async {}
 }
 
 void main() {

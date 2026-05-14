@@ -80,9 +80,54 @@ class _InMemoryStorageService extends StorageService {
 
   @override
   Future<void> saveBuffs(List<Buff> buffs) async {}
+
+  @override
+  Future<List<WeeklyGoal>> loadWeeklyGoals() async => [];
+
+  @override
+  Future<void> saveWeeklyGoals(List<WeeklyGoal> goals) async {}
 }
 
 void main() {
+  group('weekly goals', () {
+    late AppState state;
+
+    setUp(() {
+      state = AppState(storage: _InMemoryStorageService());
+    });
+
+    tearDown(() {
+      state.dispose();
+    });
+
+    test('saves one goal per week and tracks key result progress', () {
+      final weekDate = DateTime(2026, 5, 14);
+
+      state.saveWeeklyGoal(
+        weekStart: weekDate,
+        title: 'Build weekly analytics',
+        keyResults: [
+          WeeklyKeyResult(id: '', title: 'Create week chart'),
+          WeeklyKeyResult(id: '', title: 'Add key results'),
+        ],
+      );
+
+      final goal = state.weeklyGoalForWeek(DateTime(2026, 5, 11));
+
+      expect(goal, isNotNull);
+      expect(goal!.title, 'Build weekly analytics');
+      expect(goal.weekStart, DateTime(2026, 5, 11));
+      expect(goal.keyResults, hasLength(2));
+      expect(goal.progress, 0);
+
+      state.toggleWeeklyKeyResult(goal.id, goal.keyResults.first.id);
+
+      expect(goal.completedKeyResults, 1);
+      expect(goal.progress, 0.5);
+      expect(goal.keyResults.first.completedAt, isNotNull);
+    });
+  });
+
   group('minimum action flow', () {
     late AppState state;
     late Task task;

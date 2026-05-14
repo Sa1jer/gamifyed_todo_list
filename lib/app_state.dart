@@ -27,6 +27,7 @@ class AppState extends ChangeNotifier {
   final List<Boss> bosses = [];
   final List<RewardChest> rewardChests = [];
   final List<Buff> buffs = [];
+  final List<WeeklyGoal> weeklyGoals = [];
   final List<RewardChest> _pendingRewardNotifications = [];
   final List<Buff> _pendingBuffNotifications = [];
   DailyStats? todayStats;
@@ -216,6 +217,7 @@ class AppState extends ChangeNotifier {
     final loadedBosses = await _storage.loadBosses();
     final loadedRewardChests = await _storage.loadRewardChests();
     final loadedBuffs = await _storage.loadBuffs();
+    final loadedWeeklyGoals = await _storage.loadWeeklyGoals();
     final hasSavedSkills = await _storage.hasSavedSkills();
     final hasSavedTasks = await _storage.hasSavedTasks();
     final savedTheme = await _storage.loadTheme();
@@ -262,6 +264,9 @@ class AppState extends ChangeNotifier {
 
     buffs.clear();
     buffs.addAll(loadedBuffs);
+
+    weeklyGoals.clear();
+    weeklyGoals.addAll(loadedWeeklyGoals);
 
     todayStats = loadedStats;
     _resetDailyStatsIfNeeded();
@@ -311,6 +316,7 @@ class AppState extends ChangeNotifier {
     await _storage.saveBosses(bosses);
     await _storage.saveRewardChests(rewardChests);
     await _storage.saveBuffs(buffs);
+    await _storage.saveWeeklyGoals(weeklyGoals);
   }
 
   // ── Theme ────────────────────────────────────────────────────────────────────
@@ -463,6 +469,81 @@ class AppState extends ChangeNotifier {
       buffs.where((buff) => buff.isActive).toList(growable: false)
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
+  WeeklyGoal? weeklyGoalForWeek(DateTime weekStart) {
+    final normalizedStart = _startOfWeek(weekStart);
+    return weeklyGoals
+        .where((goal) => isSameDate(goal.weekStart, normalizedStart))
+        .firstOrNull;
+  }
+
+  void saveWeeklyGoal({
+    required DateTime weekStart,
+    required String title,
+    required List<WeeklyKeyResult> keyResults,
+  }) {
+    final normalizedStart = _startOfWeek(weekStart);
+    final normalizedTitle = title.trim();
+    final normalizedResults = keyResults
+        .map(
+          (result) => WeeklyKeyResult(
+            id: result.id.isEmpty ? uid() : result.id,
+            title: result.title.trim(),
+            isDone: result.isDone,
+            completedAt: result.completedAt,
+          ),
+        )
+        .where((result) => result.title.isNotEmpty)
+        .take(5)
+        .toList();
+
+    final existing = weeklyGoalForWeek(normalizedStart);
+    if (normalizedTitle.isEmpty && normalizedResults.isEmpty) {
+      if (existing == null) return;
+      weeklyGoals.remove(existing);
+      notifyListeners();
+      _saveAll();
+      return;
+    }
+
+    final now = DateTime.now();
+    if (existing == null) {
+      weeklyGoals.add(
+        WeeklyGoal(
+          id: uid(),
+          weekStart: normalizedStart,
+          title: normalizedTitle.isEmpty ? 'Цель недели' : normalizedTitle,
+          keyResults: normalizedResults,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+    } else {
+      existing.title = normalizedTitle.isEmpty
+          ? 'Цель недели'
+          : normalizedTitle;
+      existing.keyResults = normalizedResults;
+      existing.updatedAt = now;
+    }
+
+    weeklyGoals.sort((a, b) => b.weekStart.compareTo(a.weekStart));
+    notifyListeners();
+    _saveAll();
+  }
+
+  void toggleWeeklyKeyResult(String goalId, String keyResultId) {
+    final goal = weeklyGoals.where((item) => item.id == goalId).firstOrNull;
+    final keyResult = goal?.keyResults
+        .where((item) => item.id == keyResultId)
+        .firstOrNull;
+    if (goal == null || keyResult == null) return;
+
+    keyResult.isDone = !keyResult.isDone;
+    keyResult.completedAt = keyResult.isDone ? DateTime.now() : null;
+    goal.updatedAt = DateTime.now();
+    notifyListeners();
+    _saveAll();
+  }
+
   List<RewardChest> consumeRewardChestNotifications() {
     final result = List<RewardChest>.of(_pendingRewardNotifications);
     _pendingRewardNotifications.clear();
@@ -556,6 +637,7 @@ class AppState extends ChangeNotifier {
     task.bonusXpEarned = buffOutcome.bonusXp;
     task.consumedBuffIds = List.of(buffOutcome.buffIds);
     task.lastCompletedAt = now;
+    task.updatedAt = now;
 
     if (task.type == TaskType.repeating) {
       task.streak = nextStreak;
@@ -622,6 +704,7 @@ class AppState extends ChangeNotifier {
     task.minimumActionEarnedXP = earned;
     task.bonusXpEarned = 0;
     task.consumedBuffIds = const <String>[];
+    task.updatedAt = now;
 
     if (task.type == TaskType.repeating) {
       task.isDone = true;
@@ -802,6 +885,7 @@ class AppState extends ChangeNotifier {
     task.earnedXP = 0;
     task.bonusXpEarned = 0;
     task.lastCompletedAt = null;
+    task.updatedAt = DateTime.now();
     if (!restoresMinimumProgress) {
       task.minimumActionDoneAt = null;
       task.minimumActionEarnedXP = 0;
@@ -1029,6 +1113,8 @@ class AppState extends ChangeNotifier {
   void addTask(Task t) {
     t.syncSubtaskDone();
     if (t.repeatCustomDays < 1) t.repeatCustomDays = 1;
+    t.createdAt = DateTime.now();
+    t.updatedAt = t.createdAt;
     tasks.add(t);
     _syncTaskNotification(t);
     notifyListeners();
@@ -1071,6 +1157,7 @@ class AppState extends ChangeNotifier {
     task.notificationsEnabled = notificationsEnabled;
     task.notificationHour = notificationHour;
     task.notificationMinute = notificationMinute;
+    task.updatedAt = DateTime.now();
 
     if (oldType == TaskType.repeating && type != TaskType.repeating) {
       task.streak = 0;
@@ -1107,6 +1194,7 @@ class AppState extends ChangeNotifier {
     final task = _taskById(taskId);
     if (task == null || index < 0 || index >= task.subtaskDone.length) return;
     task.subtaskDone[index] = !task.subtaskDone[index];
+    task.updatedAt = DateTime.now();
     notifyListeners();
     _saveAll();
   }
@@ -1778,6 +1866,11 @@ class AppState extends ChangeNotifier {
 
   String _historyTaskKey(HistoryEntry entry) {
     return entry.taskId ?? '${entry.skillId}::${entry.taskTitle}';
+  }
+
+  DateTime _startOfWeek(DateTime date) {
+    final day = dateOnly(date);
+    return day.subtract(Duration(days: day.weekday - 1));
   }
 
   int _notificationId(String taskId) {
