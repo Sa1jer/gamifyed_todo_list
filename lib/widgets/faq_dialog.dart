@@ -182,7 +182,7 @@ class FAQDialog extends StatelessWidget {
                         ),
                       ),
                       PressFeedback(
-                        scale: 0.86,
+                        scale: 0.94,
                         tooltip: 'Закрыть гид',
                         onTap: () => Navigator.pop(context),
                         child: Icon(Icons.close, color: sub, size: 22),

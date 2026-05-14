@@ -183,8 +183,8 @@ class _TasksPanelState extends State<TasksPanel> {
           // ── Expandable Checklist ─────────────────────────────────────────────────
           if (hasChecklist)
             AnimatedSize(
-              duration: const Duration(milliseconds: 220),
-              curve: Curves.easeInOut,
+              duration: kMotionSlow,
+              curve: kMotionCurve,
               child: _checklistExpanded
                   ? Container(
                       margin: const EdgeInsets.fromLTRB(14, 0, 14, 8),
@@ -201,49 +201,59 @@ class _TasksPanelState extends State<TasksPanel> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: List.generate(skill.checklist.length, (i) {
                           final isDone = skill.checklistDone[i];
-                          return GestureDetector(
-                            onTap: () => s.toggleChecklistItem(skill.id, i),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 4),
-                              child: Row(
-                                children: [
-                                  AnimatedContainer(
-                                    duration: const Duration(milliseconds: 180),
-                                    width: 16,
-                                    height: 16,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(3),
-                                      border: Border.all(
-                                        color: isDone ? skill.color : sub,
-                                        width: 1.5,
+                          return MotionListItem(
+                            key: ValueKey('skill-check-${skill.id}-$i'),
+                            index: i,
+                            slide: 4,
+                            child: GestureDetector(
+                              onTap: () => s.toggleChecklistItem(skill.id, i),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 4,
+                                ),
+                                child: Row(
+                                  children: [
+                                    AnimatedContainer(
+                                      duration: kMotionStandard,
+                                      curve: kMotionCurve,
+                                      width: 16,
+                                      height: 16,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(3),
+                                        border: Border.all(
+                                          color: isDone ? skill.color : sub,
+                                          width: 1.5,
+                                        ),
+                                        color: isDone
+                                            ? skill.color
+                                            : Colors.transparent,
                                       ),
-                                      color: isDone
-                                          ? skill.color
-                                          : Colors.transparent,
+                                      child: isDone
+                                          ? const Icon(
+                                              Icons.check,
+                                              size: 11,
+                                              color: Colors.white,
+                                            )
+                                          : null,
                                     ),
-                                    child: isDone
-                                        ? const Icon(
-                                            Icons.check,
-                                            size: 11,
-                                            color: Colors.white,
-                                          )
-                                        : null,
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      skill.checklist[i],
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: isDone ? sub : textColor(isDark),
-                                        decoration: isDone
-                                            ? TextDecoration.lineThrough
-                                            : null,
-                                        decorationColor: sub,
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        skill.checklist[i],
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: isDone
+                                              ? sub
+                                              : textColor(isDark),
+                                          decoration: isDone
+                                              ? TextDecoration.lineThrough
+                                              : null,
+                                          decorationColor: sub,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
                           );
@@ -257,89 +267,109 @@ class _TasksPanelState extends State<TasksPanel> {
 
           // ── Task list ────────────────────────────────────────────────────────────
           Expanded(
-            child: allTasks.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
+            child: MotionFadeSlideSwitcher(
+              child: allTasks.isEmpty
+                  ? Center(
+                      key: const ValueKey('tasks-empty-state'),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.task, color: sub, size: 38),
+                          const SizedBox(height: 10),
+                          Text(
+                            'Нет задач',
+                            style: TextStyle(
+                              color: sub,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Нажмите «+ Задача»',
+                            style: TextStyle(
+                              color: sub.withAlpha(150),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView(
+                      key: const ValueKey('tasks-list'),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
                       children: [
-                        Icon(Icons.task, color: sub, size: 38),
-                        const SizedBox(height: 10),
-                        Text(
-                          'Нет задач',
-                          style: TextStyle(
-                            color: sub,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
+                        ...active.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final t = entry.value;
+                          return MotionListItem(
+                            key: ValueKey('task-active-${t.id}'),
+                            index: index,
+                            child: TaskTile(
+                              task: t,
+                              isDark: isDark,
+                              skillColor: skill.color,
+                              previewEarnedXP: s.previewEarnedXP(t),
+                              previewBuffBonus: s.previewBuffBonusXP(t),
+                              onToggle: (pos) => widget.onComplete(t.id, pos),
+                              onMinimumAction: (pos) =>
+                                  widget.onMinimumAction(t.id, pos),
+                              onUncomplete: () => s.uncompleteTask(t.id),
+                              onDelete: () => s.removeTask(t.id),
+                              onEdit: () => _editTask(context, skill, t),
+                            ),
+                          );
+                        }),
+                        if (done.isNotEmpty) ...[
+                          MotionListItem(
+                            key: ValueKey('done-header-${done.length}'),
+                            index: active.length,
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.check_circle_outline,
+                                    color: sub,
+                                    size: 14,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Выполнено (${done.length})',
+                                    style: TextStyle(
+                                      color: sub,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Нажмите «+ Задача»',
-                          style: TextStyle(
-                            color: sub.withAlpha(150),
-                            fontSize: 12,
-                          ),
-                        ),
+                          ...done.asMap().entries.map((entry) {
+                            final index = active.length + entry.key + 1;
+                            final t = entry.value;
+                            return MotionListItem(
+                              key: ValueKey('task-done-${t.id}'),
+                              index: index,
+                              child: TaskTile(
+                                task: t,
+                                isDark: isDark,
+                                skillColor: skill.color,
+                                previewEarnedXP: t.earnedXP,
+                                previewBuffBonus: t.bonusXpEarned,
+                                onToggle: (_) => s.uncompleteTask(t.id),
+                                onMinimumAction: (_) {},
+                                onUncomplete: () => s.uncompleteTask(t.id),
+                                onDelete: () => s.removeTask(t.id),
+                                onEdit: () => _editTask(context, skill, t),
+                              ),
+                            );
+                          }),
+                        ],
                       ],
                     ),
-                  )
-                : ListView(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    children: [
-                      ...active.map(
-                        (t) => TaskTile(
-                          task: t,
-                          isDark: isDark,
-                          skillColor: skill.color,
-                          previewEarnedXP: s.previewEarnedXP(t),
-                          previewBuffBonus: s.previewBuffBonusXP(t),
-                          onToggle: (pos) => widget.onComplete(t.id, pos),
-                          onMinimumAction: (pos) =>
-                              widget.onMinimumAction(t.id, pos),
-                          onUncomplete: () => s.uncompleteTask(t.id),
-                          onDelete: () => s.removeTask(t.id),
-                          onEdit: () => _editTask(context, skill, t),
-                        ),
-                      ),
-                      if (done.isNotEmpty) ...[
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.check_circle_outline,
-                                color: sub,
-                                size: 14,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                'Выполнено (${done.length})',
-                                style: TextStyle(
-                                  color: sub,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        ...done.map(
-                          (t) => TaskTile(
-                            task: t,
-                            isDark: isDark,
-                            skillColor: skill.color,
-                            previewEarnedXP: t.earnedXP,
-                            previewBuffBonus: t.bonusXpEarned,
-                            onToggle: (_) => s.uncompleteTask(t.id),
-                            onMinimumAction: (_) {},
-                            onUncomplete: () => s.uncompleteTask(t.id),
-                            onDelete: () => s.removeTask(t.id),
-                            onEdit: () => _editTask(context, skill, t),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
+            ),
           ),
         ],
       ),
@@ -467,11 +497,12 @@ class _ChecklistBtnState extends State<_ChecklistBtn> {
         },
         onTapCancel: () => setState(() => _p = false),
         child: AnimatedScale(
-          scale: _p ? 0.92 : 1.0,
-          duration: const Duration(milliseconds: 80),
-          curve: Curves.easeOut,
+          scale: _p ? 0.94 : 1.0,
+          duration: kMotionFast,
+          curve: kMotionCurve,
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 80),
+            duration: kMotionFast,
+            curve: kMotionCurve,
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               color: _p ? accent.withAlpha(24) : Colors.transparent,
@@ -560,19 +591,22 @@ class _TaskTileState extends State<TaskTile> {
       onEnter: (_) => setState(() => _h = true),
       onExit: (_) => setState(() => _h = false),
       child: AnimatedScale(
-        scale: _h ? 1 : 1.018,
+        scale: 1,
         alignment: Alignment.center,
-        duration: const Duration(milliseconds: 160),
-        curve: Curves.easeOutCubic,
+        duration: kMotionStandard,
+        curve: kMotionCurve,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
+          duration: kMotionStandard,
+          curve: kMotionCurve,
           margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           decoration: BoxDecoration(
             color: _h
-                ? (isDark ? const Color(0xFF1E1E2A) : const Color(0xFFECECF8))
+                ? (isDark ? const Color(0xFF181820) : const Color(0xFFF1F2FA))
                 : tileBg,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: bdr),
+            border: Border.all(
+              color: _h ? widget.skillColor.withAlpha(55) : bdr,
+            ),
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
@@ -584,7 +618,7 @@ class _TaskTileState extends State<TaskTile> {
                       ? 'Вернуть задачу в активные и откатить XP'
                       : 'Выполнить задачу и начислить XP',
                   child: PressFeedback(
-                    scale: 0.85,
+                    scale: 0.94,
                     onTap: () {
                       if (t.isDone) {
                         widget.onUncomplete();
@@ -599,7 +633,8 @@ class _TaskTileState extends State<TaskTile> {
                     },
                     child: AnimatedContainer(
                       key: _cbKey,
-                      duration: const Duration(milliseconds: 200),
+                      duration: kMotionStandard,
+                      curve: kMotionCurve,
                       width: 22,
                       height: 22,
                       decoration: BoxDecoration(
@@ -634,7 +669,7 @@ class _TaskTileState extends State<TaskTile> {
                       ? Tooltip(
                           message: 'Сделать лёгкий старт: ${t.minimumAction}',
                           child: PressFeedback(
-                            scale: 0.9,
+                            scale: 0.96,
                             onTap: () {
                               final box =
                                   _minKey.currentContext?.findRenderObject()
@@ -829,13 +864,14 @@ class _TaskTileState extends State<TaskTile> {
                     ],
                   ),
                 ),
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  width: _h ? 50 : 0,
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: SizedBox(
-                      width: 50,
+                SizedBox(
+                  width: 50,
+                  child: AnimatedOpacity(
+                    duration: kMotionStandard,
+                    curve: kMotionCurve,
+                    opacity: _h ? 1 : 0,
+                    child: IgnorePointer(
+                      ignoring: !_h,
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [

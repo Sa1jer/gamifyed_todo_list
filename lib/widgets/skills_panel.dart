@@ -85,15 +85,19 @@ class SkillsPanel extends StatelessWidget {
               ),
               itemBuilder: (ctx, i) {
                 final sk = state.skills[i];
-                return SkillCard(
-                  skill: sk,
-                  taskCount: state.activeTaskCountForSkill(sk.id),
-                  isSelected: state.selectedSkillId == sk.id,
-                  isDark: isDark,
-                  onTap: () => state.selectSkill(sk.id),
-                  onTree: () => _treeDialog(context, sk),
-                  onEdit: () => _editDialog(context, sk),
-                  onDelete: () => state.removeSkill(sk.id),
+                return MotionListItem(
+                  key: ValueKey('skill-${sk.id}'),
+                  index: i,
+                  child: SkillCard(
+                    skill: sk,
+                    taskCount: state.activeTaskCountForSkill(sk.id),
+                    isSelected: state.selectedSkillId == sk.id,
+                    isDark: isDark,
+                    onTap: () => state.selectSkill(sk.id),
+                    onTree: () => _treeDialog(context, sk),
+                    onEdit: () => _editDialog(context, sk),
+                    onDelete: () => state.removeSkill(sk.id),
+                  ),
                 );
               },
             ),
@@ -184,32 +188,36 @@ class _SkillCardState extends State<SkillCard> {
     final txt = textColor(isDark);
     final sub = subtext(isDark);
 
-    Color bg = Colors.transparent;
-    if (widget.isSelected) {
-      bg = sk.color.withAlpha(22);
-    }
+    final bg = widget.isSelected
+        ? sk.color.withAlpha(22)
+        : _h
+        ? sk.color.withAlpha(isDark ? 10 : 8)
+        : Colors.transparent;
 
     // FIX: wrap in ClipRect to prevent AnimatedContainer overflow error
     return MouseRegion(
       onEnter: (_) => setState(() => _h = true),
       onExit: (_) => setState(() => _h = false),
       child: AnimatedScale(
-        scale: _h ? 0.989 : 1.026,
+        scale: 1,
         alignment: Alignment.center,
-        duration: const Duration(milliseconds: 160),
-        curve: Curves.easeOutCubic,
+        duration: kMotionStandard,
+        curve: kMotionCurve,
         child: GestureDetector(
           onTap: widget.onTap,
           child: AnimatedContainer(
             clipBehavior: Clip.hardEdge, // ← FIX overflow
-            duration: const Duration(milliseconds: 150),
+            duration: kMotionStandard,
+            curve: kMotionCurve,
             margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
             decoration: BoxDecoration(
               color: bg,
               borderRadius: BorderRadius.circular(10),
-              border: widget.isSelected
-                  ? Border.all(color: sk.color.withAlpha(100))
+              border: widget.isSelected || _h
+                  ? Border.all(
+                      color: sk.color.withAlpha(widget.isSelected ? 100 : 55),
+                    )
                   : null,
             ),
             child: Row(
@@ -310,14 +318,14 @@ class _SkillCardState extends State<SkillCard> {
                     ],
                   ),
                 ),
-                // Hover actions — use Stack overlay approach to avoid pushing layout
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  width: (_h || widget.isSelected) ? 75 : 0,
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: SizedBox(
-                      width: 75,
+                SizedBox(
+                  width: 75,
+                  child: AnimatedOpacity(
+                    duration: kMotionStandard,
+                    curve: kMotionCurve,
+                    opacity: (_h || widget.isSelected) ? 1 : 0,
+                    child: IgnorePointer(
+                      ignoring: !_h && !widget.isSelected,
                       child: Row(
                         children: [
                           MiniBtn(

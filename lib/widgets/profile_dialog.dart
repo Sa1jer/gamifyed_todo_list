@@ -678,8 +678,9 @@ class _SkillChipState extends State<_SkillChip> {
       onTapUp: (_) => setState(() => _p = false),
       onTapCancel: () => setState(() => _p = false),
       child: AnimatedScale(
-        scale: _p ? 0.95 : 1.0,
-        duration: const Duration(milliseconds: 80),
+        scale: _p ? 0.96 : 1.0,
+        duration: kMotionFast,
+        curve: kMotionCurve,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(

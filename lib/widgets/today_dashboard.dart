@@ -112,9 +112,9 @@ class _TodayDashboardState extends State<TodayDashboard> {
     );
 
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeInOutCubic,
-      height: _expanded ? 258 : 68,
+      duration: kMotionSlow,
+      curve: kMotionCurve,
+      height: _expanded ? 258 : 76,
       child: AppPanel(
         isDark: isDark,
         child: Padding(
@@ -125,7 +125,12 @@ class _TodayDashboardState extends State<TodayDashboard> {
               LayoutBuilder(
                 builder: (context, constraints) {
                   final pinActions = constraints.maxWidth >= 1100;
+                  final actionReserve =
+                      (constraints.maxWidth * (pinActions ? 0.45 : 0.52))
+                          .clamp(260.0, 720.0)
+                          .toDouble();
                   final titleBlock = Column(
+                    mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
@@ -135,6 +140,8 @@ class _TodayDashboardState extends State<TodayDashboard> {
                           fontSize: 17,
                           fontWeight: FontWeight.bold,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       Text(
                         'Сначала следующий квест. Аналитика и трофеи живут в “Прогрессе”.',
@@ -151,71 +158,97 @@ class _TodayDashboardState extends State<TodayDashboard> {
 
                   return SizedBox(
                     width: constraints.maxWidth,
-                    child: Row(
+                    height: 52,
+                    child: Stack(
+                      alignment: Alignment.center,
                       children: [
-                        const Icon(
-                          Icons.auto_awesome,
-                          color: Color(0xFFFFCC00),
-                        ),
-                        const SizedBox(width: 8),
-                        if (pinActions) ...[
-                          Flexible(fit: FlexFit.loose, child: titleBlock),
-                          const Spacer(),
-                          statusRow,
-                        ] else ...[
-                          Expanded(child: titleBlock),
-                          const SizedBox(width: 12),
-                          Flexible(
-                            fit: FlexFit.tight,
-                            flex: 2,
-                            child: Align(
-                              alignment: Alignment.centerRight,
-                              child: SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                reverse: true,
-                                child: statusRow,
+                        Positioned(
+                          left: 0,
+                          right: actionReserve + 12,
+                          top: 0,
+                          bottom: 0,
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.auto_awesome,
+                                color: Color(0xFFFFCC00),
                               ),
-                            ),
+                              const SizedBox(width: 8),
+                              Expanded(child: titleBlock),
+                            ],
                           ),
-                        ],
-                        const SizedBox(width: 8),
-                        _CollapseButton(
-                          expanded: _expanded,
-                          color: sub,
-                          onTap: () => setState(() => _expanded = !_expanded),
+                        ),
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          bottom: 0,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxWidth: actionReserve - 44,
+                                ),
+                                child: SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  reverse: true,
+                                  child: statusRow,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              _CollapseButton(
+                                expanded: _expanded,
+                                color: sub,
+                                onTap: () =>
+                                    setState(() => _expanded = !_expanded),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
                   );
                 },
               ),
-              if (_expanded) const SizedBox(height: 8),
-              if (_expanded)
-                Expanded(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final content = _DashboardContent(
-                        state: state,
-                        nextTask: nextTask,
-                        riskyTasks: riskyTasks,
-                        activeTasks: activeTasks,
-                        dailyTasks: dailyTasks,
-                        todayTasks: stats?.tasksCompleted ?? 0,
-                        todayXp: stats?.xpEarned ?? 0,
-                        isDark: isDark,
-                        onComplete: widget.onComplete,
-                        onMinimumAction: widget.onMinimumAction,
-                      );
+              Expanded(
+                child: ClipRect(
+                  child: MotionFadeSlideSwitcher(
+                    child: _expanded
+                        ? Padding(
+                            key: const ValueKey('today-expanded-content'),
+                            padding: const EdgeInsets.only(top: 8),
+                            child: LayoutBuilder(
+                              builder: (context, constraints) {
+                                final content = _DashboardContent(
+                                  state: state,
+                                  nextTask: nextTask,
+                                  riskyTasks: riskyTasks,
+                                  activeTasks: activeTasks,
+                                  dailyTasks: dailyTasks,
+                                  todayTasks: stats?.tasksCompleted ?? 0,
+                                  todayXp: stats?.xpEarned ?? 0,
+                                  isDark: isDark,
+                                  onComplete: widget.onComplete,
+                                  onMinimumAction: widget.onMinimumAction,
+                                );
 
-                      if (constraints.maxWidth >= 960) return content;
+                                if (constraints.maxWidth >= 960) {
+                                  return content;
+                                }
 
-                      return SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: SizedBox(width: 960, child: content),
-                      );
-                    },
+                                return SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: SizedBox(width: 960, child: content),
+                                );
+                              },
+                            ),
+                          )
+                        : const SizedBox.shrink(
+                            key: ValueKey('today-collapsed-content'),
+                          ),
                   ),
                 ),
+              ),
             ],
           ),
         ),
@@ -704,39 +737,45 @@ class _QuestQueue extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 8),
-          if (tasks.isEmpty)
-            Expanded(
-              child: Center(
-                child: Text(
-                  'Нет активных квестов',
-                  style: TextStyle(color: sub, fontSize: 12),
-                ),
-              ),
-            )
-          else
-            Expanded(
-              child: ListView.separated(
-                padding: EdgeInsets.zero,
-                itemCount: tasks.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 6),
-                itemBuilder: (_, index) {
-                  final task = tasks[index];
-                  final skill = state.skills
-                      .where((s) => s.id == task.skillId)
-                      .firstOrNull;
-                  return _QuestMiniRow(
-                    task: task,
-                    skill: skill,
-                    xp: state.previewEarnedXP(task),
-                    buffBonus: state.previewBuffBonusXP(task),
-                    minimumXp: state.previewMinimumActionXP(task),
-                    isDark: isDark,
-                    onComplete: onComplete,
-                    onMinimumAction: onMinimumAction,
-                  );
-                },
-              ),
+          Expanded(
+            child: MotionFadeSlideSwitcher(
+              child: tasks.isEmpty
+                  ? Center(
+                      key: const ValueKey('quest-queue-empty'),
+                      child: Text(
+                        'Нет активных квестов',
+                        style: TextStyle(color: sub, fontSize: 12),
+                      ),
+                    )
+                  : ListView.separated(
+                      key: const ValueKey('quest-queue-list'),
+                      padding: EdgeInsets.zero,
+                      itemCount: tasks.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 6),
+                      itemBuilder: (_, index) {
+                        final task = tasks[index];
+                        final skill = state.skills
+                            .where((s) => s.id == task.skillId)
+                            .firstOrNull;
+                        return MotionListItem(
+                          key: ValueKey('quest-row-${task.id}'),
+                          index: index,
+                          slide: 5,
+                          child: _QuestMiniRow(
+                            task: task,
+                            skill: skill,
+                            xp: state.previewEarnedXP(task),
+                            buffBonus: state.previewBuffBonusXP(task),
+                            minimumXp: state.previewMinimumActionXP(task),
+                            isDark: isDark,
+                            onComplete: onComplete,
+                            onMinimumAction: onMinimumAction,
+                          ),
+                        );
+                      },
+                    ),
             ),
+          ),
         ],
       ),
     );
@@ -862,7 +901,7 @@ class _QuickActionButton extends StatelessWidget {
     return Tooltip(
       message: tooltip,
       child: PressFeedback(
-        scale: 0.9,
+        scale: 0.96,
         onTap: () {
           final box = context.findRenderObject() as RenderBox?;
           onTrigger(task.id, box?.localToGlobal(Offset.zero) ?? Offset.zero);
@@ -982,7 +1021,7 @@ class _CollapseButton extends StatelessWidget {
           ? 'Свернуть блок “Действовать сегодня”'
           : 'Показать блок “Действовать сегодня”',
       child: PressFeedback(
-        scale: 0.86,
+        scale: 0.94,
         onTap: onTap,
         child: Container(
           width: 28,

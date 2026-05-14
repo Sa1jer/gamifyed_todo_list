@@ -1,7 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../utils.dart';
 
 const _kPanelRadius = 14.0;
+const kMotionFast = Duration(milliseconds: 90);
+const kMotionStandard = Duration(milliseconds: 180);
+const kMotionSlow = Duration(milliseconds: 240);
+const kMotionProgress = Duration(milliseconds: 560);
+const kMotionListStaggerStep = Duration(milliseconds: 14);
+const kMotionListStaggerMaxIndex = 6;
+const kMotionCurve = Curves.easeOutCubic;
+const kMotionExitCurve = Curves.easeInCubic;
 
 class AppPanel extends StatelessWidget {
   final bool isDark;
@@ -89,7 +99,7 @@ class PressFeedback extends StatefulWidget {
     super.key,
     required this.child,
     required this.onTap,
-    this.scale = 0.93,
+    this.scale = 0.96,
     this.tooltip,
   });
   @override
@@ -109,18 +119,23 @@ class _PressFeedbackState extends State<PressFeedback> {
       onTapCancel: () => setState(() => _p = false),
       child: AnimatedScale(
         scale: _p ? widget.scale : 1.0,
-        duration: const Duration(milliseconds: 80),
-        curve: Curves.easeOut,
+        duration: kMotionFast,
+        curve: kMotionCurve,
         child: AnimatedOpacity(
-          opacity: _p ? 0.82 : 1.0,
-          duration: const Duration(milliseconds: 80),
+          opacity: _p ? 0.86 : 1.0,
+          duration: kMotionFast,
           child: widget.child,
         ),
       ),
     );
 
-    if (widget.tooltip == null) return button;
-    return Tooltip(message: widget.tooltip!, child: button);
+    final interactiveButton = MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: button,
+    );
+
+    if (widget.tooltip == null) return interactiveButton;
+    return Tooltip(message: widget.tooltip!, child: interactiveButton);
   }
 }
 
@@ -132,8 +147,8 @@ class HoverScale extends StatefulWidget {
   const HoverScale({
     super.key,
     required this.child,
-    this.scale = 1.068,
-    this.duration = const Duration(milliseconds: 160),
+    this.scale = 1.02,
+    this.duration = kMotionStandard,
     this.alignment = Alignment.center,
   });
 
@@ -152,10 +167,186 @@ class _HoverScaleState extends State<HoverScale> {
       scale: _h ? widget.scale : 1.0,
       alignment: widget.alignment,
       duration: widget.duration,
-      curve: Curves.easeOutCubic,
+      curve: kMotionCurve,
       child: widget.child,
     ),
   );
+}
+
+class MotionFadeSlideSwitcher extends StatelessWidget {
+  final Widget child;
+  final Duration duration;
+  final Offset offset;
+  final Alignment alignment;
+
+  const MotionFadeSlideSwitcher({
+    super.key,
+    required this.child,
+    this.duration = kMotionSlow,
+    this.offset = const Offset(0, 0.025),
+    this.alignment = Alignment.topCenter,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: duration,
+      reverseDuration: kMotionStandard,
+      switchInCurve: kMotionCurve,
+      switchOutCurve: kMotionExitCurve,
+      layoutBuilder: (currentChild, previousChildren) {
+        return Stack(
+          alignment: alignment,
+          children: [...previousChildren, ?currentChild],
+        );
+      },
+      transitionBuilder: (child, animation) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: kMotionCurve,
+          reverseCurve: kMotionExitCurve,
+        );
+
+        return FadeTransition(
+          opacity: curved,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: offset,
+              end: Offset.zero,
+            ).animate(curved),
+            child: child,
+          ),
+        );
+      },
+      child: child,
+    );
+  }
+}
+
+class MotionExpandable extends StatelessWidget {
+  final bool expanded;
+  final Widget expandedChild;
+  final Widget collapsedChild;
+  final Duration duration;
+
+  const MotionExpandable({
+    super.key,
+    required this.expanded,
+    required this.expandedChild,
+    this.collapsedChild = const SizedBox.shrink(),
+    this.duration = kMotionSlow,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSize(
+      duration: duration,
+      curve: kMotionCurve,
+      alignment: Alignment.topCenter,
+      child: MotionFadeSlideSwitcher(
+        duration: duration,
+        child: KeyedSubtree(
+          key: ValueKey(expanded),
+          child: expanded ? expandedChild : collapsedChild,
+        ),
+      ),
+    );
+  }
+}
+
+class MotionListItem extends StatefulWidget {
+  final Widget child;
+  final int index;
+  final bool enabled;
+  final double slide;
+  final Duration duration;
+  final Duration staggerStep;
+  final int maxStaggerIndex;
+
+  const MotionListItem({
+    super.key,
+    required this.child,
+    required this.index,
+    this.enabled = true,
+    this.slide = 8,
+    this.duration = kMotionSlow,
+    this.staggerStep = kMotionListStaggerStep,
+    this.maxStaggerIndex = kMotionListStaggerMaxIndex,
+  });
+
+  @override
+  State<MotionListItem> createState() => _MotionListItemState();
+}
+
+class _MotionListItemState extends State<MotionListItem>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _animation;
+  Timer? _delayTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: widget.duration,
+      value: widget.enabled ? 0 : 1,
+    );
+    _animation = CurvedAnimation(parent: _controller, curve: kMotionCurve);
+    if (widget.enabled) {
+      final maxIndex = widget.maxStaggerIndex < 0 ? 0 : widget.maxStaggerIndex;
+      final staggerIndex = widget.index.clamp(0, maxIndex).toInt();
+      final delayMs = staggerIndex * widget.staggerStep.inMilliseconds;
+      if (delayMs == 0) {
+        _controller.forward();
+      } else {
+        _delayTimer = Timer(Duration(milliseconds: delayMs), () {
+          if (mounted) _controller.forward();
+        });
+      }
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant MotionListItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.duration != widget.duration) {
+      _controller.duration = widget.duration;
+    }
+    if (oldWidget.enabled != widget.enabled) {
+      _delayTimer?.cancel();
+      if (widget.enabled) {
+        _controller.forward(from: 0);
+      } else {
+        _controller.value = 1;
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _delayTimer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      child: widget.child,
+      builder: (context, child) {
+        final value = widget.enabled ? _animation.value : 1.0;
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, widget.slide * (1 - value)),
+            child: child,
+          ),
+        );
+      },
+    );
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -192,11 +383,12 @@ class _SmallBtnState extends State<SmallBtn> {
       },
       onTapCancel: () => setState(() => _p = false),
       child: AnimatedScale(
-        scale: _p ? 0.92 : 1.0,
-        duration: const Duration(milliseconds: 80),
-        curve: Curves.easeOut,
+        scale: _p ? 0.96 : 1.0,
+        duration: kMotionFast,
+        curve: kMotionCurve,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 80),
+          duration: kMotionFast,
+          curve: kMotionCurve,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
           decoration: BoxDecoration(
             color: _p ? darken(widget.color) : widget.color,
@@ -258,11 +450,12 @@ class _MiniBtnState extends State<MiniBtn> {
       },
       onTapCancel: () => setState(() => _p = false),
       child: AnimatedScale(
-        scale: _p ? 0.78 : 1.0,
-        duration: const Duration(milliseconds: 80),
+        scale: _p ? 0.92 : 1.0,
+        duration: kMotionFast,
+        curve: kMotionCurve,
         child: AnimatedOpacity(
-          opacity: _p ? 0.55 : 1.0,
-          duration: const Duration(milliseconds: 80),
+          opacity: _p ? 0.75 : 1.0,
+          duration: kMotionFast,
           child: Padding(
             padding: const EdgeInsets.all(4),
             child: Icon(widget.icon, size: 17, color: widget.color),
@@ -314,13 +507,15 @@ class _HoverIconBtnState extends State<HoverIconBtn> {
         },
         onTapCancel: () => setState(() => _p = false),
         child: AnimatedScale(
-          scale: _p ? 0.88 : 1.0,
-          duration: const Duration(milliseconds: 80),
+          scale: _p ? 0.94 : 1.0,
+          duration: kMotionFast,
+          curve: kMotionCurve,
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 130),
+            duration: kMotionStandard,
+            curve: kMotionCurve,
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: _h || _p ? widget.color.withAlpha(30) : Colors.transparent,
+              color: _h || _p ? widget.color.withAlpha(24) : Colors.transparent,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(widget.icon, color: widget.color, size: 20),
@@ -360,14 +555,11 @@ class _XPBarState extends State<XPBar> with SingleTickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _c = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 700),
-    );
+    _c = AnimationController(vsync: this, duration: kMotionProgress);
     _a = Tween<double>(
       begin: 0,
       end: widget.progress,
-    ).chain(CurveTween(curve: Curves.easeOutCubic)).animate(_c);
+    ).chain(CurveTween(curve: kMotionCurve)).animate(_c);
     _prev = widget.progress;
     _c.forward();
   }
@@ -379,7 +571,7 @@ class _XPBarState extends State<XPBar> with SingleTickerProviderStateMixin {
       _a = Tween<double>(
         begin: _prev,
         end: widget.progress,
-      ).chain(CurveTween(curve: Curves.easeOutCubic)).animate(_c);
+      ).chain(CurveTween(curve: kMotionCurve)).animate(_c);
       _prev = widget.progress;
       _c.forward(from: 0);
     }
@@ -524,24 +716,32 @@ class XPBubble extends StatefulWidget {
 class _XPBubbleState extends State<XPBubble>
     with SingleTickerProviderStateMixin {
   late AnimationController _c;
-  late Animation<double> _y, _o;
+  late Animation<double> _lift, _opacity, _scale;
+  late _XPBubbleTone _tone;
 
   @override
   void initState() {
     super.initState();
+    _tone = _XPBubbleTone.fromMessage(widget.message);
     _c = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 1350),
     );
-    _y = Tween<double>(
-      begin: 0,
-      end: -90,
-    ).animate(CurvedAnimation(parent: _c, curve: Curves.easeOut));
-    _o = TweenSequence([
-      TweenSequenceItem(tween: Tween<double>(begin: 0, end: 1), weight: 12),
-      TweenSequenceItem(tween: ConstantTween<double>(1), weight: 53),
-      TweenSequenceItem(tween: Tween<double>(begin: 1, end: 0), weight: 35),
+    final curved = CurvedAnimation(parent: _c, curve: kMotionCurve);
+    _lift = Tween<double>(begin: 8, end: -58).animate(curved);
+    _opacity = TweenSequence([
+      TweenSequenceItem(tween: Tween<double>(begin: 0, end: 1), weight: 14),
+      TweenSequenceItem(tween: ConstantTween<double>(1), weight: 58),
+      TweenSequenceItem(tween: Tween<double>(begin: 1, end: 0), weight: 28),
     ]).animate(_c);
+    _scale = TweenSequence([
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 0.92, end: 1.04),
+        weight: 18,
+      ),
+      TweenSequenceItem(tween: Tween<double>(begin: 1.04, end: 1), weight: 22),
+      TweenSequenceItem(tween: ConstantTween<double>(1), weight: 60),
+    ]).animate(curved);
     _c.forward().then((_) => widget.onDone(widget.key));
   }
 
@@ -552,37 +752,169 @@ class _XPBubbleState extends State<XPBubble>
   }
 
   @override
-  Widget build(BuildContext context) => AnimatedBuilder(
-    animation: _c,
-    builder: (_, child) => Positioned(
-      left: widget.position.dx - 50,
-      top: widget.position.dy + _y.value,
-      child: Opacity(opacity: _o.value, child: child),
-    ),
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF4A9EFF), Color(0xFF8B5CF6)],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF4A9EFF).withAlpha(100),
-            blurRadius: 12,
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? const Color(0xFF15151D) : Colors.white;
+    final txt = isDark ? const Color(0xFFF4F4F8) : const Color(0xFF1B1B22);
+    final sub = isDark ? const Color(0xFF9A9AA6) : const Color(0xFF5F6370);
+    final screen = MediaQuery.sizeOf(context);
+
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (_, child) {
+        final maxLeft = screen.width > 296 ? screen.width - 272 : 12.0;
+        final maxTop = screen.height > 84 ? screen.height - 72 : 12.0;
+        final left = (widget.position.dx - 124).clamp(12.0, maxLeft);
+        final top = (widget.position.dy + _lift.value - 4).clamp(12.0, maxTop);
+
+        return Positioned(
+          left: left.toDouble(),
+          top: top.toDouble(),
+          child: IgnorePointer(
+            child: Opacity(
+              opacity: _opacity.value,
+              child: Transform.scale(
+                scale: _scale.value,
+                alignment: Alignment.bottomCenter,
+                child: child,
+              ),
+            ),
           ),
-        ],
-      ),
-      child: Text(
-        widget.message,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: 14,
+        );
+      },
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 260),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: _tone.color.withAlpha(95)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(isDark ? 95 : 24),
+                blurRadius: 18,
+                offset: const Offset(0, 10),
+              ),
+              BoxShadow(color: _tone.color.withAlpha(42), blurRadius: 22),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 26,
+                height: 26,
+                decoration: BoxDecoration(
+                  color: _tone.color.withAlpha(26),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(_tone.icon, color: _tone.color, size: 15),
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _tone.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: txt,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 12.5,
+                        height: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _tone.subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: sub,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        height: 1,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
+}
+
+class _XPBubbleTone {
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String subtitle;
+
+  const _XPBubbleTone({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.subtitle,
+  });
+
+  factory _XPBubbleTone.fromMessage(String message) {
+    final cleaned = message
+        .replaceAll('🎉', '')
+        .replaceAll('🏅', '')
+        .replaceAll('⬆️', '')
+        .trim();
+    final lower = cleaned.toLowerCase();
+
+    if (lower.contains('достигнут') || lower.contains('уровень')) {
+      return _XPBubbleTone(
+        icon: Icons.workspace_premium,
+        color: const Color(0xFFFFCC00),
+        title: 'Новый рубеж',
+        subtitle: cleaned,
+      );
+    }
+
+    if (lower.contains('ур.') || lower.contains('→')) {
+      return _XPBubbleTone(
+        icon: Icons.trending_up,
+        color: const Color(0xFFFF9500),
+        title: 'Навык вырос',
+        subtitle: cleaned,
+      );
+    }
+
+    if (lower.contains('старт')) {
+      return _XPBubbleTone(
+        icon: Icons.play_circle_fill,
+        color: const Color(0xFF4A9EFF),
+        title: 'Лёгкий старт',
+        subtitle: cleaned,
+      );
+    }
+
+    if (lower.contains('бафф')) {
+      return _XPBubbleTone(
+        icon: Icons.bolt,
+        color: const Color(0xFF34C759),
+        title: 'Бафф сработал',
+        subtitle: cleaned,
+      );
+    }
+
+    return _XPBubbleTone(
+      icon: Icons.auto_awesome,
+      color: const Color(0xFF4A9EFF),
+      title: 'Опыт получен',
+      subtitle: cleaned,
+    );
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

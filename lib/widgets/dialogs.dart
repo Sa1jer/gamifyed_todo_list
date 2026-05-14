@@ -52,7 +52,7 @@ class AchievementsDialog extends StatelessWidget {
                   ),
                   const Spacer(),
                   PressFeedback(
-                    scale: 0.85,
+                    scale: 0.94,
                     tooltip: 'Закрыть достижения',
                     onTap: () => Navigator.pop(context),
                     child: Icon(Icons.close, color: sub, size: 22),
@@ -291,7 +291,7 @@ class HistoryDialog extends StatelessWidget {
                   ),
                   const Spacer(),
                   PressFeedback(
-                    scale: 0.85,
+                    scale: 0.94,
                     tooltip: 'Закрыть историю',
                     onTap: () => Navigator.pop(context),
                     child: Icon(Icons.close, color: sub, size: 22),
@@ -429,6 +429,247 @@ class _HistoryCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _DialogChoiceChip extends StatefulWidget {
+  final String label;
+  final Color color;
+  final bool selected;
+  final Color backgroundColor;
+  final Color borderColor;
+  final Color inactiveTextColor;
+  final VoidCallback onTap;
+  final EdgeInsetsGeometry padding;
+  final double radius;
+  final FontWeight selectedWeight;
+
+  const _DialogChoiceChip({
+    required this.label,
+    required this.color,
+    required this.selected,
+    required this.backgroundColor,
+    required this.borderColor,
+    required this.inactiveTextColor,
+    required this.onTap,
+    this.padding = const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+    this.radius = 8,
+    this.selectedWeight = FontWeight.w700,
+  });
+
+  @override
+  State<_DialogChoiceChip> createState() => _DialogChoiceChipState();
+}
+
+class _DialogChoiceChipState extends State<_DialogChoiceChip> {
+  bool _hovered = false;
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = widget.selected;
+    final fillColor = selected
+        ? widget.color.withAlpha(38)
+        : (_hovered ? widget.color.withAlpha(16) : widget.backgroundColor);
+    final outlineColor = selected
+        ? widget.color.withAlpha(150)
+        : (_hovered ? widget.color.withAlpha(70) : widget.borderColor);
+    final labelColor = selected
+        ? widget.color
+        : (_hovered ? widget.color.withAlpha(220) : widget.inactiveTextColor);
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() {
+        _hovered = false;
+        _pressed = false;
+      }),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onTap,
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapCancel: () => setState(() => _pressed = false),
+        onTapUp: (_) => setState(() => _pressed = false),
+        child: AnimatedScale(
+          scale: _pressed ? 0.97 : 1,
+          duration: kMotionFast,
+          curve: kMotionCurve,
+          child: AnimatedContainer(
+            duration: kMotionStandard,
+            curve: kMotionCurve,
+            padding: widget.padding,
+            decoration: BoxDecoration(
+              color: fillColor,
+              borderRadius: BorderRadius.circular(widget.radius),
+              border: Border.all(color: outlineColor),
+            ),
+            child: Text(
+              widget.label,
+              style: TextStyle(
+                color: labelColor,
+                fontSize: 12,
+                fontWeight: selected ? widget.selectedWeight : FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _IconChoiceButton extends StatefulWidget {
+  final IconData icon;
+  final bool selected;
+  final Color color;
+  final Color inactiveColor;
+  final VoidCallback onTap;
+
+  const _IconChoiceButton({
+    required this.icon,
+    required this.selected,
+    required this.color,
+    required this.inactiveColor,
+    required this.onTap,
+  });
+
+  @override
+  State<_IconChoiceButton> createState() => _IconChoiceButtonState();
+}
+
+class _IconChoiceButtonState extends State<_IconChoiceButton> {
+  bool _hovered = false;
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = widget.selected;
+    final fillColor = selected
+        ? widget.color.withAlpha(46)
+        : (_hovered ? widget.color.withAlpha(14) : Colors.transparent);
+    final outlineColor = selected
+        ? widget.color.withAlpha(165)
+        : (_hovered ? widget.color.withAlpha(60) : Colors.transparent);
+    final iconColor = selected
+        ? widget.color
+        : (_hovered ? widget.color.withAlpha(220) : widget.inactiveColor);
+
+    return Tooltip(
+      message: 'Выбрать иконку',
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() {
+          _hovered = false;
+          _pressed = false;
+        }),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onTap,
+          onTapDown: (_) => setState(() => _pressed = true),
+          onTapCancel: () => setState(() => _pressed = false),
+          onTapUp: (_) => setState(() => _pressed = false),
+          child: AnimatedScale(
+            scale: _pressed ? 0.92 : 1,
+            duration: kMotionFast,
+            curve: kMotionCurve,
+            child: AnimatedContainer(
+              duration: kMotionStandard,
+              curve: kMotionCurve,
+              decoration: BoxDecoration(
+                color: fillColor,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: outlineColor, width: 1.4),
+              ),
+              child: Icon(widget.icon, size: 18, color: iconColor),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ColorChoiceButton extends StatefulWidget {
+  final Color color;
+  final bool selected;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  const _ColorChoiceButton({
+    required this.color,
+    required this.selected,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  @override
+  State<_ColorChoiceButton> createState() => _ColorChoiceButtonState();
+}
+
+class _ColorChoiceButtonState extends State<_ColorChoiceButton> {
+  bool _hovered = false;
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final ringColor = widget.selected
+        ? (widget.isDark ? Colors.white : const Color(0xFF202033))
+        : (_hovered ? widget.color.withAlpha(120) : Colors.transparent);
+    final shadowAlpha = widget.selected ? 90 : (_hovered ? 45 : 0);
+
+    return Tooltip(
+      message: 'Выбрать цвет',
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() {
+          _hovered = false;
+          _pressed = false;
+        }),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onTap,
+          onTapDown: (_) => setState(() => _pressed = true),
+          onTapCancel: () => setState(() => _pressed = false),
+          onTapUp: (_) => setState(() => _pressed = false),
+          child: AnimatedScale(
+            scale: _pressed ? 0.9 : 1,
+            duration: kMotionFast,
+            curve: kMotionCurve,
+            child: AnimatedContainer(
+              duration: kMotionStandard,
+              curve: kMotionCurve,
+              width: 28,
+              height: 28,
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: ringColor,
+                  width: widget.selected ? 2 : 1,
+                ),
+                boxShadow: shadowAlpha == 0
+                    ? null
+                    : [
+                        BoxShadow(
+                          color: widget.color.withAlpha(shadowAlpha),
+                          blurRadius: widget.selected ? 10 : 7,
+                        ),
+                      ],
+              ),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: widget.color,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -591,21 +832,12 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
                   itemBuilder: (_, i) {
                     final ic = _allIcons[i];
                     final sel = ic == _icon;
-                    return GestureDetector(
+                    return _IconChoiceButton(
+                      icon: ic,
+                      selected: sel,
+                      color: _color,
+                      inactiveColor: sub,
                       onTap: () => setState(() => _icon = ic),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 100),
-                        decoration: BoxDecoration(
-                          color: sel
-                              ? _color.withAlpha(50)
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(7),
-                          border: sel
-                              ? Border.all(color: _color, width: 2)
-                              : null,
-                        ),
-                        child: Icon(ic, size: 18, color: sel ? _color : sub),
-                      ),
                     );
                   },
                 ),
@@ -620,28 +852,11 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
                 runSpacing: 8,
                 children: kColors.map((c) {
                   final sel = c == _color;
-                  return GestureDetector(
+                  return _ColorChoiceButton(
+                    color: c,
+                    selected: sel,
+                    isDark: isDark,
                     onTap: () => setState(() => _color = c),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 120),
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        color: c,
-                        shape: BoxShape.circle,
-                        border: sel
-                            ? Border.all(color: Colors.white, width: 2.5)
-                            : null,
-                        boxShadow: sel
-                            ? [
-                                BoxShadow(
-                                  color: c.withAlpha(130),
-                                  blurRadius: 6,
-                                ),
-                              ]
-                            : null,
-                      ),
-                    ),
                   );
                 }).toList(),
               ),
@@ -651,30 +866,39 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
               SubLbl('Чек-лист', sub),
               const SizedBox(height: 8),
               ..._items.asMap().entries.map(
-                (e) => Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Row(
-                    children: [
-                      Icon(Icons.check_box_outline_blank, size: 15, color: sub),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          e.value,
-                          style: TextStyle(color: txt, fontSize: 13),
+                (e) => MotionListItem(
+                  key: ValueKey('skill-check-${e.key}-${e.value}'),
+                  index: e.key,
+                  slide: 4,
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.check_box_outline_blank,
+                          size: 15,
+                          color: sub,
                         ),
-                      ),
-                      Tooltip(
-                        message: 'Удалить пункт чек-листа',
-                        child: GestureDetector(
-                          onTap: () => setState(() => _items.removeAt(e.key)),
-                          child: const Icon(
-                            Icons.close,
-                            size: 15,
-                            color: Color(0xFFFF3B30),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            e.value,
+                            style: TextStyle(color: txt, fontSize: 13),
                           ),
                         ),
-                      ),
-                    ],
+                        Tooltip(
+                          message: 'Удалить пункт чек-листа',
+                          child: GestureDetector(
+                            onTap: () => setState(() => _items.removeAt(e.key)),
+                            child: const Icon(
+                              Icons.close,
+                              size: 15,
+                              color: Color(0xFFFF3B30),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -796,7 +1020,7 @@ class _SkillTreeDialogState extends State<SkillTreeDialog> {
                   ),
                   const SizedBox(width: 10),
                   PressFeedback(
-                    scale: 0.85,
+                    scale: 0.94,
                     tooltip: 'Закрыть дерево навыка',
                     onTap: () => Navigator.pop(context),
                     child: Icon(Icons.close, color: sub, size: 22),
@@ -810,27 +1034,35 @@ class _SkillTreeDialogState extends State<SkillTreeDialog> {
               child: _SkillTreeSummary(skill: skill, isDark: isDark),
             ),
             Expanded(
-              child: skill.treeNodes.isEmpty
-                  ? _SkillTreeEmptyState(
-                      isDark: isDark,
-                      color: skill.color,
-                      onAdd: () => _showAddNode(context, skill),
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-                      itemCount: skill.treeNodes.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 10),
-                      itemBuilder: (_, index) {
-                        final node = skill.treeNodes[index];
-                        return _SkillTreeNodeCard(
-                          skill: skill,
-                          node: node,
-                          state: widget.state,
-                          isDark: isDark,
-                          onChanged: () => setState(() {}),
-                        );
-                      },
-                    ),
+              child: MotionFadeSlideSwitcher(
+                child: skill.treeNodes.isEmpty
+                    ? _SkillTreeEmptyState(
+                        key: const ValueKey('skill-tree-empty'),
+                        isDark: isDark,
+                        color: skill.color,
+                        onAdd: () => _showAddNode(context, skill),
+                      )
+                    : ListView.separated(
+                        key: const ValueKey('skill-tree-list'),
+                        padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                        itemCount: skill.treeNodes.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 10),
+                        itemBuilder: (_, index) {
+                          final node = skill.treeNodes[index];
+                          return MotionListItem(
+                            key: ValueKey('tree-node-${node.id}'),
+                            index: index,
+                            child: _SkillTreeNodeCard(
+                              skill: skill,
+                              node: node,
+                              state: widget.state,
+                              isDark: isDark,
+                              onChanged: () => setState(() {}),
+                            ),
+                          );
+                        },
+                      ),
+              ),
             ),
           ],
         ),
@@ -1043,37 +1275,44 @@ class _SkillTreeNodeCard extends StatelessWidget {
             ...node.checklist.asMap().entries.map((entry) {
               final index = entry.key;
               final done = node.checklistDone[index];
-              return GestureDetector(
-                onTap: node.isMastered
-                    ? null
-                    : () {
-                        state.toggleSkillTreeNodeChecklist(
-                          skill.id,
-                          node.id,
-                          index,
-                        );
-                        onChanged();
-                      },
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 5),
-                  child: Row(
-                    children: [
-                      Icon(
-                        done ? Icons.check_box : Icons.check_box_outline_blank,
-                        color: done ? skill.color : sub,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          entry.value,
-                          style: TextStyle(
-                            color: done ? txt : sub,
-                            fontSize: 12,
+              return MotionListItem(
+                key: ValueKey('node-check-${node.id}-$index-${entry.value}'),
+                index: index,
+                slide: 4,
+                child: GestureDetector(
+                  onTap: node.isMastered
+                      ? null
+                      : () {
+                          state.toggleSkillTreeNodeChecklist(
+                            skill.id,
+                            node.id,
+                            index,
+                          );
+                          onChanged();
+                        },
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 5),
+                    child: Row(
+                      children: [
+                        Icon(
+                          done
+                              ? Icons.check_box
+                              : Icons.check_box_outline_blank,
+                          color: done ? skill.color : sub,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            entry.value,
+                            style: TextStyle(
+                              color: done ? txt : sub,
+                              fontSize: 12,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               );
@@ -1161,34 +1400,41 @@ class _MasterNodeButton extends StatelessWidget {
       );
     }
 
-    return GestureDetector(
-      onTap: enabled ? onTap : null,
-      child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 120),
-        opacity: enabled ? 1 : 0.45,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.workspace_premium, color: Colors.white, size: 14),
-              SizedBox(width: 4),
-              Text(
-                'Освоить',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
+    final button = AnimatedOpacity(
+      duration: kMotionStandard,
+      curve: kMotionCurve,
+      opacity: enabled ? 1 : 0.45,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.workspace_premium, color: Colors.white, size: 14),
+            SizedBox(width: 4),
+            Text(
+              'Освоить',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
+    );
+
+    if (!enabled) return button;
+
+    return PressFeedback(
+      scale: 0.96,
+      tooltip: 'Освоить узел дерева навыка',
+      onTap: onTap,
+      child: button,
     );
   }
 }
@@ -1199,6 +1445,7 @@ class _SkillTreeEmptyState extends StatelessWidget {
   final VoidCallback onAdd;
 
   const _SkillTreeEmptyState({
+    super.key,
     required this.isDark,
     required this.color,
     required this.onAdd,
@@ -1378,31 +1625,40 @@ class _AddSkillTreeNodeDialogState extends State<_AddSkillTreeNodeDialog> {
               SubLbl('Чеклист узла', sub),
               const SizedBox(height: 8),
               ..._checklist.asMap().entries.map(
-                (entry) => Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Row(
-                    children: [
-                      Icon(Icons.check_box_outline_blank, color: sub, size: 15),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          entry.value,
-                          style: TextStyle(color: txt, fontSize: 13),
+                (entry) => MotionListItem(
+                  key: ValueKey('tree-check-${entry.key}-${entry.value}'),
+                  index: entry.key,
+                  slide: 4,
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.check_box_outline_blank,
+                          color: sub,
+                          size: 15,
                         ),
-                      ),
-                      Tooltip(
-                        message: 'Удалить пункт чеклиста узла',
-                        child: GestureDetector(
-                          onTap: () =>
-                              setState(() => _checklist.removeAt(entry.key)),
-                          child: const Icon(
-                            Icons.close,
-                            color: Color(0xFFFF3B30),
-                            size: 15,
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            entry.value,
+                            style: TextStyle(color: txt, fontSize: 13),
                           ),
                         ),
-                      ),
-                    ],
+                        Tooltip(
+                          message: 'Удалить пункт чеклиста узла',
+                          child: GestureDetector(
+                            onTap: () =>
+                                setState(() => _checklist.removeAt(entry.key)),
+                            child: const Icon(
+                              Icons.close,
+                              color: Color(0xFFFF3B30),
+                              size: 15,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -1676,7 +1932,8 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                 onChanged: (v) => setState(() => _xp = v.round()),
               ),
               AnimatedSize(
-                duration: const Duration(milliseconds: 200),
+                duration: kMotionSlow,
+                curve: kMotionCurve,
                 child: _overCap
                     ? Container(
                         margin: const EdgeInsets.only(bottom: 8),
@@ -1721,30 +1978,14 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                 children: TaskType.values.map((t) {
                   final sel = _type == t;
                   final tc = typeColor[t]!;
-                  return GestureDetector(
+                  return _DialogChoiceChip(
+                    label: typeLabel[t]!,
+                    color: tc,
+                    selected: sel,
+                    backgroundColor: fBg,
+                    borderColor: bdr,
+                    inactiveTextColor: sub,
                     onTap: () => setState(() => _type = t),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 120),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 7,
-                      ),
-                      decoration: BoxDecoration(
-                        color: sel ? tc.withAlpha(40) : fBg,
-                        borderRadius: BorderRadius.circular(8),
-                        border: sel
-                            ? Border.all(color: tc)
-                            : Border.all(color: bdr),
-                      ),
-                      child: Text(
-                        typeLabel[t]!,
-                        style: TextStyle(
-                          color: sel ? tc : sub,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
                   );
                 }).toList(),
               ),
@@ -1757,133 +1998,126 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                 children: Priority.values.map((priority) {
                   final sel = _priority == priority;
                   final pc = priorityColor[priority]!;
-                  return GestureDetector(
+                  return _DialogChoiceChip(
+                    label: priorityLabel[priority]!,
+                    color: pc,
+                    selected: sel,
+                    backgroundColor: fBg,
+                    borderColor: bdr,
+                    inactiveTextColor: sub,
                     onTap: () => setState(() => _priority = priority),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 120),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 7,
-                      ),
-                      decoration: BoxDecoration(
-                        color: sel ? pc.withAlpha(38) : fBg,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: sel ? pc : bdr),
-                      ),
-                      child: Text(
-                        priorityLabel[priority]!,
-                        style: TextStyle(
-                          color: sel ? pc : sub,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
                   );
                 }).toList(),
               ),
-              if (_type == TaskType.repeating) ...[
-                const SizedBox(height: 16),
-                SubLbl('Частота выполнения', sub),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: fBg,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: bdr),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: RepeatFrequency.values.map((f) {
-                          final sel = _freq == f;
-                          return GestureDetector(
-                            onTap: () => setState(() => _freq = f),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 120),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: sel
-                                    ? const Color(0xFF4A9EFF).withAlpha(40)
-                                    : (isDark
-                                          ? const Color(0xFF2A2A35)
-                                          : const Color(0xFFEAEAF0)),
-                                borderRadius: BorderRadius.circular(20),
-                                border: sel
-                                    ? Border.all(color: const Color(0xFF4A9EFF))
-                                    : null,
-                              ),
-                              child: Text(
-                                freqLabel[f]!,
-                                style: TextStyle(
-                                  color: sel ? const Color(0xFF4A9EFF) : sub,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          );
-                        }).toList(),
+              MotionExpandable(
+                expanded: _type == TaskType.repeating,
+                expandedChild: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 16),
+                    SubLbl('Частота выполнения', sub),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: fBg,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: bdr),
                       ),
-                      if (_freq == RepeatFrequency.custom) ...[
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            Text(
-                              'Каждые',
-                              style: TextStyle(color: txt, fontSize: 13),
-                            ),
-                            const SizedBox(width: 8),
-                            SizedBox(
-                              width: 60,
-                              child: TextField(
-                                controller: _customCtrl,
-                                style: TextStyle(color: txt, fontSize: 13),
-                                keyboardType: TextInputType.number,
-                                onChanged: (_) => setState(() {}),
-                                decoration: InputDecoration(
-                                  isDense: true,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 8,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: RepeatFrequency.values.map((f) {
+                              final sel = _freq == f;
+                              return _DialogChoiceChip(
+                                label: freqLabel[f]!,
+                                color: const Color(0xFF4A9EFF),
+                                selected: sel,
+                                backgroundColor: isDark
+                                    ? const Color(0xFF2A2A35)
+                                    : const Color(0xFFEAEAF0),
+                                borderColor: isDark
+                                    ? const Color(0xFF2A2A35)
+                                    : const Color(0xFFEAEAF0),
+                                inactiveTextColor: sub,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
+                                radius: 20,
+                                selectedWeight: FontWeight.w600,
+                                onTap: () => setState(() => _freq = f),
+                              );
+                            }).toList(),
+                          ),
+                          MotionExpandable(
+                            expanded: _freq == RepeatFrequency.custom,
+                            expandedChild: Padding(
+                              padding: const EdgeInsets.only(top: 10),
+                              child: Row(
+                                children: [
+                                  Text(
+                                    'Каждые',
+                                    style: TextStyle(color: txt, fontSize: 13),
                                   ),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(color: bdr),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: const BorderSide(
-                                      color: Color(0xFF4A9EFF),
+                                  const SizedBox(width: 8),
+                                  SizedBox(
+                                    width: 60,
+                                    child: TextField(
+                                      controller: _customCtrl,
+                                      style: TextStyle(
+                                        color: txt,
+                                        fontSize: 13,
+                                      ),
+                                      keyboardType: TextInputType.number,
+                                      onChanged: (_) => setState(() {}),
+                                      decoration: InputDecoration(
+                                        isDense: true,
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 8,
+                                            ),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          borderSide: BorderSide(color: bdr),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          borderSide: const BorderSide(
+                                            color: Color(0xFF4A9EFF),
+                                          ),
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'дней',
+                                    style: TextStyle(color: txt, fontSize: 13),
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'дней',
-                              style: TextStyle(color: txt, fontSize: 13),
-                            ),
-                          ],
-                        ),
-                      ],
-                      const SizedBox(height: 8),
-                      Text(
-                        'Задача обновится в 03:00 через ${freqDays(_freq, _customDays)} дн.',
-                        style: TextStyle(color: sub, fontSize: 11),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Задача обновится в 03:00 через ${freqDays(_freq, _customDays)} дн.',
+                            style: TextStyle(color: sub, fontSize: 11),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
               const SizedBox(height: 16),
               _buildTextListEditor(
                 title: 'Подзадачи',
@@ -1943,33 +2177,42 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
             spacing: 6,
             runSpacing: 6,
             children: items.asMap().entries.map((entry) {
-              return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                decoration: BoxDecoration(
-                  color: color.withAlpha(22),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: color.withAlpha(60)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '$prefix${entry.value}',
-                      style: TextStyle(color: txt, fontSize: 12),
-                    ),
-                    const SizedBox(width: 6),
-                    Tooltip(
-                      message: 'Удалить элемент списка',
-                      child: GestureDetector(
-                        onTap: () => setState(() => items.removeAt(entry.key)),
-                        child: const Icon(
-                          Icons.close,
-                          color: Color(0xFFFF3B30),
-                          size: 13,
+              return MotionListItem(
+                key: ValueKey('$title-${entry.key}-${entry.value}'),
+                index: entry.key,
+                slide: 4,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: color.withAlpha(22),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: color.withAlpha(60)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '$prefix${entry.value}',
+                        style: TextStyle(color: txt, fontSize: 12),
+                      ),
+                      const SizedBox(width: 6),
+                      Tooltip(
+                        message: 'Удалить элемент списка',
+                        child: GestureDetector(
+                          onTap: () =>
+                              setState(() => items.removeAt(entry.key)),
+                          child: const Icon(
+                            Icons.close,
+                            color: Color(0xFFFF3B30),
+                            size: 13,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               );
             }).toList(),
@@ -2182,38 +2425,41 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
               ),
             ],
           ),
-          if (_notificationsEnabled) ...[
-            const SizedBox(height: 8),
-            Tooltip(
-              message: 'Выбрать время напоминания',
-              child: GestureDetector(
-                onTap: _pickNotificationTime,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: color.withAlpha(20),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: color.withAlpha(70)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.schedule, color: color, size: 16),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Время: ${_formatTimeOfDay(_notificationTime)}',
-                        style: TextStyle(color: color, fontSize: 13),
-                      ),
-                      const Spacer(),
-                      Icon(Icons.edit_outlined, color: color, size: 15),
-                    ],
+          MotionExpandable(
+            expanded: _notificationsEnabled,
+            expandedChild: Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Tooltip(
+                message: 'Выбрать время напоминания',
+                child: GestureDetector(
+                  onTap: _pickNotificationTime,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: color.withAlpha(20),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: color.withAlpha(70)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.schedule, color: color, size: 16),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Время: ${_formatTimeOfDay(_notificationTime)}',
+                          style: TextStyle(color: color, fontSize: 13),
+                        ),
+                        const Spacer(),
+                        Icon(Icons.edit_outlined, color: color, size: 15),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ],
+          ),
         ],
       ),
     );
@@ -2307,7 +2553,7 @@ class StatsDialog extends StatelessWidget {
                   ),
                   const Spacer(),
                   PressFeedback(
-                    scale: 0.85,
+                    scale: 0.94,
                     tooltip: 'Закрыть статистику',
                     onTap: () => Navigator.pop(context),
                     child: Icon(Icons.close, color: sub, size: 22),
@@ -2646,7 +2892,7 @@ class _RewardsDialogState extends State<RewardsDialog> {
                   ),
                   const Spacer(),
                   PressFeedback(
-                    scale: 0.85,
+                    scale: 0.94,
                     tooltip: 'Закрыть награды и баффы',
                     onTap: () => Navigator.pop(context),
                     child: Icon(Icons.close, color: sub, size: 22),
@@ -2689,10 +2935,11 @@ class _RewardsDialogState extends State<RewardsDialog> {
                       'Сундуки открываются за боевые рывки: сейчас это 5 квестов за день и победы над боссами.',
                       style: TextStyle(color: sub, fontSize: 12, height: 1.35),
                     ),
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 220),
-                      child: _lastOpenMessage == null
-                          ? const SizedBox(height: 18)
+                    MotionExpandable(
+                      expanded: _lastOpenMessage != null,
+                      collapsedChild: const SizedBox(height: 18),
+                      expandedChild: _lastOpenMessage == null
+                          ? const SizedBox.shrink()
                           : Padding(
                               padding: const EdgeInsets.only(top: 12),
                               child: _RewardInlineNotice(
@@ -2710,27 +2957,41 @@ class _RewardsDialogState extends State<RewardsDialog> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    if (unopened.isEmpty)
-                      _RewardsEmptyState(
-                        icon: Icons.inventory_2_outlined,
-                        title: 'Пока нет сундуков',
-                        subtitle:
-                            'Сделай 5 квестов за день или победи босса, чтобы получить награду.',
-                        isDark: isDark,
-                      )
-                    else
-                      ...unopened.map(
-                        (chest) => _RewardChestCard(
-                          chest: chest,
-                          skill: chest.skillId == null
-                              ? null
-                              : widget.state.skills
-                                    .where((skill) => skill.id == chest.skillId)
-                                    .firstOrNull,
-                          isDark: isDark,
-                          onOpen: () => _openChest(context, chest.id),
-                        ),
-                      ),
+                    MotionFadeSlideSwitcher(
+                      child: unopened.isEmpty
+                          ? _RewardsEmptyState(
+                              key: const ValueKey('empty-chests'),
+                              icon: Icons.inventory_2_outlined,
+                              title: 'Пока нет сундуков',
+                              subtitle:
+                                  'Сделай 5 квестов за день или победи босса, чтобы получить награду.',
+                              isDark: isDark,
+                            )
+                          : Column(
+                              key: const ValueKey('chest-list'),
+                              children: unopened.asMap().entries.map((entry) {
+                                final chest = entry.value;
+                                return MotionListItem(
+                                  key: ValueKey('chest-${chest.id}'),
+                                  index: entry.key,
+                                  slide: 5,
+                                  child: _RewardChestCard(
+                                    chest: chest,
+                                    skill: chest.skillId == null
+                                        ? null
+                                        : widget.state.skills
+                                              .where(
+                                                (skill) =>
+                                                    skill.id == chest.skillId,
+                                              )
+                                              .firstOrNull,
+                                    isDark: isDark,
+                                    onOpen: () => _openChest(context, chest.id),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                    ),
                     const SizedBox(height: 18),
                     Text(
                       'Активные баффы',
@@ -2741,26 +3002,40 @@ class _RewardsDialogState extends State<RewardsDialog> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    if (buffs.isEmpty)
-                      _RewardsEmptyState(
-                        icon: Icons.bolt_outlined,
-                        title: 'Нет активных баффов',
-                        subtitle:
-                            'Открой сундук, чтобы получить временное усиление на XP.',
-                        isDark: isDark,
-                      )
-                    else
-                      ...buffs.map(
-                        (buff) => _ActiveBuffCard(
-                          buff: buff,
-                          skill: buff.skillId == null
-                              ? null
-                              : widget.state.skills
-                                    .where((skill) => skill.id == buff.skillId)
-                                    .firstOrNull,
-                          isDark: isDark,
-                        ),
-                      ),
+                    MotionFadeSlideSwitcher(
+                      child: buffs.isEmpty
+                          ? _RewardsEmptyState(
+                              key: const ValueKey('empty-buffs'),
+                              icon: Icons.bolt_outlined,
+                              title: 'Нет активных баффов',
+                              subtitle:
+                                  'Открой сундук, чтобы получить временное усиление на XP.',
+                              isDark: isDark,
+                            )
+                          : Column(
+                              key: const ValueKey('buff-list'),
+                              children: buffs.asMap().entries.map((entry) {
+                                final buff = entry.value;
+                                return MotionListItem(
+                                  key: ValueKey('buff-${buff.id}'),
+                                  index: entry.key,
+                                  slide: 5,
+                                  child: _ActiveBuffCard(
+                                    buff: buff,
+                                    skill: buff.skillId == null
+                                        ? null
+                                        : widget.state.skills
+                                              .where(
+                                                (skill) =>
+                                                    skill.id == buff.skillId,
+                                              )
+                                              .firstOrNull,
+                                    isDark: isDark,
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                    ),
                   ],
                 ),
               ),
@@ -3019,6 +3294,7 @@ class _RewardsEmptyState extends StatelessWidget {
   final bool isDark;
 
   const _RewardsEmptyState({
+    super.key,
     required this.icon,
     required this.title,
     required this.subtitle,
@@ -3109,7 +3385,7 @@ class _BossesDialogState extends State<BossesDialog> {
                   ),
                   const Spacer(),
                   PressFeedback(
-                    scale: 0.85,
+                    scale: 0.94,
                     tooltip: 'Закрыть боссов',
                     onTap: () => Navigator.pop(context),
                     child: Icon(Icons.close, color: sub, size: 22),
@@ -3120,8 +3396,9 @@ class _BossesDialogState extends State<BossesDialog> {
             Container(height: 1, color: bdr),
 
             // Collapsible Explanation
-            if (!_expanded)
-              Tooltip(
+            MotionExpandable(
+              expanded: _expanded,
+              collapsedChild: Tooltip(
                 message: 'Показать объяснение механики боссов',
                 child: GestureDetector(
                   onTap: () => setState(() => _expanded = true),
@@ -3144,9 +3421,8 @@ class _BossesDialogState extends State<BossesDialog> {
                     ),
                   ),
                 ),
-              )
-            else
-              Container(
+              ),
+              expandedChild: Container(
                 margin: const EdgeInsets.all(12),
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
@@ -3207,47 +3483,57 @@ class _BossesDialogState extends State<BossesDialog> {
                   ],
                 ),
               ),
+            ),
 
             Container(height: 1, color: bdr),
             Expanded(
-              child: widget.state.bosses.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.shield_outlined, color: sub, size: 38),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Нет активных боссов',
-                            style: TextStyle(color: sub, fontSize: 15),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Создайте босса для навыка',
-                            style: TextStyle(
-                              color: sub.withAlpha(160),
-                              fontSize: 12,
+              child: MotionFadeSlideSwitcher(
+                child: widget.state.bosses.isEmpty
+                    ? Center(
+                        key: const ValueKey('bosses-empty'),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.shield_outlined, color: sub, size: 38),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Нет активных боссов',
+                              style: TextStyle(color: sub, fontSize: 15),
                             ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(14),
-                      itemCount: widget.state.bosses.length,
-                      itemBuilder: (_, i) => _BossCard(
-                        boss: widget.state.bosses[i],
-                        snapshot: widget.state.bossSnapshot(
-                          widget.state.bosses[i],
+                            const SizedBox(height: 4),
+                            Text(
+                              'Создайте босса для навыка',
+                              style: TextStyle(
+                                color: sub.withAlpha(160),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
                         ),
-                        skills: widget.state.skills,
-                        isDark: isDark,
-                        onDelete: () {
-                          widget.state.removeBoss(widget.state.bosses[i].id);
-                          Navigator.pop(context);
+                      )
+                    : ListView.builder(
+                        key: const ValueKey('bosses-list'),
+                        padding: const EdgeInsets.all(14),
+                        itemCount: widget.state.bosses.length,
+                        itemBuilder: (_, i) {
+                          final boss = widget.state.bosses[i];
+                          return MotionListItem(
+                            key: ValueKey('boss-${boss.id}'),
+                            index: i,
+                            child: _BossCard(
+                              boss: boss,
+                              snapshot: widget.state.bossSnapshot(boss),
+                              skills: widget.state.skills,
+                              isDark: isDark,
+                              onDelete: () {
+                                widget.state.removeBoss(boss.id);
+                                Navigator.pop(context);
+                              },
+                            ),
+                          );
                         },
                       ),
-                    ),
+              ),
             ),
             Container(height: 1, color: bdr),
             Padding(
@@ -3768,7 +4054,7 @@ class _CalendarDialogState extends State<CalendarDialog> {
                   ),
                   const Spacer(),
                   PressFeedback(
-                    scale: 0.85,
+                    scale: 0.94,
                     tooltip: 'Закрыть календарь',
                     onTap: () => Navigator.pop(context),
                     child: Icon(Icons.close, color: sub, size: 22),
@@ -3787,14 +4073,18 @@ class _CalendarDialogState extends State<CalendarDialog> {
                 completionHistoryByDate,
               ),
             ),
-            if (_selectedDate != null)
-              _buildSelectedDateTasks(
-                isDark,
-                txt,
-                sub,
-                bdr,
-                completionHistoryByDate,
-              ),
+            MotionExpandable(
+              expanded: _selectedDate != null,
+              expandedChild: _selectedDate == null
+                  ? const SizedBox.shrink()
+                  : _buildSelectedDateTasks(
+                      isDark,
+                      txt,
+                      sub,
+                      bdr,
+                      completionHistoryByDate,
+                    ),
+            ),
           ],
         ),
       ),
@@ -4010,65 +4300,83 @@ class _CalendarDialogState extends State<CalendarDialog> {
             ),
           ),
           Expanded(
-            child: selectedEntries.isEmpty
-                ? Center(
-                    child: Text(
-                      'Нет выполненных задач',
-                      style: TextStyle(color: sub, fontSize: 12),
+            child: MotionFadeSlideSwitcher(
+              child: selectedEntries.isEmpty
+                  ? Center(
+                      key: const ValueKey('calendar-empty-day'),
+                      child: Text(
+                        'Нет выполненных задач',
+                        style: TextStyle(color: sub, fontSize: 12),
+                      ),
+                    )
+                  : ListView.builder(
+                      key: const ValueKey('calendar-entry-list'),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      itemCount: selectedEntries.length,
+                      itemBuilder: (_, i) {
+                        final entry = selectedEntries[i];
+                        return MotionListItem(
+                          key: ValueKey(
+                            'calendar-entry-${entry.taskId}-${entry.at.millisecondsSinceEpoch}',
+                          ),
+                          index: i,
+                          slide: 4,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 6,
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: entry.skillColor,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        entry.taskTitle,
+                                        style: TextStyle(
+                                          color: txt,
+                                          fontSize: 12,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '${entry.skillName} • ${formatTime(entry.at)}',
+                                        style: TextStyle(
+                                          color: sub,
+                                          fontSize: 10,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Text(
+                                  '+${entry.xp}',
+                                  style: const TextStyle(
+                                    color: Color(0xFF34C759),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    itemCount: selectedEntries.length,
-                    itemBuilder: (_, i) {
-                      final entry = selectedEntries[i];
-                      return Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 6,
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: entry.skillColor,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    entry.taskTitle,
-                                    style: TextStyle(color: txt, fontSize: 12),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    '${entry.skillName} • ${formatTime(entry.at)}',
-                                    style: TextStyle(color: sub, fontSize: 10),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Text(
-                              '+${entry.xp}',
-                              style: const TextStyle(
-                                color: Color(0xFF34C759),
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
+            ),
           ),
         ],
       ),

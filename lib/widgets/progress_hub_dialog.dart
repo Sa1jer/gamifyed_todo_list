@@ -156,7 +156,7 @@ class ProgressHubContent extends StatelessWidget {
                 ),
                 if (showCloseButton && onClose != null)
                   PressFeedback(
-                    scale: 0.86,
+                    scale: 0.94,
                     tooltip: 'Закрыть центр прогресса',
                     onTap: onClose!,
                     child: Icon(Icons.close, color: sub, size: 22),
@@ -174,62 +174,87 @@ class ProgressHubContent extends StatelessWidget {
               crossAxisSpacing: 12,
               childAspectRatio: 2.34,
               children: [
-                _ProgressHubCard(
-                  isDark: isDark,
-                  icon: Icons.bar_chart,
-                  color: const Color(0xFF4A9EFF),
-                  title: 'Статистика',
-                  subtitle: 'XP, уровни, темп дня',
-                  value: '${state.todayStats?.xpEarned ?? 0} XP сегодня',
-                  onTap: onOpenStats,
+                MotionListItem(
+                  key: const ValueKey('progress-card-stats'),
+                  index: 0,
+                  child: _ProgressHubCard(
+                    isDark: isDark,
+                    icon: Icons.bar_chart,
+                    color: const Color(0xFF4A9EFF),
+                    title: 'Статистика',
+                    subtitle: 'XP, уровни, темп дня',
+                    value: '${state.todayStats?.xpEarned ?? 0} XP сегодня',
+                    onTap: onOpenStats,
+                  ),
                 ),
-                _ProgressHubCard(
-                  isDark: isDark,
-                  icon: Icons.calendar_month,
-                  color: const Color(0xFF30D158),
-                  title: 'Календарь',
-                  subtitle: 'Когда реально закрывались квесты',
-                  value: '$completedDays активных дней',
-                  onTap: onOpenCalendar,
+                MotionListItem(
+                  key: const ValueKey('progress-card-calendar'),
+                  index: 1,
+                  child: _ProgressHubCard(
+                    isDark: isDark,
+                    icon: Icons.calendar_month,
+                    color: const Color(0xFF30D158),
+                    title: 'Календарь',
+                    subtitle: 'Когда реально закрывались квесты',
+                    value: '$completedDays активных дней',
+                    onTap: onOpenCalendar,
+                  ),
                 ),
-                _ProgressHubCard(
-                  isDark: isDark,
-                  icon: Icons.shield,
-                  color: const Color(0xFFFF2D55),
-                  title: 'Боссы',
-                  subtitle: 'Плохие привычки и сопротивление',
-                  value: state.activeBossThreatCount > 0
-                      ? '${state.activeBossThreatCount} атакуют'
-                      : '${state.activeBosses.length} активных',
-                  onTap: onOpenBosses,
+                MotionListItem(
+                  key: const ValueKey('progress-card-bosses'),
+                  index: 2,
+                  child: _ProgressHubCard(
+                    isDark: isDark,
+                    icon: Icons.shield,
+                    color: const Color(0xFFFF2D55),
+                    title: 'Боссы',
+                    subtitle: 'Плохие привычки и сопротивление',
+                    value: state.activeBossThreatCount > 0
+                        ? '${state.activeBossThreatCount} атакуют'
+                        : '${state.activeBosses.length} активных',
+                    onTap: onOpenBosses,
+                  ),
                 ),
-                _ProgressHubCard(
-                  isDark: isDark,
-                  icon: Icons.emoji_events,
-                  color: const Color(0xFFFFCC00),
-                  title: 'Достижения',
-                  subtitle: 'Открытые milestones',
-                  value: '$unlockedAchievements / ${state.achievements.length}',
-                  onTap: onOpenAchievements,
+                MotionListItem(
+                  key: const ValueKey('progress-card-achievements'),
+                  index: 3,
+                  child: _ProgressHubCard(
+                    isDark: isDark,
+                    icon: Icons.emoji_events,
+                    color: const Color(0xFFFFCC00),
+                    title: 'Достижения',
+                    subtitle: 'Открытые milestones',
+                    value:
+                        '$unlockedAchievements / ${state.achievements.length}',
+                    onTap: onOpenAchievements,
+                  ),
                 ),
-                _ProgressHubCard(
-                  isDark: isDark,
-                  icon: Icons.history,
-                  color: const Color(0xFFAF52DE),
-                  title: 'История',
-                  subtitle: 'Журнал XP и отмен',
-                  value: '${state.history.length} записей',
-                  onTap: onOpenHistory,
+                MotionListItem(
+                  key: const ValueKey('progress-card-history'),
+                  index: 4,
+                  child: _ProgressHubCard(
+                    isDark: isDark,
+                    icon: Icons.history,
+                    color: const Color(0xFFAF52DE),
+                    title: 'История',
+                    subtitle: 'Журнал XP и отмен',
+                    value: '${state.history.length} записей',
+                    onTap: onOpenHistory,
+                  ),
                 ),
-                _ProgressHubCard(
-                  isDark: isDark,
-                  icon: Icons.redeem,
-                  color: const Color(0xFFFF9500),
-                  title: 'Награды',
-                  subtitle: 'Сундуки и активные баффы',
-                  value:
-                      '${state.unopenedRewardChests.length} сундуков • ${state.activeBuffs.length} баффов',
-                  onTap: onOpenRewards,
+                MotionListItem(
+                  key: const ValueKey('progress-card-rewards'),
+                  index: 5,
+                  child: _ProgressHubCard(
+                    isDark: isDark,
+                    icon: Icons.redeem,
+                    color: const Color(0xFFFF9500),
+                    title: 'Награды',
+                    subtitle: 'Сундуки и активные баффы',
+                    value:
+                        '${state.unopenedRewardChests.length} сундуков • ${state.activeBuffs.length} баффов',
+                    onTap: onOpenRewards,
+                  ),
                 ),
               ],
             ),
@@ -316,21 +341,23 @@ class _ProgressHubCardState extends State<_ProgressHubCard> {
           widget.onTap();
         },
         child: AnimatedScale(
-          scale: _pressed ? 0.98 : 1,
-          duration: const Duration(milliseconds: 90),
+          scale: _pressed ? 0.97 : 1,
+          duration: kMotionFast,
+          curve: kMotionCurve,
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 140),
+            duration: kMotionStandard,
+            curve: kMotionCurve,
             padding: const EdgeInsets.all(13),
             decoration: BoxDecoration(
               color: _hovered
-                  ? widget.color.withAlpha(18)
+                  ? widget.color.withAlpha(widget.isDark ? 12 : 10)
                   : widget.isDark
                   ? const Color(0xFF121219)
                   : const Color(0xFFF7F8FC),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: _hovered
-                    ? widget.color.withAlpha(70)
+                    ? widget.color.withAlpha(44)
                     : borderColor(widget.isDark),
               ),
             ),

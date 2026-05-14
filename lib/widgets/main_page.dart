@@ -234,9 +234,11 @@ class _WorkspaceModeButtonState extends State<_WorkspaceModeButton> {
         },
         child: AnimatedScale(
           scale: _pressed ? 0.97 : 1,
-          duration: const Duration(milliseconds: 90),
+          duration: kMotionFast,
+          curve: kMotionCurve,
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 140),
+            duration: kMotionStandard,
+            curve: kMotionCurve,
             padding: EdgeInsets.symmetric(
               horizontal: widget.compact ? 8 : 10,
               vertical: 7,
@@ -333,9 +335,11 @@ class _TopBarPillButtonState extends State<_TopBarPillButton> {
         },
         child: AnimatedScale(
           scale: _pressed ? 0.96 : 1.0,
-          duration: const Duration(milliseconds: 90),
+          duration: kMotionFast,
+          curve: kMotionCurve,
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 140),
+            duration: kMotionStandard,
+            curve: kMotionCurve,
             padding: EdgeInsets.symmetric(
               horizontal: widget.compact ? 8 : 10,
               vertical: 8,
@@ -375,23 +379,47 @@ class _TopBarPillButtonState extends State<_TopBarPillButton> {
                 ],
                 if (widget.badge != null) ...[
                   const SizedBox(width: 6),
-                  Container(
-                    constraints: const BoxConstraints(minWidth: 18),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 5,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: widget.color.withAlpha(36),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      widget.badge!,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: widget.color,
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w900,
+                  AnimatedSwitcher(
+                    duration: kMotionStandard,
+                    switchInCurve: kMotionCurve,
+                    switchOutCurve: kMotionExitCurve,
+                    transitionBuilder: (child, animation) {
+                      final curved = CurvedAnimation(
+                        parent: animation,
+                        curve: kMotionCurve,
+                        reverseCurve: kMotionExitCurve,
+                      );
+
+                      return FadeTransition(
+                        opacity: curved,
+                        child: ScaleTransition(
+                          scale: Tween<double>(
+                            begin: 0.82,
+                            end: 1,
+                          ).animate(curved),
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: Container(
+                      key: ValueKey(widget.badge),
+                      constraints: const BoxConstraints(minWidth: 18),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: widget.color.withAlpha(36),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        widget.badge!,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: widget.color,
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
                     ),
                   ),
@@ -659,10 +687,7 @@ class _MainPageState extends State<MainPage> {
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 180),
-                    switchInCurve: Curves.easeOutCubic,
-                    switchOutCurve: Curves.easeInCubic,
+                  child: MotionFadeSlideSwitcher(
                     child: switch (_mode) {
                       WorkspaceMode.act => _ActWorkspace(
                         key: const ValueKey('act-workspace'),
@@ -976,7 +1001,7 @@ class _RewardNotice {
   }
 }
 
-class _RewardNoticePopover extends StatelessWidget {
+class _RewardNoticePopover extends StatefulWidget {
   final _RewardNotice notice;
   final Offset? anchor;
   final bool isDark;
@@ -992,30 +1017,71 @@ class _RewardNoticePopover extends StatelessWidget {
   });
 
   @override
+  State<_RewardNoticePopover> createState() => _RewardNoticePopoverState();
+}
+
+class _RewardNoticePopoverState extends State<_RewardNoticePopover>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  bool _closing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: kMotionSlow)
+      ..forward();
+  }
+
+  @override
+  void didUpdateWidget(covariant _RewardNoticePopover oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final noticeChanged =
+        oldWidget.notice.title != widget.notice.title ||
+        oldWidget.notice.subtitle != widget.notice.subtitle;
+    if (noticeChanged) {
+      _closing = false;
+      _controller.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _closeThen(VoidCallback action) async {
+    if (_closing) return;
+    _closing = true;
+    await _controller.reverse();
+    if (!mounted) return;
+    action();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.sizeOf(context).width;
     const width = 320.0;
     final fallbackAnchor = Offset(screenWidth - 190, 58);
-    final resolvedAnchor = anchor ?? fallbackAnchor;
+    final resolvedAnchor = widget.anchor ?? fallbackAnchor;
     final left = (resolvedAnchor.dx - width + 28).clamp(
       12.0,
       screenWidth - width - 12,
     );
     final top = resolvedAnchor.dy + 8;
-    final bg = surface(isDark);
-    final txt = textColor(isDark);
-    final sub = subtext(isDark);
-    final bdr = borderColor(isDark);
+    final bg = surface(widget.isDark);
+    final txt = textColor(widget.isDark);
+    final sub = subtext(widget.isDark);
+    final bdr = borderColor(widget.isDark);
 
     return Positioned(
       left: left,
       top: top,
       width: width,
-      child: TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0, end: 1),
-        duration: const Duration(milliseconds: 260),
-        curve: Curves.easeOutCubic,
-        builder: (context, value, child) {
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          final value = kMotionCurve.transform(_controller.value);
           return Opacity(
             opacity: value,
             child: Transform.translate(
@@ -1054,12 +1120,18 @@ class _RewardNoticePopover extends StatelessWidget {
               decoration: BoxDecoration(
                 color: bg,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: notice.color.withAlpha(90)),
+                border: Border.all(color: widget.notice.color.withAlpha(90)),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withAlpha(isDark ? 110 : 36),
+                    color: Colors.black.withAlpha(widget.isDark ? 110 : 36),
                     blurRadius: 22,
                     offset: const Offset(0, 14),
+                  ),
+                  BoxShadow(
+                    color: widget.notice.color.withAlpha(
+                      widget.isDark ? 32 : 22,
+                    ),
+                    blurRadius: 26,
                   ),
                 ],
               ),
@@ -1074,10 +1146,14 @@ class _RewardNoticePopover extends StatelessWidget {
                         width: 38,
                         height: 38,
                         decoration: BoxDecoration(
-                          color: notice.color.withAlpha(28),
+                          color: widget.notice.color.withAlpha(28),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Icon(notice.icon, color: notice.color, size: 20),
+                        child: Icon(
+                          widget.notice.icon,
+                          color: widget.notice.color,
+                          size: 20,
+                        ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -1085,7 +1161,7 @@ class _RewardNoticePopover extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              notice.title,
+                              widget.notice.title,
                               style: TextStyle(
                                 color: txt,
                                 fontWeight: FontWeight.bold,
@@ -1094,7 +1170,7 @@ class _RewardNoticePopover extends StatelessWidget {
                             ),
                             const SizedBox(height: 3),
                             Text(
-                              notice.subtitle,
+                              widget.notice.subtitle,
                               style: TextStyle(
                                 color: sub,
                                 fontSize: 12,
@@ -1114,16 +1190,16 @@ class _RewardNoticePopover extends StatelessWidget {
                           label: 'Скрыть',
                           color: sub,
                           isPrimary: false,
-                          onTap: onHide,
+                          onTap: () => _closeThen(widget.onHide),
                         ),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: _NoticeActionButton(
                           label: 'Показать',
-                          color: notice.color,
+                          color: widget.notice.color,
                           isPrimary: true,
-                          onTap: onShow,
+                          onTap: () => _closeThen(widget.onShow),
                         ),
                       ),
                     ],
@@ -1169,9 +1245,11 @@ class _NoticeActionButtonState extends State<_NoticeActionButton> {
       },
       child: AnimatedScale(
         scale: _pressed ? 0.97 : 1,
-        duration: const Duration(milliseconds: 90),
+        duration: kMotionFast,
+        curve: kMotionCurve,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 120),
+          duration: kMotionFast,
+          curve: kMotionCurve,
           padding: const EdgeInsets.symmetric(vertical: 9),
           decoration: BoxDecoration(
             color: widget.isPrimary
