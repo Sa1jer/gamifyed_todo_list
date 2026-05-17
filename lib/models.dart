@@ -16,6 +16,15 @@ mixin XPOwner {
   double get progress => (xp / xpNeeded).clamp(0.0, 1.0);
 
   int addXP(int amount) {
+    if (amount < 0) {
+      throw ArgumentError.value(
+        amount,
+        'amount',
+        'Use removeXP for negative XP',
+      );
+    }
+    if (amount == 0) return 0;
+
     xp += amount;
     int gained = 0;
     while (xp >= xpNeeded) {
@@ -251,10 +260,8 @@ class Task {
        updatedAt = updatedAt ?? createdAt ?? DateTime.now();
 
   int get activeMultiplier {
-    if (type != TaskType.repeating || streak < 2) return 1;
-    if (streak >= 14) return 4;
-    if (streak >= 7) return 3;
-    return 2;
+    if (type != TaskType.repeating) return 1;
+    return multiplierForStreak(streak);
   }
 
   bool get showStreakBadge =>

@@ -2,6 +2,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz_data;
 
+enum ReminderRepeatMode { none, daily, weekly }
+
 class NotificationService {
   static final NotificationService _instance = NotificationService._();
   factory NotificationService() => _instance;
@@ -69,9 +71,14 @@ class NotificationService {
     required int id,
     required String title,
     required String body,
-    required Duration interval,
+    required DateTime scheduledTime,
+    ReminderRepeatMode repeatMode = ReminderRepeatMode.none,
   }) async {
-    final scheduledDate = tz.TZDateTime.now(tz.local).add(interval);
+    var scheduledDate = tz.TZDateTime.from(scheduledTime, tz.local);
+    final now = tz.TZDateTime.now(tz.local);
+    if (!scheduledDate.isAfter(now)) {
+      scheduledDate = now.add(const Duration(minutes: 1));
+    }
 
     await _notifications.zonedSchedule(
       id: id,
@@ -94,7 +101,11 @@ class NotificationService {
         ),
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      matchDateTimeComponents: DateTimeComponents.time,
+      matchDateTimeComponents: switch (repeatMode) {
+        ReminderRepeatMode.daily => DateTimeComponents.time,
+        ReminderRepeatMode.weekly => DateTimeComponents.dayOfWeekAndTime,
+        ReminderRepeatMode.none => null,
+      },
     );
   }
 

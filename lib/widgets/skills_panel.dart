@@ -181,7 +181,7 @@ class _EmptySkillsState extends StatelessWidget {
     const color = Color(0xFF4A9EFF);
 
     return Center(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(22),
         child: Column(
           mainAxisSize: MainAxisSize.min,

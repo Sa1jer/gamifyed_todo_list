@@ -93,7 +93,7 @@ void main() {
     late AppState state;
 
     setUp(() {
-      state = AppState(storage: _InMemoryStorageService());
+      state = AppState(storage: _InMemoryStorageService(), seedDefaults: true);
     });
 
     tearDown(() {
@@ -133,7 +133,7 @@ void main() {
     late Task task;
 
     setUp(() {
-      state = AppState(storage: _InMemoryStorageService());
+      state = AppState(storage: _InMemoryStorageService(), seedDefaults: true);
       task = state.tasks.firstWhere(
         (candidate) => candidate.title == 'Написать REST API на FastAPI',
       );
@@ -193,7 +193,7 @@ void main() {
     late Boss boss;
 
     setUp(() {
-      state = AppState(storage: _InMemoryStorageService());
+      state = AppState(storage: _InMemoryStorageService(), seedDefaults: true);
       skill = state.skills.firstWhere((item) => item.name == 'Python');
       task = state.tasks.firstWhere(
         (candidate) => candidate.title == 'Написать REST API на FastAPI',
@@ -254,7 +254,7 @@ void main() {
     late Skill skill;
 
     setUp(() {
-      state = AppState(storage: _InMemoryStorageService());
+      state = AppState(storage: _InMemoryStorageService(), seedDefaults: true);
       skill = Skill(
         id: 'backend',
         name: 'Backend',
@@ -334,6 +334,7 @@ void main() {
       state = AppState(
         storage: _InMemoryStorageService(),
         random: math.Random(1),
+        seedDefaults: true,
       );
     });
 

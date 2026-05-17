@@ -180,6 +180,13 @@ int freqDays(RepeatFrequency f, int custom) => switch (f) {
   RepeatFrequency.custom => custom < 1 ? 1 : custom,
 };
 
+int multiplierForStreak(int streak) {
+  if (streak < 2) return 1;
+  if (streak >= 14) return 4;
+  if (streak >= 7) return 3;
+  return 2;
+}
+
 DateTime nextReset(RepeatFrequency freq, int customDays) {
   return nextResetFrom(DateTime.now(), freq, customDays);
 }

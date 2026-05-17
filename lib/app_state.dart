@@ -38,10 +38,13 @@ class AppState extends ChangeNotifier {
     required StorageService storage,
     NotificationService? notifications,
     math.Random? random,
+    bool seedDefaults = false,
   }) : _storage = storage,
        _notifications = notifications ?? NotificationService(),
        _random = random ?? math.Random() {
-    _initDefaults();
+    if (seedDefaults) {
+      _initDefaults();
+    }
     _resetTimer = Timer.periodic(
       const Duration(minutes: 1),
       (_) => checkResets(),
@@ -230,14 +233,24 @@ class AppState extends ChangeNotifier {
       skills.clear();
       skills.addAll(loadedSkills);
     }
-    for (final s in skills) {
-      s.syncChecklistDone();
-      s.syncTreeNodes();
-    }
 
     if (hasSavedTasks || loadedTasks.isNotEmpty) {
       tasks.clear();
       tasks.addAll(loadedTasks);
+    }
+
+    if (!hasSavedSkills &&
+        !hasSavedTasks &&
+        loadedSkills.isEmpty &&
+        loadedTasks.isEmpty &&
+        skills.isEmpty &&
+        tasks.isEmpty) {
+      _initDefaults();
+    }
+
+    for (final s in skills) {
+      s.syncChecklistDone();
+      s.syncTreeNodes();
     }
     for (final t in tasks) {
       t.syncSubtaskDone();
@@ -287,9 +300,7 @@ class AppState extends ChangeNotifier {
       await _saveAll();
     }
 
-    for (final task in tasks) {
-      _syncTaskNotification(task);
-    }
+    _syncAllTaskNotifications();
 
     notifyListeners();
   }
@@ -382,6 +393,7 @@ class AppState extends ChangeNotifier {
 
   void checkResets() {
     if (_resetExpiredTasks()) {
+      _syncAllTaskNotifications();
       notifyListeners();
       _saveAll();
     }
@@ -1273,18 +1285,14 @@ class AppState extends ChangeNotifier {
 
   // ── Private ──────────────────────────────────────────────────────────────────
 
-  int _multiplierFor(TaskType type, int streak) {
-    if (type != TaskType.repeating || streak < 2) return 1;
-    if (streak >= 14) return 4;
-    if (streak >= 7) return 3;
-    return 2;
-  }
-
   int _totalRewardFor(Task task) {
     final nextStreak = task.type == TaskType.repeating
         ? task.streak + 1
         : task.streak;
-    return task.xpReward * _multiplierFor(task.type, nextStreak);
+    final multiplier = task.type == TaskType.repeating
+        ? multiplierForStreak(nextStreak)
+        : 1;
+    return task.xpReward * multiplier;
   }
 
   ({int bonusXp, int bonusPercent}) _previewBuffOutcome(
@@ -2043,7 +2051,8 @@ class AppState extends ChangeNotifier {
           id: notificationId,
           title: 'Напоминание: ${task.title}',
           body: 'Пора выполнить повторяющуюся задачу.',
-          interval: scheduledTime.difference(now),
+          scheduledTime: scheduledTime,
+          repeatMode: _repeatNotificationMode(task),
         );
       } else {
         _notifications.scheduleTaskReminder(
@@ -2054,6 +2063,23 @@ class AppState extends ChangeNotifier {
         );
       }
     });
+  }
+
+  void _syncAllTaskNotifications() {
+    for (final task in tasks) {
+      _syncTaskNotification(task);
+    }
+  }
+
+  ReminderRepeatMode _repeatNotificationMode(Task task) {
+    return switch (task.repeatFrequency) {
+      RepeatFrequency.daily => ReminderRepeatMode.daily,
+      RepeatFrequency.weekly => ReminderRepeatMode.weekly,
+      RepeatFrequency.every3Days ||
+      RepeatFrequency.biweekly ||
+      RepeatFrequency.monthly ||
+      RepeatFrequency.custom => ReminderRepeatMode.none,
+    };
   }
 }
 

@@ -65,7 +65,7 @@ class _RPGAppState extends State<RPGApp> with SingleTickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _state = AppState(storage: widget.storage);
+    _state = AppState(storage: widget.storage, seedDefaults: false);
     _state.addListener(_onStateChange);
     _revealCtrl = AnimationController(
       vsync: this,
