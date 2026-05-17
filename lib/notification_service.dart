@@ -6,6 +6,10 @@ import 'package:timezone/data/latest.dart' as tz_data;
 enum ReminderRepeatMode { none, daily, weekly }
 
 class NotificationService {
+  static const String _windowsAppName = 'RPG To-Do List';
+  static const String _windowsAppUserModelId = 'Saijer.RPGToDoList.App';
+  static const String _windowsGuid = '5b5ef079-0e34-4f9a-9d62-8d8fbc1677ac';
+
   static final NotificationService _instance = NotificationService._();
   factory NotificationService() => _instance;
   NotificationService._();
@@ -28,9 +32,21 @@ class NotificationService {
       requestBadgePermission: true,
       requestSoundPermission: true,
     );
+    const iOSSettings = DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+    );
+    const windowsSettings = WindowsInitializationSettings(
+      appName: _windowsAppName,
+      appUserModelId: _windowsAppUserModelId,
+      guid: _windowsGuid,
+    );
     const initSettings = InitializationSettings(
       android: androidSettings,
+      iOS: iOSSettings,
       macOS: macOSSettings,
+      windows: windowsSettings,
     );
 
     await _notifications.initialize(
@@ -54,15 +70,36 @@ class NotificationService {
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
         >();
+    final iOS = _notifications
+        .resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin
+        >();
     final macOS = _notifications
         .resolvePlatformSpecificImplementation<
           MacOSFlutterLocalNotificationsPlugin
+        >();
+    final windows = _notifications
+        .resolvePlatformSpecificImplementation<
+          FlutterLocalNotificationsWindows
         >();
 
     bool granted = false;
 
     if (android != null) {
-      granted = await android.requestNotificationsPermission() ?? false;
+      final notificationsGranted =
+          await android.requestNotificationsPermission() ?? false;
+      final canScheduleExact =
+          await android.canScheduleExactNotifications() ?? true;
+      final exactGranted = canScheduleExact
+          ? true
+          : await android.requestExactAlarmsPermission() ?? false;
+      granted = notificationsGranted && exactGranted;
+    }
+
+    if (iOS != null) {
+      granted =
+          await iOS.requestPermissions(alert: true, badge: true, sound: true) ??
+          false;
     }
 
     if (macOS != null) {
@@ -73,6 +110,10 @@ class NotificationService {
             sound: true,
           ) ??
           false;
+    }
+
+    if (windows != null) {
+      granted = true;
     }
 
     return granted;
@@ -96,20 +137,8 @@ class NotificationService {
       title: title,
       body: body,
       scheduledDate: scheduledDate,
-      notificationDetails: NotificationDetails(
-        android: AndroidNotificationDetails(
-          'task_reminders',
-          'Напоминания о задачах',
-          channelDescription: 'Уведомления о повторяющихся задачах',
-          importance: Importance.high,
-          priority: Priority.high,
-          icon: '@mipmap/ic_launcher',
-        ),
-        macOS: const DarwinNotificationDetails(
-          presentAlert: true,
-          presentBadge: true,
-          presentSound: true,
-        ),
+      notificationDetails: _taskNotificationDetails(
+        channelDescription: 'Уведомления о повторяющихся задачах',
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       matchDateTimeComponents: switch (repeatMode) {
@@ -133,25 +162,8 @@ class NotificationService {
       title: title,
       body: body,
       scheduledDate: tzTime,
-      notificationDetails: NotificationDetails(
-        android: AndroidNotificationDetails(
-          'task_reminders',
-          'Напоминания о задачах',
-          channelDescription: 'Уведомления о задачах',
-          importance: Importance.high,
-          priority: Priority.high,
-          icon: '@mipmap/ic_launcher',
-        ),
-        iOS: const DarwinNotificationDetails(
-          presentAlert: true,
-          presentBadge: true,
-          presentSound: true,
-        ),
-        macOS: const DarwinNotificationDetails(
-          presentAlert: true,
-          presentBadge: true,
-          presentSound: true,
-        ),
+      notificationDetails: _taskNotificationDetails(
+        channelDescription: 'Уведомления о задачах',
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
     );
@@ -174,21 +186,35 @@ class NotificationService {
       id: id,
       title: title,
       body: body,
-      notificationDetails: NotificationDetails(
-        android: AndroidNotificationDetails(
-          'task_reminders',
-          'Напоминания о задачах',
-          channelDescription: 'Уведомления о задачах',
-          importance: Importance.high,
-          priority: Priority.high,
-          icon: '@mipmap/ic_launcher',
-        ),
-        macOS: const DarwinNotificationDetails(
-          presentAlert: true,
-          presentBadge: true,
-          presentSound: true,
-        ),
+      notificationDetails: _taskNotificationDetails(
+        channelDescription: 'Уведомления о задачах',
       ),
+    );
+  }
+
+  NotificationDetails _taskNotificationDetails({
+    required String channelDescription,
+  }) {
+    return NotificationDetails(
+      android: AndroidNotificationDetails(
+        'task_reminders',
+        'Напоминания о задачах',
+        channelDescription: channelDescription,
+        importance: Importance.high,
+        priority: Priority.high,
+        icon: '@mipmap/ic_launcher',
+      ),
+      iOS: const DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      ),
+      macOS: const DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      ),
+      windows: const WindowsNotificationDetails(),
     );
   }
 }
