@@ -21,6 +21,7 @@ class StorageService {
   static const String _skillsSavedKey = 'skillsSaved';
   static const String _tasksSavedKey = 'tasksSaved';
   static const String _isDarkKey = 'isDark';
+  static const String _sfxEnabledKey = 'sfxEnabled';
 
   late Box<String> _skills;
   late Box<String> _tasks;
@@ -193,6 +194,18 @@ class StorageService {
   Future<void> saveTheme(bool isDark) async {
     _ensureInit();
     await _meta.put(_isDarkKey, isDark ? 'true' : 'false');
+  }
+
+  Future<bool?> loadSfxEnabled() async {
+    _ensureInit();
+    final raw = _meta.get(_sfxEnabledKey);
+    if (raw == null) return null;
+    return raw == 'true';
+  }
+
+  Future<void> saveSfxEnabled(bool enabled) async {
+    _ensureInit();
+    await _meta.put(_sfxEnabledKey, enabled ? 'true' : 'false');
   }
 
   Future<void> saveSkills(List<Skill> skills) async {

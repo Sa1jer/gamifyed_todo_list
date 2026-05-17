@@ -28,6 +28,12 @@ class _InMemoryStorageService extends StorageService {
   }
 
   @override
+  Future<bool?> loadSfxEnabled() async => true;
+
+  @override
+  Future<void> saveSfxEnabled(bool enabled) async {}
+
+  @override
   Future<List<Skill>> loadSkills() async => [];
 
   @override

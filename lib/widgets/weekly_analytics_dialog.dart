@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app_state.dart';
+import '../feedback_service.dart';
 import '../models.dart';
 import '../utils.dart';
 import 'shared.dart';
@@ -123,6 +124,7 @@ class _WeeklyAnalyticsDialogState extends State<WeeklyAnalyticsDialog> {
                             taskId,
                           );
                           if (message != null) {
+                            AppFeedback.questResult(message, isMinimum: true);
                             ScaffoldMessenger.maybeOf(
                               context,
                             )?.showSnackBar(SnackBar(content: Text(message)));

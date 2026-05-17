@@ -6,6 +6,7 @@ import 'models.dart';
 import 'utils.dart';
 import 'storage_service.dart';
 import 'notification_service.dart';
+import 'sfx_service.dart';
 
 class AppState extends ChangeNotifier {
   static const double _minimumActionRatio = 0.3;
@@ -14,6 +15,7 @@ class AppState extends ChangeNotifier {
   static const int _maxStreakProtectionCharges = 1;
 
   bool _isDark = true;
+  bool _sfxEnabled = true;
   String? selectedSkillId;
   final StorageService _storage;
   final NotificationService _notifications;
@@ -24,6 +26,7 @@ class AppState extends ChangeNotifier {
   bool _saveAgainAfterInFlight = false;
 
   bool get isDark => _isDark;
+  bool get sfxEnabled => _sfxEnabled;
 
   UserProfile profile = UserProfile(name: 'Your Name');
   final List<HistoryEntry> history = [];
@@ -36,6 +39,7 @@ class AppState extends ChangeNotifier {
   final List<WeeklyGoal> weeklyGoals = [];
   final List<RewardChest> _pendingRewardNotifications = [];
   final List<Buff> _pendingBuffNotifications = [];
+  final List<Achievement> _pendingAchievementNotifications = [];
   DailyStats? todayStats;
 
   int _bestStreak = 0;
@@ -245,10 +249,15 @@ class AppState extends ChangeNotifier {
     final hasSavedSkills = await _storage.hasSavedSkills();
     final hasSavedTasks = await _storage.hasSavedTasks();
     final savedTheme = await _storage.loadTheme();
+    final savedSfxEnabled = await _storage.loadSfxEnabled();
 
     if (savedTheme != null) {
       _isDark = savedTheme;
     }
+    if (savedSfxEnabled != null) {
+      _sfxEnabled = savedSfxEnabled;
+    }
+    SfxService.instance.enabled = _sfxEnabled;
 
     if (hasSavedSkills || loadedSkills.isNotEmpty) {
       skills.clear();
@@ -385,6 +394,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> _writeAllUnlocked() async {
     await _storage.saveTheme(_isDark);
+    await _storage.saveSfxEnabled(_sfxEnabled);
     await _storage.saveSkills(skills);
     await _storage.saveTasks(tasks);
     await _storage.saveProfile(profile);
@@ -403,6 +413,13 @@ class AppState extends ChangeNotifier {
     _isDark = !_isDark;
     notifyListeners();
     _storage.saveTheme(_isDark);
+  }
+
+  void toggleSfxEnabled() {
+    _sfxEnabled = !_sfxEnabled;
+    SfxService.instance.enabled = _sfxEnabled;
+    notifyListeners();
+    _storage.saveSfxEnabled(_sfxEnabled);
   }
 
   // ── Resets ───────────────────────────────────────────────────────────────────
@@ -692,6 +709,12 @@ class AppState extends ChangeNotifier {
     return result;
   }
 
+  List<Achievement> consumeAchievementNotifications() {
+    final result = List<Achievement>.of(_pendingAchievementNotifications);
+    _pendingAchievementNotifications.clear();
+    return result;
+  }
+
   Skill? get selectedSkill {
     if (selectedSkillId == null) return null;
     return _skillById(selectedSkillId!);
@@ -946,6 +969,7 @@ class AppState extends ChangeNotifier {
     final a = achievements.where((a) => a.id == id).firstOrNull;
     if (a != null && !a.isUnlocked) {
       a.unlockedAt = DateTime.now();
+      _pendingAchievementNotifications.add(a);
     }
   }
 

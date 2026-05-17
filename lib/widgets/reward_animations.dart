@@ -1,8 +1,70 @@
 import 'dart:math' as math;
 
+import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 
 import 'shared.dart';
+
+class MilestoneConfettiBurst extends StatefulWidget {
+  final Color color;
+  final Alignment alignment;
+  final int particles;
+
+  const MilestoneConfettiBurst({
+    super.key,
+    required this.color,
+    this.alignment = Alignment.topCenter,
+    this.particles = 16,
+  });
+
+  @override
+  State<MilestoneConfettiBurst> createState() => _MilestoneConfettiBurstState();
+}
+
+class _MilestoneConfettiBurstState extends State<MilestoneConfettiBurst> {
+  late final ConfettiController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = ConfettiController(
+      duration: const Duration(milliseconds: 900),
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _controller.play();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Align(
+        alignment: widget.alignment,
+        child: ConfettiWidget(
+          confettiController: _controller,
+          blastDirectionality: BlastDirectionality.explosive,
+          emissionFrequency: 0.05,
+          numberOfParticles: widget.particles,
+          minBlastForce: 6,
+          maxBlastForce: 18,
+          gravity: 0.18,
+          colors: [
+            widget.color,
+            const Color(0xFFFFCC00),
+            const Color(0xFF4A9EFF),
+            const Color(0xFFFFFFFF),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class RewardSparkleBurst extends StatefulWidget {
   final Color color;

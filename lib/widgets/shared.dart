@@ -704,11 +704,15 @@ class TaskBadge extends StatelessWidget {
 class XPBubble extends StatefulWidget {
   final String message;
   final Offset position;
+  final bool showMilestoneConfetti;
+  final Widget Function(Color color)? confettiBuilder;
   final Function(Key?) onDone;
   const XPBubble({
     super.key,
     required this.message,
     required this.position,
+    this.showMilestoneConfetti = false,
+    this.confettiBuilder,
     required this.onDone,
   });
   @override
@@ -784,70 +788,85 @@ class _XPBubbleState extends State<XPBubble>
           ),
         );
       },
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 320),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: _tone.color.withAlpha(95)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withAlpha(isDark ? 95 : 24),
-                blurRadius: 18,
-                offset: const Offset(0, 10),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 320),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+              decoration: BoxDecoration(
+                color: bg,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: _tone.color.withAlpha(95)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(isDark ? 95 : 24),
+                    blurRadius: 18,
+                    offset: const Offset(0, 10),
+                  ),
+                  BoxShadow(color: _tone.color.withAlpha(42), blurRadius: 22),
+                ],
               ),
-              BoxShadow(color: _tone.color.withAlpha(42), blurRadius: 22),
-            ],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 26,
-                height: 26,
-                decoration: BoxDecoration(
-                  color: _tone.color.withAlpha(26),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(_tone.icon, color: _tone.color, size: 15),
-              ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _tone.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: txt,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 12.5,
-                        height: 1,
-                      ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 26,
+                    height: 26,
+                    decoration: BoxDecoration(
+                      color: _tone.color.withAlpha(26),
+                      shape: BoxShape.circle,
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      _tone.subtitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: sub,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        height: 1,
-                      ),
+                    child: Icon(_tone.icon, color: _tone.color, size: 15),
+                  ),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _tone.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: txt,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 12.5,
+                            height: 1,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _tone.subtitle,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: sub,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            height: 1,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
+          if (widget.showMilestoneConfetti && widget.confettiBuilder != null)
+            Positioned(
+              left: 150,
+              top: -4,
+              child: SizedBox(
+                width: 1,
+                height: 1,
+                child: widget.confettiBuilder!(_tone.color),
+              ),
+            ),
+        ],
       ),
     );
   }

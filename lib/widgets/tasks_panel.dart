@@ -1,4 +1,6 @@
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:flutter/material.dart';
+import '../feedback_service.dart';
 import '../models.dart';
 import '../app_state.dart';
 import '../utils.dart';
@@ -631,7 +633,7 @@ class _TaskTileState extends State<TaskTile> {
         t.hasMinimumAction && !t.isDone && !t.isMinimumActionDone;
     final showStartedBadge = t.isMinimumActionDone && !t.isDone;
 
-    return MouseRegion(
+    final tile = MouseRegion(
       onEnter: (_) => setState(() => _h = true),
       onExit: (_) => setState(() => _h = false),
       child: AnimatedScale(
@@ -665,14 +667,9 @@ class _TaskTileState extends State<TaskTile> {
                     scale: 0.94,
                     onTap: () {
                       if (t.isDone) {
-                        widget.onUncomplete();
+                        _uncomplete();
                       } else {
-                        final box =
-                            _cbKey.currentContext?.findRenderObject()
-                                as RenderBox?;
-                        widget.onToggle(
-                          box?.localToGlobal(Offset.zero) ?? Offset.zero,
-                        );
+                        _complete(_cbKey.currentContext ?? context);
                       }
                     },
                     child: AnimatedContainer(
@@ -715,11 +712,8 @@ class _TaskTileState extends State<TaskTile> {
                           child: PressFeedback(
                             scale: 0.96,
                             onTap: () {
-                              final box =
-                                  _minKey.currentContext?.findRenderObject()
-                                      as RenderBox?;
-                              widget.onMinimumAction(
-                                box?.localToGlobal(Offset.zero) ?? Offset.zero,
+                              _completeMinimum(
+                                _minKey.currentContext ?? context,
                               );
                             },
                             child: Container(
@@ -923,13 +917,13 @@ class _TaskTileState extends State<TaskTile> {
                             icon: Icons.edit,
                             color: sub,
                             tooltip: 'Редактировать задачу',
-                            onTap: widget.onEdit,
+                            onTap: _edit,
                           ),
                           MiniBtn(
                             icon: Icons.delete_outline,
                             color: const Color(0xFFFF3B30),
                             tooltip: 'Удалить задачу',
-                            onTap: widget.onDelete,
+                            onTap: _delete,
                           ),
                         ],
                       ),
@@ -942,5 +936,94 @@ class _TaskTileState extends State<TaskTile> {
         ),
       ),
     );
+
+    return Slidable(
+      key: ValueKey('slidable-${t.id}-${t.isDone}'),
+      startActionPane: ActionPane(
+        motion: const DrawerMotion(),
+        extentRatio: canStartMinimum && !t.isDone ? 0.46 : 0.28,
+        children: [
+          if (t.isDone)
+            SlidableAction(
+              onPressed: (_) => _uncomplete(),
+              backgroundColor: const Color(0xFF8E8E93),
+              foregroundColor: Colors.white,
+              icon: Icons.undo,
+              label: 'Вернуть',
+              borderRadius: BorderRadius.circular(10),
+            )
+          else ...[
+            SlidableAction(
+              onPressed: (actionContext) => _complete(actionContext),
+              backgroundColor: const Color(0xFF34C759),
+              foregroundColor: Colors.white,
+              icon: Icons.check,
+              label: 'Готово',
+              borderRadius: BorderRadius.circular(10),
+            ),
+            if (canStartMinimum)
+              SlidableAction(
+                onPressed: (actionContext) => _completeMinimum(actionContext),
+                backgroundColor: widget.skillColor,
+                foregroundColor: Colors.white,
+                icon: Icons.play_arrow_rounded,
+                label: 'Старт',
+                borderRadius: BorderRadius.circular(10),
+              ),
+          ],
+        ],
+      ),
+      endActionPane: ActionPane(
+        motion: const DrawerMotion(),
+        extentRatio: 0.42,
+        children: [
+          SlidableAction(
+            onPressed: (_) => _edit(),
+            backgroundColor: const Color(0xFF4A9EFF),
+            foregroundColor: Colors.white,
+            icon: Icons.edit,
+            label: 'Править',
+            borderRadius: BorderRadius.circular(10),
+          ),
+          SlidableAction(
+            onPressed: (_) => _delete(),
+            backgroundColor: const Color(0xFFFF3B30),
+            foregroundColor: Colors.white,
+            icon: Icons.delete_outline,
+            label: 'Удалить',
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ],
+      ),
+      child: tile,
+    );
+  }
+
+  Offset _globalOrigin(BuildContext context) {
+    final box = context.findRenderObject() as RenderBox?;
+    return box?.localToGlobal(Offset.zero) ?? Offset.zero;
+  }
+
+  void _complete(BuildContext context) {
+    widget.onToggle(_globalOrigin(context));
+  }
+
+  void _completeMinimum(BuildContext context) {
+    widget.onMinimumAction(_globalOrigin(context));
+  }
+
+  void _uncomplete() {
+    AppFeedback.selection();
+    widget.onUncomplete();
+  }
+
+  void _edit() {
+    AppFeedback.selection();
+    widget.onEdit();
+  }
+
+  void _delete() {
+    AppFeedback.destructive();
+    widget.onDelete();
   }
 }

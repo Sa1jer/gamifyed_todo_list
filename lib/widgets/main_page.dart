@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app_state.dart';
+import '../feedback_service.dart';
 import '../utils.dart';
 import 'shared.dart';
 import 'dialogs.dart';
@@ -82,6 +83,7 @@ class TopBar extends StatelessWidget {
         : null;
 
     return Container(
+      width: double.infinity,
       color: sfc,
       padding: const EdgeInsets.fromLTRB(22, 22, 22, 8),
       child: LayoutBuilder(
@@ -94,7 +96,8 @@ class TopBar extends StatelessWidget {
               const Icon(Icons.security, color: Color(0xFF4A9EFF), size: 18),
               if (!veryCompact) ...[
                 const SizedBox(width: 8),
-                Flexible(
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: compact ? 150 : 190),
                   child: Text(
                     'RPG To-Do List',
                     maxLines: 1,
@@ -136,6 +139,15 @@ class TopBar extends StatelessWidget {
                     ),
               ),
               const SizedBox(width: 8),
+              HoverIconBtn(
+                icon: state.sfxEnabled ? Icons.volume_up : Icons.volume_off,
+                color: state.sfxEnabled ? sub : const Color(0xFFFF9500),
+                tooltip: state.sfxEnabled
+                    ? 'Выключить звуки интерфейса'
+                    : 'Включить звуки интерфейса',
+                onTap: state.toggleSfxEnabled,
+              ),
+              const SizedBox(width: 4),
               HoverIconBtn(
                 icon: isDark ? Icons.light_mode : Icons.dark_mode,
                 color: sub,
@@ -623,12 +635,16 @@ class _MainPageState extends State<MainPage> {
   Offset? _rewardNoticeAnchor;
 
   void _showBubble(String message, Offset pos) {
+    final isMilestone = AppFeedback.isMilestoneMessage(message);
     setState(() {
       _bubbles.add(
         XPBubble(
           key: UniqueKey(),
           message: message,
           position: pos,
+          showMilestoneConfetti: isMilestone,
+          confettiBuilder: (color) =>
+              MilestoneConfettiBurst(color: color, particles: 14),
           onDone: (k) =>
               setState(() => _bubbles.removeWhere((b) => b.key == k)),
         ),
@@ -639,12 +655,23 @@ class _MainPageState extends State<MainPage> {
   void _showRewardNotifications(AppState state) {
     final chests = state.consumeRewardChestNotifications();
     final buffs = state.consumeBuffNotifications();
-    if ((chests.isEmpty && buffs.isEmpty) || !mounted) return;
+    final achievements = state.consumeAchievementNotifications();
+    if ((chests.isEmpty && buffs.isEmpty && achievements.isEmpty) || !mounted) {
+      return;
+    }
+    if (achievements.isNotEmpty) {
+      AppFeedback.milestone();
+    } else if (chests.isNotEmpty) {
+      AppFeedback.reward();
+    }
 
     setState(() {
       _rewardNotice = _RewardNotice(
         chestTitles: chests.map((chest) => chest.title).toList(),
         buffTitles: buffs.map((buff) => buff.title).toList(),
+        achievementTitles: achievements
+            .map((achievement) => achievement.def?.name ?? 'Достижение')
+            .toList(),
       );
       _rewardNoticeAnchor = _resolveRewardsButtonAnchor();
     });
@@ -668,6 +695,7 @@ class _MainPageState extends State<MainPage> {
   }
 
   void _openRewardsDialog(AppState state) {
+    AppFeedback.selection();
     setState(() => _rewardNotice = null);
     showDialog(
       context: context,
@@ -679,6 +707,7 @@ class _MainPageState extends State<MainPage> {
     final s = AppStateProvider.of(context);
     final msg = s.completeTask(taskId);
     if (msg == null) return;
+    AppFeedback.questResult(msg);
     _showBubble(msg, pos);
     _showRewardNotifications(s);
   }
@@ -687,6 +716,7 @@ class _MainPageState extends State<MainPage> {
     final s = AppStateProvider.of(context);
     final msg = s.completeMinimumAction(taskId);
     if (msg == null) return;
+    AppFeedback.questResult(msg, isMinimum: true);
     _showBubble(msg, pos);
     _showRewardNotifications(s);
   }
@@ -1032,13 +1062,25 @@ class _ModeHeader extends StatelessWidget {
 class _RewardNotice {
   final List<String> chestTitles;
   final List<String> buffTitles;
+  final List<String> achievementTitles;
 
-  const _RewardNotice({required this.chestTitles, required this.buffTitles});
+  const _RewardNotice({
+    required this.chestTitles,
+    required this.buffTitles,
+    required this.achievementTitles,
+  });
 
   bool get hasChests => chestTitles.isNotEmpty;
   bool get hasBuffs => buffTitles.isNotEmpty;
+  bool get hasAchievements => achievementTitles.isNotEmpty;
+  bool get hasConfettiMoment => hasChests || hasAchievements;
 
   String get title {
+    if (hasAchievements && !hasChests && !hasBuffs) {
+      return achievementTitles.length == 1
+          ? 'Открыто достижение'
+          : 'Открыты достижения';
+    }
     if (hasChests && hasBuffs) return 'Награды обновлены';
     if (hasChests) {
       return chestTitles.length == 1 ? 'Получен сундук' : 'Получены сундуки';
@@ -1062,15 +1104,24 @@ class _RewardNotice {
             : '${buffTitles.length} активных баффа',
       );
     }
+    if (hasAchievements) {
+      parts.add(
+        achievementTitles.length == 1
+            ? achievementTitles.first
+            : '${achievementTitles.length} достижения',
+      );
+    }
     return parts.join(' • ');
   }
 
   Color get color {
+    if (hasAchievements) return const Color(0xFFFFCC00);
     if (hasChests) return const Color(0xFFFFCC00);
     return const Color(0xFF34C759);
   }
 
   IconData get icon {
+    if (hasAchievements) return Icons.emoji_events;
     if (hasChests && hasBuffs) return Icons.auto_awesome;
     if (hasChests) return Icons.redeem;
     return Icons.bolt;
@@ -1173,6 +1224,16 @@ class _RewardNoticePopoverState extends State<_RewardNoticePopover>
         child: Stack(
           clipBehavior: Clip.none,
           children: [
+            if (widget.notice.hasConfettiMoment)
+              Positioned(
+                top: 3,
+                right: 48,
+                child: MilestoneConfettiBurst(
+                  color: widget.notice.color,
+                  alignment: Alignment.topCenter,
+                  particles: 12,
+                ),
+              ),
             Positioned(
               top: -5,
               right: 28,

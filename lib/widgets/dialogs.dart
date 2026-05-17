@@ -1,4 +1,8 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
+import '../feedback_service.dart';
 import '../models.dart';
 import '../utils.dart';
 import '../app_state.dart';
@@ -2530,8 +2534,8 @@ class StatsDialog extends StatelessWidget {
       backgroundColor: bg,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: SizedBox(
-        width: 480,
-        height: 580,
+        width: 560,
+        height: 680,
         child: Column(
           children: [
             Padding(
@@ -2619,6 +2623,10 @@ class StatsDialog extends StatelessWidget {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 20),
+                    _buildXpTrendChart(state, isDark, txt, sub),
+                    const SizedBox(height: 20),
+                    _buildSkillProgressChart(state, isDark, txt, sub),
                     const SizedBox(height: 20),
                     _buildSkillStats(state, isDark, txt, sub),
                     const SizedBox(height: 20),
@@ -2716,6 +2724,236 @@ class StatsDialog extends StatelessWidget {
     );
   }
 
+  Widget _buildXpTrendChart(AppState s, bool isDark, Color txt, Color sub) {
+    final points = _dailyXpPoints(s);
+    final maxXp = points.fold<int>(0, (max, point) => math.max(max, point.xp));
+    final maxY = math.max(40, (maxXp * 1.25).ceil()).toDouble();
+    final chartColor = const Color(0xFF4A9EFF);
+
+    return _ChartPanel(
+      title: 'XP за 7 дней',
+      subtitle: maxXp == 0
+          ? 'Пока тихая неделя. Первый квест сразу оживит график.'
+          : 'Ритм недели виден по дням, а не только по общему числу.',
+      icon: Icons.show_chart,
+      color: chartColor,
+      isDark: isDark,
+      child: SizedBox(
+        height: 170,
+        child: LineChart(
+          LineChartData(
+            minX: 0,
+            maxX: 6,
+            minY: 0,
+            maxY: maxY,
+            gridData: FlGridData(
+              show: true,
+              drawVerticalLine: false,
+              horizontalInterval: maxY / 2,
+              getDrawingHorizontalLine: (_) => FlLine(
+                color: borderColor(isDark).withAlpha(130),
+                strokeWidth: 1,
+              ),
+            ),
+            borderData: FlBorderData(show: false),
+            titlesData: FlTitlesData(
+              topTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+              rightTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 38,
+                  interval: maxY / 2,
+                  getTitlesWidget: (value, _) {
+                    if (value == 0 || value >= maxY) {
+                      return Text(
+                        value.round().toString(),
+                        style: TextStyle(color: sub, fontSize: 10),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
+              ),
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  interval: 1,
+                  reservedSize: 24,
+                  getTitlesWidget: (value, _) {
+                    final index = value.round();
+                    if (index < 0 || index >= points.length) {
+                      return const SizedBox.shrink();
+                    }
+                    return Text(
+                      points[index].label,
+                      style: TextStyle(color: sub, fontSize: 10),
+                    );
+                  },
+                ),
+              ),
+            ),
+            lineBarsData: [
+              LineChartBarData(
+                spots: [
+                  for (var i = 0; i < points.length; i++)
+                    FlSpot(i.toDouble(), points[i].xp.toDouble()),
+                ],
+                isCurved: true,
+                preventCurveOverShooting: true,
+                barWidth: 3,
+                isStrokeCapRound: true,
+                color: chartColor,
+                dotData: const FlDotData(show: true),
+                belowBarData: BarAreaData(
+                  show: true,
+                  color: chartColor.withAlpha(24),
+                ),
+              ),
+            ],
+          ),
+          duration: const Duration(milliseconds: 550),
+          curve: Curves.easeOutCubic,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSkillProgressChart(
+    AppState s,
+    bool isDark,
+    Color txt,
+    Color sub,
+  ) {
+    final points = _skillProgressPoints(s);
+    final chartColor = const Color(0xFFFF9500);
+
+    if (points.isEmpty) {
+      return _ChartPanel(
+        title: 'Прогресс навыков',
+        subtitle: 'Добавьте навык, чтобы здесь появился RPG-срез развития.',
+        icon: Icons.auto_graph,
+        color: chartColor,
+        isDark: isDark,
+        child: _EmptyChartHint(text: 'Нет навыков для графика', color: sub),
+      );
+    }
+
+    return _ChartPanel(
+      title: 'Прогресс навыков',
+      subtitle: 'Быстрый срез: какие навыки ближе всего к следующему уровню.',
+      icon: Icons.auto_graph,
+      color: chartColor,
+      isDark: isDark,
+      child: SizedBox(
+        height: 185,
+        child: BarChart(
+          BarChartData(
+            minY: 0,
+            maxY: 100,
+            alignment: BarChartAlignment.spaceAround,
+            groupsSpace: 14,
+            gridData: FlGridData(
+              show: true,
+              drawVerticalLine: false,
+              horizontalInterval: 50,
+              getDrawingHorizontalLine: (_) => FlLine(
+                color: borderColor(isDark).withAlpha(120),
+                strokeWidth: 1,
+              ),
+            ),
+            borderData: FlBorderData(show: false),
+            barTouchData: BarTouchData(
+              touchTooltipData: BarTouchTooltipData(
+                getTooltipColor: (_) => surface(isDark),
+                getTooltipItem: (group, _, rod, _) {
+                  final point = points[group.x];
+                  return BarTooltipItem(
+                    '${point.name}\n${rod.toY.round()}% до ур. ${point.level + 1}',
+                    TextStyle(
+                      color: txt,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 11,
+                    ),
+                  );
+                },
+              ),
+            ),
+            titlesData: FlTitlesData(
+              topTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+              rightTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 34,
+                  interval: 50,
+                  getTitlesWidget: (value, _) => Text(
+                    '${value.round()}%',
+                    style: TextStyle(color: sub, fontSize: 10),
+                  ),
+                ),
+              ),
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  interval: 1,
+                  reservedSize: 30,
+                  getTitlesWidget: (value, _) {
+                    final index = value.round();
+                    if (index < 0 || index >= points.length) {
+                      return const SizedBox.shrink();
+                    }
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        points[index].shortName,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: points[index].color,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 10,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+            barGroups: [
+              for (var i = 0; i < points.length; i++)
+                BarChartGroupData(
+                  x: i,
+                  barRods: [
+                    BarChartRodData(
+                      toY: points[i].progressPercent,
+                      color: points[i].color,
+                      width: 18,
+                      borderRadius: BorderRadius.circular(8),
+                      backDrawRodData: BackgroundBarChartRodData(
+                        show: true,
+                        toY: 100,
+                        color: points[i].color.withAlpha(26),
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+          duration: const Duration(milliseconds: 550),
+          curve: Curves.easeOutCubic,
+        ),
+      ),
+    );
+  }
+
   Widget _buildTodayStats(AppState s, bool isDark, Color txt, Color sub) {
     final stats = s.todayStats;
     return Column(
@@ -2763,6 +3001,138 @@ class StatsDialog extends StatelessWidget {
       ],
     );
   }
+
+  List<_DailyXpPoint> _dailyXpPoints(AppState s) {
+    const labels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+    final today = dateOnly(DateTime.now());
+    final start = today.subtract(const Duration(days: 6));
+    return [
+      for (var i = 0; i < 7; i++)
+        () {
+          final day = start.add(Duration(days: i));
+          final xp = (s.completionHistoryByDate[day] ?? const <HistoryEntry>[])
+              .fold<int>(0, (sum, entry) => sum + math.max(0, entry.xp));
+          return _DailyXpPoint(label: labels[day.weekday - 1], xp: xp);
+        }(),
+    ];
+  }
+
+  List<_SkillProgressPoint> _skillProgressPoints(AppState s) {
+    final sorted = List<Skill>.of(s.skills)
+      ..sort((a, b) => b.progress.compareTo(a.progress));
+    return sorted.take(6).map((skill) {
+      return _SkillProgressPoint(
+        name: skill.name,
+        shortName: skill.name.length <= 7
+            ? skill.name
+            : '${skill.name.substring(0, 6)}…',
+        color: skill.color,
+        level: skill.level,
+        progressPercent: (skill.progress * 100).clamp(0, 100),
+      );
+    }).toList();
+  }
+}
+
+class _ChartPanel extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+  final bool isDark;
+  final Widget child;
+
+  const _ChartPanel({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+    required this.isDark,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final txt = textColor(isDark);
+    final sub = subtext(isDark);
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withAlpha(10),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withAlpha(36)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    color: txt,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(subtitle, style: TextStyle(color: sub, fontSize: 12)),
+          const SizedBox(height: 14),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyChartHint extends StatelessWidget {
+  final String text;
+  final Color color;
+
+  const _EmptyChartHint({required this.text, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 120,
+      child: Center(
+        child: Text(
+          text,
+          style: TextStyle(color: color, fontWeight: FontWeight.w600),
+        ),
+      ),
+    );
+  }
+}
+
+class _DailyXpPoint {
+  final String label;
+  final int xp;
+
+  const _DailyXpPoint({required this.label, required this.xp});
+}
+
+class _SkillProgressPoint {
+  final String name;
+  final String shortName;
+  final Color color;
+  final int level;
+  final double progressPercent;
+
+  const _SkillProgressPoint({
+    required this.name,
+    required this.shortName,
+    required this.color,
+    required this.level,
+    required this.progressPercent,
+  });
 }
 
 class _StatCard extends StatelessWidget {
@@ -3066,6 +3436,7 @@ class _RewardsDialogState extends State<RewardsDialog> {
 
     final message = widget.state.openRewardChest(chestId);
     if (message == null) return;
+    AppFeedback.reward();
     final buff = widget.state.buffs
         .where((item) => item.sourceChestId == chestId)
         .firstOrNull;
@@ -3164,70 +3535,84 @@ class _RewardRevealNoticeState extends State<_RewardRevealNotice>
           ),
         );
       },
-      child: Container(
-        width: double.infinity,
-        margin: const EdgeInsets.only(bottom: 18),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: reveal.color.withAlpha(widget.isDark ? 20 : 15),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: reveal.color.withAlpha(78)),
-          boxShadow: [
-            BoxShadow(
-              color: reveal.color.withAlpha(widget.isDark ? 26 : 22),
-              blurRadius: 24,
-              offset: const Offset(0, 12),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            RewardGlowIcon(
-              icon: reveal.icon,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            top: -6,
+            left: 44,
+            child: MilestoneConfettiBurst(
               color: reveal.color,
-              size: 46,
-              iconSize: 21,
-              sparkle: true,
+              alignment: Alignment.topCenter,
+              particles: 18,
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Сундук открыт',
-                    style: TextStyle(
-                      color: reveal.color,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    reveal.message,
-                    style: TextStyle(
-                      color: txt,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  if (reveal.buffTitle != null ||
-                      reveal.bonusPercent != null) ...[
-                    const SizedBox(height: 5),
-                    Text(
-                      [
-                        if (reveal.buffTitle != null) reveal.buffTitle!,
-                        if (reveal.bonusPercent != null)
-                          '+${reveal.bonusPercent}% XP',
-                      ].join(' • '),
-                      style: TextStyle(color: sub, fontSize: 11.5),
-                    ),
-                  ],
-                ],
-              ),
+          ),
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(bottom: 18),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: reveal.color.withAlpha(widget.isDark ? 20 : 15),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: reveal.color.withAlpha(78)),
+              boxShadow: [
+                BoxShadow(
+                  color: reveal.color.withAlpha(widget.isDark ? 26 : 22),
+                  blurRadius: 24,
+                  offset: const Offset(0, 12),
+                ),
+              ],
             ),
-          ],
-        ),
+            child: Row(
+              children: [
+                RewardGlowIcon(
+                  icon: reveal.icon,
+                  color: reveal.color,
+                  size: 46,
+                  iconSize: 21,
+                  sparkle: true,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Сундук открыт',
+                        style: TextStyle(
+                          color: reveal.color,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        reveal.message,
+                        style: TextStyle(
+                          color: txt,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      if (reveal.buffTitle != null ||
+                          reveal.bonusPercent != null) ...[
+                        const SizedBox(height: 5),
+                        Text(
+                          [
+                            if (reveal.buffTitle != null) reveal.buffTitle!,
+                            if (reveal.bonusPercent != null)
+                              '+${reveal.bonusPercent}% XP',
+                          ].join(' • '),
+                          style: TextStyle(color: sub, fontSize: 11.5),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

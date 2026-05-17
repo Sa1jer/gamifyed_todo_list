@@ -258,6 +258,7 @@ class _SkillCardState extends State<SkillCard> {
         : _h
         ? sk.color.withAlpha(isDark ? 10 : 8)
         : Colors.transparent;
+    final showActions = _h;
 
     // FIX: wrap in ClipRect to prevent AnimatedContainer overflow error
     return MouseRegion(
@@ -287,7 +288,6 @@ class _SkillCardState extends State<SkillCard> {
             ),
             child: Row(
               children: [
-                // Icon badge
                 Container(
                   width: 36,
                   height: 36,
@@ -299,139 +299,152 @@ class _SkillCardState extends State<SkillCard> {
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              sk.name,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                                color: txt,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          LvlBadge(level: sk.level, color: sk.color),
-                          if (widget.taskCount > 0) ...[
-                            // FIX badge: smaller (15px), light uniform color, slight right offset
-                            const SizedBox(width: 6),
-                            Container(
-                              width: 15,
-                              height: 15,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFDDDDEE), // light uniform color
-                                shape: BoxShape.circle,
-                              ),
-                              child: Center(
-                                child: Text(
-                                  '${widget.taskCount}',
-                                  style: const TextStyle(
-                                    color: Color(0xFF2A2A40),
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: 5),
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          final showTreeProgress = constraints.maxWidth >= 190;
-                          final showXpText = constraints.maxWidth >= 150;
-
-                          return Row(
-                            children: [
-                              ConstrainedBox(
-                                constraints: BoxConstraints(
-                                  maxWidth: showTreeProgress ? 82 : 64,
-                                ),
-                                child: Text(
-                                  skillRank.label,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    color: sk.color.withAlpha(220),
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              if (showTreeProgress &&
-                                  sk.treeNodes.isNotEmpty) ...[
-                                Icon(Icons.account_tree, size: 11, color: sub),
-                                const SizedBox(width: 3),
-                                Text(
-                                  '${sk.masteredTreeNodeCount}/${sk.treeNodes.length}',
-                                  style: TextStyle(
-                                    color: sub,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                              ],
-                              Expanded(
-                                child: XPBar(
-                                  progress: sk.progress,
-                                  color: sk.color,
-                                  height: 5,
-                                ),
-                              ),
-                              if (showXpText) ...[
-                                const SizedBox(width: 6),
-                                Text(
-                                  '${sk.xp}/${sk.xpNeeded}',
-                                  style: TextStyle(color: sub, fontSize: 10),
-                                ),
-                              ],
-                            ],
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(
-                  width: 75,
-                  child: AnimatedOpacity(
+                  child: AnimatedPadding(
                     duration: kMotionStandard,
                     curve: kMotionCurve,
-                    opacity: (_h || widget.isSelected) ? 1 : 0,
-                    child: IgnorePointer(
-                      ignoring: !_h && !widget.isSelected,
-                      child: Row(
-                        children: [
-                          MiniBtn(
-                            icon: Icons.account_tree,
-                            color: sk.color,
-                            tooltip: 'Открыть дерево навыка',
-                            onTap: widget.onTree,
-                          ),
-                          MiniBtn(
-                            icon: Icons.edit,
-                            color: sub,
-                            tooltip: 'Редактировать навык',
-                            onTap: widget.onEdit,
-                          ),
-                          MiniBtn(
-                            icon: Icons.delete_outline,
-                            color: const Color(0xFFFF3B30),
-                            tooltip: 'Удалить навык',
-                            onTap: widget.onDelete,
-                          ),
-                        ],
-                      ),
+                    padding: EdgeInsets.only(right: showActions ? 8 : 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                sk.name,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                  color: txt,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            LvlBadge(level: sk.level, color: sk.color),
+                            if (widget.taskCount > 0) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                width: 15,
+                                height: 15,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFDDDDEE),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '${widget.taskCount}',
+                                    style: const TextStyle(
+                                      color: Color(0xFF2A2A40),
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 5),
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final showTreeProgress =
+                                constraints.maxWidth >= 190;
+                            final showXpText = constraints.maxWidth >= 150;
+
+                            return Row(
+                              children: [
+                                ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    maxWidth: showTreeProgress ? 82 : 64,
+                                  ),
+                                  child: Text(
+                                    skillRank.label,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: sk.color.withAlpha(220),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                if (showTreeProgress &&
+                                    sk.treeNodes.isNotEmpty) ...[
+                                  Icon(
+                                    Icons.account_tree,
+                                    size: 11,
+                                    color: sub,
+                                  ),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    '${sk.masteredTreeNodeCount}/${sk.treeNodes.length}',
+                                    style: TextStyle(
+                                      color: sub,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                ],
+                                Expanded(
+                                  child: XPBar(
+                                    progress: sk.progress,
+                                    color: sk.color,
+                                    height: 5,
+                                  ),
+                                ),
+                                if (showXpText) ...[
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '${sk.xp}/${sk.xpNeeded}',
+                                    style: TextStyle(color: sub, fontSize: 10),
+                                  ),
+                                ],
+                              ],
+                            );
+                          },
+                        ),
+                      ],
                     ),
                   ),
+                ),
+                AnimatedSize(
+                  duration: kMotionStandard,
+                  curve: kMotionCurve,
+                  alignment: Alignment.centerRight,
+                  child: showActions
+                      ? SizedBox(
+                          width: 75,
+                          child: AnimatedOpacity(
+                            duration: kMotionFast,
+                            curve: kMotionCurve,
+                            opacity: 1,
+                            child: Row(
+                              children: [
+                                MiniBtn(
+                                  icon: Icons.account_tree,
+                                  color: sk.color,
+                                  tooltip: 'Открыть дерево навыка',
+                                  onTap: widget.onTree,
+                                ),
+                                MiniBtn(
+                                  icon: Icons.edit,
+                                  color: sub,
+                                  tooltip: 'Редактировать навык',
+                                  onTap: widget.onEdit,
+                                ),
+                                MiniBtn(
+                                  icon: Icons.delete_outline,
+                                  color: const Color(0xFFFF3B30),
+                                  tooltip: 'Удалить навык',
+                                  onTap: widget.onDelete,
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : const SizedBox.shrink(),
                 ),
               ],
             ),
