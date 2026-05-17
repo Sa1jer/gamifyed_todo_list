@@ -311,6 +311,11 @@ class UserProfile with XPOwner {
   /// Raw bytes of the profile banner image (PNG/JPG)
   Uint8List? bannerBytes;
 
+  int streakProtectionCharges;
+  DateTime? streakProtectionRefilledAt;
+  DateTime? lastStreakProtectionUsedAt;
+  String? lastStreakProtectionTaskTitle;
+
   UserProfile({
     required this.name,
     this.level = 1,
@@ -320,6 +325,10 @@ class UserProfile with XPOwner {
     this.gender,
     this.avatarBytes,
     this.bannerBytes,
+    this.streakProtectionCharges = 1,
+    this.streakProtectionRefilledAt,
+    this.lastStreakProtectionUsedAt,
+    this.lastStreakProtectionTaskTitle,
   });
 
   String get initial => name.isNotEmpty ? name[0].toUpperCase() : '?';

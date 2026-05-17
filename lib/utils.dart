@@ -1,13 +1,20 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ID GENERATOR
 // ═══════════════════════════════════════════════════════════════════════════════
 
+final math.Random _uidRandom = math.Random.secure();
 int _nextId = 0;
 String uid() {
   final micros = DateTime.now().microsecondsSinceEpoch;
-  return '${micros}_${++_nextId}';
+  final random = _uidRandom
+      .nextInt(0xFFFFFFFF)
+      .toRadixString(16)
+      .padLeft(8, '0');
+  return '${micros}_${random}_${++_nextId}';
 }
 
 String _twoDigits(int value) => value.toString().padLeft(2, '0');

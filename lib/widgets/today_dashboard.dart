@@ -283,6 +283,12 @@ class _TodayDashboardState extends State<TodayDashboard> {
           value: '$activeBuffs активно',
           color: const Color(0xFF34C759),
         ),
+      if (state.profile.streakProtectionCharges > 0)
+        _TodayStatusLabelData(
+          label: 'защита',
+          value: '${state.profile.streakProtectionCharges} амулет',
+          color: const Color(0xFF4A9EFF),
+        ),
       if (unopenedChests > 0)
         _TodayStatusLabelData(
           label: 'награды',

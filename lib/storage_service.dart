@@ -254,6 +254,12 @@ class StorageService {
       'bannerBytes': profile.bannerBytes != null
           ? base64Encode(profile.bannerBytes!)
           : null,
+      'streakProtectionCharges': profile.streakProtectionCharges,
+      'streakProtectionRefilledAt': profile.streakProtectionRefilledAt
+          ?.toIso8601String(),
+      'lastStreakProtectionUsedAt': profile.lastStreakProtectionUsedAt
+          ?.toIso8601String(),
+      'lastStreakProtectionTaskTitle': profile.lastStreakProtectionTaskTitle,
     };
     await _profile.put('profile', jsonEncode(data));
   }
@@ -280,6 +286,13 @@ class StorageService {
           : _readEnum(Gender.values, data['gender'], Gender.nonBinary),
       avatarBytes: _readBytes(data, 'avatarBytes'),
       bannerBytes: _readBytes(data, 'bannerBytes'),
+      streakProtectionCharges: _readInt(data, 'streakProtectionCharges', 1),
+      streakProtectionRefilledAt: _readDate(data, 'streakProtectionRefilledAt'),
+      lastStreakProtectionUsedAt: _readDate(data, 'lastStreakProtectionUsedAt'),
+      lastStreakProtectionTaskTitle: _readNullableString(
+        data,
+        'lastStreakProtectionTaskTitle',
+      ),
     );
   }
 

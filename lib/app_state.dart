@@ -9,6 +9,9 @@ import 'notification_service.dart';
 
 class AppState extends ChangeNotifier {
   static const double _minimumActionRatio = 0.3;
+  static const Duration _resetCheckInterval = Duration(minutes: 15);
+  static const Duration _saveDebounceDuration = Duration(milliseconds: 750);
+  static const int _maxStreakProtectionCharges = 1;
 
   bool _isDark = true;
   String? selectedSkillId;
@@ -16,6 +19,9 @@ class AppState extends ChangeNotifier {
   final NotificationService _notifications;
   final math.Random _random;
   Timer? _resetTimer;
+  Timer? _saveDebounceTimer;
+  Future<void>? _saveInFlight;
+  bool _saveAgainAfterInFlight = false;
 
   bool get isDark => _isDark;
 
@@ -33,6 +39,8 @@ class AppState extends ChangeNotifier {
   DailyStats? todayStats;
 
   int _bestStreak = 0;
+  Map<DateTime, List<HistoryEntry>>? _completionHistoryByDateCache;
+  int? _totalTasksCompletedCache;
 
   AppState({
     required StorageService storage,
@@ -45,16 +53,29 @@ class AppState extends ChangeNotifier {
     if (seedDefaults) {
       _initDefaults();
     }
-    _resetTimer = Timer.periodic(
-      const Duration(minutes: 1),
-      (_) => checkResets(),
-    );
+    _startResetTimer();
   }
 
   @override
   void dispose() {
-    _resetTimer?.cancel();
+    pauseBackgroundWork();
     super.dispose();
+  }
+
+  void pauseBackgroundWork() {
+    _resetTimer?.cancel();
+    _resetTimer = null;
+    unawaited(flushSaves());
+  }
+
+  void resumeBackgroundWork() {
+    _startResetTimer();
+    checkResets();
+  }
+
+  void _startResetTimer() {
+    _resetTimer?.cancel();
+    _resetTimer = Timer.periodic(_resetCheckInterval, (_) => checkResets());
   }
 
   void _initDefaults() {
@@ -258,10 +279,12 @@ class AppState extends ChangeNotifier {
     }
 
     profile = loadedProfile;
+    final protectionChanged = _refillStreakProtectionIfNeeded();
 
     if (loadedHistory.isNotEmpty) {
       history.clear();
       history.addAll(loadedHistory);
+      _invalidateHistoryCaches();
     }
 
     if (loadedAchievements.isNotEmpty) {
@@ -296,8 +319,8 @@ class AppState extends ChangeNotifier {
     final changed = _resetExpiredTasks();
     _syncAllBosses();
     _checkAchievements();
-    if (changed) {
-      await _saveAll();
+    if (changed || protectionChanged) {
+      await _saveAll(immediate: true);
     }
 
     _syncAllTaskNotifications();
@@ -316,7 +339,51 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<void> _saveAll() async {
+  Future<void> _saveAll({bool immediate = false}) {
+    if (immediate) return flushSaves();
+
+    _saveDebounceTimer?.cancel();
+    _saveDebounceTimer = Timer(_saveDebounceDuration, () {
+      _saveDebounceTimer = null;
+      unawaited(_writeAll());
+    });
+    return Future.value();
+  }
+
+  Future<void> flushSaves() {
+    _saveDebounceTimer?.cancel();
+    _saveDebounceTimer = null;
+    return _writeAll();
+  }
+
+  Future<void> _writeAll() {
+    final inFlight = _saveInFlight;
+    if (inFlight != null) {
+      _saveAgainAfterInFlight = true;
+      return inFlight;
+    }
+
+    final completer = Completer<void>();
+    _saveInFlight = completer.future;
+
+    () async {
+      try {
+        do {
+          _saveAgainAfterInFlight = false;
+          await _writeAllUnlocked();
+        } while (_saveAgainAfterInFlight);
+        completer.complete();
+      } catch (error, stackTrace) {
+        completer.completeError(error, stackTrace);
+      } finally {
+        _saveInFlight = null;
+      }
+    }();
+
+    return completer.future;
+  }
+
+  Future<void> _writeAllUnlocked() async {
     await _storage.saveTheme(_isDark);
     await _storage.saveSkills(skills);
     await _storage.saveTasks(tasks);
@@ -342,7 +409,7 @@ class AppState extends ChangeNotifier {
 
   bool _resetExpiredTasks() {
     final now = DateTime.now();
-    var changed = false;
+    var changed = _refillStreakProtectionIfNeeded(now);
 
     for (final t in tasks) {
       if (t.type != TaskType.repeating) continue;
@@ -364,10 +431,10 @@ class AppState extends ChangeNotifier {
       }
 
       if (!t.isDone && t.nextResetAt != null) {
-        var missedPeriod = false;
+        var missedPeriods = 0;
         var guard = 0;
         while (!now.isBefore(t.nextResetAt!) && guard < 3700) {
-          missedPeriod = true;
+          missedPeriods++;
           t.nextResetAt = nextResetFrom(
             t.nextResetAt!,
             t.repeatFrequency,
@@ -376,8 +443,8 @@ class AppState extends ChangeNotifier {
           guard++;
         }
 
-        if (missedPeriod) {
-          if (t.streak != 0) {
+        if (missedPeriods > 0) {
+          if (t.streak != 0 && !_protectMissedStreak(t, missedPeriods, now)) {
             t.streak = 0;
           }
           changed = true;
@@ -389,6 +456,42 @@ class AppState extends ChangeNotifier {
       _syncAllBosses();
     }
     return changed;
+  }
+
+  bool _refillStreakProtectionIfNeeded([DateTime? at]) {
+    final now = at ?? DateTime.now();
+    final weekStart = _startOfWeek(now);
+    final refilledAt = profile.streakProtectionRefilledAt;
+    final refilledWeek = refilledAt == null ? null : _startOfWeek(refilledAt);
+    var changed = false;
+
+    if (profile.streakProtectionCharges < 0) {
+      profile.streakProtectionCharges = 0;
+      changed = true;
+    }
+    if (profile.streakProtectionCharges > _maxStreakProtectionCharges) {
+      profile.streakProtectionCharges = _maxStreakProtectionCharges;
+      changed = true;
+    }
+
+    if (refilledWeek == null || !isSameDate(refilledWeek, weekStart)) {
+      profile.streakProtectionCharges = _maxStreakProtectionCharges;
+      profile.streakProtectionRefilledAt = weekStart;
+      changed = true;
+    }
+
+    return changed;
+  }
+
+  bool _protectMissedStreak(Task task, int missedPeriods, DateTime now) {
+    if (missedPeriods != 1 || profile.streakProtectionCharges < 1) {
+      return false;
+    }
+
+    profile.streakProtectionCharges--;
+    profile.lastStreakProtectionUsedAt = now;
+    profile.lastStreakProtectionTaskTitle = task.title;
+    return true;
   }
 
   void checkResets() {
@@ -419,6 +522,13 @@ class AppState extends ChangeNotifier {
       tasks.where((t) => t.skillId == skillId && !t.isDone).length;
 
   Map<DateTime, List<HistoryEntry>> get completionHistoryByDate {
+    final cached = _completionHistoryByDateCache;
+    if (cached != null) return cached;
+
+    return _rebuildCompletionHistoryCaches();
+  }
+
+  Map<DateTime, List<HistoryEntry>> _rebuildCompletionHistoryCaches() {
     final orderedHistory = [...history]..sort((a, b) => a.at.compareTo(b.at));
     final effectiveCompletionsByTask = <String, List<HistoryEntry>>{};
 
@@ -451,7 +561,16 @@ class AppState extends ChangeNotifier {
       dayCompletions.sort((a, b) => a.at.compareTo(b.at));
     }
 
-    return completionsByDate;
+    final stableCompletionsByDate = <DateTime, List<HistoryEntry>>{};
+    var totalCompletions = 0;
+    for (final entry in completionsByDate.entries) {
+      totalCompletions += entry.value.length;
+      stableCompletionsByDate[entry.key] = List.unmodifiable(entry.value);
+    }
+
+    _completionHistoryByDateCache = Map.unmodifiable(stableCompletionsByDate);
+    _totalTasksCompletedCache = totalCompletions;
+    return _completionHistoryByDateCache!;
   }
 
   List<HistoryEntry> completionHistoryForDate(DateTime date) {
@@ -463,6 +582,11 @@ class AppState extends ChangeNotifier {
 
   bool hasCompletionOnDate(DateTime date) {
     return completionHistoryByDate.containsKey(dateOnly(date));
+  }
+
+  void _invalidateHistoryCaches() {
+    _completionHistoryByDateCache = null;
+    _totalTasksCompletedCache = null;
   }
 
   List<Boss> get activeBosses =>
@@ -1258,22 +1382,11 @@ class AppState extends ChangeNotifier {
   // ── Statistics helpers ───────────────────────────────────────────────────────
 
   int get totalTasksCompleted {
-    final effectiveCompletionsByTask = <String, List<HistoryEntry>>{};
-    final orderedHistory = [...history]..sort((a, b) => a.at.compareTo(b.at));
+    final cached = _totalTasksCompletedCache;
+    if (cached != null) return cached;
 
-    for (final entry in orderedHistory) {
-      final taskKey = _historyTaskKey(entry);
-      final list = effectiveCompletionsByTask.putIfAbsent(taskKey, () => []);
-      if (entry.isCompletion) {
-        list.add(entry);
-      } else if (list.isNotEmpty) {
-        list.removeLast();
-      }
-    }
-    return effectiveCompletionsByTask.values.fold(
-      0,
-      (sum, list) => sum + list.length,
-    );
+    _rebuildCompletionHistoryCaches();
+    return _totalTasksCompletedCache ?? 0;
   }
 
   int get bestStreak => _bestStreak;
@@ -1885,6 +1998,7 @@ class AppState extends ChangeNotifier {
         at: DateTime.now(),
       ),
     );
+    _invalidateHistoryCaches();
   }
 
   Task? _taskById(String id) {

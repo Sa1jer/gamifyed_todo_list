@@ -52,7 +52,8 @@ class RPGApp extends StatefulWidget {
   State<RPGApp> createState() => _RPGAppState();
 }
 
-class _RPGAppState extends State<RPGApp> with SingleTickerProviderStateMixin {
+class _RPGAppState extends State<RPGApp>
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late AppState _state;
   final _repaintKey = GlobalKey();
 
@@ -65,6 +66,7 @@ class _RPGAppState extends State<RPGApp> with SingleTickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _state = AppState(storage: widget.storage, seedDefaults: false);
     _state.addListener(_onStateChange);
     _revealCtrl = AnimationController(
@@ -82,10 +84,26 @@ class _RPGAppState extends State<RPGApp> with SingleTickerProviderStateMixin {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _state.removeListener(_onStateChange);
     _state.dispose();
     _revealCtrl.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.resumed:
+        _state.resumeBackgroundWork();
+        break;
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+        _state.pauseBackgroundWork();
+        break;
+    }
   }
 
   Future<void> _handleThemeToggle() async {

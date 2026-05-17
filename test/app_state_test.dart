@@ -89,6 +89,62 @@ class _InMemoryStorageService extends StorageService {
 }
 
 void main() {
+  group('streak protection', () {
+    late AppState state;
+    late Task task;
+
+    DateTime startOfWeek(DateTime date) {
+      final day = dateOnly(date);
+      return day.subtract(Duration(days: day.weekday - 1));
+    }
+
+    setUp(() {
+      state = AppState(storage: _InMemoryStorageService(), seedDefaults: true);
+      task = state.tasks.firstWhere(
+        (candidate) => candidate.type == TaskType.repeating,
+      );
+    });
+
+    tearDown(() {
+      state.dispose();
+    });
+
+    test('uses weekly protection charge for a single missed repeat period', () {
+      final now = DateTime.now();
+      task
+        ..isDone = false
+        ..streak = 5
+        ..nextResetAt = now.subtract(const Duration(hours: 1));
+      state.profile
+        ..streakProtectionCharges = 1
+        ..streakProtectionRefilledAt = startOfWeek(now);
+
+      state.checkResets();
+
+      expect(task.streak, 5);
+      expect(state.profile.streakProtectionCharges, 0);
+      expect(state.profile.lastStreakProtectionTaskTitle, task.title);
+      expect(task.nextResetAt, isNotNull);
+      expect(task.nextResetAt!.isAfter(DateTime.now()), isTrue);
+    });
+
+    test('resets streak when protection charge is already spent', () {
+      final now = DateTime.now();
+      task
+        ..isDone = false
+        ..streak = 5
+        ..nextResetAt = now.subtract(const Duration(hours: 1));
+      state.profile
+        ..streakProtectionCharges = 0
+        ..streakProtectionRefilledAt = startOfWeek(now);
+
+      state.checkResets();
+
+      expect(task.streak, 0);
+      expect(state.profile.streakProtectionCharges, 0);
+    });
+  });
+
   group('weekly goals', () {
     late AppState state;
 
