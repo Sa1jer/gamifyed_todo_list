@@ -75,31 +75,40 @@ class SkillsPanel extends StatelessWidget {
           ),
           Container(height: 1, color: bdr),
           Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              itemCount: state.skills.length,
-              separatorBuilder: (_, _) => Container(
-                height: 1,
-                margin: const EdgeInsets.symmetric(horizontal: 12),
-                color: bdr,
-              ),
-              itemBuilder: (ctx, i) {
-                final sk = state.skills[i];
-                return MotionListItem(
-                  key: ValueKey('skill-${sk.id}'),
-                  index: i,
-                  child: SkillCard(
-                    skill: sk,
-                    taskCount: state.activeTaskCountForSkill(sk.id),
-                    isSelected: state.selectedSkillId == sk.id,
-                    isDark: isDark,
-                    onTap: () => state.selectSkill(sk.id),
-                    onTree: () => _treeDialog(context, sk),
-                    onEdit: () => _editDialog(context, sk),
-                    onDelete: () => state.removeSkill(sk.id),
-                  ),
-                );
-              },
+            child: MotionFadeSlideSwitcher(
+              child: state.skills.isEmpty
+                  ? _EmptySkillsState(
+                      key: const ValueKey('skills-empty-state'),
+                      isDark: isDark,
+                      onAdd: () => _addDialog(context),
+                    )
+                  : ListView.separated(
+                      key: const ValueKey('skills-list'),
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      itemCount: state.skills.length,
+                      separatorBuilder: (_, _) => Container(
+                        height: 1,
+                        margin: const EdgeInsets.symmetric(horizontal: 12),
+                        color: bdr,
+                      ),
+                      itemBuilder: (ctx, i) {
+                        final sk = state.skills[i];
+                        return MotionListItem(
+                          key: ValueKey('skill-${sk.id}'),
+                          index: i,
+                          child: SkillCard(
+                            skill: sk,
+                            taskCount: state.activeTaskCountForSkill(sk.id),
+                            isSelected: state.selectedSkillId == sk.id,
+                            isDark: isDark,
+                            onTap: () => state.selectSkill(sk.id),
+                            onTree: () => _treeDialog(context, sk),
+                            onEdit: () => _editDialog(context, sk),
+                            onDelete: () => state.removeSkill(sk.id),
+                          ),
+                        );
+                      },
+                    ),
             ),
           ),
         ],
@@ -153,6 +162,62 @@ class SkillsPanel extends StatelessWidget {
       return SkillTreeDialog(state: state, skill: sk);
     },
   );
+}
+
+class _EmptySkillsState extends StatelessWidget {
+  final bool isDark;
+  final VoidCallback onAdd;
+
+  const _EmptySkillsState({
+    super.key,
+    required this.isDark,
+    required this.onAdd,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final txt = textColor(isDark);
+    final sub = subtext(isDark);
+    const color = Color(0xFF4A9EFF);
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(22),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.bolt, color: color.withAlpha(220), size: 36),
+            const SizedBox(height: 12),
+            Text(
+              'Создайте первый навык',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: txt,
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              'Навык — это направление прокачки. После него появятся квесты, XP и прогресс.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: sub, fontSize: 12, height: 1.3),
+            ),
+            const SizedBox(height: 14),
+            HoverScale(
+              child: SmallBtn(
+                label: 'Первый навык',
+                icon: Icons.add,
+                color: color,
+                tooltip: 'Создать первый навык',
+                onTap: onAdd,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 // ─── Skill Card ───────────────────────────────────────────────────────────────
@@ -277,43 +342,60 @@ class _SkillCardState extends State<SkillCard> {
                         ],
                       ),
                       const SizedBox(height: 5),
-                      Row(
-                        children: [
-                          Text(
-                            skillRank.label,
-                            style: TextStyle(
-                              color: sk.color.withAlpha(220),
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          if (sk.treeNodes.isNotEmpty) ...[
-                            Icon(Icons.account_tree, size: 11, color: sub),
-                            const SizedBox(width: 3),
-                            Text(
-                              '${sk.masteredTreeNodeCount}/${sk.treeNodes.length}',
-                              style: TextStyle(
-                                color: sub,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final showTreeProgress = constraints.maxWidth >= 190;
+                          final showXpText = constraints.maxWidth >= 150;
+
+                          return Row(
+                            children: [
+                              ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxWidth: showTreeProgress ? 82 : 64,
+                                ),
+                                child: Text(
+                                  skillRank.label,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: sk.color.withAlpha(220),
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 6),
-                          ],
-                          Expanded(
-                            child: XPBar(
-                              progress: sk.progress,
-                              color: sk.color,
-                              height: 5,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            '${sk.xp}/${sk.xpNeeded}',
-                            style: TextStyle(color: sub, fontSize: 10),
-                          ),
-                        ],
+                              const SizedBox(width: 6),
+                              if (showTreeProgress &&
+                                  sk.treeNodes.isNotEmpty) ...[
+                                Icon(Icons.account_tree, size: 11, color: sub),
+                                const SizedBox(width: 3),
+                                Text(
+                                  '${sk.masteredTreeNodeCount}/${sk.treeNodes.length}',
+                                  style: TextStyle(
+                                    color: sub,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                              ],
+                              Expanded(
+                                child: XPBar(
+                                  progress: sk.progress,
+                                  color: sk.color,
+                                  height: 5,
+                                ),
+                              ),
+                              if (showXpText) ...[
+                                const SizedBox(width: 6),
+                                Text(
+                                  '${sk.xp}/${sk.xpNeeded}',
+                                  style: TextStyle(color: sub, fontSize: 10),
+                                ),
+                              ],
+                            ],
+                          );
+                        },
                       ),
                     ],
                   ),

@@ -8,6 +8,7 @@ import 'package:file_picker/file_picker.dart';
 import '../models.dart';
 import '../app_state.dart';
 import '../utils.dart';
+import 'character_timeline_dialog.dart';
 import 'shared.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -124,6 +125,13 @@ class _ProfileDialogState extends State<ProfileDialog> {
                           Text(
                             'Изучаю ${s.activeSkillCount} ${_skillWord(s.activeSkillCount)}',
                             style: TextStyle(color: sub, fontSize: 13),
+                          ),
+                          const SizedBox(height: 10),
+                          _ProfileTimelineButton(
+                            state: s,
+                            isDark: isDark,
+                            txt: txt,
+                            sub: sub,
                           ),
                           const SizedBox(height: 18),
                           Container(height: 1, color: bdr),
@@ -651,6 +659,78 @@ class _ProfileDialogState extends State<ProfileDialog> {
       return 'навыка';
     }
     return 'навыков';
+  }
+}
+
+class _ProfileTimelineButton extends StatelessWidget {
+  final AppState state;
+  final bool isDark;
+  final Color txt;
+  final Color sub;
+
+  const _ProfileTimelineButton({
+    required this.state,
+    required this.isDark,
+    required this.txt,
+    required this.sub,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const accent = Color(0xFFAF52DE);
+
+    return PressFeedback(
+      scale: 0.98,
+      tooltip: 'Открыть летопись роста персонажа',
+      onTap: () => showDialog(
+        context: context,
+        builder: (_) => CharacterTimelineDialog(state: state),
+      ),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: accent.withAlpha(isDark ? 18 : 12),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: accent.withAlpha(isDark ? 58 : 44)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: accent.withAlpha(24),
+                borderRadius: BorderRadius.circular(11),
+              ),
+              child: const Icon(Icons.auto_stories, color: accent, size: 18),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Летопись роста',
+                    style: TextStyle(
+                      color: txt,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Ранги, боссы, освоение и сильные недели',
+                    style: TextStyle(color: sub, fontSize: 11.5),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: sub.withAlpha(180), size: 18),
+          ],
+        ),
+      ),
+    );
   }
 }
 

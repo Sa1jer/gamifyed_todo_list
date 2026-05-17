@@ -621,6 +621,7 @@ class AppState extends ChangeNotifier {
     final skillRankBefore = skill != null
         ? skillRankForLevel(skill.level)
         : null;
+    final bossMomentsBefore = _bossMomentsForSkill(task.skillId);
     final nextStreak = task.type == TaskType.repeating
         ? task.streak + 1
         : task.streak;
@@ -663,6 +664,7 @@ class AppState extends ChangeNotifier {
     _maybeGrantBehaviorBuffs(task);
     _checkAchievements();
     _checkBosses(task);
+    final bossFeedback = _bossFeedbackForSkill(task.skillId, bossMomentsBefore);
     _syncTaskNotification(task);
     notifyListeners();
     _saveAll();
@@ -675,6 +677,7 @@ class AppState extends ChangeNotifier {
       bonusXp: buffOutcome.bonusXp,
       profileRankBefore: profileRankBefore,
       skillRankBefore: skillRankBefore,
+      bossFeedback: bossFeedback,
     );
   }
 
@@ -695,6 +698,7 @@ class AppState extends ChangeNotifier {
     final skillRankBefore = skill != null
         ? skillRankForLevel(skill.level)
         : null;
+    final bossMomentsBefore = _bossMomentsForSkill(task.skillId);
     final earned = previewMinimumActionXP(task);
     final nextStreak = task.type == TaskType.repeating
         ? task.streak + 1
@@ -738,6 +742,7 @@ class AppState extends ChangeNotifier {
     }
 
     _checkBosses(task);
+    final bossFeedback = _bossFeedbackForSkill(task.skillId, bossMomentsBefore);
     _checkAchievements();
     _syncTaskNotification(task);
     notifyListeners();
@@ -751,6 +756,7 @@ class AppState extends ChangeNotifier {
       bonusXp: 0,
       profileRankBefore: profileRankBefore,
       skillRankBefore: skillRankBefore,
+      bossFeedback: bossFeedback,
       fallbackLabel: task.type == TaskType.repeating ? 'Лёгкий старт' : 'Старт',
     );
   }
@@ -857,6 +863,26 @@ class AppState extends ChangeNotifier {
         );
       }
     }
+  }
+
+  Map<String, _BossMoment> _bossMomentsForSkill(String skillId) {
+    return {
+      for (final boss in bosses.where((boss) => boss.skillId == skillId))
+        boss.id: _BossMoment(hp: boss.hp, isDefeated: boss.isDefeated),
+    };
+  }
+
+  String? _bossFeedbackForSkill(
+    String skillId,
+    Map<String, _BossMoment> before,
+  ) {
+    for (final boss in bosses.where((boss) => boss.skillId == skillId)) {
+      final previous = before[boss.id];
+      if (previous == null || previous.isDefeated) continue;
+      if (boss.isDefeated) return 'босс “${boss.title}” побеждён';
+      if (boss.hp < previous.hp) return 'босс “${boss.title}” ослаб';
+    }
+    return null;
   }
 
   void uncompleteTask(String taskId) {
@@ -1064,6 +1090,7 @@ class AppState extends ChangeNotifier {
 
     final profileRankBefore = profileRankForLevel(profile.level);
     final skillRankBefore = skillRankForLevel(skill.level);
+    final bossMomentsBefore = _bossMomentsForSkill(skillId);
     final earned = node.xpReward;
 
     node.isMastered = true;
@@ -1075,6 +1102,7 @@ class AppState extends ChangeNotifier {
 
     _updateDailyXp(earned, skillUp);
     _syncBossesForSkill(skillId);
+    final bossFeedback = _bossFeedbackForSkill(skillId, bossMomentsBefore);
     _checkAchievements();
     notifyListeners();
     _saveAll();
@@ -1087,6 +1115,7 @@ class AppState extends ChangeNotifier {
       bonusXp: 0,
       profileRankBefore: profileRankBefore,
       skillRankBefore: skillRankBefore,
+      bossFeedback: bossFeedback,
       fallbackLabel: 'Узел освоен',
     );
   }
@@ -1340,8 +1369,8 @@ class AppState extends ChangeNotifier {
     if (task.type != TaskType.repeating) return;
 
     final milestone = switch (task.streak) {
-      7 => (rarity: RewardRarity.rare, title: 'Сундук стрика'),
-      30 => (rarity: RewardRarity.epic, title: 'Эпический сундук стрика'),
+      7 => (rarity: RewardRarity.rare, title: 'Сундук серии'),
+      30 => (rarity: RewardRarity.epic, title: 'Эпический сундук серии'),
       _ => null,
     };
     if (milestone == null) return;
@@ -1350,7 +1379,7 @@ class AppState extends ChangeNotifier {
       sourceKey: 'streak:${task.id}:${task.streak}',
       title: milestone.title,
       description:
-          'Награда за стрик ${task.streak} дней по квесту «${task.title}».',
+          'Награда за серию ${task.streak} дней по квесту «${task.title}».',
       rarity: milestone.rarity,
       skillId: task.skillId,
       notify: notify,
@@ -1777,9 +1806,9 @@ class AppState extends ChangeNotifier {
         : 'Силен';
 
     final recommendation = urgentRepeatingTasks > 0
-        ? 'Удержи repeating-квесты: босс восстановится, если пропустить день.'
+        ? 'Удержи повторяющиеся квесты: босс восстановится, если пропустить день.'
         : stalledHighPriorityTasks > 0
-        ? 'Закрой high-priority задачу по навыку, чтобы сбить давление.'
+        ? 'Закрой важную задачу по навыку, чтобы сбить давление.'
         : minimumTasks.any(canCompleteMinimumAction)
         ? 'Сделай лёгкий старт по крупной задаче — это тоже наносит урон.'
         : totalTreeNodes > 0 && masteredTreeNodes < totalTreeNodes
@@ -1890,34 +1919,100 @@ class AppState extends ChangeNotifier {
     required int bonusXp,
     RankInfo? profileRankBefore,
     RankInfo? skillRankBefore,
+    String? bossFeedback,
     String? fallbackLabel,
   }) {
     if (globalUp > 0) {
       final profileRankAfter = profileRankForLevel(profile.level);
       if (profileRankBefore != null &&
           profileRankAfter.code != profileRankBefore.code) {
-        return '🏅 Достигнут ${profileRankAfter.label}!';
+        return _characterEvent('Новый ранг', [
+          'достигнут ${profileRankAfter.label}',
+          '+$earned XP',
+          ?bossFeedback,
+        ]);
       }
-      return bonusXp > 0
-          ? '🎉 Уровень ${profile.level}! • бафф +$bonusXp XP'
-          : '🎉 Уровень ${profile.level}!';
+      return _characterEvent('Новый уровень', [
+        'персонаж стал увереннее: ур. ${profile.level}',
+        '+$earned XP',
+        if (bonusXp > 0) 'бафф +$bonusXp XP',
+        _nextProfileRankHint(),
+        ?bossFeedback,
+      ]);
     }
     if (skillUp > 0 && skill != null) {
       final skillRankAfter = skillRankForLevel(skill.level);
       if (skillRankBefore != null &&
           skillRankAfter.code != skillRankBefore.code) {
-        return '🏅 ${skill.name} → ${skillRankAfter.label}';
+        return _characterEvent('Новый ранг навыка', [
+          '${skill.name} → ${skillRankAfter.label}',
+          '+$earned XP',
+          ?bossFeedback,
+        ]);
       }
-      return bonusXp > 0
-          ? '⬆️ ${skill.name} → ур.${skill.level} • бафф +$bonusXp XP'
-          : '⬆️ ${skill.name} → ур.${skill.level}';
+      return _characterEvent('Навык вырос', [
+        '${skill.name} окреп до ур.${skill.level}',
+        '+$earned XP',
+        if (bonusXp > 0) 'бафф +$bonusXp XP',
+        _nextSkillRankHint(skill),
+        ?bossFeedback,
+      ]);
     }
-    if (fallbackLabel == null || fallbackLabel.isEmpty) {
-      return bonusXp > 0 ? '+$earned XP • бафф +$bonusXp' : '+$earned XP';
+
+    if (fallbackLabel != null &&
+        fallbackLabel.toLowerCase().contains('старт')) {
+      return _characterEvent(fallbackLabel, [
+        skill == null ? 'первый шаг сделан' : '${skill.name} запущен',
+        '+$earned XP',
+        _nextSkillRankHint(skill),
+        ?bossFeedback,
+      ]);
     }
-    return bonusXp > 0
-        ? '$fallbackLabel: +$earned XP • бафф +$bonusXp'
-        : '$fallbackLabel: +$earned XP';
+
+    return _characterEvent(
+      fallbackLabel == null || fallbackLabel.isEmpty
+          ? 'Навык окреп'
+          : fallbackLabel,
+      [
+        skill == null ? '+$earned XP' : '${skill.name} +$earned XP',
+        if (bonusXp > 0) 'бафф +$bonusXp XP',
+        _nextSkillRankHint(skill),
+        ?bossFeedback,
+      ],
+    );
+  }
+
+  String _characterEvent(String title, List<String?> details) {
+    final filtered = details
+        .whereType<String>()
+        .map((detail) => detail.trim())
+        .where((detail) => detail.isNotEmpty)
+        .toList();
+    return filtered.isEmpty ? title : '$title\n${filtered.join(' • ')}';
+  }
+
+  String? _nextProfileRankHint() {
+    final nextRank = nextProfileRankForLevel(profile.level);
+    if (nextRank == null) return null;
+    final xpLeft = _xpUntilLevel(profile.level, profile.xp, nextRank.minLevel);
+    return 'до ${nextRank.label} $xpLeft XP';
+  }
+
+  String? _nextSkillRankHint(Skill? skill) {
+    if (skill == null) return null;
+    final nextRank = nextSkillRankForLevel(skill.level);
+    if (nextRank == null) return null;
+    final xpLeft = _xpUntilLevel(skill.level, skill.xp, nextRank.minLevel);
+    return 'до ${nextRank.label} $xpLeft XP';
+  }
+
+  int _xpUntilLevel(int level, int currentXp, int targetLevel) {
+    if (targetLevel <= level) return 0;
+    var xpLeft = xpForLevel(level) - currentXp;
+    for (var nextLevel = level + 1; nextLevel < targetLevel; nextLevel++) {
+      xpLeft += xpForLevel(nextLevel);
+    }
+    return math.max(0, xpLeft);
   }
 
   void _syncTaskNotification(Task task) {
@@ -1960,6 +2055,13 @@ class AppState extends ChangeNotifier {
       }
     });
   }
+}
+
+class _BossMoment {
+  final int hp;
+  final bool isDefeated;
+
+  const _BossMoment({required this.hp, required this.isDefeated});
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

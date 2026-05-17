@@ -443,14 +443,14 @@ const achievementDefinitions = <AchievementDef>[
   ),
   AchievementDef(
     id: 'streak_7',
-    name: 'Недельный стрик',
+    name: 'Недельная серия',
     description: '7 дней подряд выполняй повторяющиеся задачи',
     icon: Icons.local_fire_department,
     color: Color(0xFFFF9500),
   ),
   AchievementDef(
     id: 'streak_30',
-    name: 'Месячный стрик',
+    name: 'Месячная серия',
     description: '30 дней подряд выполняй повторяющиеся задачи',
     icon: Icons.whatshot,
     color: Color(0xFFFF3B30),

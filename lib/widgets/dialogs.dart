@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models.dart';
 import '../utils.dart';
 import '../app_state.dart';
+import 'reward_animations.dart';
 import 'shared.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2581,7 +2582,7 @@ class StatsDialog extends StatelessWidget {
                         const SizedBox(width: 12),
                         Expanded(
                           child: _StatCard(
-                            title: 'Лучший стрик',
+                            title: 'Лучшая серия',
                             value: '${state.bestStreak} дн.',
                             icon: Icons.local_fire_department,
                             color: const Color(0xFFFF9500),
@@ -2856,7 +2857,7 @@ class RewardsDialog extends StatefulWidget {
 }
 
 class _RewardsDialogState extends State<RewardsDialog> {
-  String? _lastOpenMessage;
+  _RewardReveal? _lastReveal;
 
   @override
   Widget build(BuildContext context) {
@@ -2867,13 +2868,23 @@ class _RewardsDialogState extends State<RewardsDialog> {
     final bdr = borderColor(isDark);
     final unopened = widget.state.unopenedRewardChests;
     final buffs = widget.state.activeBuffs;
+    final size = MediaQuery.sizeOf(context);
+    final availableWidth = size.width - 36;
+    final availableHeight = size.height - 40;
+    final dialogWidth = availableWidth < 360
+        ? availableWidth
+        : availableWidth.clamp(360.0, 500.0).toDouble();
+    final dialogHeight = availableHeight < 500
+        ? availableHeight
+        : availableHeight.clamp(500.0, 620.0).toDouble();
 
     return Dialog(
       backgroundColor: bg,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: SizedBox(
-        width: 500,
-        height: 620,
+        width: dialogWidth,
+        height: dialogHeight,
         child: Column(
           children: [
             Padding(
@@ -2932,18 +2943,19 @@ class _RewardsDialogState extends State<RewardsDialog> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'Сундуки открываются за боевые рывки: сейчас это 5 квестов за день и победы над боссами.',
+                      'Награды появляются за заметные рывки: сильный день, рубеж серии или победу над боссом.',
                       style: TextStyle(color: sub, fontSize: 12, height: 1.35),
                     ),
                     MotionExpandable(
-                      expanded: _lastOpenMessage != null,
+                      expanded: _lastReveal != null,
                       collapsedChild: const SizedBox(height: 18),
-                      expandedChild: _lastOpenMessage == null
+                      expandedChild: _lastReveal == null
                           ? const SizedBox.shrink()
                           : Padding(
                               padding: const EdgeInsets.only(top: 12),
-                              child: _RewardInlineNotice(
-                                message: _lastOpenMessage!,
+                              child: _RewardRevealNotice(
+                                key: ValueKey(_lastReveal!.id),
+                                reveal: _lastReveal!,
                                 isDark: isDark,
                               ),
                             ),
@@ -2964,7 +2976,7 @@ class _RewardsDialogState extends State<RewardsDialog> {
                               icon: Icons.inventory_2_outlined,
                               title: 'Пока нет сундуков',
                               subtitle:
-                                  'Сделай 5 квестов за день или победи босса, чтобы получить награду.',
+                                  'Закрой сильный день, удержи серию или победи босса, чтобы получить награду.',
                               isDark: isDark,
                             )
                           : Column(
@@ -3009,7 +3021,7 @@ class _RewardsDialogState extends State<RewardsDialog> {
                               icon: Icons.bolt_outlined,
                               title: 'Нет активных баффов',
                               subtitle:
-                                  'Открой сундук, чтобы получить временное усиление на XP.',
+                                  'Открой сундук, и здесь появится временное усиление для следующих квестов.',
                               isDark: isDark,
                             )
                           : Column(
@@ -3047,44 +3059,175 @@ class _RewardsDialogState extends State<RewardsDialog> {
   }
 
   void _openChest(BuildContext context, String chestId) {
+    final chest = widget.state.rewardChests
+        .where((item) => item.id == chestId)
+        .firstOrNull;
+    if (chest == null) return;
+
     final message = widget.state.openRewardChest(chestId);
     if (message == null) return;
-    setState(() => _lastOpenMessage = message);
+    final buff = widget.state.buffs
+        .where((item) => item.sourceChestId == chestId)
+        .firstOrNull;
+
+    setState(
+      () => _lastReveal = _RewardReveal(
+        id: '${chest.id}-${buff?.id ?? chest.openedAt?.millisecondsSinceEpoch}',
+        message: message,
+        buffTitle: buff?.title,
+        bonusPercent: buff?.bonusPercent,
+        color: rewardRarityColor[chest.rarity]!,
+        icon: chest.rarity == RewardRarity.epic
+            ? Icons.auto_awesome
+            : Icons.inventory_2,
+      ),
+    );
   }
 }
 
-class _RewardInlineNotice extends StatelessWidget {
+class _RewardReveal {
+  final String id;
   final String message;
+  final String? buffTitle;
+  final int? bonusPercent;
+  final Color color;
+  final IconData icon;
+
+  const _RewardReveal({
+    required this.id,
+    required this.message,
+    required this.color,
+    required this.icon,
+    this.buffTitle,
+    this.bonusPercent,
+  });
+}
+
+class _RewardRevealNotice extends StatefulWidget {
+  final _RewardReveal reveal;
   final bool isDark;
 
-  const _RewardInlineNotice({required this.message, required this.isDark});
+  const _RewardRevealNotice({
+    super.key,
+    required this.reveal,
+    required this.isDark,
+  });
+
+  @override
+  State<_RewardRevealNotice> createState() => _RewardRevealNoticeState();
+}
+
+class _RewardRevealNoticeState extends State<_RewardRevealNotice>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: kMotionProgress)
+      ..forward();
+  }
+
+  @override
+  void didUpdateWidget(covariant _RewardRevealNotice oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.reveal.id != widget.reveal.id) {
+      _controller.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 18),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF34C759).withAlpha(16),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF34C759).withAlpha(60)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.bolt, color: Color(0xFF34C759), size: 17),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              message,
-              style: TextStyle(
-                color: textColor(isDark),
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-              ),
+    final txt = textColor(widget.isDark);
+    final sub = subtext(widget.isDark);
+    final reveal = widget.reveal;
+
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final value = kMotionCurve.transform(_controller.value);
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, 10 * (1 - value)),
+            child: Transform.scale(
+              scale: 0.96 + value * 0.04,
+              alignment: Alignment.topCenter,
+              child: child,
             ),
           ),
-        ],
+        );
+      },
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 18),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: reveal.color.withAlpha(widget.isDark ? 20 : 15),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: reveal.color.withAlpha(78)),
+          boxShadow: [
+            BoxShadow(
+              color: reveal.color.withAlpha(widget.isDark ? 26 : 22),
+              blurRadius: 24,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            RewardGlowIcon(
+              icon: reveal.icon,
+              color: reveal.color,
+              size: 46,
+              iconSize: 21,
+              sparkle: true,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Сундук открыт',
+                    style: TextStyle(
+                      color: reveal.color,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    reveal.message,
+                    style: TextStyle(
+                      color: txt,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  if (reveal.buffTitle != null ||
+                      reveal.bonusPercent != null) ...[
+                    const SizedBox(height: 5),
+                    Text(
+                      [
+                        if (reveal.buffTitle != null) reveal.buffTitle!,
+                        if (reveal.bonusPercent != null)
+                          '+${reveal.bonusPercent}% XP',
+                      ].join(' • '),
+                      style: TextStyle(color: sub, fontSize: 11.5),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -3120,14 +3263,15 @@ class _RewardChestCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: rarityColor.withAlpha(26),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(Icons.inventory_2, color: rarityColor, size: 20),
+          RewardGlowIcon(
+            icon: chest.rarity == RewardRarity.epic
+                ? Icons.auto_awesome
+                : Icons.inventory_2,
+            color: rarityColor,
+            size: 42,
+            iconSize: 20,
+            sparkle: chest.rarity != RewardRarity.common,
+            loop: chest.rarity == RewardRarity.epic,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -3467,13 +3611,13 @@ class _BossesDialogState extends State<BossesDialog> {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'Босс — это плохая привычка или негативная черта. Теперь он слабеет не только от стрика, но и от high-priority задач, лёгких стартов и общего прогресса по навыку.',
+                      'Босс — это плохая привычка или негативная черта. Теперь он слабеет не только от серии, но и от важных задач, лёгких стартов и общего прогресса по навыку.',
                       style: TextStyle(color: sub, fontSize: 12, height: 1.4),
                     ),
                     const SizedBox(height: 10),
                     Row(
                       children: [
-                        _buildTip(Icons.local_fire_department, 'Стрик', sub),
+                        _buildTip(Icons.local_fire_department, 'Серия', sub),
                         const SizedBox(width: 16),
                         _buildTip(Icons.flag, 'Фокус', sub),
                         const SizedBox(width: 16),
@@ -3758,7 +3902,7 @@ class _BossCard extends StatelessWidget {
               runSpacing: 6,
               children: [
                 _BossMetricChip(
-                  label: 'Стрик',
+                  label: 'Серия',
                   value: '${snapshot.currentStreak}/${snapshot.targetStreak}',
                   color: const Color(0xFFFF9500),
                 ),
@@ -3782,13 +3926,13 @@ class _BossCard extends StatelessWidget {
                 if (snapshot.stalledHighPriorityTasks > 0)
                   _BossMetricChip(
                     label: 'Риск',
-                    value: '${snapshot.stalledHighPriorityTasks} high',
+                    value: '${snapshot.stalledHighPriorityTasks} важн.',
                     color: const Color(0xFFFF3B30),
                   ),
                 if (snapshot.urgentRepeatingTasks > 0)
                   _BossMetricChip(
                     label: 'Срок',
-                    value: '${snapshot.urgentRepeatingTasks} daily',
+                    value: '${snapshot.urgentRepeatingTasks} повт.',
                     color: const Color(0xFFFF3B30),
                   ),
               ],
@@ -3932,7 +4076,7 @@ class _AddBossDialogState extends State<_AddBossDialog> {
               const SizedBox(height: 14),
               Row(
                 children: [
-                  SubLbl('Базовый порог стрика', sub),
+                  SubLbl('Базовый порог серии', sub),
                   const Spacer(),
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -3964,7 +4108,7 @@ class _AddBossDialogState extends State<_AddBossDialog> {
                 onChanged: (v) => setState(() => _streak = v.round()),
               ),
               Text(
-                'Стрик остаётся главным рычагом, но босс также слабеет от high-priority задач, лёгких стартов и прогресса по навыку.',
+                'Серия остаётся главным рычагом, но босс также слабеет от важных задач, лёгких стартов и прогресса по навыку.',
                 style: TextStyle(color: sub, fontSize: 11, height: 1.3),
               ),
               const SizedBox(height: 16),

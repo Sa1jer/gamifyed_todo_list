@@ -30,13 +30,22 @@ class _WeeklyAnalyticsDialogState extends State<WeeklyAnalyticsDialog> {
     final bg = surface(isDark);
     final summary = _WeeklySummary.fromState(state, _weekStart);
     final canGoNext = _weekStart.isBefore(_startOfWeek(DateTime.now()));
+    final size = MediaQuery.sizeOf(context);
+    final availableWidth = size.width - 36;
+    final availableHeight = size.height - 40;
+    final dialogWidth = availableWidth < 360
+        ? availableWidth
+        : availableWidth.clamp(360.0, 900.0).toDouble();
+    final maxHeight = availableHeight < 520
+        ? availableHeight
+        : availableHeight.clamp(520.0, 720.0).toDouble();
 
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
       child: Container(
-        width: 900,
-        constraints: const BoxConstraints(maxHeight: 720),
+        width: dialogWidth,
+        constraints: BoxConstraints(maxHeight: maxHeight),
         decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(22),
@@ -355,60 +364,76 @@ class _WeeklyOverview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _WeeklyMetricCard(
-            isDark: isDark,
-            title: 'XP недели',
-            value: '${summary.totalXp}',
-            subtitle: summary.totalXp == 0
-                ? 'Пока без XP'
-                : '${summary.averageXpPerActiveDay} XP в активный день',
-            icon: Icons.bolt,
-            color: const Color(0xFFFFCC00),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _WeeklyMetricCard(
-            isDark: isDark,
-            title: 'Квесты',
-            value: '${summary.completedTasks}',
-            subtitle: summary.completedTasks == 0
-                ? 'Ещё не закрывались'
-                : '${summary.activeDays} активн. дн.',
-            icon: Icons.check_circle,
-            color: const Color(0xFF34C759),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _WeeklyMetricCard(
-            isDark: isDark,
-            title: 'Навыки',
-            value: '${summary.skillStats.length}',
-            subtitle: summary.topSkillName == null
-                ? 'Нет вклада'
-                : 'Лидер: ${summary.topSkillName}',
-            icon: Icons.auto_graph,
-            color: const Color(0xFF4A9EFF),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _WeeklyMetricCard(
-            isDark: isDark,
-            title: 'Риски',
-            value: '${summary.riskTasks.length}',
-            subtitle: summary.riskTasks.isEmpty
-                ? 'Стрики спокойны'
-                : 'Лучше закрыть первыми',
-            icon: Icons.local_fire_department,
-            color: const Color(0xFFFF9500),
-          ),
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth < 440
+            ? 1
+            : constraints.maxWidth < 760
+            ? 2
+            : 4;
+        const spacing = 10.0;
+        final cardWidth =
+            (constraints.maxWidth - spacing * (columns - 1)) / columns;
+
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: [
+            SizedBox(
+              width: cardWidth,
+              child: _WeeklyMetricCard(
+                isDark: isDark,
+                title: 'XP недели',
+                value: '${summary.totalXp}',
+                subtitle: summary.totalXp == 0
+                    ? 'Пока без XP'
+                    : '${summary.averageXpPerActiveDay} XP в активный день',
+                icon: Icons.bolt,
+                color: const Color(0xFFFFCC00),
+              ),
+            ),
+            SizedBox(
+              width: cardWidth,
+              child: _WeeklyMetricCard(
+                isDark: isDark,
+                title: 'Квесты',
+                value: '${summary.completedTasks}',
+                subtitle: summary.completedTasks == 0
+                    ? 'Ещё не закрывались'
+                    : '${summary.activeDays} активн. дн.',
+                icon: Icons.check_circle,
+                color: const Color(0xFF34C759),
+              ),
+            ),
+            SizedBox(
+              width: cardWidth,
+              child: _WeeklyMetricCard(
+                isDark: isDark,
+                title: 'Навыки',
+                value: '${summary.skillStats.length}',
+                subtitle: summary.topSkillName == null
+                    ? 'Нет вклада'
+                    : 'Лидер: ${summary.topSkillName}',
+                icon: Icons.auto_graph,
+                color: const Color(0xFF4A9EFF),
+              ),
+            ),
+            SizedBox(
+              width: cardWidth,
+              child: _WeeklyMetricCard(
+                isDark: isDark,
+                title: 'Риски',
+                value: '${summary.riskTasks.length}',
+                subtitle: summary.riskTasks.isEmpty
+                    ? 'Серии спокойны'
+                    : 'Лучше закрыть первыми',
+                icon: Icons.local_fire_department,
+                color: const Color(0xFFFF9500),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -444,19 +469,36 @@ class _WeeklyMetricCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(icon, color: color, size: 18),
-          const SizedBox(width: 9),
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: color.withAlpha(24),
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: TextStyle(color: sub, fontSize: 11)),
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: sub,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 const SizedBox(height: 4),
                 Text(
                   value,
                   style: TextStyle(
                     color: txt,
-                    fontSize: 22,
+                    fontSize: 19,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -501,11 +543,11 @@ class _WeeklyGoalCard extends StatelessWidget {
       isDark: isDark,
       icon: Icons.flag,
       color: color,
-      title: 'Weekly Goal / OKR',
-      subtitle: 'Одна цель недели и key results, по которым видно фокус',
+      title: 'Цель недели',
+      subtitle: 'Одна цель и ключевые результаты, по которым видно фокус',
       trailing: PressFeedback(
         scale: 0.94,
-        tooltip: goal == null ? 'Задать цель недели' : 'Редактировать OKR',
+        tooltip: goal == null ? 'Задать цель недели' : 'Редактировать цель',
         onTap: onEdit,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
@@ -892,14 +934,16 @@ class _WeeklyGoalEditorDialogState extends State<_WeeklyGoalEditorDialog> {
             const SizedBox(height: 4),
             PressFeedback(
               scale: 0.98,
-              tooltip: 'Добавить ещё один key result',
+              tooltip: 'Добавить ещё один ключевой результат',
               onTap: _items.length >= 5
                   ? () {}
                   : () => setState(
                       () => _items.add(_KeyResultEditorItem.empty()),
                     ),
               child: Text(
-                _items.length >= 5 ? 'Максимум 5 key results' : '+ Добавить KR',
+                _items.length >= 5
+                    ? 'Максимум 5 результатов'
+                    : '+ Добавить результат',
                 style: TextStyle(
                   color: _items.length >= 5 ? sub : color,
                   fontSize: 12,
@@ -912,7 +956,7 @@ class _WeeklyGoalEditorDialogState extends State<_WeeklyGoalEditorDialog> {
               children: [
                 Expanded(
                   child: Text(
-                    'Совет: цель отвечает “зачем”, key results — “как пойму, что неделя удалась”.',
+                    'Совет: цель отвечает “зачем”, результаты — “как пойму, что неделя удалась”.',
                     style: TextStyle(color: sub, fontSize: 11.5, height: 1.3),
                   ),
                 ),
@@ -1510,7 +1554,7 @@ class _WeeklySkillBreakdown extends StatelessWidget {
                               ),
                               const SizedBox(height: 3),
                               Text(
-                                '${stat.tasksCompleted} квест.',
+                                _questCount(stat.tasksCompleted),
                                 style: TextStyle(color: sub, fontSize: 10.5),
                               ),
                             ],
@@ -1646,13 +1690,13 @@ class _WeeklyStreakRisks extends StatelessWidget {
       isDark: isDark,
       icon: Icons.local_fire_department,
       color: const Color(0xFFFF9500),
-      title: 'Streak-risk',
+      title: 'Риск серии',
       subtitle: 'Повторяющиеся квесты, которые лучше не откладывать',
       child: risks.isEmpty
           ? _WeeklyEmptyState(
               icon: Icons.shield,
               title: 'Риски не горят',
-              subtitle: 'Сейчас нет repeating-квестов на грани сброса.',
+              subtitle: 'Сейчас нет повторяющихся квестов на грани сброса.',
               isDark: isDark,
             )
           : Column(
@@ -1695,7 +1739,7 @@ class _WeeklyStreakRisks extends StatelessWidget {
                               ),
                               const SizedBox(height: 3),
                               Text(
-                                '${skill?.name ?? 'Навык'} • стрик ${task.streak} д. • ${formatResetLabel(task.nextResetAt)}',
+                                '${skill?.name ?? 'Навык'} • серия ${task.streak} д. • ${formatResetLabel(task.nextResetAt)}',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(color: sub, fontSize: 10.5),
@@ -2159,4 +2203,16 @@ String _formatDayMonth(DateTime date) {
   final day = date.day.toString().padLeft(2, '0');
   final month = date.month.toString().padLeft(2, '0');
   return '$day.$month';
+}
+
+String _questCount(int count) => '$count ${_questWord(count)}';
+
+String _questWord(int count) {
+  final lastTwo = count % 100;
+  if (lastTwo >= 11 && lastTwo <= 14) return 'квестов';
+  return switch (count % 10) {
+    1 => 'квест',
+    2 || 3 || 4 => 'квеста',
+    _ => 'квестов',
+  };
 }

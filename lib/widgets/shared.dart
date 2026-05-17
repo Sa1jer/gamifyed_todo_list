@@ -60,6 +60,7 @@ class EmptyStateMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sub = subtext(isDark);
+    final txt = textColor(isDark);
 
     return Center(
       child: Column(
@@ -70,9 +71,9 @@ class EmptyStateMessage extends StatelessWidget {
           Text(
             title,
             style: TextStyle(
-              color: sub,
+              color: txt.withAlpha(isDark ? 220 : 230),
               fontSize: 15,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 4),
@@ -161,6 +162,7 @@ class _HoverScaleState extends State<HoverScale> {
 
   @override
   Widget build(BuildContext context) => MouseRegion(
+    cursor: SystemMouseCursors.click,
     onEnter: (_) => setState(() => _h = true),
     onExit: (_) => setState(() => _h = false),
     child: AnimatedScale(
@@ -648,7 +650,7 @@ class LvlBadge extends StatelessWidget {
       border: Border.all(color: color.withAlpha(80)),
     ),
     child: Text(
-      'Lvl $level',
+      'Ур. $level',
       style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
     ),
   );
@@ -725,7 +727,7 @@ class _XPBubbleState extends State<XPBubble>
     _tone = _XPBubbleTone.fromMessage(widget.message);
     _c = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1350),
+      duration: const Duration(milliseconds: 1800),
     );
     final curved = CurvedAnimation(parent: _c, curve: kMotionCurve);
     _lift = Tween<double>(begin: 8, end: -58).animate(curved);
@@ -762,9 +764,9 @@ class _XPBubbleState extends State<XPBubble>
     return AnimatedBuilder(
       animation: _c,
       builder: (_, child) {
-        final maxLeft = screen.width > 296 ? screen.width - 272 : 12.0;
-        final maxTop = screen.height > 84 ? screen.height - 72 : 12.0;
-        final left = (widget.position.dx - 124).clamp(12.0, maxLeft);
+        final maxLeft = screen.width > 356 ? screen.width - 332 : 12.0;
+        final maxTop = screen.height > 104 ? screen.height - 92 : 12.0;
+        final left = (widget.position.dx - 154).clamp(12.0, maxLeft);
         final top = (widget.position.dy + _lift.value - 4).clamp(12.0, maxTop);
 
         return Positioned(
@@ -783,12 +785,12 @@ class _XPBubbleState extends State<XPBubble>
         );
       },
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 260),
+        constraints: const BoxConstraints(maxWidth: 320),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
           decoration: BoxDecoration(
             color: bg,
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(18),
             border: Border.all(color: _tone.color.withAlpha(95)),
             boxShadow: [
               BoxShadow(
@@ -831,7 +833,7 @@ class _XPBubbleState extends State<XPBubble>
                     const SizedBox(height: 2),
                     Text(
                       _tone.subtitle,
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: sub,
@@ -870,23 +872,50 @@ class _XPBubbleTone {
         .replaceAll('🏅', '')
         .replaceAll('⬆️', '')
         .trim();
+    final lines = cleaned
+        .split('\n')
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty)
+        .toList();
+    final customTitle = lines.length > 1 ? lines.first : null;
+    final customSubtitle = lines.length > 1 ? lines.skip(1).join(' ') : cleaned;
     final lower = cleaned.toLowerCase();
 
-    if (lower.contains('достигнут') || lower.contains('уровень')) {
+    if (lower.contains('ранг')) {
       return _XPBubbleTone(
         icon: Icons.workspace_premium,
         color: const Color(0xFFFFCC00),
-        title: 'Новый рубеж',
-        subtitle: cleaned,
+        title: customTitle ?? 'Новый ранг',
+        subtitle: customSubtitle,
       );
     }
 
-    if (lower.contains('ур.') || lower.contains('→')) {
+    if (lower.contains('уровень')) {
+      return _XPBubbleTone(
+        icon: Icons.workspace_premium,
+        color: const Color(0xFFFFCC00),
+        title: customTitle ?? 'Новый рубеж',
+        subtitle: customSubtitle,
+      );
+    }
+
+    if (lower.contains('окреп') ||
+        lower.contains('ур.') ||
+        lower.contains('→')) {
       return _XPBubbleTone(
         icon: Icons.trending_up,
         color: const Color(0xFFFF9500),
-        title: 'Навык вырос',
-        subtitle: cleaned,
+        title: customTitle ?? 'Навык вырос',
+        subtitle: customSubtitle,
+      );
+    }
+
+    if (lower.contains('босс')) {
+      return _XPBubbleTone(
+        icon: Icons.shield,
+        color: const Color(0xFFFF2D55),
+        title: customTitle ?? 'Босс ослаб',
+        subtitle: customSubtitle,
       );
     }
 
@@ -894,8 +923,8 @@ class _XPBubbleTone {
       return _XPBubbleTone(
         icon: Icons.play_circle_fill,
         color: const Color(0xFF4A9EFF),
-        title: 'Лёгкий старт',
-        subtitle: cleaned,
+        title: customTitle ?? 'Лёгкий старт',
+        subtitle: customSubtitle,
       );
     }
 
@@ -903,16 +932,16 @@ class _XPBubbleTone {
       return _XPBubbleTone(
         icon: Icons.bolt,
         color: const Color(0xFF34C759),
-        title: 'Бафф сработал',
-        subtitle: cleaned,
+        title: customTitle ?? 'Бафф сработал',
+        subtitle: customSubtitle,
       );
     }
 
     return _XPBubbleTone(
       icon: Icons.auto_awesome,
       color: const Color(0xFF4A9EFF),
-      title: 'Опыт получен',
-      subtitle: cleaned,
+      title: customTitle ?? 'Опыт получен',
+      subtitle: customSubtitle,
     );
   }
 }
@@ -939,6 +968,7 @@ class DlgHeader extends StatelessWidget {
       const Spacer(),
       PressFeedback(
         scale: 0.82,
+        tooltip: 'Закрыть',
         onTap: () => Navigator.pop(context),
         child: const Icon(Icons.close, color: Color(0xFF8E8E93), size: 22),
       ),

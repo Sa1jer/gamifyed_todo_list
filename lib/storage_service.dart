@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'models.dart';
@@ -61,6 +62,117 @@ class StorageService {
     }
   }
 
+  T? _decodeOrNull<T>(String raw, T Function(String raw) decode) {
+    try {
+      return decode(raw);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Map<String, dynamic> _decodeMap(String raw) {
+    final decoded = jsonDecode(raw);
+    if (decoded is Map<String, dynamic>) return decoded;
+    if (decoded is Map) return Map<String, dynamic>.from(decoded);
+    return <String, dynamic>{};
+  }
+
+  String _readString(
+    Map<String, dynamic> data,
+    String key, [
+    String fallback = '',
+  ]) {
+    final value = data[key];
+    if (value is String) return value;
+    return fallback;
+  }
+
+  String? _readNullableString(Map<String, dynamic> data, String key) {
+    final value = data[key];
+    if (value is String && value.isNotEmpty) return value;
+    return null;
+  }
+
+  int _readInt(Map<String, dynamic> data, String key, [int fallback = 0]) {
+    final value = data[key];
+    return _readNullableIntValue(value) ?? fallback;
+  }
+
+  int? _readNullableInt(Map<String, dynamic> data, String key) {
+    return _readNullableIntValue(data[key]);
+  }
+
+  int? _readNullableIntValue(Object? value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value);
+    return null;
+  }
+
+  int _readPositiveInt(
+    Map<String, dynamic> data,
+    String key, [
+    int fallback = 1,
+  ]) {
+    final value = _readInt(data, key, fallback);
+    return value < 1 ? fallback : value;
+  }
+
+  bool _readBool(
+    Map<String, dynamic> data,
+    String key, [
+    bool fallback = false,
+  ]) {
+    final value = data[key];
+    if (value is bool) return value;
+    if (value is String) return value.toLowerCase() == 'true';
+    return fallback;
+  }
+
+  List<String> _readStringList(Map<String, dynamic> data, String key) {
+    final value = data[key];
+    if (value is! List) return [];
+    return value.whereType<String>().toList();
+  }
+
+  List<bool> _readBoolList(Map<String, dynamic> data, String key) {
+    final value = data[key];
+    if (value is! List) return [];
+    return value.map((item) {
+      if (item is bool) return item;
+      if (item is String) return item.toLowerCase() == 'true';
+      return false;
+    }).toList();
+  }
+
+  DateTime? _readDate(Map<String, dynamic> data, String key) {
+    final value = data[key];
+    if (value is! String || value.isEmpty) return null;
+    return DateTime.tryParse(value);
+  }
+
+  Uint8List? _readBytes(Map<String, dynamic> data, String key) {
+    final value = data[key];
+    if (value is! String || value.isEmpty) return null;
+    try {
+      return base64Decode(value);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  T _readEnum<T>(List<T> values, Object? raw, T fallback) {
+    final index = raw is int
+        ? raw
+        : raw is num
+        ? raw.toInt()
+        : raw is String
+        ? int.tryParse(raw)
+        : null;
+    if (index == null || index < 0 || index >= values.length) return fallback;
+    return values[index];
+  }
+
   Future<bool> hasSavedSkills() async {
     _ensureInit();
     return _meta.get(_skillsSavedKey) == 'true';
@@ -98,7 +210,8 @@ class StorageService {
     for (final key in _skills.keys) {
       final json = _skills.get(key);
       if (json != null) {
-        result.add(_decodeSkill(json));
+        final decoded = _decodeOrNull(json, _decodeSkill);
+        if (decoded != null) result.add(decoded);
       }
     }
     return result;
@@ -119,7 +232,8 @@ class StorageService {
     for (final key in _tasks.keys) {
       final json = _tasks.get(key);
       if (json != null) {
-        result.add(_decodeTask(json));
+        final decoded = _decodeOrNull(json, _decodeTask);
+        if (decoded != null) result.add(decoded);
       }
     }
     return result;
@@ -151,22 +265,21 @@ class StorageService {
       return UserProfile(name: 'Your Name');
     }
 
-    final data = jsonDecode(raw) as Map<String, dynamic>;
+    final data = _decodeOrNull(raw, _decodeMap);
+    if (data == null) {
+      return UserProfile(name: 'Your Name');
+    }
     return UserProfile(
-      name: data['name'] as String? ?? 'Your Name',
-      level: data['level'] as int? ?? 1,
-      xp: data['xp'] as int? ?? 0,
-      totalXpEarned: data['totalXpEarned'] as int? ?? 0,
-      age: data['age'] as int?,
-      gender: data['gender'] != null
-          ? Gender.values[data['gender'] as int]
-          : null,
-      avatarBytes: data['avatarBytes'] != null
-          ? base64Decode(data['avatarBytes'] as String)
-          : null,
-      bannerBytes: data['bannerBytes'] != null
-          ? base64Decode(data['bannerBytes'] as String)
-          : null,
+      name: _readString(data, 'name', 'Your Name'),
+      level: _readInt(data, 'level', 1),
+      xp: _readInt(data, 'xp'),
+      totalXpEarned: _readInt(data, 'totalXpEarned'),
+      age: data['age'] == null ? null : _readInt(data, 'age'),
+      gender: data['gender'] == null
+          ? null
+          : _readEnum(Gender.values, data['gender'], Gender.nonBinary),
+      avatarBytes: _readBytes(data, 'avatarBytes'),
+      bannerBytes: _readBytes(data, 'bannerBytes'),
     );
   }
 
@@ -184,7 +297,8 @@ class StorageService {
     for (final key in _history.keys) {
       final json = _history.get(key);
       if (json != null) {
-        result.add(_decodeHistoryEntry(json));
+        final decoded = _decodeOrNull(json, _decodeHistoryEntry);
+        if (decoded != null) result.add(decoded);
       }
     }
     return result;
@@ -199,7 +313,11 @@ class StorageService {
     _ensureInit();
     final raw = _stats.get('daily');
     if (raw == null) return null;
-    return _decodeDailyStats(jsonDecode(raw));
+    final decoded = _decodeOrNull(
+      raw,
+      (json) => _decodeDailyStats(_decodeMap(json)),
+    );
+    return decoded;
   }
 
   Future<void> saveAchievements(List<Achievement> achievements) async {
@@ -216,7 +334,8 @@ class StorageService {
     for (final key in _achievements.keys) {
       final json = _achievements.get(key);
       if (json != null) {
-        result.add(_decodeAchievement(json));
+        final decoded = _decodeOrNull(json, _decodeAchievement);
+        if (decoded != null) result.add(decoded);
       }
     }
     return result;
@@ -236,7 +355,8 @@ class StorageService {
     for (final key in _bosses.keys) {
       final json = _bosses.get(key);
       if (json != null) {
-        result.add(_decodeBoss(json));
+        final decoded = _decodeOrNull(json, _decodeBoss);
+        if (decoded != null) result.add(decoded);
       }
     }
     return result;
@@ -256,7 +376,8 @@ class StorageService {
     for (final key in _rewardChests.keys) {
       final json = _rewardChests.get(key);
       if (json != null) {
-        result.add(_decodeRewardChest(json));
+        final decoded = _decodeOrNull(json, _decodeRewardChest);
+        if (decoded != null) result.add(decoded);
       }
     }
     return result;
@@ -276,7 +397,8 @@ class StorageService {
     for (final key in _buffs.keys) {
       final json = _buffs.get(key);
       if (json != null) {
-        result.add(_decodeBuff(json));
+        final decoded = _decodeOrNull(json, _decodeBuff);
+        if (decoded != null) result.add(decoded);
       }
     }
     return result;
@@ -296,7 +418,8 @@ class StorageService {
     for (final key in _weeklyGoals.keys) {
       final json = _weeklyGoals.get(key);
       if (json != null) {
-        result.add(_decodeWeeklyGoal(json));
+        final decoded = _decodeOrNull(json, _decodeWeeklyGoal);
+        if (decoded != null) result.add(decoded);
       }
     }
     return result;
@@ -325,23 +448,26 @@ class StorageService {
   }
 
   Skill _decodeSkill(String json) {
-    final d = jsonDecode(json) as Map<String, dynamic>;
-    final iconName = d['iconName'] as String;
+    final d = _decodeMap(json);
+    final iconName = _readString(d, 'iconName', _readString(d, 'icon', ''));
     return Skill(
-      id: d['id'] as String,
-      name: d['name'] as String,
-      goal: d['goal'] as String,
-      checklist: (d['checklist'] as List).cast<String>(),
-      checklistDone: (d['checklistDone'] as List).cast<bool>(),
+      id: _readString(d, 'id', uid()),
+      name: _readString(d, 'name', 'Навык'),
+      goal: _readString(d, 'goal'),
+      checklist: _readStringList(d, 'checklist'),
+      checklistDone: _readBoolList(d, 'checklistDone'),
       treeNodes:
           (d['treeNodes'] as List?)
-              ?.map((raw) => _decodeSkillTreeNode(raw as Map<String, dynamic>))
+              ?.whereType<Map>()
+              .map(
+                (raw) => _decodeSkillTreeNode(Map<String, dynamic>.from(raw)),
+              )
               .toList() ??
           [],
-      color: Color(d['color'] as int),
+      color: Color(_readInt(d, 'color', const Color(0xFF4A9EFF).toARGB32())),
       icon: _getIconFromCodePoint(iconName),
-      level: d['level'] as int? ?? 1,
-      xp: d['xp'] as int? ?? 0,
+      level: _readInt(d, 'level', 1),
+      xp: _readInt(d, 'xp'),
     );
   }
 
@@ -359,17 +485,15 @@ class StorageService {
 
   SkillTreeNode _decodeSkillTreeNode(Map<String, dynamic> d) {
     return SkillTreeNode(
-      id: d['id'] as String,
-      title: d['title'] as String,
-      description: d['description'] as String? ?? '',
-      xpReward: d['xpReward'] as int? ?? 20,
-      prerequisiteIds: (d['prerequisiteIds'] as List?)?.cast<String>() ?? [],
-      checklist: (d['checklist'] as List?)?.cast<String>() ?? [],
-      checklistDone: (d['checklistDone'] as List?)?.cast<bool>() ?? [],
-      isMastered: d['isMastered'] as bool? ?? false,
-      masteredAt: d['masteredAt'] != null
-          ? DateTime.parse(d['masteredAt'] as String)
-          : null,
+      id: _readString(d, 'id', uid()),
+      title: _readString(d, 'title', 'Узел навыка'),
+      description: _readString(d, 'description'),
+      xpReward: _readInt(d, 'xpReward', 20),
+      prerequisiteIds: _readStringList(d, 'prerequisiteIds'),
+      checklist: _readStringList(d, 'checklist'),
+      checklistDone: _readBoolList(d, 'checklistDone'),
+      isMastered: _readBool(d, 'isMastered'),
+      masteredAt: _readDate(d, 'masteredAt'),
     );
   }
 
@@ -403,45 +527,38 @@ class StorageService {
   });
 
   Task _decodeTask(String json) {
-    final d = jsonDecode(json) as Map<String, dynamic>;
+    final d = _decodeMap(json);
     return Task(
-      id: d['id'] as String,
-      title: d['title'] as String,
-      skillId: d['skillId'] as String,
-      xpReward: d['xpReward'] as int,
-      type: TaskType.values[d['type'] as int],
-      isDone: d['isDone'] as bool? ?? false,
-      streak: d['streak'] as int? ?? 0,
-      earnedXP: d['earnedXP'] as int? ?? 0,
-      repeatFrequency:
-          RepeatFrequency.values[d['repeatFrequency'] as int? ?? 0],
-      repeatCustomDays: d['repeatCustomDays'] as int? ?? 1,
-      nextResetAt: d['nextResetAt'] != null
-          ? DateTime.parse(d['nextResetAt'] as String)
-          : null,
-      lastCompletedAt: d['lastCompletedAt'] != null
-          ? DateTime.parse(d['lastCompletedAt'] as String)
-          : null,
-      priority: Priority.values[d['priority'] as int? ?? 1],
-      minimumAction: d['minimumAction'] as String? ?? '',
-      minimumActionDoneAt: d['minimumActionDoneAt'] != null
-          ? DateTime.parse(d['minimumActionDoneAt'] as String)
-          : null,
-      minimumActionEarnedXP: d['minimumActionEarnedXP'] as int? ?? 0,
-      bonusXpEarned: d['bonusXpEarned'] as int? ?? 0,
-      consumedBuffIds: (d['consumedBuffIds'] as List?)?.cast<String>() ?? [],
-      subtasks: (d['subtasks'] as List?)?.cast<String>() ?? [],
-      subtaskDone: (d['subtaskDone'] as List?)?.cast<bool>() ?? [],
-      tags: (d['tags'] as List?)?.cast<String>() ?? [],
-      notificationsEnabled: d['notificationsEnabled'] as bool? ?? false,
-      notificationHour: d['notificationHour'] as int?,
-      notificationMinute: d['notificationMinute'] as int?,
-      createdAt: d['createdAt'] != null
-          ? DateTime.parse(d['createdAt'] as String)
-          : null,
-      updatedAt: d['updatedAt'] != null
-          ? DateTime.parse(d['updatedAt'] as String)
-          : null,
+      id: _readString(d, 'id', uid()),
+      title: _readString(d, 'title', 'Квест'),
+      skillId: _readString(d, 'skillId'),
+      xpReward: _readInt(d, 'xpReward', 20),
+      type: _readEnum(TaskType.values, d['type'], TaskType.shortTerm),
+      isDone: _readBool(d, 'isDone'),
+      streak: _readInt(d, 'streak'),
+      earnedXP: _readInt(d, 'earnedXP'),
+      repeatFrequency: _readEnum(
+        RepeatFrequency.values,
+        d['repeatFrequency'],
+        RepeatFrequency.daily,
+      ),
+      repeatCustomDays: _readPositiveInt(d, 'repeatCustomDays'),
+      nextResetAt: _readDate(d, 'nextResetAt'),
+      lastCompletedAt: _readDate(d, 'lastCompletedAt'),
+      priority: _readEnum(Priority.values, d['priority'], Priority.medium),
+      minimumAction: _readString(d, 'minimumAction'),
+      minimumActionDoneAt: _readDate(d, 'minimumActionDoneAt'),
+      minimumActionEarnedXP: _readInt(d, 'minimumActionEarnedXP'),
+      bonusXpEarned: _readInt(d, 'bonusXpEarned'),
+      consumedBuffIds: _readStringList(d, 'consumedBuffIds'),
+      subtasks: _readStringList(d, 'subtasks'),
+      subtaskDone: _readBoolList(d, 'subtaskDone'),
+      tags: _readStringList(d, 'tags'),
+      notificationsEnabled: _readBool(d, 'notificationsEnabled'),
+      notificationHour: _readNullableInt(d, 'notificationHour'),
+      notificationMinute: _readNullableInt(d, 'notificationMinute'),
+      createdAt: _readDate(d, 'createdAt'),
+      updatedAt: _readDate(d, 'updatedAt'),
     );
   }
 
@@ -459,19 +576,21 @@ class StorageService {
   });
 
   HistoryEntry _decodeHistoryEntry(String json) {
-    final d = jsonDecode(json) as Map<String, dynamic>;
-    final iconName = d['skillIconCodePoint'] as String;
+    final d = _decodeMap(json);
+    final iconName = _readString(d, 'skillIconCodePoint');
     return HistoryEntry(
-      id: d['id'] as String,
-      taskTitle: d['taskTitle'] as String,
-      taskId: d['taskId'] as String?,
-      skillId: d['skillId'] as String,
-      skillName: d['skillName'] as String,
-      skillColor: Color(d['skillColor'] as int),
+      id: _readString(d, 'id', uid()),
+      taskTitle: _readString(d, 'taskTitle', 'Квест'),
+      taskId: _readNullableString(d, 'taskId'),
+      skillId: _readString(d, 'skillId'),
+      skillName: _readString(d, 'skillName', 'Навык'),
+      skillColor: Color(
+        _readInt(d, 'skillColor', const Color(0xFF4A9EFF).toARGB32()),
+      ),
       skillIcon: _getIconFromCodePoint(iconName),
-      xp: d['xp'] as int,
-      isCompletion: d['isCompletion'] as bool,
-      at: DateTime.parse(d['at'] as String),
+      xp: _readInt(d, 'xp'),
+      isCompletion: _readBool(d, 'isCompletion', true),
+      at: _readDate(d, 'at') ?? DateTime.now(),
     );
   }
 
@@ -483,24 +602,21 @@ class StorageService {
   };
 
   DailyStats _decodeDailyStats(Map<String, dynamic> d) => DailyStats(
-    date: DateTime.parse(d['date'] as String),
-    tasksCompleted: d['tasksCompleted'] as int,
-    xpEarned: d['xpEarned'] as int,
-    skillsImproved: d['skillsImproved'] as int,
+    date: _readDate(d, 'date') ?? DateTime.now(),
+    tasksCompleted: _readInt(d, 'tasksCompleted'),
+    xpEarned: _readInt(d, 'xpEarned'),
+    skillsImproved: _readInt(d, 'skillsImproved'),
   );
 
   String _encodeAchievement(Achievement a) =>
       jsonEncode({'id': a.id, 'unlockedAt': a.unlockedAt?.toIso8601String()});
 
   Achievement _decodeAchievement(String json) {
-    final d = jsonDecode(json) as Map<String, dynamic>;
-    final def = achievementDefinitions.firstWhere((x) => x.id == d['id']);
-    return Achievement(
-      id: d['id'] as String,
-      unlockedAt: d['unlockedAt'] != null
-          ? DateTime.parse(d['unlockedAt'] as String)
-          : null,
-    )..def = def;
+    final d = _decodeMap(json);
+    final id = _readString(d, 'id', uid());
+    final def = achievementDefinitions.where((x) => x.id == id).firstOrNull;
+    return Achievement(id: id, unlockedAt: _readDate(d, 'unlockedAt'))
+      ..def = def;
   }
 
   String _encodeBoss(Boss b) => jsonEncode({
@@ -516,19 +632,17 @@ class StorageService {
   });
 
   Boss _decodeBoss(String json) {
-    final d = jsonDecode(json) as Map<String, dynamic>;
+    final d = _decodeMap(json);
     return Boss(
-      id: d['id'] as String,
-      title: d['title'] as String,
-      skillId: d['skillId'] as String,
-      hp: d['hp'] as int,
-      maxHp: d['maxHp'] as int,
-      targetStreak: d['targetStreak'] as int,
-      currentStreak: d['currentStreak'] as int? ?? 0,
-      isDefeated: d['isDefeated'] as bool? ?? false,
-      defeatedAt: d['defeatedAt'] != null
-          ? DateTime.parse(d['defeatedAt'] as String)
-          : null,
+      id: _readString(d, 'id', uid()),
+      title: _readString(d, 'title', 'Босс'),
+      skillId: _readString(d, 'skillId'),
+      hp: _readInt(d, 'hp', 100),
+      maxHp: _readPositiveInt(d, 'maxHp', 100),
+      targetStreak: _readPositiveInt(d, 'targetStreak', 7),
+      currentStreak: _readInt(d, 'currentStreak'),
+      isDefeated: _readBool(d, 'isDefeated'),
+      defeatedAt: _readDate(d, 'defeatedAt'),
     );
   }
 
@@ -544,18 +658,16 @@ class StorageService {
   });
 
   RewardChest _decodeRewardChest(String json) {
-    final d = jsonDecode(json) as Map<String, dynamic>;
+    final d = _decodeMap(json);
     return RewardChest(
-      id: d['id'] as String,
-      title: d['title'] as String,
-      description: d['description'] as String,
-      rarity: RewardRarity.values[d['rarity'] as int? ?? 0],
-      sourceKey: d['sourceKey'] as String,
-      skillId: d['skillId'] as String?,
-      unlockedAt: DateTime.parse(d['unlockedAt'] as String),
-      openedAt: d['openedAt'] != null
-          ? DateTime.parse(d['openedAt'] as String)
-          : null,
+      id: _readString(d, 'id', uid()),
+      title: _readString(d, 'title', 'Сундук'),
+      description: _readString(d, 'description'),
+      rarity: _readEnum(RewardRarity.values, d['rarity'], RewardRarity.common),
+      sourceKey: _readString(d, 'sourceKey', _readString(d, 'id', uid())),
+      skillId: _readNullableString(d, 'skillId'),
+      unlockedAt: _readDate(d, 'unlockedAt') ?? DateTime.now(),
+      openedAt: _readDate(d, 'openedAt'),
     );
   }
 
@@ -574,21 +686,19 @@ class StorageService {
   });
 
   Buff _decodeBuff(String json) {
-    final d = jsonDecode(json) as Map<String, dynamic>;
+    final d = _decodeMap(json);
     return Buff(
-      id: d['id'] as String,
-      type: BuffType.values[d['type'] as int? ?? 0],
-      title: d['title'] as String,
-      description: d['description'] as String,
-      bonusPercent: d['bonusPercent'] as int? ?? 0,
-      charges: d['charges'] as int? ?? 0,
-      skillId: d['skillId'] as String?,
-      sourceChestId: d['sourceChestId'] as String?,
-      sourceKey: d['sourceKey'] as String?,
-      createdAt: DateTime.parse(d['createdAt'] as String),
-      expiresAt: d['expiresAt'] != null
-          ? DateTime.parse(d['expiresAt'] as String)
-          : null,
+      id: _readString(d, 'id', uid()),
+      type: _readEnum(BuffType.values, d['type'], BuffType.nextQuestXpBoost),
+      title: _readString(d, 'title', 'Бафф'),
+      description: _readString(d, 'description'),
+      bonusPercent: _readInt(d, 'bonusPercent'),
+      charges: _readInt(d, 'charges'),
+      skillId: _readNullableString(d, 'skillId'),
+      sourceChestId: _readNullableString(d, 'sourceChestId'),
+      sourceKey: _readNullableString(d, 'sourceKey'),
+      createdAt: _readDate(d, 'createdAt') ?? DateTime.now(),
+      expiresAt: _readDate(d, 'expiresAt'),
     );
   }
 
@@ -611,27 +721,21 @@ class StorageService {
   });
 
   WeeklyGoal _decodeWeeklyGoal(String json) {
-    final d = jsonDecode(json) as Map<String, dynamic>;
+    final d = _decodeMap(json);
     return WeeklyGoal(
-      id: d['id'] as String,
-      weekStart: DateTime.parse(d['weekStart'] as String),
-      title: d['title'] as String? ?? '',
-      createdAt: d['createdAt'] != null
-          ? DateTime.parse(d['createdAt'] as String)
-          : null,
-      updatedAt: d['updatedAt'] != null
-          ? DateTime.parse(d['updatedAt'] as String)
-          : null,
+      id: _readString(d, 'id', uid()),
+      weekStart: _readDate(d, 'weekStart') ?? DateTime.now(),
+      title: _readString(d, 'title', 'Цель недели'),
+      createdAt: _readDate(d, 'createdAt'),
+      updatedAt: _readDate(d, 'updatedAt'),
       keyResults:
-          (d['keyResults'] as List?)?.map((raw) {
-            final item = raw as Map<String, dynamic>;
+          (d['keyResults'] as List?)?.whereType<Map>().map((raw) {
+            final item = Map<String, dynamic>.from(raw);
             return WeeklyKeyResult(
-              id: item['id'] as String,
-              title: item['title'] as String? ?? '',
-              isDone: item['isDone'] as bool? ?? false,
-              completedAt: item['completedAt'] != null
-                  ? DateTime.parse(item['completedAt'] as String)
-                  : null,
+              id: _readString(item, 'id', uid()),
+              title: _readString(item, 'title', 'Результат'),
+              isDone: _readBool(item, 'isDone'),
+              completedAt: _readDate(item, 'completedAt'),
             );
           }).toList() ??
           [],

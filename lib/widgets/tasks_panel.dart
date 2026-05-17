@@ -45,6 +45,7 @@ class _TasksPanelState extends State<TasksPanel> {
     }
 
     if (skill == null) {
+      final hasSkills = s.skills.isNotEmpty;
       return Container(
         decoration: BoxDecoration(
           color: sfc,
@@ -58,17 +59,20 @@ class _TasksPanelState extends State<TasksPanel> {
               Icon(Icons.arrow_back, color: sub, size: 30),
               const SizedBox(height: 12),
               Text(
-                'Выберите навык',
+                hasSkills ? 'Выберите навык' : 'Сначала создайте навык',
                 style: TextStyle(
-                  color: sub,
+                  color: txt,
                   fontSize: 16,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
-                'Задачи откроются здесь',
-                style: TextStyle(color: sub.withAlpha(160), fontSize: 13),
+                hasSkills
+                    ? 'Задачи откроются здесь'
+                    : 'После навыка можно будет добавить первый квест',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: sub.withAlpha(180), fontSize: 13),
               ),
             ],
           ),
@@ -269,31 +273,12 @@ class _TasksPanelState extends State<TasksPanel> {
           Expanded(
             child: MotionFadeSlideSwitcher(
               child: allTasks.isEmpty
-                  ? Center(
+                  ? _EmptyTasksState(
                       key: const ValueKey('tasks-empty-state'),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.task, color: sub, size: 38),
-                          const SizedBox(height: 10),
-                          Text(
-                            'Нет задач',
-                            style: TextStyle(
-                              color: sub,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Нажмите «+ Задача»',
-                            style: TextStyle(
-                              color: sub.withAlpha(150),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
+                      isDark: isDark,
+                      skillColor: skill.color,
+                      skillName: skill.name,
+                      onAdd: () => _addTask(context, skill),
                     )
                   : ListView(
                       key: const ValueKey('tasks-list'),
@@ -456,6 +441,65 @@ class _TasksPanelState extends State<TasksPanel> {
               notificationHour: notificationHour,
               notificationMinute: notificationMinute,
             ),
+      ),
+    );
+  }
+}
+
+class _EmptyTasksState extends StatelessWidget {
+  final bool isDark;
+  final Color skillColor;
+  final String skillName;
+  final VoidCallback onAdd;
+
+  const _EmptyTasksState({
+    super.key,
+    required this.isDark,
+    required this.skillColor,
+    required this.skillName,
+    required this.onAdd,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final txt = textColor(isDark);
+    final sub = subtext(isDark);
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(22),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.task_alt, color: skillColor, size: 38),
+            const SizedBox(height: 12),
+            Text(
+              'Добавьте первый квест',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: txt,
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              'Для “$skillName” пока нет действий. Начните с маленького квеста или лёгкого старта.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: sub, fontSize: 12, height: 1.3),
+            ),
+            const SizedBox(height: 14),
+            HoverScale(
+              child: SmallBtn(
+                label: 'Первый квест',
+                icon: Icons.add,
+                color: skillColor,
+                tooltip: 'Создать первый квест для навыка “$skillName”',
+                onTap: onAdd,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

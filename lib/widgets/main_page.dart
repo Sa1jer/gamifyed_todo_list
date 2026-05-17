@@ -9,6 +9,9 @@ import 'today_dashboard.dart';
 import 'profile_dialog.dart';
 import 'faq_dialog.dart';
 import 'progress_hub_dialog.dart';
+import 'character_timeline_dialog.dart';
+import 'daily_victories_dialog.dart';
+import 'reward_animations.dart';
 import 'weekly_analytics_dialog.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -68,7 +71,9 @@ class TopBar extends StatelessWidget {
               ? const Color(0xFFFFCC00)
               : const Color(0xFFB87500)
         : activeBuffsCount > 0
-        ? const Color(0xFF34C759)
+        ? isDark
+              ? const Color(0xFF34C759)
+              : const Color(0xFF218A3C)
         : sub;
     final rewardsBadge = rewardsCount > 0
         ? '$rewardsCount'
@@ -82,19 +87,26 @@ class TopBar extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 900;
+          final veryCompact = constraints.maxWidth < 560;
 
           return Row(
             children: [
               const Icon(Icons.security, color: Color(0xFF4A9EFF), size: 18),
-              const SizedBox(width: 8),
-              Text(
-                'RPG To-Do List',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 17,
-                  color: txt,
+              if (!veryCompact) ...[
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    'RPG To-Do List',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 17,
+                      color: txt,
+                    ),
+                  ),
                 ),
-              ),
+              ],
               SizedBox(width: compact ? 10 : 18),
               _WorkspaceModeSwitch(
                 mode: mode,
@@ -221,6 +233,7 @@ class _WorkspaceModeButtonState extends State<_WorkspaceModeButton> {
     final active = widget.selected || _hovered;
 
     final button = MouseRegion(
+      cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() {
         _hovered = false;
@@ -322,6 +335,7 @@ class _TopBarPillButtonState extends State<_TopBarPillButton> {
   @override
   Widget build(BuildContext context) {
     final button = MouseRegion(
+      cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() {
         _hovered = false;
@@ -471,39 +485,42 @@ class ProfileBar extends StatelessWidget {
         children: [
           // Avatar — clickable → profile
           HoverScale(
-            child: GestureDetector(
-              onTap: () => _openProfile(context),
-              child: Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  gradient: profile.avatarBytes == null
-                      ? const LinearGradient(
-                          colors: [Color(0xFF4A9EFF), Color(0xFF8B5CF6)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        )
-                      : null,
-                  image: profile.avatarBytes != null
-                      ? DecorationImage(
-                          image: MemoryImage(profile.avatarBytes!),
-                          fit: BoxFit.cover,
-                        )
-                      : null,
-                  shape: BoxShape.circle,
-                ),
-                child: profile.avatarBytes == null
-                    ? Center(
-                        child: Text(
-                          profile.initial,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+            child: Tooltip(
+              message: 'Открыть профиль',
+              child: GestureDetector(
+                onTap: () => _openProfile(context),
+                child: Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    gradient: profile.avatarBytes == null
+                        ? const LinearGradient(
+                            colors: [Color(0xFF4A9EFF), Color(0xFF8B5CF6)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          )
+                        : null,
+                    image: profile.avatarBytes != null
+                        ? DecorationImage(
+                            image: MemoryImage(profile.avatarBytes!),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
+                    shape: BoxShape.circle,
+                  ),
+                  child: profile.avatarBytes == null
+                      ? Center(
+                          child: Text(
+                            profile.initial,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
                           ),
-                        ),
-                      )
-                    : null,
+                        )
+                      : null,
+                ),
               ),
             ),
           ),
@@ -515,31 +532,47 @@ class ProfileBar extends StatelessWidget {
                 Row(
                   children: [
                     // Name — clickable → profile
-                    GestureDetector(
-                      onTap: () => _openProfile(context),
-                      child: Text(
-                        profile.name,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          color: txt,
+                    Flexible(
+                      child: MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        child: Tooltip(
+                          message: 'Открыть профиль',
+                          child: GestureDetector(
+                            onTap: () => _openProfile(context),
+                            child: Text(
+                              profile.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: txt,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
                     const SizedBox(width: 8),
                     // Level badge — clickable → profile
-                    GestureDetector(
-                      onTap: () => _openProfile(context),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          RankBadge(label: rank.label, color: rank.color),
-                          const SizedBox(width: 6),
-                          LvlBadge(
-                            level: profile.level,
-                            color: const Color(0xFF4A9EFF),
+                    MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      child: Tooltip(
+                        message: 'Открыть профиль',
+                        child: GestureDetector(
+                          onTap: () => _openProfile(context),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              RankBadge(label: rank.label, color: rank.color),
+                              const SizedBox(width: 6),
+                              LvlBadge(
+                                level: profile.level,
+                                color: const Color(0xFF4A9EFF),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
                   ],
@@ -705,6 +738,14 @@ class _MainPageState extends State<MainPage> {
                         key: const ValueKey('progress-workspace'),
                         state: s,
                         isDark: isDark,
+                        onOpenDailyVictories: () => showDialog(
+                          context: context,
+                          builder: (_) => DailyVictoriesDialog(state: s),
+                        ),
+                        onOpenCharacterTimeline: () => showDialog(
+                          context: context,
+                          builder: (_) => CharacterTimelineDialog(state: s),
+                        ),
                         onOpenWeekly: () => showDialog(
                           context: context,
                           builder: (_) => WeeklyAnalyticsDialog(state: s),
@@ -825,6 +866,8 @@ class _PlanWorkspace extends StatelessWidget {
 class _ProgressWorkspace extends StatelessWidget {
   final AppState state;
   final bool isDark;
+  final VoidCallback onOpenDailyVictories;
+  final VoidCallback onOpenCharacterTimeline;
   final VoidCallback onOpenWeekly;
   final VoidCallback onOpenStats;
   final VoidCallback onOpenCalendar;
@@ -837,6 +880,8 @@ class _ProgressWorkspace extends StatelessWidget {
     super.key,
     required this.state,
     required this.isDark,
+    required this.onOpenDailyVictories,
+    required this.onOpenCharacterTimeline,
     required this.onOpenWeekly,
     required this.onOpenStats,
     required this.onOpenCalendar,
@@ -854,6 +899,8 @@ class _ProgressWorkspace extends StatelessWidget {
         isDark: isDark,
         subtitle:
             'Здесь живут аналитика, календарь, боссы, достижения и награды. Режим без срочности: только понять прогресс.',
+        onOpenDailyVictories: onOpenDailyVictories,
+        onOpenCharacterTimeline: onOpenCharacterTimeline,
         onOpenWeekly: onOpenWeekly,
         onOpenStats: onOpenStats,
         onOpenCalendar: onOpenCalendar,
@@ -877,18 +924,39 @@ class _SkillTaskWorkspace extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(width: 380, child: SkillsPanel()),
-        const SizedBox(width: 12),
-        Expanded(
-          child: TasksPanel(
-            onComplete: onComplete,
-            onMinimumAction: onMinimumAction,
-          ),
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 760) {
+          return Column(
+            children: [
+              const SizedBox(height: 280, child: SkillsPanel()),
+              const SizedBox(height: 10),
+              Expanded(
+                child: TasksPanel(
+                  onComplete: onComplete,
+                  onMinimumAction: onMinimumAction,
+                ),
+              ),
+            ],
+          );
+        }
+
+        final skillsWidth = constraints.maxWidth < 1050 ? 330.0 : 380.0;
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(width: skillsWidth, child: const SkillsPanel()),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TasksPanel(
+                onComplete: onComplete,
+                onMinimumAction: onMinimumAction,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -1069,13 +1137,13 @@ class _RewardNoticePopoverState extends State<_RewardNoticePopover>
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.sizeOf(context).width;
-    const width = 320.0;
+    final width = (screenWidth - 24).clamp(280.0, 320.0).toDouble();
     final fallbackAnchor = Offset(screenWidth - 190, 58);
     final resolvedAnchor = widget.anchor ?? fallbackAnchor;
-    final left = (resolvedAnchor.dx - width + 28).clamp(
-      12.0,
-      screenWidth - width - 12,
-    );
+    final maxLeft = screenWidth - width - 12;
+    final left = maxLeft <= 12
+        ? 12.0
+        : (resolvedAnchor.dx - width + 28).clamp(12.0, maxLeft).toDouble();
     final top = resolvedAnchor.dy + 8;
     final bg = surface(widget.isDark);
     final txt = textColor(widget.isDark);
@@ -1150,18 +1218,13 @@ class _RewardNoticePopoverState extends State<_RewardNoticePopover>
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: 38,
-                        height: 38,
-                        decoration: BoxDecoration(
-                          color: widget.notice.color.withAlpha(28),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(
-                          widget.notice.icon,
-                          color: widget.notice.color,
-                          size: 20,
-                        ),
+                      RewardGlowIcon(
+                        icon: widget.notice.icon,
+                        color: widget.notice.color,
+                        size: 38,
+                        iconSize: 20,
+                        sparkle: true,
+                        loop: true,
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -1244,37 +1307,45 @@ class _NoticeActionButtonState extends State<_NoticeActionButton> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapCancel: () => setState(() => _pressed = false),
-      onTapUp: (_) {
-        setState(() => _pressed = false);
-        widget.onTap();
-      },
-      child: AnimatedScale(
-        scale: _pressed ? 0.97 : 1,
-        duration: kMotionFast,
-        curve: kMotionCurve,
-        child: AnimatedContainer(
+    final primaryTextColor =
+        ThemeData.estimateBrightnessForColor(widget.color) == Brightness.light
+        ? const Color(0xFF15151D)
+        : Colors.white;
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapCancel: () => setState(() => _pressed = false),
+        onTapUp: (_) {
+          setState(() => _pressed = false);
+          widget.onTap();
+        },
+        child: AnimatedScale(
+          scale: _pressed ? 0.97 : 1,
           duration: kMotionFast,
           curve: kMotionCurve,
-          padding: const EdgeInsets.symmetric(vertical: 9),
-          decoration: BoxDecoration(
-            color: widget.isPrimary
-                ? (_pressed ? darken(widget.color) : widget.color)
-                : widget.color.withAlpha(_pressed ? 34 : 22),
-            borderRadius: BorderRadius.circular(10),
-            border: widget.isPrimary
-                ? null
-                : Border.all(color: widget.color.withAlpha(55)),
-          ),
-          child: Text(
-            widget.label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: widget.isPrimary ? Colors.white : widget.color,
-              fontSize: 12.5,
-              fontWeight: FontWeight.w800,
+          child: AnimatedContainer(
+            duration: kMotionFast,
+            curve: kMotionCurve,
+            padding: const EdgeInsets.symmetric(vertical: 9),
+            decoration: BoxDecoration(
+              color: widget.isPrimary
+                  ? (_pressed ? darken(widget.color) : widget.color)
+                  : widget.color.withAlpha(_pressed ? 34 : 22),
+              borderRadius: BorderRadius.circular(10),
+              border: widget.isPrimary
+                  ? null
+                  : Border.all(color: widget.color.withAlpha(55)),
+            ),
+            child: Text(
+              widget.label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: widget.isPrimary ? primaryTextColor : widget.color,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
         ),

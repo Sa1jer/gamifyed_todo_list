@@ -150,7 +150,8 @@ void main() {
 
       final message = state.completeMinimumAction(task.id);
 
-      expect(message, 'Старт: +18 XP');
+      expect(message, contains('Старт'));
+      expect(message, contains('+18 XP'));
       expect(task.isDone, isFalse);
       expect(task.isMinimumActionDone, isTrue);
       expect(task.minimumActionEarnedXP, 18);
@@ -166,7 +167,7 @@ void main() {
 
       final message = state.completeTask(task.id);
 
-      expect(message, '+42 XP');
+      expect(message, contains('+42 XP'));
       expect(task.isDone, isTrue);
       expect(task.earnedXP, 60);
       expect(state.profile.totalXpEarned, 60);
@@ -294,7 +295,8 @@ void main() {
       state.toggleSkillTreeNodeChecklist(skill.id, basics.id, 0);
       final message = state.masterSkillTreeNode(skill.id, basics.id);
 
-      expect(message, 'Узел освоен: +20 XP');
+      expect(message, contains('Узел освоен'));
+      expect(message, contains('+20 XP'));
       expect(basics.isMastered, isTrue);
       expect(skill.treeNodeStatus(auth), SkillTreeNodeStatus.active);
       expect(skill.masteredTreeNodeCount, 1);
@@ -486,11 +488,11 @@ void main() {
 
       expect(task.streak, 7);
       expect(state.unopenedRewardChests, hasLength(1));
-      expect(state.unopenedRewardChests.first.title, 'Сундук стрика');
+      expect(state.unopenedRewardChests.first.title, 'Сундук серии');
       expect(state.unopenedRewardChests.first.rarity, RewardRarity.rare);
       expect(
         state.consumeRewardChestNotifications().first.title,
-        'Сундук стрика',
+        'Сундук серии',
       );
 
       final chestId = state.rewardChests.first.id;

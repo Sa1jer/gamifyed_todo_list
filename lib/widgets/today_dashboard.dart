@@ -352,9 +352,7 @@ class _DashboardContent extends StatelessWidget {
           flex: 4,
           child: _QuestQueue(
             state: state,
-            title: riskyTasks.isEmpty
-                ? 'Фокус на сегодня'
-                : 'Стрики под риском',
+            title: riskyTasks.isEmpty ? 'Фокус на сегодня' : 'Серии под риском',
             subtitle: riskyTasks.isEmpty
                 ? 'Начни с малого — поток придёт после первого действия'
                 : 'Эти квесты лучше закрыть первыми',
@@ -398,6 +396,7 @@ class _NextActionCard extends StatelessWidget {
     final accent = skill?.color ?? const Color(0xFF4A9EFF);
 
     if (task == null) {
+      final hasSkills = state.skills.isNotEmpty;
       return _SoftCard(
         isDark: isDark,
         child: Column(
@@ -407,7 +406,7 @@ class _NextActionCard extends StatelessWidget {
             Icon(Icons.check_circle, color: accent, size: 26),
             const SizedBox(height: 10),
             Text(
-              'На сегодня всё чисто',
+              hasSkills ? 'На сегодня всё чисто' : 'Начните с первого навыка',
               style: TextStyle(
                 color: txt,
                 fontSize: 15,
@@ -416,7 +415,9 @@ class _NextActionCard extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              'Можно добавить маленький квест или выбрать навык слева.',
+              hasSkills
+                  ? 'Можно добавить маленький квест или выбрать навык слева.'
+                  : 'Перейдите в “Планировать” и создайте направление прокачки.',
               style: TextStyle(color: sub, fontSize: 12, height: 1.25),
             ),
           ],
@@ -677,7 +678,7 @@ class _StatsGrid extends StatelessWidget {
               Expanded(
                 child: _StatTile(
                   isDark: isDark,
-                  label: 'Daily',
+                  label: 'Повтор.',
                   value: '$dailyQuests',
                   icon: Icons.repeat,
                   color: const Color(0xFFFF9500),
@@ -1061,22 +1062,26 @@ class _TinyProgressLabel extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: color.withAlpha(55)),
       ),
-      child: Row(
-        children: [
-          Text(
-            label,
-            style: TextStyle(color: color.withAlpha(190), fontSize: 10),
-          ),
-          const SizedBox(width: 5),
-          Text(
-            value,
-            style: TextStyle(
-              color: color,
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: TextStyle(color: color.withAlpha(190), fontSize: 10),
             ),
-          ),
-        ],
+            const SizedBox(width: 5),
+            Text(
+              value,
+              style: TextStyle(
+                color: color,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

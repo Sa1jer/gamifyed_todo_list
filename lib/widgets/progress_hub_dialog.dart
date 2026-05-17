@@ -7,6 +7,8 @@ import 'shared.dart';
 class ProgressHubDialog extends StatelessWidget {
   final AppState state;
   final bool isDark;
+  final VoidCallback onOpenDailyVictories;
+  final VoidCallback onOpenCharacterTimeline;
   final VoidCallback onOpenWeekly;
   final VoidCallback onOpenStats;
   final VoidCallback onOpenCalendar;
@@ -19,6 +21,8 @@ class ProgressHubDialog extends StatelessWidget {
     super.key,
     required this.state,
     required this.isDark,
+    required this.onOpenDailyVictories,
+    required this.onOpenCharacterTimeline,
     required this.onOpenWeekly,
     required this.onOpenStats,
     required this.onOpenCalendar,
@@ -30,18 +34,30 @@ class ProgressHubDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    final availableWidth = size.width - 40;
+    final availableHeight = size.height - 48;
+    final dialogWidth = availableWidth < 360
+        ? availableWidth
+        : availableWidth.clamp(360.0, 620.0).toDouble();
+    final maxHeight = availableHeight < 520
+        ? availableHeight
+        : availableHeight.clamp(520.0, 620.0).toDouble();
+
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       child: ProgressHubContent(
         state: state,
         isDark: isDark,
-        width: 620,
-        constraints: const BoxConstraints(maxHeight: 620),
+        width: dialogWidth,
+        constraints: BoxConstraints(maxHeight: maxHeight),
         showCloseButton: true,
         subtitle:
             'Вторичные RPG-разделы собраны здесь, чтобы главный экран оставался про действие.',
         onClose: () => Navigator.pop(context),
+        onOpenDailyVictories: onOpenDailyVictories,
+        onOpenCharacterTimeline: onOpenCharacterTimeline,
         onOpenWeekly: onOpenWeekly,
         onOpenStats: onOpenStats,
         onOpenCalendar: onOpenCalendar,
@@ -62,6 +78,8 @@ class ProgressHubContent extends StatelessWidget {
   final bool showCloseButton;
   final String subtitle;
   final VoidCallback? onClose;
+  final VoidCallback onOpenDailyVictories;
+  final VoidCallback onOpenCharacterTimeline;
   final VoidCallback onOpenWeekly;
   final VoidCallback onOpenStats;
   final VoidCallback onOpenCalendar;
@@ -80,6 +98,8 @@ class ProgressHubContent extends StatelessWidget {
     this.subtitle =
         'Статистика, календарь, боссы и трофеи собраны отдельно от режима действия.',
     this.onClose,
+    required this.onOpenDailyVictories,
+    required this.onOpenCharacterTimeline,
     required this.onOpenWeekly,
     required this.onOpenStats,
     required this.onOpenCalendar,
@@ -99,6 +119,8 @@ class ProgressHubContent extends StatelessWidget {
         .where((achievement) => achievement.isUnlocked)
         .length;
     final completedDays = state.completionHistoryByDate.length;
+    final todayEntries = _todayEntries(state);
+    final todayXp = todayEntries.fold<int>(0, (sum, entry) => sum + entry.xp);
     final currentWeekEntries = _currentWeekEntries(state);
     final currentWeekXp = currentWeekEntries.fold<int>(
       0,
@@ -177,112 +199,132 @@ class ProgressHubContent extends StatelessWidget {
           ),
           Container(height: 1, color: bdr),
           Flexible(
-            child: GridView.count(
-              shrinkWrap: true,
+            child: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
-              crossAxisCount: 2,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 2.34,
-              children: [
-                MotionListItem(
-                  key: const ValueKey('progress-card-weekly'),
-                  index: 0,
-                  child: _ProgressHubCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _ProgressHubSection(
                     isDark: isDark,
-                    icon: Icons.calendar_view_week,
-                    color: const Color(0xFF34C759),
-                    title: 'Неделя',
-                    subtitle: 'XP, квесты, навыки и streak-risk',
-                    value: currentWeekEntries.isEmpty
-                        ? 'пока пусто'
-                        : '$currentWeekXp XP • ${currentWeekEntries.length} квест.',
-                    onTap: onOpenWeekly,
+                    title: 'Сначала итоги',
+                    subtitle:
+                        'Быстрый ответ: что получилось и куда растёт персонаж.',
+                    startIndex: 0,
+                    cards: [
+                      _ProgressHubCard(
+                        isDark: isDark,
+                        icon: Icons.celebration,
+                        color: const Color(0xFFFF9500),
+                        title: 'Победы дня',
+                        subtitle: 'Итог сегодняшнего рывка',
+                        value: todayEntries.isEmpty
+                            ? 'ждёт первой победы'
+                            : '$todayXp XP • ${_questCount(todayEntries.length)}',
+                        onTap: onOpenDailyVictories,
+                      ),
+                      _ProgressHubCard(
+                        isDark: isDark,
+                        icon: Icons.calendar_view_week,
+                        color: const Color(0xFF34C759),
+                        title: 'Неделя',
+                        subtitle: 'XP, квесты, навыки и риск серии',
+                        value: currentWeekEntries.isEmpty
+                            ? 'пока пусто'
+                            : '$currentWeekXp XP • ${_questCount(currentWeekEntries.length)}',
+                        onTap: onOpenWeekly,
+                      ),
+                      _ProgressHubCard(
+                        isDark: isDark,
+                        icon: Icons.auto_stories,
+                        color: const Color(0xFFAF52DE),
+                        title: 'Летопись',
+                        subtitle: 'Ранги, боссы, освоение и недели',
+                        value:
+                            '${profileRankForLevel(state.profile.level).label} • Ур. ${state.profile.level}',
+                        onTap: onOpenCharacterTimeline,
+                      ),
+                    ],
                   ),
-                ),
-                MotionListItem(
-                  key: const ValueKey('progress-card-stats'),
-                  index: 1,
-                  child: _ProgressHubCard(
+                  const SizedBox(height: 14),
+                  _ProgressHubSection(
                     isDark: isDark,
-                    icon: Icons.bar_chart,
-                    color: const Color(0xFF4A9EFF),
-                    title: 'Статистика',
-                    subtitle: 'XP, уровни, темп дня',
-                    value: '${state.todayStats?.xpEarned ?? 0} XP сегодня',
-                    onTap: onOpenStats,
+                    title: 'Понять прогресс',
+                    subtitle:
+                        'Цифры и журнал, когда хочется разобраться глубже.',
+                    startIndex: 3,
+                    cards: [
+                      _ProgressHubCard(
+                        isDark: isDark,
+                        icon: Icons.bar_chart,
+                        color: const Color(0xFF4A9EFF),
+                        title: 'Статистика',
+                        subtitle: 'XP, уровни, темп дня',
+                        value: '${state.todayStats?.xpEarned ?? 0} XP сегодня',
+                        onTap: onOpenStats,
+                      ),
+                      _ProgressHubCard(
+                        isDark: isDark,
+                        icon: Icons.calendar_month,
+                        color: const Color(0xFF30D158),
+                        title: 'Календарь',
+                        subtitle: 'Когда реально закрывались квесты',
+                        value: '$completedDays активных дней',
+                        onTap: onOpenCalendar,
+                      ),
+                      _ProgressHubCard(
+                        isDark: isDark,
+                        icon: Icons.history,
+                        color: const Color(0xFF8E8E93),
+                        title: 'Журнал XP',
+                        subtitle: 'Начисления, отмены и проверки',
+                        value: '${state.history.length} записей',
+                        onTap: onOpenHistory,
+                      ),
+                    ],
                   ),
-                ),
-                MotionListItem(
-                  key: const ValueKey('progress-card-calendar'),
-                  index: 2,
-                  child: _ProgressHubCard(
+                  const SizedBox(height: 14),
+                  _ProgressHubSection(
                     isDark: isDark,
-                    icon: Icons.calendar_month,
-                    color: const Color(0xFF30D158),
-                    title: 'Календарь',
-                    subtitle: 'Когда реально закрывались квесты',
-                    value: '$completedDays активных дней',
-                    onTap: onOpenCalendar,
+                    title: 'Игровые системы',
+                    subtitle:
+                        'Игровые механики, которые поддерживают мотивацию.',
+                    startIndex: 6,
+                    cards: [
+                      _ProgressHubCard(
+                        isDark: isDark,
+                        icon: Icons.shield,
+                        color: const Color(0xFFFF2D55),
+                        title: 'Боссы',
+                        subtitle: 'Плохие привычки и сопротивление',
+                        value: state.activeBossThreatCount > 0
+                            ? '${state.activeBossThreatCount} атакуют'
+                            : '${state.activeBosses.length} активных',
+                        onTap: onOpenBosses,
+                      ),
+                      _ProgressHubCard(
+                        isDark: isDark,
+                        icon: Icons.emoji_events,
+                        color: const Color(0xFFFFCC00),
+                        title: 'Достижения',
+                        subtitle: 'Открытые рубежи',
+                        value:
+                            '$unlockedAchievements / ${state.achievements.length}',
+                        onTap: onOpenAchievements,
+                      ),
+                      _ProgressHubCard(
+                        isDark: isDark,
+                        icon: Icons.redeem,
+                        color: const Color(0xFFFF9500),
+                        title: 'Награды',
+                        subtitle: 'Сундуки и активные баффы',
+                        value:
+                            '${state.unopenedRewardChests.length} сундуков • ${state.activeBuffs.length} баффов',
+                        onTap: onOpenRewards,
+                      ),
+                    ],
                   ),
-                ),
-                MotionListItem(
-                  key: const ValueKey('progress-card-bosses'),
-                  index: 3,
-                  child: _ProgressHubCard(
-                    isDark: isDark,
-                    icon: Icons.shield,
-                    color: const Color(0xFFFF2D55),
-                    title: 'Боссы',
-                    subtitle: 'Плохие привычки и сопротивление',
-                    value: state.activeBossThreatCount > 0
-                        ? '${state.activeBossThreatCount} атакуют'
-                        : '${state.activeBosses.length} активных',
-                    onTap: onOpenBosses,
-                  ),
-                ),
-                MotionListItem(
-                  key: const ValueKey('progress-card-achievements'),
-                  index: 4,
-                  child: _ProgressHubCard(
-                    isDark: isDark,
-                    icon: Icons.emoji_events,
-                    color: const Color(0xFFFFCC00),
-                    title: 'Достижения',
-                    subtitle: 'Открытые milestones',
-                    value:
-                        '$unlockedAchievements / ${state.achievements.length}',
-                    onTap: onOpenAchievements,
-                  ),
-                ),
-                MotionListItem(
-                  key: const ValueKey('progress-card-history'),
-                  index: 5,
-                  child: _ProgressHubCard(
-                    isDark: isDark,
-                    icon: Icons.history,
-                    color: const Color(0xFFAF52DE),
-                    title: 'История',
-                    subtitle: 'Журнал XP и отмен',
-                    value: '${state.history.length} записей',
-                    onTap: onOpenHistory,
-                  ),
-                ),
-                MotionListItem(
-                  key: const ValueKey('progress-card-rewards'),
-                  index: 6,
-                  child: _ProgressHubCard(
-                    isDark: isDark,
-                    icon: Icons.redeem,
-                    color: const Color(0xFFFF9500),
-                    title: 'Награды',
-                    subtitle: 'Сундуки и активные баффы',
-                    value:
-                        '${state.unopenedRewardChests.length} сундуков • ${state.activeBuffs.length} баффов',
-                    onTap: onOpenRewards,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           Padding(
@@ -336,6 +378,93 @@ List<HistoryEntry> _currentWeekEntries(AppState state) {
   return entries;
 }
 
+List<HistoryEntry> _todayEntries(AppState state) {
+  final entries = List<HistoryEntry>.of(
+    state.completionHistoryForDate(DateTime.now()),
+  );
+  entries.sort((a, b) => b.at.compareTo(a.at));
+  return entries;
+}
+
+String _questCount(int count) => '$count ${_questWord(count)}';
+
+String _questWord(int count) {
+  final lastTwo = count % 100;
+  if (lastTwo >= 11 && lastTwo <= 14) return 'квестов';
+  return switch (count % 10) {
+    1 => 'квест',
+    2 || 3 || 4 => 'квеста',
+    _ => 'квестов',
+  };
+}
+
+class _ProgressHubSection extends StatelessWidget {
+  final bool isDark;
+  final String title;
+  final String subtitle;
+  final int startIndex;
+  final List<_ProgressHubCard> cards;
+
+  const _ProgressHubSection({
+    required this.isDark,
+    required this.title,
+    required this.subtitle,
+    required this.startIndex,
+    required this.cards,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final txt = textColor(isDark);
+    final sub = subtext(isDark);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: TextStyle(
+            color: txt,
+            fontSize: 13.5,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(subtitle, style: TextStyle(color: sub, fontSize: 11.5)),
+        const SizedBox(height: 10),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final columns = constraints.maxWidth < 520
+                ? 1
+                : constraints.maxWidth >= 980
+                ? 3
+                : 2;
+            const spacing = 12.0;
+            final cardWidth =
+                (constraints.maxWidth - spacing * (columns - 1)) / columns;
+
+            return Wrap(
+              spacing: spacing,
+              runSpacing: spacing,
+              children: [
+                for (var i = 0; i < cards.length; i++)
+                  SizedBox(
+                    width: cardWidth,
+                    child: MotionListItem(
+                      key: ValueKey('$title-card-$i'),
+                      index: startIndex + i,
+                      child: cards[i],
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
 class _ProgressHubCard extends StatefulWidget {
   final bool isDark;
   final IconData icon;
@@ -369,6 +498,7 @@ class _ProgressHubCardState extends State<_ProgressHubCard> {
     final sub = subtext(widget.isDark);
 
     return MouseRegion(
+      cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() {
         _hovered = false;
@@ -401,6 +531,15 @@ class _ProgressHubCardState extends State<_ProgressHubCard> {
                     ? widget.color.withAlpha(44)
                     : borderColor(widget.isDark),
               ),
+              boxShadow: _hovered
+                  ? [
+                      BoxShadow(
+                        color: widget.color.withAlpha(widget.isDark ? 20 : 16),
+                        blurRadius: 18,
+                        offset: const Offset(0, 8),
+                      ),
+                    ]
+                  : null,
             ),
             child: Row(
               children: [
