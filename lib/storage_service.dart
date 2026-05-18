@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -42,19 +43,35 @@ class StorageService {
 
     await Hive.initFlutter();
 
-    _skills = await Hive.openBox<String>(_skillsBox);
-    _tasks = await Hive.openBox<String>(_tasksBox);
-    _profile = await Hive.openBox<String>(_profileBox);
-    _history = await Hive.openBox<String>(_historyBox);
-    _achievements = await Hive.openBox<String>(_achievementsBox);
-    _stats = await Hive.openBox<String>(_statsBox);
-    _bosses = await Hive.openBox<String>(_bossesBox);
-    _rewardChests = await Hive.openBox<String>(_rewardChestsBox);
-    _buffs = await Hive.openBox<String>(_buffsBox);
-    _weeklyGoals = await Hive.openBox<String>(_weeklyGoalsBox);
-    _meta = await Hive.openBox<String>(_metaBox);
+    _skills = await _openBox<String>(_skillsBox);
+    _tasks = await _openBox<String>(_tasksBox);
+    _profile = await _openBox<String>(_profileBox);
+    _history = await _openBox<String>(_historyBox);
+    _achievements = await _openBox<String>(_achievementsBox);
+    _stats = await _openBox<String>(_statsBox);
+    _bosses = await _openBox<String>(_bossesBox);
+    _rewardChests = await _openBox<String>(_rewardChestsBox);
+    _buffs = await _openBox<String>(_buffsBox);
+    _weeklyGoals = await _openBox<String>(_weeklyGoalsBox);
+    _meta = await _openBox<String>(_metaBox);
 
     _initialized = true;
+  }
+
+  Future<Box<T>> _openBox<T>(String name) async {
+    const maxAttempts = 8;
+
+    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return await Hive.openBox<T>(name);
+      } on FileSystemException catch (error) {
+        final isLocked = error.osError?.errorCode == 35;
+        if (!isLocked || attempt == maxAttempts) rethrow;
+        await Future<void>.delayed(Duration(milliseconds: 120 * attempt));
+      }
+    }
+
+    return Hive.openBox<T>(name);
   }
 
   void _ensureInit() {

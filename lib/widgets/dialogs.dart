@@ -1773,12 +1773,18 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   Priority _priority = Priority.medium;
   final List<String> _subtasks = [];
   final List<String> _tags = [];
+  bool _minimumActionEnabled = false;
   bool _notificationsEnabled = false;
   TimeOfDay _notificationTime = const TimeOfDay(hour: 9, minute: 0);
+  bool _advancedExpanded = false;
+  bool _qualityExpanded = false;
+  bool _subtasksExpanded = false;
+  bool _tagsExpanded = false;
 
   int get _softCap => typeSoftCap[_type]!;
   bool get _overCap => _xp > _softCap;
-  bool get _hasMinimumAction => _minimumActionCtrl.text.trim().isNotEmpty;
+  bool get _hasMinimumAction =>
+      _minimumActionEnabled && _minimumActionCtrl.text.trim().isNotEmpty;
   bool get _looksBigTask =>
       _type == TaskType.midTerm ||
       _type == TaskType.longTerm ||
@@ -1822,6 +1828,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     if (widget.existing case final ex?) {
       _titleCtrl.text = ex.title;
       _minimumActionCtrl.text = ex.minimumAction;
+      _minimumActionEnabled = ex.minimumAction.trim().isNotEmpty;
       _xp = ex.xpReward;
       _type = ex.type;
       _freq = ex.repeatFrequency;
@@ -1830,6 +1837,13 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
       _subtasks.addAll(ex.subtasks);
       _tags.addAll(ex.tags);
       _notificationsEnabled = ex.notificationsEnabled;
+      _advancedExpanded =
+          ex.type == TaskType.repeating ||
+          ex.subtasks.isNotEmpty ||
+          ex.tags.isNotEmpty ||
+          ex.notificationsEnabled;
+      _subtasksExpanded = ex.subtasks.isNotEmpty;
+      _tagsExpanded = ex.tags.isNotEmpty;
       if (ex.notificationHour != null && ex.notificationMinute != null) {
         _notificationTime = TimeOfDay(
           hour: ex.notificationHour!,
@@ -1888,20 +1902,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                 bdr: bdr,
               ),
               const SizedBox(height: 16),
-              DlgField(
-                label: 'Минимальное действие',
-                ctrl: _minimumActionCtrl,
-                fBg: fBg,
-                txt: txt,
-                sub: sub,
-                bdr: bdr,
-                min: 2,
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Например: открыть проект и сделать первый endpoint.',
-                style: TextStyle(color: sub, fontSize: 11),
-              ),
+              _buildMinimumActionSection(fBg, txt, sub, bdr, c),
               const SizedBox(height: 16),
               Row(
                 children: [
@@ -1990,7 +1991,18 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                     backgroundColor: fBg,
                     borderColor: bdr,
                     inactiveTextColor: sub,
-                    onTap: () => setState(() => _type = t),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    radius: 999,
+                    selectedWeight: FontWeight.w700,
+                    onTap: () => setState(() {
+                      _type = t;
+                      if (t == TaskType.repeating) {
+                        _advancedExpanded = true;
+                      }
+                    }),
                   );
                 }).toList(),
               ),
@@ -2010,144 +2022,20 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                     backgroundColor: fBg,
                     borderColor: bdr,
                     inactiveTextColor: sub,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    radius: 999,
+                    selectedWeight: FontWeight.w700,
                     onTap: () => setState(() => _priority = priority),
                   );
                 }).toList(),
               ),
-              MotionExpandable(
-                expanded: _type == TaskType.repeating,
-                expandedChild: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 16),
-                    SubLbl('Частота выполнения', sub),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: fBg,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: bdr),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: RepeatFrequency.values.map((f) {
-                              final sel = _freq == f;
-                              return _DialogChoiceChip(
-                                label: freqLabel[f]!,
-                                color: const Color(0xFF4A9EFF),
-                                selected: sel,
-                                backgroundColor: isDark
-                                    ? const Color(0xFF2A2A35)
-                                    : const Color(0xFFEAEAF0),
-                                borderColor: isDark
-                                    ? const Color(0xFF2A2A35)
-                                    : const Color(0xFFEAEAF0),
-                                inactiveTextColor: sub,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 6,
-                                ),
-                                radius: 20,
-                                selectedWeight: FontWeight.w600,
-                                onTap: () => setState(() => _freq = f),
-                              );
-                            }).toList(),
-                          ),
-                          MotionExpandable(
-                            expanded: _freq == RepeatFrequency.custom,
-                            expandedChild: Padding(
-                              padding: const EdgeInsets.only(top: 10),
-                              child: Row(
-                                children: [
-                                  Text(
-                                    'Каждые',
-                                    style: TextStyle(color: txt, fontSize: 13),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  SizedBox(
-                                    width: 60,
-                                    child: TextField(
-                                      controller: _customCtrl,
-                                      style: TextStyle(
-                                        color: txt,
-                                        fontSize: 13,
-                                      ),
-                                      keyboardType: TextInputType.number,
-                                      onChanged: (_) => setState(() {}),
-                                      decoration: InputDecoration(
-                                        isDense: true,
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                              horizontal: 8,
-                                              vertical: 8,
-                                            ),
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                          borderSide: BorderSide(color: bdr),
-                                        ),
-                                        focusedBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                          borderSide: const BorderSide(
-                                            color: Color(0xFF4A9EFF),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'дней',
-                                    style: TextStyle(color: txt, fontSize: 13),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Задача обновится в 03:00 через ${freqDays(_freq, _customDays)} дн.',
-                            style: TextStyle(color: sub, fontSize: 11),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              _buildTextListEditor(
-                title: 'Подзадачи',
-                hint: '+ Добавить подзадачу',
-                items: _subtasks,
-                ctrl: _subtaskCtrl,
-                color: c,
-                txt: txt,
-                sub: sub,
-              ),
               const SizedBox(height: 16),
               _buildQualityCheck(fBg, txt, sub, bdr, c),
               const SizedBox(height: 16),
-              _buildTextListEditor(
-                title: 'Теги',
-                hint: '+ Добавить тег',
-                items: _tags,
-                ctrl: _tagCtrl,
-                color: c,
-                txt: txt,
-                sub: sub,
-                prefix: '#',
-              ),
-              const SizedBox(height: 16),
-              _buildNotificationSection(fBg, txt, sub, bdr, c),
+              _buildAdvancedSection(fBg, txt, sub, bdr, c, isDark),
               const SizedBox(height: 22),
               DlgActions(onCancel: () => Navigator.pop(context), onSave: _save),
             ],
@@ -2162,6 +2050,324 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     return parsed < 1 ? 1 : parsed;
   }
 
+  Widget _buildMinimumActionSection(
+    Color fBg,
+    Color txt,
+    Color sub,
+    Color bdr,
+    Color color,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: fBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: bdr),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Icon(Icons.bolt_outlined, color: color, size: 17),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Минимальное действие',
+                      style: TextStyle(
+                        color: txt,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Лёгкий вход, если задача кажется тяжёлой',
+                      style: TextStyle(color: sub, fontSize: 11.5),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: _minimumActionEnabled,
+                activeThumbColor: color,
+                onChanged: (value) =>
+                    setState(() => _minimumActionEnabled = value),
+              ),
+            ],
+          ),
+          MotionExpandable(
+            expanded: _minimumActionEnabled,
+            expandedChild: Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: TextField(
+                controller: _minimumActionCtrl,
+                style: TextStyle(color: txt, fontSize: 13),
+                minLines: 2,
+                maxLines: 4,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  hintText: 'Например: открыть проект и сделать первый шаг',
+                  hintStyle: TextStyle(color: sub, fontSize: 12),
+                  filled: true,
+                  fillColor: surface(widget.isDark),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: bdr),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: bdr),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: color.withAlpha(180)),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAdvancedSection(
+    Color fBg,
+    Color txt,
+    Color sub,
+    Color bdr,
+    Color color,
+    bool isDark,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: fBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: bdr),
+      ),
+      child: Column(
+        children: [
+          _sectionToggle(
+            icon: Icons.tune_rounded,
+            title: 'Дополнительно',
+            expanded: _advancedExpanded,
+            color: color,
+            txt: txt,
+            sub: sub,
+            onTap: () => setState(() => _advancedExpanded = !_advancedExpanded),
+          ),
+          MotionExpandable(
+            expanded: _advancedExpanded,
+            expandedChild: Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (_type == TaskType.repeating) ...[
+                    _buildRepeatSection(fBg, txt, sub, bdr, isDark),
+                    const SizedBox(height: 12),
+                  ],
+                  _buildTextListEditor(
+                    title: 'Подзадачи',
+                    hint: '+ Добавить подзадачу',
+                    items: _subtasks,
+                    ctrl: _subtaskCtrl,
+                    color: color,
+                    txt: txt,
+                    sub: sub,
+                    bdr: bdr,
+                    expanded: _subtasksExpanded,
+                    onToggle: () =>
+                        setState(() => _subtasksExpanded = !_subtasksExpanded),
+                  ),
+                  const SizedBox(height: 10),
+                  _buildTextListEditor(
+                    title: 'Теги',
+                    hint: '+ Добавить тег',
+                    items: _tags,
+                    ctrl: _tagCtrl,
+                    color: color,
+                    txt: txt,
+                    sub: sub,
+                    bdr: bdr,
+                    prefix: '#',
+                    expanded: _tagsExpanded,
+                    onToggle: () =>
+                        setState(() => _tagsExpanded = !_tagsExpanded),
+                  ),
+                  const SizedBox(height: 10),
+                  _buildNotificationSection(fBg, txt, sub, bdr, color),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRepeatSection(
+    Color fBg,
+    Color txt,
+    Color sub,
+    Color bdr,
+    bool isDark,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF181820) : const Color(0xFFFFFFFF),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: bdr.withAlpha(180)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SubLbl('Повторяемость', sub),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 7,
+            runSpacing: 7,
+            children: RepeatFrequency.values.map((f) {
+              final sel = _freq == f;
+              return _DialogChoiceChip(
+                label: freqLabel[f]!,
+                color: const Color(0xFF4A9EFF),
+                selected: sel,
+                backgroundColor: isDark
+                    ? const Color(0xFF23232D)
+                    : const Color(0xFFF0F0F5),
+                borderColor: isDark
+                    ? const Color(0xFF2A2A35)
+                    : const Color(0xFFE0E0E8),
+                inactiveTextColor: sub,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                radius: 999,
+                selectedWeight: FontWeight.w600,
+                onTap: () => setState(() => _freq = f),
+              );
+            }).toList(),
+          ),
+          MotionExpandable(
+            expanded: _freq == RepeatFrequency.custom,
+            expandedChild: Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Row(
+                children: [
+                  Text('Каждые', style: TextStyle(color: txt, fontSize: 13)),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: 60,
+                    child: TextField(
+                      controller: _customCtrl,
+                      style: TextStyle(color: txt, fontSize: 13),
+                      keyboardType: TextInputType.number,
+                      onChanged: (_) => setState(() {}),
+                      decoration: InputDecoration(
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 8,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: bdr),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF4A9EFF),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text('дней', style: TextStyle(color: txt, fontSize: 13)),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Обновится в 03:00 через ${freqDays(_freq, _customDays)} дн.',
+            style: TextStyle(color: sub, fontSize: 11),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sectionToggle({
+    required IconData icon,
+    required String title,
+    required bool expanded,
+    required Color color,
+    required Color txt,
+    required Color sub,
+    required VoidCallback onTap,
+    String subtitle = '',
+    bool compact = false,
+  }) {
+    return Tooltip(
+      message: expanded ? 'Скрыть раздел' : 'Показать раздел',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Row(
+          children: [
+            Icon(icon, color: color.withAlpha(220), size: compact ? 15 : 16),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  color: txt,
+                  fontSize: compact ? 12.5 : 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            if (subtitle.isNotEmpty) ...[
+              SizedBox(
+                width: compact ? 28 : 88,
+                child: Text(
+                  subtitle,
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                    color: sub,
+                    fontSize: compact ? 11.5 : 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 6),
+            ],
+            AnimatedRotation(
+              turns: expanded ? 0.5 : 0,
+              duration: kMotionStandard,
+              curve: kMotionCurve,
+              child: Icon(Icons.expand_more, color: sub, size: 17),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildTextListEditor({
     required String title,
     required String hint,
@@ -2170,85 +2376,121 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     required Color color,
     required Color txt,
     required Color sub,
+    required Color bdr,
+    required bool expanded,
+    required VoidCallback onToggle,
     String prefix = '',
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SubLbl(title, sub),
-        const SizedBox(height: 8),
-        if (items.isNotEmpty)
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: items.asMap().entries.map((entry) {
-              return MotionListItem(
-                key: ValueKey('$title-${entry.key}-${entry.value}'),
-                index: entry.key,
-                slide: 4,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: color.withAlpha(22),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: color.withAlpha(60)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: bdr.withAlpha(160)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionToggle(
+            icon: title == 'Теги' ? Icons.sell_outlined : Icons.checklist,
+            title: title,
+            subtitle: '${items.length}',
+            expanded: expanded,
+            color: color,
+            txt: txt,
+            sub: sub,
+            onTap: onToggle,
+            compact: true,
+          ),
+          MotionExpandable(
+            expanded: expanded,
+            expandedChild: Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (items.isNotEmpty)
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: items.asMap().entries.map((entry) {
+                        return MotionListItem(
+                          key: ValueKey('$title-${entry.key}-${entry.value}'),
+                          index: entry.key,
+                          slide: 4,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: color.withAlpha(22),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: color.withAlpha(60)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  '$prefix${entry.value}',
+                                  style: TextStyle(color: txt, fontSize: 12),
+                                ),
+                                const SizedBox(width: 6),
+                                Tooltip(
+                                  message: 'Удалить элемент списка',
+                                  child: GestureDetector(
+                                    onTap: () => setState(
+                                      () => items.removeAt(entry.key),
+                                    ),
+                                    child: const Icon(
+                                      Icons.close,
+                                      color: Color(0xFFFF3B30),
+                                      size: 13,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  if (items.isNotEmpty) const SizedBox(height: 8),
+                  Row(
                     children: [
-                      Text(
-                        '$prefix${entry.value}',
-                        style: TextStyle(color: txt, fontSize: 12),
+                      Expanded(
+                        child: TextField(
+                          controller: ctrl,
+                          style: TextStyle(color: txt, fontSize: 13),
+                          onChanged: (_) => setState(() {}),
+                          decoration: InputDecoration(
+                            hintText: hint,
+                            hintStyle: TextStyle(color: sub, fontSize: 13),
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                          onSubmitted: (_) => _addListItem(items, ctrl),
+                        ),
                       ),
-                      const SizedBox(width: 6),
                       Tooltip(
-                        message: 'Удалить элемент списка',
+                        message: 'Добавить элемент списка',
                         child: GestureDetector(
-                          onTap: () =>
-                              setState(() => items.removeAt(entry.key)),
-                          child: const Icon(
-                            Icons.close,
-                            color: Color(0xFFFF3B30),
-                            size: 13,
+                          onTap: () => _addListItem(items, ctrl),
+                          child: Icon(
+                            Icons.add_circle_outline,
+                            color: color,
+                            size: 20,
                           ),
                         ),
                       ),
                     ],
                   ),
-                ),
-              );
-            }).toList(),
+                ],
+              ),
+            ),
           ),
-        if (items.isNotEmpty) const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: ctrl,
-                style: TextStyle(color: txt, fontSize: 13),
-                onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(
-                  hintText: hint,
-                  hintStyle: TextStyle(color: sub, fontSize: 13),
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.zero,
-                ),
-                onSubmitted: (_) => _addListItem(items, ctrl),
-              ),
-            ),
-            Tooltip(
-              message: 'Добавить элемент списка',
-              child: GestureDetector(
-                onTap: () => _addListItem(items, ctrl),
-                child: Icon(Icons.add_circle_outline, color: color, size: 20),
-              ),
-            ),
-          ],
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -2269,91 +2511,85 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: fBg,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: bdr),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(Icons.rule_folder_outlined, color: qualityColor, size: 16),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Качество задачи',
-                  style: TextStyle(
-                    color: txt,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
+          _sectionToggle(
+            icon: Icons.rule_folder_outlined,
+            title: 'Качество задачи',
+            expanded: _qualityExpanded,
+            color: qualityColor,
+            txt: txt,
+            sub: sub,
+            onTap: () => setState(() => _qualityExpanded = !_qualityExpanded),
+          ),
+          MotionExpandable(
+            expanded: _qualityExpanded,
+            expandedChild: Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Column(
+                children: [
+                  _qualityRow(
+                    ok: _hasSpecificTitle,
+                    okLabel: 'Есть понятное действие',
+                    warnLabel: 'Название слишком общее',
+                    txt: txt,
+                    sub: sub,
                   ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: qualityColor.withAlpha(18),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: qualityColor.withAlpha(70)),
-                ),
-                child: Text(
-                  _qualityStatus,
-                  style: TextStyle(
-                    color: qualityColor,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
+                  const SizedBox(height: 6),
+                  _qualityRow(
+                    ok: _hasMinimumAction,
+                    okLabel: 'Есть минимальный старт',
+                    warnLabel: 'Добавь лёгкий старт',
+                    txt: txt,
+                    sub: sub,
                   ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          _qualityRow(
-            ok: _hasSpecificTitle,
-            okLabel: 'Есть понятное действие',
-            warnLabel: 'Название слишком общее',
-            txt: txt,
-            sub: sub,
-          ),
-          const SizedBox(height: 6),
-          _qualityRow(
-            ok: _hasMinimumAction,
-            okLabel: 'Есть минимальный старт',
-            warnLabel: 'Добавь лёгкий старт',
-            txt: txt,
-            sub: sub,
-          ),
-          const SizedBox(height: 6),
-          _qualityRow(
-            ok: _xp > 0,
-            okLabel: 'Есть XP-награда',
-            warnLabel: 'Нужна XP-награда',
-            txt: txt,
-            sub: sub,
-          ),
-          const SizedBox(height: 6),
-          _qualityRow(
-            ok: !_looksBigTask || _subtasks.isNotEmpty,
-            okLabel: 'Структура уже разбита на шаги',
-            warnLabel: 'Для большой задачи лучше добавить 2–3 шага',
-            txt: txt,
-            sub: sub,
-          ),
-          if (_looksBigTask && (!_hasMinimumAction || _subtasks.isEmpty)) ...[
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              decoration: BoxDecoration(
-                color: color.withAlpha(16),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: color.withAlpha(48)),
-              ),
-              child: Text(
-                'Эта задача выглядит большой. Разбей её на 2–3 шага, чтобы легче начать.',
-                style: TextStyle(color: txt, fontSize: 11.5, height: 1.25),
+                  const SizedBox(height: 6),
+                  _qualityRow(
+                    ok: _xp > 0,
+                    okLabel: 'Есть XP-награда',
+                    warnLabel: 'Нужна XP-награда',
+                    txt: txt,
+                    sub: sub,
+                  ),
+                  const SizedBox(height: 6),
+                  _qualityRow(
+                    ok: !_looksBigTask || _subtasks.isNotEmpty,
+                    okLabel: 'Структура уже разбита на шаги',
+                    warnLabel: 'Для большой задачи лучше добавить 2–3 шага',
+                    txt: txt,
+                    sub: sub,
+                  ),
+                  if (_looksBigTask &&
+                      (!_hasMinimumAction || _subtasks.isEmpty)) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: color.withAlpha(16),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: color.withAlpha(48)),
+                      ),
+                      child: Text(
+                        'Задача выглядит большой. Добавь минимум или 2–3 шага, чтобы легче начать.',
+                        style: TextStyle(
+                          color: txt,
+                          fontSize: 11.5,
+                          height: 1.25,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
-          ],
+          ),
         ],
       ),
     );
@@ -2503,7 +2739,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
       _freq,
       _customDays,
       _priority,
-      _minimumActionCtrl.text.trim(),
+      _minimumActionEnabled ? _minimumActionCtrl.text.trim() : '',
       List.of(_subtasks),
       List.of(_tags),
       _notificationsEnabled,

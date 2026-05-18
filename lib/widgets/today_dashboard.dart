@@ -433,14 +433,14 @@ class _NextActionCard extends StatelessWidget {
 
     final earnedXp = state.previewEarnedXP(task!);
     final canStartMinimum = state.canCompleteMinimumAction(task!);
-    final recommendsMinimum =
-        canStartMinimum && TodayDashboard._shouldRecommendMinimumAction(task!);
     final buffBonus = state.previewBuffBonusXP(task!);
     final fullDisplayedXp = earnedXp + buffBonus;
     final minimumXp = canStartMinimum ? state.previewMinimumActionXP(task!) : 0;
-    final footer = canStartMinimum
-        ? 'Выбери вход: быстрый минимум или полное закрытие квеста.'
-        : 'Один маленький квест — и поток запущен.';
+    final displayedXp = canStartMinimum ? minimumXp : fullDisplayedXp;
+    final actionLabel = canStartMinimum ? 'Начать' : 'Выполнить';
+    final actionTooltip = canStartMinimum
+        ? 'Сделать минимальное действие и получить частичный XP'
+        : 'Закрыть квест полностью и начислить XP';
 
     return _SoftCard(
       isDark: isDark,
@@ -469,17 +469,9 @@ class _NextActionCard extends StatelessWidget {
               const SizedBox(width: 6),
               TaskBadge(
                 icon: Icons.auto_awesome,
-                label: '+$fullDisplayedXp XP',
+                label: '+$displayedXp XP',
                 color: const Color(0xFF4A9EFF),
               ),
-              if (canStartMinimum) ...[
-                const SizedBox(width: 6),
-                TaskBadge(
-                  icon: Icons.play_circle_fill,
-                  label: 'мин +$minimumXp',
-                  color: accent,
-                ),
-              ],
               if (buffBonus > 0) ...[
                 const SizedBox(width: 6),
                 TaskBadge(
@@ -503,71 +495,36 @@ class _NextActionCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
           if (canStartMinimum) ...[
-            const SizedBox(height: 5),
+            const SizedBox(height: 8),
             _MinimumActionHint(
               text: task!.minimumAction,
               color: accent,
               isDark: isDark,
             ),
           ],
-          const SizedBox(height: 7),
-          Wrap(
-            spacing: 6,
-            runSpacing: 4,
-            children: [
-              if (skill != null)
-                TaskBadge(icon: skill!.icon, label: skill!.name, color: accent),
-              if (canStartMinimum)
-                TaskBadge(
-                  icon: Icons.play_circle_fill,
-                  label: 'Лёгкий старт',
-                  color: accent,
-                ),
-              TaskBadge(
-                label: typeLabel[task!.type]!,
-                color: typeColor[task!.type]!,
-              ),
-              if (task!.priority != Priority.medium)
-                TaskBadge(
-                  label: priorityLabel[task!.priority]!,
-                  color: priorityColor[task!.priority]!,
-                ),
-            ],
-          ),
           const Spacer(),
           Row(
             children: [
               Expanded(
                 child: Text(
-                  footer,
+                  canStartMinimum
+                      ? 'Сделай самый маленький вход. Полное закрытие останется в списке.'
+                      : 'Один маленький квест — и поток запущен.',
                   style: TextStyle(color: sub, fontSize: 11.5, height: 1.25),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
               const SizedBox(width: 10),
-              if (canStartMinimum) ...[
-                _QuickActionButton(
-                  task: task!,
-                  color: accent,
-                  label: 'Минимум',
-                  tooltip: 'Сделать лёгкий старт и получить частичный XP',
-                  icon: Icons.play_arrow,
-                  compact: false,
-                  primary: recommendsMinimum,
-                  onTrigger: onMinimumAction,
-                ),
-                const SizedBox(width: 8),
-              ],
               _QuickActionButton(
                 task: task!,
                 color: accent,
-                label: 'Выполнить',
-                tooltip: 'Закрыть квест полностью и начислить XP',
-                icon: Icons.check,
+                label: actionLabel,
+                tooltip: actionTooltip,
+                icon: canStartMinimum ? Icons.play_arrow : Icons.check,
                 compact: false,
-                primary: !recommendsMinimum,
-                onTrigger: onComplete,
+                primary: true,
+                onTrigger: canStartMinimum ? onMinimumAction : onComplete,
               ),
             ],
           ),

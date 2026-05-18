@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../feedback_service.dart';
@@ -10,6 +12,7 @@ import 'today_dashboard.dart';
 import 'profile_dialog.dart';
 import 'faq_dialog.dart';
 import 'progress_hub_dialog.dart';
+import 'planning_workspace.dart';
 import 'character_timeline_dialog.dart';
 import 'daily_victories_dialog.dart';
 import 'reward_animations.dart';
@@ -761,8 +764,6 @@ class _MainPageState extends State<MainPage> {
                       WorkspaceMode.plan => _PlanWorkspace(
                         key: const ValueKey('plan-workspace'),
                         isDark: isDark,
-                        onComplete: _onComplete,
-                        onMinimumAction: _onMinimumAction,
                       ),
                       WorkspaceMode.progress => _ProgressWorkspace(
                         key: const ValueKey('progress-workspace'),
@@ -859,37 +860,12 @@ class _ActWorkspace extends StatelessWidget {
 
 class _PlanWorkspace extends StatelessWidget {
   final bool isDark;
-  final void Function(String taskId, Offset position) onComplete;
-  final void Function(String taskId, Offset position) onMinimumAction;
 
-  const _PlanWorkspace({
-    super.key,
-    required this.isDark,
-    required this.onComplete,
-    required this.onMinimumAction,
-  });
+  const _PlanWorkspace({super.key, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _ModeHeader(
-          isDark: isDark,
-          icon: Icons.edit_note,
-          color: const Color(0xFF4A9EFF),
-          title: 'Планировать систему',
-          subtitle:
-              'Навыки, цели, квесты и дерево живут здесь. Это режим спокойной настройки, без давления “сделай сейчас”.',
-        ),
-        const SizedBox(height: 8),
-        Expanded(
-          child: _SkillTaskWorkspace(
-            onComplete: onComplete,
-            onMinimumAction: onMinimumAction,
-          ),
-        ),
-      ],
-    );
+    return PlanningWorkspace(isDark: isDark);
   }
 }
 
@@ -991,74 +967,6 @@ class _SkillTaskWorkspace extends StatelessWidget {
   }
 }
 
-class _ModeHeader extends StatelessWidget {
-  final bool isDark;
-  final IconData icon;
-  final Color color;
-  final String title;
-  final String subtitle;
-
-  const _ModeHeader({
-    required this.isDark,
-    required this.icon,
-    required this.color,
-    required this.title,
-    required this.subtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final txt = textColor(isDark);
-    final sub = subtext(isDark);
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
-      decoration: BoxDecoration(
-        color: surface(isDark),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: borderColor(isDark)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: color.withAlpha(24),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(icon, color: color, size: 22),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: txt,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 17,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  subtitle,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: sub, fontSize: 12.5, height: 1.25),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _RewardNotice {
   final List<String> chestTitles;
   final List<String> buffTitles;
@@ -1150,13 +1058,16 @@ class _RewardNoticePopover extends StatefulWidget {
 class _RewardNoticePopoverState extends State<_RewardNoticePopover>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
+  Timer? _autoHideTimer;
   bool _closing = false;
+  bool _hovered = false;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(vsync: this, duration: kMotionSlow)
       ..forward();
+    _scheduleAutoHide();
   }
 
   @override
@@ -1168,18 +1079,40 @@ class _RewardNoticePopoverState extends State<_RewardNoticePopover>
     if (noticeChanged) {
       _closing = false;
       _controller.forward(from: 0);
+      _scheduleAutoHide();
     }
   }
 
   @override
   void dispose() {
+    _autoHideTimer?.cancel();
     _controller.dispose();
     super.dispose();
+  }
+
+  void _scheduleAutoHide() {
+    _autoHideTimer?.cancel();
+    if (_hovered || _closing) return;
+    _autoHideTimer = Timer(const Duration(seconds: 5), () {
+      if (!mounted || _hovered || _closing) return;
+      _closeThen(widget.onHide);
+    });
+  }
+
+  void _pauseAutoHide() {
+    _hovered = true;
+    _autoHideTimer?.cancel();
+  }
+
+  void _resumeAutoHide() {
+    _hovered = false;
+    _scheduleAutoHide();
   }
 
   Future<void> _closeThen(VoidCallback action) async {
     if (_closing) return;
     _closing = true;
+    _autoHideTimer?.cancel();
     await _controller.reverse();
     if (!mounted) return;
     action();
@@ -1221,125 +1154,129 @@ class _RewardNoticePopoverState extends State<_RewardNoticePopover>
             ),
           );
         },
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            if (widget.notice.hasConfettiMoment)
+        child: MouseRegion(
+          onEnter: (_) => _pauseAutoHide(),
+          onExit: (_) => _resumeAutoHide(),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              if (widget.notice.hasConfettiMoment)
+                Positioned(
+                  top: 3,
+                  right: 48,
+                  child: MilestoneConfettiBurst(
+                    color: widget.notice.color,
+                    alignment: Alignment.topCenter,
+                    particles: 12,
+                  ),
+                ),
               Positioned(
-                top: 3,
-                right: 48,
-                child: MilestoneConfettiBurst(
-                  color: widget.notice.color,
-                  alignment: Alignment.topCenter,
-                  particles: 12,
-                ),
-              ),
-            Positioned(
-              top: -5,
-              right: 28,
-              child: Transform.rotate(
-                angle: 0.785398,
-                child: Container(
-                  width: 12,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    color: bg,
-                    border: Border(
-                      left: BorderSide(color: bdr),
-                      top: BorderSide(color: bdr),
+                top: -5,
+                right: 28,
+                child: Transform.rotate(
+                  angle: 0.785398,
+                  child: Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: bg,
+                      border: Border(
+                        left: BorderSide(color: bdr),
+                        top: BorderSide(color: bdr),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: bg,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: widget.notice.color.withAlpha(90)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withAlpha(widget.isDark ? 110 : 36),
-                    blurRadius: 22,
-                    offset: const Offset(0, 14),
-                  ),
-                  BoxShadow(
-                    color: widget.notice.color.withAlpha(
-                      widget.isDark ? 32 : 22,
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: bg,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: widget.notice.color.withAlpha(90)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(widget.isDark ? 110 : 36),
+                      blurRadius: 22,
+                      offset: const Offset(0, 14),
                     ),
-                    blurRadius: 26,
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      RewardGlowIcon(
-                        icon: widget.notice.icon,
-                        color: widget.notice.color,
-                        size: 38,
-                        iconSize: 20,
-                        sparkle: true,
-                        loop: true,
+                    BoxShadow(
+                      color: widget.notice.color.withAlpha(
+                        widget.isDark ? 32 : 22,
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.notice.title,
-                              style: TextStyle(
-                                color: txt,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14.5,
-                              ),
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              widget.notice.subtitle,
-                              style: TextStyle(
-                                color: sub,
-                                fontSize: 12,
-                                height: 1.25,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _NoticeActionButton(
-                          label: 'Скрыть',
-                          color: sub,
-                          isPrimary: false,
-                          onTap: () => _closeThen(widget.onHide),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _NoticeActionButton(
-                          label: 'Показать',
+                      blurRadius: 26,
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        RewardGlowIcon(
+                          icon: widget.notice.icon,
                           color: widget.notice.color,
-                          isPrimary: true,
-                          onTap: () => _closeThen(widget.onShow),
+                          size: 38,
+                          iconSize: 20,
+                          sparkle: true,
+                          loop: true,
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.notice.title,
+                                style: TextStyle(
+                                  color: txt,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14.5,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                widget.notice.subtitle,
+                                style: TextStyle(
+                                  color: sub,
+                                  fontSize: 12,
+                                  height: 1.25,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _NoticeActionButton(
+                            label: 'Скрыть',
+                            color: sub,
+                            isPrimary: false,
+                            onTap: () => _closeThen(widget.onHide),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _NoticeActionButton(
+                            label: 'Показать',
+                            color: widget.notice.color,
+                            isPrimary: true,
+                            onTap: () => _closeThen(widget.onShow),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

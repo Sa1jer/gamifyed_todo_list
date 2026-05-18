@@ -14,10 +14,12 @@ import 'dialogs.dart';
 class TasksPanel extends StatefulWidget {
   final Function(String id, Offset pos) onComplete;
   final Function(String id, Offset pos) onMinimumAction;
+  final bool planningMode;
   const TasksPanel({
     super.key,
     required this.onComplete,
     required this.onMinimumAction,
+    this.planningMode = false,
   });
   @override
   State<TasksPanel> createState() => _TasksPanelState();
@@ -61,7 +63,11 @@ class _TasksPanelState extends State<TasksPanel> {
               Icon(Icons.arrow_back, color: sub, size: 30),
               const SizedBox(height: 12),
               Text(
-                hasSkills ? 'Выберите навык' : 'Сначала создайте навык',
+                hasSkills
+                    ? (widget.planningMode
+                          ? 'Выберите навык для настройки'
+                          : 'Выберите навык')
+                    : 'Сначала создайте навык',
                 style: TextStyle(
                   color: txt,
                   fontSize: 16,
@@ -71,7 +77,9 @@ class _TasksPanelState extends State<TasksPanel> {
               const SizedBox(height: 4),
               Text(
                 hasSkills
-                    ? 'Задачи откроются здесь'
+                    ? (widget.planningMode
+                          ? 'Здесь откроются цель, прогресс и квесты навыка'
+                          : 'Задачи откроются здесь')
                     : 'После навыка можно будет добавить первый квест',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: sub.withAlpha(180), fontSize: 13),
@@ -152,6 +160,28 @@ class _TasksPanelState extends State<TasksPanel> {
                       ),
                     ),
                   ),
+                if (widget.planningMode) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: sub.withAlpha(16),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: sub.withAlpha(45)),
+                    ),
+                    child: Text(
+                      'структура',
+                      style: TextStyle(
+                        color: sub,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
                 HoverScale(
                   child: SmallBtn(
                     label: 'Новая задача',
