@@ -57,9 +57,6 @@ class _PlanningWorkspaceState extends State<PlanningWorkspace> {
                         onEditSkill: skill == null
                             ? null
                             : () => _editSkill(context, skill),
-                        onOpenTree: skill == null
-                            ? null
-                            : () => _openTree(context, skill),
                         onAddTask: skill == null
                             ? null
                             : () => _addTask(context, skill),
@@ -71,9 +68,6 @@ class _PlanningWorkspaceState extends State<PlanningWorkspace> {
                         state: state,
                         skill: skill,
                         isDark: isDark,
-                        onOpenTree: skill == null
-                            ? null
-                            : () => _openTree(context, skill),
                         onAddTask: skill == null
                             ? null
                             : () => _addTask(context, skill),
@@ -111,9 +105,6 @@ class _PlanningWorkspaceState extends State<PlanningWorkspace> {
                       onEditSkill: skill == null
                           ? null
                           : () => _editSkill(context, skill),
-                      onOpenTree: skill == null
-                          ? null
-                          : () => _openTree(context, skill),
                       onAddTask: skill == null
                           ? null
                           : () => _addTask(context, skill),
@@ -128,9 +119,6 @@ class _PlanningWorkspaceState extends State<PlanningWorkspace> {
                       state: state,
                       skill: skill,
                       isDark: isDark,
-                      onOpenTree: skill == null
-                          ? null
-                          : () => _openTree(context, skill),
                       onAddTask: skill == null
                           ? null
                           : () => _addTask(context, skill),
@@ -187,21 +175,23 @@ class _PlanningWorkspaceState extends State<PlanningWorkspace> {
     );
   }
 
-  void _openTree(BuildContext context, Skill skill) {
-    final state = AppStateProvider.of(context);
-    showDialog(
-      context: context,
-      builder: (_) => SkillTreeDialog(state: state, skill: skill),
-    );
+  void _addTask(BuildContext context, Skill skill) {
+    _addTaskForNode(context, skill, treeNodeId: null);
   }
 
-  void _addTask(BuildContext context, Skill skill) {
+  void _addTaskForNode(
+    BuildContext context,
+    Skill skill, {
+    String? treeNodeId,
+  }) {
     final state = AppStateProvider.of(context);
     showDialog(
       context: context,
       builder: (_) => AddTaskDialog(
         isDark: state.isDark,
         skillColor: skill.color,
+        skill: skill,
+        initialTreeNodeId: treeNodeId,
         onSave:
             (
               title,
@@ -216,6 +206,7 @@ class _PlanningWorkspaceState extends State<PlanningWorkspace> {
               notificationsEnabled,
               notificationHour,
               notificationMinute,
+              treeNodeId,
             ) => state.addTask(
               Task(
                 id: uid(),
@@ -229,6 +220,7 @@ class _PlanningWorkspaceState extends State<PlanningWorkspace> {
                 minimumAction: minimumAction,
                 subtasks: subtasks,
                 tags: tags,
+                treeNodeId: treeNodeId,
                 notificationsEnabled: notificationsEnabled,
                 notificationHour: notificationHour,
                 notificationMinute: notificationMinute,
@@ -245,6 +237,7 @@ class _PlanningWorkspaceState extends State<PlanningWorkspace> {
       builder: (_) => AddTaskDialog(
         isDark: state.isDark,
         skillColor: skill.color,
+        skill: skill,
         existing: task,
         onSave:
             (
@@ -260,6 +253,7 @@ class _PlanningWorkspaceState extends State<PlanningWorkspace> {
               notificationsEnabled,
               notificationHour,
               notificationMinute,
+              treeNodeId,
             ) => state.updateTask(
               task,
               title: title,
@@ -274,6 +268,7 @@ class _PlanningWorkspaceState extends State<PlanningWorkspace> {
               notificationsEnabled: notificationsEnabled,
               notificationHour: notificationHour,
               notificationMinute: notificationMinute,
+              treeNodeId: treeNodeId,
             ),
       ),
     );
@@ -322,7 +317,7 @@ class _PlanningHero extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    'Навыки, цели, квесты и дерево живут здесь. Это режим спокойной настройки, без давления “сделай сейчас”.',
+                    'Навыки, цели и квесты живут здесь. Это режим спокойной настройки, без давления “сделай сейчас”.',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -365,7 +360,7 @@ class _PlanningSkillRail extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
             child: Row(
               children: [
-                const Icon(Icons.account_tree, color: Color(0xFF4A9EFF)),
+                const Icon(Icons.view_list_rounded, color: Color(0xFF4A9EFF)),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -468,7 +463,6 @@ class _PlanningSkillTileState extends State<_PlanningSkillTile> {
     final skill = widget.skill;
     final isDark = widget.isDark;
     final color = skill.color;
-    final rank = skillRankForLevel(skill.level);
     final txt = textColor(isDark);
     final sub = subtext(isDark);
     final selected = widget.selected;
@@ -535,31 +529,22 @@ class _PlanningSkillTileState extends State<_PlanningSkillTile> {
                     Row(
                       children: [
                         Text(
-                          rank.label,
+                          'Квесты',
                           style: TextStyle(
                             color: color,
                             fontSize: 11.5,
-                            fontWeight: FontWeight.w700,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
                         const SizedBox(width: 6),
                         Icon(Icons.route, color: sub.withAlpha(150), size: 13),
                         const SizedBox(width: 3),
                         Text(
-                          '${skill.masteredTreeNodeCount}/${skill.treeNodes.length}',
-                          style: TextStyle(
-                            color: sub,
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const Spacer(),
-                        Text(
                           '${widget.taskCount}',
                           style: TextStyle(
                             color: sub,
                             fontSize: 11.5,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ],
@@ -601,7 +586,6 @@ class _SkillBlueprintPanel extends StatelessWidget {
   final VoidCallback onArchiveToggle;
   final VoidCallback onAddSkill;
   final VoidCallback? onEditSkill;
-  final VoidCallback? onOpenTree;
   final VoidCallback? onAddTask;
   final ValueChanged<Task> onEditTask;
   final ValueChanged<Task> onDeleteTask;
@@ -615,7 +599,6 @@ class _SkillBlueprintPanel extends StatelessWidget {
     required this.onArchiveToggle,
     required this.onAddSkill,
     required this.onEditSkill,
-    required this.onOpenTree,
     required this.onAddTask,
     required this.onEditTask,
     required this.onDeleteTask,
@@ -641,7 +624,8 @@ class _SkillBlueprintPanel extends StatelessWidget {
 
     final tasks = state.tasksForSkill(selected.id);
     final active = tasks.where((task) => !task.isDone).toList();
-    final done = tasks.where((task) => task.isDone).toList();
+    final done = tasks.where((task) => task.isDone).toList()
+      ..sort(_compareCompletedTasksNewestFirst);
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -651,11 +635,9 @@ class _SkillBlueprintPanel extends StatelessWidget {
           activeCount: active.length,
           doneCount: done.length,
           onEditSkill: onEditSkill!,
-          onOpenTree: onOpenTree!,
           onAddTask: onAddTask!,
         ),
         PanelDivider(isDark: isDark),
-        _SkillChecklistCard(state: state, skill: selected, isDark: isDark),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
           child: _SectionTitle(
@@ -705,7 +687,6 @@ class _SkillPassportHeader extends StatelessWidget {
   final int activeCount;
   final int doneCount;
   final VoidCallback onEditSkill;
-  final VoidCallback onOpenTree;
   final VoidCallback onAddTask;
 
   const _SkillPassportHeader({
@@ -714,7 +695,6 @@ class _SkillPassportHeader extends StatelessWidget {
     required this.activeCount,
     required this.doneCount,
     required this.onEditSkill,
-    required this.onOpenTree,
     required this.onAddTask,
   });
 
@@ -722,7 +702,6 @@ class _SkillPassportHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final txt = textColor(isDark);
     final sub = subtext(isDark);
-    final rank = skillRankForLevel(skill.level);
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -783,13 +762,6 @@ class _SkillPassportHeader extends StatelessWidget {
                     isDark: isDark,
                     onTap: onEditSkill,
                   ),
-                  _OutlineActionButton(
-                    label: 'Дерево',
-                    icon: Icons.account_tree,
-                    color: const Color(0xFF4A9EFF),
-                    isDark: isDark,
-                    onTap: onOpenTree,
-                  ),
                   SmallBtn(
                     label: 'Квест',
                     icon: Icons.add,
@@ -806,7 +778,6 @@ class _SkillPassportHeader extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              RankBadge(label: rank.label, color: rank.color),
               LvlBadge(level: skill.level, color: skill.color),
               _SoftPill(
                 label: '$activeCount активных',
@@ -1000,6 +971,7 @@ class _QuestPlanList extends StatelessWidget {
                   key: ValueKey('planning-active-task-${task.id}'),
                   index: entry.key,
                   child: _PlanningTaskRow(
+                    skill: skill,
                     task: task,
                     isDark: isDark,
                     skillColor: skill.color,
@@ -1029,6 +1001,7 @@ class _QuestPlanList extends StatelessWidget {
                         bottom: entry.key == doneTasks.length - 1 ? 0 : 8,
                       ),
                       child: _PlanningTaskRow(
+                        skill: skill,
                         task: task,
                         isDark: isDark,
                         skillColor: skill.color,
@@ -1051,6 +1024,7 @@ class _QuestPlanList extends StatelessWidget {
 }
 
 class _PlanningTaskRow extends StatelessWidget {
+  final Skill skill;
   final Task task;
   final bool isDark;
   final Color skillColor;
@@ -1059,6 +1033,7 @@ class _PlanningTaskRow extends StatelessWidget {
   final VoidCallback onDelete;
 
   const _PlanningTaskRow({
+    required this.skill,
     required this.task,
     required this.isDark,
     required this.skillColor,
@@ -1216,7 +1191,6 @@ class _PlanningInspector extends StatelessWidget {
   final AppState state;
   final Skill? skill;
   final bool isDark;
-  final VoidCallback? onOpenTree;
   final VoidCallback? onAddTask;
   final VoidCallback? onDeleteSkill;
 
@@ -1224,7 +1198,6 @@ class _PlanningInspector extends StatelessWidget {
     required this.state,
     required this.skill,
     required this.isDark,
-    required this.onOpenTree,
     required this.onAddTask,
     required this.onDeleteSkill,
   });
@@ -1276,7 +1249,6 @@ class _PlanningInspector extends StatelessWidget {
         .where((task) => _looksLarge(task) && task.subtasks.isEmpty)
         .length;
     final insights = _insightsFor(
-      skill: selected,
       active: active,
       missingMinimum: missingMinimum,
       largeWithoutSteps: largeWithoutSteps,
@@ -1295,12 +1267,12 @@ class _PlanningInspector extends StatelessWidget {
               title: 'Инспектор планирования',
               subtitle: 'Мягко показывает, где систему стоит уточнить.',
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 8),
             GridView.count(
               crossAxisCount: 2,
               mainAxisSpacing: 8,
               crossAxisSpacing: 8,
-              childAspectRatio: 1.35,
+              childAspectRatio: 1.55,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               children: [
@@ -1335,7 +1307,7 @@ class _PlanningInspector extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 14),
-            _TreeProgressCard(skill: selected, isDark: isDark),
+            _SkillChecklistCard(state: state, skill: selected, isDark: isDark),
             const SizedBox(height: 14),
             Text(
               'Что уточнить',
@@ -1352,7 +1324,8 @@ class _PlanningInspector extends StatelessWidget {
                 icon: Icons.check_circle,
                 color: const Color(0xFF34C759),
                 title: 'Структура выглядит устойчиво',
-                subtitle: 'Есть квесты, дерево или понятные маленькие шаги.',
+                subtitle:
+                    'Есть квесты, карта мастерства или понятные маленькие шаги.',
               )
             else
               ...insights.map(
@@ -1366,14 +1339,6 @@ class _PlanningInspector extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                if (onOpenTree != null)
-                  _OutlineActionButton(
-                    label: 'Дерево',
-                    icon: Icons.account_tree,
-                    color: const Color(0xFF4A9EFF),
-                    isDark: isDark,
-                    onTap: onOpenTree!,
-                  ),
                 if (onAddTask != null)
                   _OutlineActionButton(
                     label: 'Квест',
@@ -1411,7 +1376,6 @@ class _PlanningInspector extends StatelessWidget {
   }
 
   List<Widget> _insightsFor({
-    required Skill skill,
     required List<Task> active,
     required int missingMinimum,
     required int largeWithoutSteps,
@@ -1450,17 +1414,6 @@ class _PlanningInspector extends StatelessWidget {
         ),
       );
     }
-    if (skill.treeNodes.isEmpty) {
-      result.add(
-        _InspectorHint(
-          isDark: isDark,
-          icon: Icons.account_tree,
-          color: const Color(0xFF8E8E93),
-          title: 'Собрать дерево навыка',
-          subtitle: 'Дерево поможет видеть структуру роста.',
-        ),
-      );
-    }
     final repeatingWithoutReminder = active
         .where(
           (task) =>
@@ -1480,78 +1433,6 @@ class _PlanningInspector extends StatelessWidget {
       );
     }
     return result.take(4).toList();
-  }
-}
-
-class _TreeProgressCard extends StatelessWidget {
-  final Skill skill;
-  final bool isDark;
-
-  const _TreeProgressCard({required this.skill, required this.isDark});
-
-  @override
-  Widget build(BuildContext context) {
-    final txt = textColor(isDark);
-    final sub = subtext(isDark);
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF4A9EFF).withAlpha(isDark ? 14 : 10),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF4A9EFF).withAlpha(55)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(
-                Icons.account_tree,
-                color: Color(0xFF4A9EFF),
-                size: 17,
-              ),
-              const SizedBox(width: 7),
-              Expanded(
-                child: Text(
-                  'Дерево навыка',
-                  style: TextStyle(
-                    color: txt,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              Text(
-                '${skill.masteredTreeNodeCount}/${skill.treeNodes.length}',
-                style: TextStyle(
-                  color: sub,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 9),
-          XPBar(
-            progress: skill.treeProgress,
-            color: const Color(0xFF4A9EFF),
-            height: 6,
-          ),
-          const SizedBox(height: 7),
-          Text(
-            skill.treeNodes.isEmpty
-                ? 'Узлы ещё не настроены.'
-                : '${skill.activeTreeNodeCount} активных узлов ждут настройки.',
-            style: TextStyle(
-              color: sub,
-              fontSize: 11.5,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 
@@ -1877,4 +1758,12 @@ String? _reminderLabel(Task task) {
   final hour = task.notificationHour!.toString().padLeft(2, '0');
   final minute = task.notificationMinute!.toString().padLeft(2, '0');
   return '$hour:$minute';
+}
+
+int _compareCompletedTasksNewestFirst(Task a, Task b) {
+  final aDate = a.lastCompletedAt ?? a.updatedAt;
+  final bDate = b.lastCompletedAt ?? b.updatedAt;
+  final byCompletion = bDate.compareTo(aDate);
+  if (byCompletion != 0) return byCompletion;
+  return b.createdAt.compareTo(a.createdAt);
 }

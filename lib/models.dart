@@ -66,6 +66,7 @@ class SkillTreeNode {
   String title;
   String description;
   int xpReward;
+  int requiredQuestCompletions;
   List<String> prerequisiteIds;
   List<String> checklist;
   List<bool> checklistDone;
@@ -77,6 +78,7 @@ class SkillTreeNode {
     required this.title,
     this.description = '',
     this.xpReward = 20,
+    this.requiredQuestCompletions = 3,
     List<String>? prerequisiteIds,
     List<String>? checklist,
     List<bool>? checklistDone,
@@ -88,6 +90,9 @@ class SkillTreeNode {
            checklistDone ?? List.filled((checklist ?? []).length, false);
 
   int get checklistCompletedCount => checklistDone.where((done) => done).length;
+
+  int get questTarget =>
+      requiredQuestCompletions < 1 ? 1 : requiredQuestCompletions;
 
   bool get isChecklistReady =>
       checklist.isEmpty || checklistDone.every((done) => done);
@@ -219,6 +224,7 @@ class Task {
   List<String> subtasks;
   List<bool> subtaskDone;
   List<String> tags;
+  String? treeNodeId;
   bool notificationsEnabled;
   int? notificationHour;
   int? notificationMinute;
@@ -247,6 +253,7 @@ class Task {
     List<String>? subtasks,
     List<bool>? subtaskDone,
     List<String>? tags,
+    this.treeNodeId,
     this.notificationsEnabled = false,
     this.notificationHour,
     this.notificationMinute,

@@ -105,6 +105,7 @@ class AppState extends ChangeNotifier {
             title: 'Чистая техника',
             description: 'Закрепить амплитуду и контроль движения.',
             xpReward: 25,
+            requiredQuestCompletions: 1,
             checklist: ['Полная амплитуда', 'Без рывков'],
           ),
           SkillTreeNode(
@@ -112,6 +113,7 @@ class AppState extends ChangeNotifier {
             title: 'Рабочий объём',
             description: 'Собрать базу для выхода на 20 повторений.',
             xpReward: 40,
+            requiredQuestCompletions: 1,
             prerequisiteIds: [pullTechnique],
             checklist: ['3 подхода', 'Отдых не больше 2 минут'],
           ),
@@ -132,6 +134,7 @@ class AppState extends ChangeNotifier {
             title: 'Основы backend',
             description: 'Синтаксис, функции и работа с проектом.',
             xpReward: 30,
+            requiredQuestCompletions: 1,
             checklist: ['Функции', 'Модули', 'Виртуальное окружение'],
           ),
           SkillTreeNode(
@@ -139,6 +142,7 @@ class AppState extends ChangeNotifier {
             title: 'FastAPI CRUD',
             description: 'Первый рабочий API с роутами и моделями.',
             xpReward: 60,
+            requiredQuestCompletions: 1,
             prerequisiteIds: [pythonSyntax],
             checklist: [
               'Создать endpoint',
@@ -161,6 +165,7 @@ class AppState extends ChangeNotifier {
             title: 'Core loop',
             description: 'Навык, квест, XP, обратная связь.',
             xpReward: 35,
+            requiredQuestCompletions: 1,
             checklist: ['Квесты', 'XP', 'Профиль'],
           ),
           SkillTreeNode(
@@ -168,6 +173,7 @@ class AppState extends ChangeNotifier {
             title: 'Rewards layer',
             description: 'Сундуки, баффы и приятное усиление прогресса.',
             xpReward: 55,
+            requiredQuestCompletions: 1,
             prerequisiteIds: [gamificationLoop],
             checklist: ['Сундуки', 'Баффы', 'Уведомления'],
           ),
@@ -184,6 +190,7 @@ class AppState extends ChangeNotifier {
         type: TaskType.repeating,
         streak: 3,
         repeatFrequency: RepeatFrequency.daily,
+        treeNodeId: pullTechnique,
       ),
       Task(
         id: uid(),
@@ -191,6 +198,7 @@ class AppState extends ChangeNotifier {
         skillId: skills[0].id,
         xpReward: 100,
         type: TaskType.longTerm,
+        treeNodeId: pullVolume,
       ),
       Task(
         id: uid(),
@@ -198,6 +206,7 @@ class AppState extends ChangeNotifier {
         skillId: skills[1].id,
         xpReward: 20,
         type: TaskType.shortTerm,
+        treeNodeId: pythonSyntax,
       ),
       Task(
         id: uid(),
@@ -206,6 +215,7 @@ class AppState extends ChangeNotifier {
         xpReward: 60,
         type: TaskType.midTerm,
         minimumAction: 'Создать первый endpoint и проверить ответ 200 OK',
+        treeNodeId: pythonApi,
       ),
       Task(
         id: uid(),
@@ -213,6 +223,7 @@ class AppState extends ChangeNotifier {
         skillId: skills[2].id,
         xpReward: 50,
         type: TaskType.midTerm,
+        treeNodeId: gamificationLoop,
       ),
     ]);
 
@@ -524,6 +535,13 @@ class AppState extends ChangeNotifier {
   List<Task> tasksForSkill(String id) =>
       tasks.where((t) => t.skillId == id).toList();
 
+  List<Task> tasksForTreeNode(String skillId, String nodeId) => tasks
+      .where((task) => task.skillId == skillId && task.treeNodeId == nodeId)
+      .toList();
+
+  int completedTasksForTreeNode(String skillId, String nodeId) =>
+      tasksForTreeNode(skillId, nodeId).where((task) => task.isDone).length;
+
   ({List<Task> active, List<Task> completed}) taskSectionsForSkill(
     String skillId,
   ) {
@@ -776,10 +794,6 @@ class AppState extends ChangeNotifier {
 
     final now = DateTime.now();
     final skill = _skillById(task.skillId);
-    final profileRankBefore = profileRankForLevel(profile.level);
-    final skillRankBefore = skill != null
-        ? skillRankForLevel(skill.level)
-        : null;
     final bossMomentsBefore = _bossMomentsForSkill(task.skillId);
     final nextStreak = task.type == TaskType.repeating
         ? task.streak + 1
@@ -834,8 +848,6 @@ class AppState extends ChangeNotifier {
       skillUp,
       earned,
       bonusXp: buffOutcome.bonusXp,
-      profileRankBefore: profileRankBefore,
-      skillRankBefore: skillRankBefore,
       bossFeedback: bossFeedback,
     );
   }
@@ -853,10 +865,6 @@ class AppState extends ChangeNotifier {
 
     final now = DateTime.now();
     final skill = _skillById(task.skillId);
-    final profileRankBefore = profileRankForLevel(profile.level);
-    final skillRankBefore = skill != null
-        ? skillRankForLevel(skill.level)
-        : null;
     final bossMomentsBefore = _bossMomentsForSkill(task.skillId);
     final earned = previewMinimumActionXP(task);
     final nextStreak = task.type == TaskType.repeating
@@ -913,8 +921,6 @@ class AppState extends ChangeNotifier {
       skillUp,
       earned,
       bonusXp: 0,
-      profileRankBefore: profileRankBefore,
-      skillRankBefore: skillRankBefore,
       bossFeedback: bossFeedback,
       fallbackLabel: task.type == TaskType.repeating ? 'Лёгкий старт' : 'Старт',
     );
@@ -1187,6 +1193,9 @@ class AppState extends ChangeNotifier {
   void addSkillTreeNode(String skillId, SkillTreeNode node) {
     final skill = _skillById(skillId);
     if (skill == null) return;
+    if (node.requiredQuestCompletions < 1) {
+      node.requiredQuestCompletions = 1;
+    }
     node.syncChecklistDone();
     skill.treeNodes.add(node);
     skill.syncTreeNodes();
@@ -1201,6 +1210,10 @@ class AppState extends ChangeNotifier {
     skill.treeNodes.removeWhere((node) => node.id == nodeId);
     for (final node in skill.treeNodes) {
       node.prerequisiteIds.remove(nodeId);
+    }
+    for (final task in tasksForTreeNode(skillId, nodeId)) {
+      task.treeNodeId = null;
+      task.updatedAt = DateTime.now();
     }
     skill.syncTreeNodes();
     _syncBossesForSkill(skillId);
@@ -1234,7 +1247,7 @@ class AppState extends ChangeNotifier {
         .firstOrNull;
     if (skill == null || node == null) return false;
     return skill.treeNodeStatus(node) == SkillTreeNodeStatus.active &&
-        node.isChecklistReady;
+        completedTasksForTreeNode(skillId, nodeId) >= node.questTarget;
   }
 
   String? masterSkillTreeNode(String skillId, String nodeId) {
@@ -1248,8 +1261,6 @@ class AppState extends ChangeNotifier {
       return null;
     }
 
-    final profileRankBefore = profileRankForLevel(profile.level);
-    final skillRankBefore = skillRankForLevel(skill.level);
     final bossMomentsBefore = _bossMomentsForSkill(skillId);
     final earned = node.xpReward;
 
@@ -1273,8 +1284,6 @@ class AppState extends ChangeNotifier {
       skillUp,
       earned,
       bonusXp: 0,
-      profileRankBefore: profileRankBefore,
-      skillRankBefore: skillRankBefore,
       bossFeedback: bossFeedback,
       fallbackLabel: 'Узел освоен',
     );
@@ -1301,6 +1310,7 @@ class AppState extends ChangeNotifier {
 
   void addTask(Task t) {
     t.syncSubtaskDone();
+    t.treeNodeId = _normalizedTreeNodeId(t.skillId, t.treeNodeId);
     if (t.repeatCustomDays < 1) t.repeatCustomDays = 1;
     t.createdAt = DateTime.now();
     t.updatedAt = t.createdAt;
@@ -1324,6 +1334,7 @@ class AppState extends ChangeNotifier {
     required bool notificationsEnabled,
     required int? notificationHour,
     required int? notificationMinute,
+    required String? treeNodeId,
   }) {
     final oldType = task.type;
     final hadNotification = task.notificationsEnabled;
@@ -1343,6 +1354,7 @@ class AppState extends ChangeNotifier {
     task.subtasks = subtasks;
     task.syncSubtaskDone();
     task.tags = tags;
+    task.treeNodeId = _normalizedTreeNodeId(task.skillId, treeNodeId);
     task.notificationsEnabled = notificationsEnabled;
     task.notificationHour = notificationHour;
     task.notificationMinute = notificationMinute;
@@ -1366,6 +1378,15 @@ class AppState extends ChangeNotifier {
     _syncTaskNotification(task);
     notifyListeners();
     _saveAll();
+  }
+
+  String? _normalizedTreeNodeId(String skillId, String? nodeId) {
+    final trimmed = nodeId?.trim();
+    if (trimmed == null || trimmed.isEmpty) return null;
+    final skill = _skillById(skillId);
+    if (skill == null) return null;
+    final exists = skill.treeNodes.any((node) => node.id == trimmed);
+    return exists ? trimmed : null;
   }
 
   void removeTask(String id) {
@@ -2063,44 +2084,24 @@ class AppState extends ChangeNotifier {
     int skillUp,
     int earned, {
     required int bonusXp,
-    RankInfo? profileRankBefore,
-    RankInfo? skillRankBefore,
     String? bossFeedback,
     String? fallbackLabel,
   }) {
     if (globalUp > 0) {
-      final profileRankAfter = profileRankForLevel(profile.level);
-      if (profileRankBefore != null &&
-          profileRankAfter.code != profileRankBefore.code) {
-        return _characterEvent('Новый ранг', [
-          'достигнут ${profileRankAfter.label}',
-          '+$earned XP',
-          ?bossFeedback,
-        ]);
-      }
       return _characterEvent('Новый уровень', [
         'персонаж стал увереннее: ур. ${profile.level}',
         '+$earned XP',
         if (bonusXp > 0) 'бафф +$bonusXp XP',
-        _nextProfileRankHint(),
+        _nextProfileLevelHint(),
         ?bossFeedback,
       ]);
     }
     if (skillUp > 0 && skill != null) {
-      final skillRankAfter = skillRankForLevel(skill.level);
-      if (skillRankBefore != null &&
-          skillRankAfter.code != skillRankBefore.code) {
-        return _characterEvent('Новый ранг навыка', [
-          '${skill.name} → ${skillRankAfter.label}',
-          '+$earned XP',
-          ?bossFeedback,
-        ]);
-      }
       return _characterEvent('Навык вырос', [
         '${skill.name} окреп до ур.${skill.level}',
         '+$earned XP',
         if (bonusXp > 0) 'бафф +$bonusXp XP',
-        _nextSkillRankHint(skill),
+        _nextSkillLevelHint(skill),
         ?bossFeedback,
       ]);
     }
@@ -2110,7 +2111,7 @@ class AppState extends ChangeNotifier {
       return _characterEvent(fallbackLabel, [
         skill == null ? 'первый шаг сделан' : '${skill.name} запущен',
         '+$earned XP',
-        _nextSkillRankHint(skill),
+        _nextSkillLevelHint(skill),
         ?bossFeedback,
       ]);
     }
@@ -2122,7 +2123,7 @@ class AppState extends ChangeNotifier {
       [
         skill == null ? '+$earned XP' : '${skill.name} +$earned XP',
         if (bonusXp > 0) 'бафф +$bonusXp XP',
-        _nextSkillRankHint(skill),
+        _nextSkillLevelHint(skill),
         ?bossFeedback,
       ],
     );
@@ -2137,28 +2138,13 @@ class AppState extends ChangeNotifier {
     return filtered.isEmpty ? title : '$title\n${filtered.join(' • ')}';
   }
 
-  String? _nextProfileRankHint() {
-    final nextRank = nextProfileRankForLevel(profile.level);
-    if (nextRank == null) return null;
-    final xpLeft = _xpUntilLevel(profile.level, profile.xp, nextRank.minLevel);
-    return 'до ${nextRank.label} $xpLeft XP';
+  String? _nextProfileLevelHint() {
+    return 'до ур.${profile.level + 1} ${profile.xpNeeded - profile.xp} XP';
   }
 
-  String? _nextSkillRankHint(Skill? skill) {
+  String? _nextSkillLevelHint(Skill? skill) {
     if (skill == null) return null;
-    final nextRank = nextSkillRankForLevel(skill.level);
-    if (nextRank == null) return null;
-    final xpLeft = _xpUntilLevel(skill.level, skill.xp, nextRank.minLevel);
-    return 'до ${nextRank.label} $xpLeft XP';
-  }
-
-  int _xpUntilLevel(int level, int currentXp, int targetLevel) {
-    if (targetLevel <= level) return 0;
-    var xpLeft = xpForLevel(level) - currentXp;
-    for (var nextLevel = level + 1; nextLevel < targetLevel; nextLevel++) {
-      xpLeft += xpForLevel(nextLevel);
-    }
-    return math.max(0, xpLeft);
+    return 'до ур.${skill.level + 1} ${skill.xpNeeded - skill.xp} XP';
   }
 
   void _syncTaskNotification(Task task) {

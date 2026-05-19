@@ -93,6 +93,11 @@ class InMemoryStorageService extends StorageService {
 
 void main() {
   testWidgets('App smoke test', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     final storage = InMemoryStorageService();
     await storage.init();
     await tester.pumpWidget(RPGApp(storage: storage));
@@ -101,6 +106,7 @@ void main() {
 
     expect(find.text('RPG To-Do List'), findsOneWidget);
     expect(find.text('Действовать сегодня'), findsOneWidget);
+    expect(find.text('Карта'), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.dashboard_customize).first);
     await tester.pump();
@@ -111,6 +117,11 @@ void main() {
     await tester.pump();
 
     expect(find.text('Планировать систему'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.account_tree).first);
+    await tester.pump();
+
+    expect(find.text('Карта мастерства'), findsWidgets);
 
     await tester.tap(find.byIcon(Icons.help_outline));
     await tester.pump();

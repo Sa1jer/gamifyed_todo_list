@@ -92,10 +92,9 @@ class _TasksPanelState extends State<TasksPanel> {
 
     final allTasks = s.tasksForSkill(skill.id);
     final active = allTasks.where((t) => !t.isDone).toList();
-    final done = allTasks.where((t) => t.isDone).toList();
+    final done = allTasks.where((t) => t.isDone).toList()
+      ..sort(_compareCompletedTasksNewestFirst);
     final hasChecklist = skill.checklist.isNotEmpty;
-    final skillRank = skillRankForLevel(skill.level);
-
     return Container(
       decoration: BoxDecoration(
         color: sfc,
@@ -209,7 +208,7 @@ class _TasksPanelState extends State<TasksPanel> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '${skill.xp} / ${skill.xpNeeded} XP  •  ${skillRank.label}  •  Ур.${skill.level}',
+                  '${skill.xp} / ${skill.xpNeeded} XP  •  Ур.${skill.level}',
                   style: TextStyle(color: sub, fontSize: 11),
                 ),
               ],
@@ -400,6 +399,7 @@ class _TasksPanelState extends State<TasksPanel> {
       builder: (_) => AddTaskDialog(
         isDark: s.isDark,
         skillColor: skill.color,
+        skill: skill,
         onSave:
             (
               title,
@@ -414,6 +414,7 @@ class _TasksPanelState extends State<TasksPanel> {
               notificationsEnabled,
               notificationHour,
               notificationMinute,
+              treeNodeId,
             ) => s.addTask(
               Task(
                 id: uid(),
@@ -427,6 +428,7 @@ class _TasksPanelState extends State<TasksPanel> {
                 minimumAction: minimumAction,
                 subtasks: subtasks,
                 tags: tags,
+                treeNodeId: treeNodeId,
                 notificationsEnabled: notificationsEnabled,
                 notificationHour: notificationHour,
                 notificationMinute: notificationMinute,
@@ -443,6 +445,7 @@ class _TasksPanelState extends State<TasksPanel> {
       builder: (_) => AddTaskDialog(
         isDark: s.isDark,
         skillColor: skill.color,
+        skill: skill,
         existing: task,
         onSave:
             (
@@ -458,6 +461,7 @@ class _TasksPanelState extends State<TasksPanel> {
               notificationsEnabled,
               notificationHour,
               notificationMinute,
+              treeNodeId,
             ) => s.updateTask(
               task,
               title: title,
@@ -472,6 +476,7 @@ class _TasksPanelState extends State<TasksPanel> {
               notificationsEnabled: notificationsEnabled,
               notificationHour: notificationHour,
               notificationMinute: notificationMinute,
+              treeNodeId: treeNodeId,
             ),
       ),
     );
@@ -535,6 +540,14 @@ class _EmptyTasksState extends StatelessWidget {
       ),
     );
   }
+}
+
+int _compareCompletedTasksNewestFirst(Task a, Task b) {
+  final aDate = a.lastCompletedAt ?? a.updatedAt;
+  final bDate = b.lastCompletedAt ?? b.updatedAt;
+  final byCompletion = bDate.compareTo(aDate);
+  if (byCompletion != 0) return byCompletion;
+  return b.createdAt.compareTo(a.createdAt);
 }
 
 // ─── Checklist Button ─────────────────────────────────────────────────────────

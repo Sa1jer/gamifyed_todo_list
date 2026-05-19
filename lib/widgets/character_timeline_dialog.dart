@@ -72,7 +72,7 @@ class CharacterTimelineDialog extends StatelessWidget {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          'Уровни, ранги, дерево навыков, боссы и важные недели',
+                          'Уровни, карта мастерства, боссы и важные недели',
                           style: TextStyle(color: sub, fontSize: 12.5),
                         ),
                       ],
@@ -252,7 +252,6 @@ class _CharacterTimelineSummary {
     );
   }
 
-  RankInfo get currentRank => profileRankForLevel(state.profile.level);
   int get currentLevel => state.profile.level;
   int get totalXp => state.profile.totalXpEarned;
   bool get hasEvents => events.isNotEmpty;
@@ -285,7 +284,7 @@ class _TimelineEvent {
   String get kindLabel => switch (kind) {
     _TimelineKind.profile => 'Персонаж',
     _TimelineKind.skill => 'Навык',
-    _TimelineKind.tree => 'Дерево',
+    _TimelineKind.tree => 'Карта',
     _TimelineKind.boss => 'Босс',
     _TimelineKind.week => 'Неделя',
     _TimelineKind.achievement => 'Трофей',
@@ -316,31 +315,22 @@ List<_TimelineEvent> _buildProfileLevelEvents(List<_XpTimelineSource> sources) {
   final events = <_TimelineEvent>[];
   var level = 1;
   var xp = 0;
-  var rank = profileRankForLevel(level);
-
   for (final source in sorted) {
     xp += source.xp;
     while (xp >= xpForLevel(level)) {
       xp -= xpForLevel(level);
       level++;
-      final nextRank = profileRankForLevel(level);
-      final rankChanged = nextRank.code != rank.code;
       events.add(
         _TimelineEvent(
           kind: _TimelineKind.profile,
           at: source.at,
-          title: rankChanged
-              ? 'Персонаж достиг ${nextRank.label}'
-              : 'Персонаж получил уровень $level',
-          subtitle: rankChanged
-              ? 'Новый ранг открыт на уровне $level'
-              : 'Накопленный опыт вывел персонажа на новый уровень',
-          icon: rankChanged ? Icons.workspace_premium : Icons.trending_up,
-          color: rankChanged ? nextRank.color : const Color(0xFF4A9EFF),
-          importance: rankChanged ? 96 : 78,
+          title: 'Персонаж получил уровень $level',
+          subtitle: 'Накопленный опыт вывел персонажа на новый уровень',
+          icon: Icons.trending_up,
+          color: const Color(0xFF4A9EFF),
+          importance: 78,
         ),
       );
-      rank = nextRank;
     }
   }
 
@@ -359,31 +349,22 @@ List<_TimelineEvent> _buildSkillLevelEvents(
 
     var level = 1;
     var xp = 0;
-    var rank = skillRankForLevel(level);
-
     for (final source in sorted) {
       xp += source.xp;
       while (xp >= xpForLevel(level)) {
         xp -= xpForLevel(level);
         level++;
-        final nextRank = skillRankForLevel(level);
-        final rankChanged = nextRank.code != rank.code;
         events.add(
           _TimelineEvent(
             kind: _TimelineKind.skill,
             at: source.at,
-            title: rankChanged
-                ? '${source.skillName} получил ранг “${nextRank.label}”'
-                : '${source.skillName} вырос до уровня $level',
-            subtitle: rankChanged
-                ? 'Навык перешёл в новую ступень мастерства'
-                : 'Регулярные квесты усилили навык',
+            title: '${source.skillName} вырос до уровня $level',
+            subtitle: 'Регулярные квесты усилили навык',
             icon: source.skillIcon,
-            color: rankChanged ? nextRank.color : source.skillColor,
-            importance: rankChanged ? 86 : 64,
+            color: source.skillColor,
+            importance: 64,
           ),
         );
-        rank = nextRank;
       }
     }
   }
@@ -464,18 +445,16 @@ class _TimelineHero extends StatelessWidget {
   Widget build(BuildContext context) {
     final txt = textColor(isDark);
     final sub = subtext(isDark);
-    final rank = summary.currentRank;
-
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF121219) : const Color(0xFFF8F9FD),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: rank.color.withAlpha(72)),
+        border: Border.all(color: const Color(0xFF4A9EFF).withAlpha(72)),
         boxShadow: [
           BoxShadow(
-            color: rank.color.withAlpha(isDark ? 18 : 16),
+            color: const Color(0xFF4A9EFF).withAlpha(isDark ? 18 : 16),
             blurRadius: 24,
             offset: const Offset(0, 12),
           ),
@@ -487,11 +466,15 @@ class _TimelineHero extends StatelessWidget {
             width: 58,
             height: 58,
             decoration: BoxDecoration(
-              color: rank.color.withAlpha(24),
+              color: const Color(0xFF4A9EFF).withAlpha(24),
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: rank.color.withAlpha(54)),
+              border: Border.all(color: const Color(0xFF4A9EFF).withAlpha(54)),
             ),
-            child: Icon(Icons.person_4, color: rank.color, size: 30),
+            child: const Icon(
+              Icons.person_4,
+              color: Color(0xFF4A9EFF),
+              size: 30,
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -512,11 +495,6 @@ class _TimelineHero extends StatelessWidget {
                       ),
                     ),
                     _TimelinePill(
-                      label: rank.label,
-                      color: rank.color,
-                      isDark: isDark,
-                    ),
-                    _TimelinePill(
                       label: 'Ур. ${summary.currentLevel}',
                       color: const Color(0xFF4A9EFF),
                       isDark: isDark,
@@ -526,7 +504,7 @@ class _TimelineHero extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   summary.hasEvents
-                      ? 'Здесь собраны события, которые меняли персонажа: ранги, освоение, боссы и сильные недели.'
+                      ? 'Здесь собраны события, которые меняли персонажа: уровни, освоение, боссы и сильные недели.'
                       : 'Летопись начнётся после первых больших событий: закрытых квестов, освоенных узлов и побед над боссами.',
                   style: TextStyle(color: sub, fontSize: 13.2, height: 1.35),
                 ),

@@ -268,7 +268,6 @@ class _SkillCardState extends State<SkillCard> {
   @override
   Widget build(BuildContext context) {
     final sk = widget.skill;
-    final skillRank = skillRankForLevel(sk.level);
     final isDark = widget.isDark;
     final txt = textColor(isDark);
     final sub = subtext(isDark);
@@ -367,29 +366,23 @@ class _SkillCardState extends State<SkillCard> {
                         const SizedBox(height: 5),
                         LayoutBuilder(
                           builder: (context, constraints) {
-                            final showTreeProgress =
-                                constraints.maxWidth >= 190;
+                            final showMapProgress = constraints.maxWidth >= 190;
                             final showXpText = constraints.maxWidth >= 150;
 
                             return Row(
                               children: [
-                                ConstrainedBox(
-                                  constraints: BoxConstraints(
-                                    maxWidth: showTreeProgress ? 82 : 64,
-                                  ),
-                                  child: Text(
-                                    skillRank.label,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      color: sk.color.withAlpha(220),
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                                Text(
+                                  'Ур.${sk.level}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: sk.color.withAlpha(220),
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
                                 const SizedBox(width: 6),
-                                if (showTreeProgress &&
+                                if (showMapProgress &&
                                     sk.treeNodes.isNotEmpty) ...[
                                   Icon(
                                     Icons.account_tree,
@@ -445,7 +438,7 @@ class _SkillCardState extends State<SkillCard> {
                                 MiniBtn(
                                   icon: Icons.account_tree,
                                   color: sk.color,
-                                  tooltip: 'Открыть дерево навыка',
+                                  tooltip: 'Открыть карту мастерства',
                                   onTap: widget.onTree,
                                 ),
                                 MiniBtn(

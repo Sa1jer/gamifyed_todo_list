@@ -69,7 +69,6 @@ class _ProfileDialogState extends State<ProfileDialog> {
   Widget build(BuildContext context) {
     final s = AppStateProvider.of(context);
     final p = s.profile;
-    final profileRank = profileRankForLevel(p.level);
     final isDark = s.isDark;
     final bg = surface(isDark);
     final txt = textColor(isDark);
@@ -104,11 +103,6 @@ class _ProfileDialogState extends State<ProfileDialog> {
                           const SizedBox(height: 4),
                           Row(
                             children: [
-                              RankBadge(
-                                label: profileRank.label,
-                                color: profileRank.color,
-                              ),
-                              const SizedBox(width: 8),
                               LvlBadge(
                                 level: p.level,
                                 color: const Color(0xFF4A9EFF),
@@ -394,9 +388,6 @@ class _ProfileDialogState extends State<ProfileDialog> {
   // ── XP section ────────────────────────────────────────────────────────────
 
   Widget _buildXPSection(UserProfile p, Color sub) {
-    final currentRank = profileRankForLevel(p.level);
-    final nextRank = nextProfileRankForLevel(p.level);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -420,9 +411,7 @@ class _ProfileDialogState extends State<ProfileDialog> {
         ),
         const SizedBox(height: 8),
         Text(
-          nextRank == null
-              ? 'Текущий ранг: ${currentRank.label}. Пиковый ранг уже достигнут.'
-              : 'Текущий ранг: ${currentRank.label}. Следующий — ${nextRank.label} на ур.${nextRank.minLevel}.',
+          'До уровня ${p.level + 1}: ${p.xpNeeded - p.xp} XP.',
           style: TextStyle(color: sub, fontSize: 12, height: 1.25),
         ),
       ],
@@ -720,7 +709,7 @@ class _ProfileTimelineButton extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Ранги, боссы, освоение и сильные недели',
+                    'Уровни, боссы, освоение и сильные недели',
                     style: TextStyle(color: sub, fontSize: 11.5),
                   ),
                 ],
@@ -750,7 +739,6 @@ class _SkillChipState extends State<_SkillChip> {
   @override
   Widget build(BuildContext context) {
     final sk = widget.skill;
-    final skillRank = skillRankForLevel(sk.level);
     final sub = subtext(widget.isDark);
 
     return GestureDetector(
@@ -786,7 +774,7 @@ class _SkillChipState extends State<_SkillChip> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    skillRank.label,
+                    '${sk.xp}/${sk.xpNeeded} XP',
                     style: TextStyle(color: sub, fontSize: 10),
                     overflow: TextOverflow.ellipsis,
                   ),

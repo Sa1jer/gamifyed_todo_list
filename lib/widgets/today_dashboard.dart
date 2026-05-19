@@ -92,7 +92,6 @@ class _TodayDashboardState extends State<TodayDashboard> {
     final isDark = state.isDark;
     final txt = textColor(isDark);
     final sub = subtext(isDark);
-    final nextRank = nextProfileRankForLevel(state.profile.level);
     final activeBossThreats = state.activeBossThreatCount;
     final activeBuffs = state.activeBuffs.length;
     final unopenedChests = state.unopenedRewardChests.length;
@@ -105,7 +104,6 @@ class _TodayDashboardState extends State<TodayDashboard> {
     final stats = state.todayStats;
     final statusLabels = _todayStatusLabels(
       state: state,
-      nextRank: nextRank,
       activeBossThreats: activeBossThreats,
       activeBuffs: activeBuffs,
       unopenedChests: unopenedChests,
@@ -258,18 +256,15 @@ class _TodayDashboardState extends State<TodayDashboard> {
 
   List<_TodayStatusLabelData> _todayStatusLabels({
     required AppState state,
-    required RankInfo? nextRank,
     required int activeBossThreats,
     required int activeBuffs,
     required int unopenedChests,
   }) {
     return [
       _TodayStatusLabelData(
-        label: nextRank == null ? 'пик ранга' : 'до ${nextRank.label}',
-        value: nextRank == null
-            ? 'max'
-            : '${state.profile.xpNeeded - state.profile.xp} XP',
-        color: nextRank?.color ?? const Color(0xFFFFCC00),
+        label: 'до ур. ${state.profile.level + 1}',
+        value: '${state.profile.xpNeeded - state.profile.xp} XP',
+        color: const Color(0xFF4A9EFF),
       ),
       if (activeBossThreats > 0)
         _TodayStatusLabelData(

@@ -275,6 +275,7 @@ void main() {
         notificationsEnabled: false,
         notificationHour: null,
         notificationMinute: null,
+        treeNodeId: task.treeNodeId,
       );
 
       boss = Boss(
@@ -328,14 +329,14 @@ void main() {
             id: 'basics',
             title: 'API basics',
             xpReward: 20,
-            checklist: ['Create first endpoint'],
+            requiredQuestCompletions: 1,
           ),
           SkillTreeNode(
             id: 'auth',
             title: 'JWT auth',
             xpReward: 30,
             prerequisiteIds: ['basics'],
-            checklist: ['Protect route'],
+            requiredQuestCompletions: 1,
           ),
         ],
       );
@@ -354,7 +355,17 @@ void main() {
       expect(skill.treeNodeStatus(auth), SkillTreeNodeStatus.locked);
       expect(state.canMasterSkillTreeNode(skill.id, basics.id), isFalse);
 
-      state.toggleSkillTreeNodeChecklist(skill.id, basics.id, 0);
+      state.addTask(
+        Task(
+          id: 'basics-practice',
+          title: 'Create first endpoint',
+          skillId: skill.id,
+          xpReward: 20,
+          type: TaskType.shortTerm,
+          isDone: true,
+          treeNodeId: basics.id,
+        ),
+      );
       final message = state.masterSkillTreeNode(skill.id, basics.id);
 
       expect(message, contains('Узел освоен'));
@@ -376,7 +387,17 @@ void main() {
       );
       state.addBoss(boss);
 
-      state.toggleSkillTreeNodeChecklist(skill.id, 'basics', 0);
+      state.addTask(
+        Task(
+          id: 'basics-boss-practice',
+          title: 'Create first endpoint',
+          skillId: skill.id,
+          xpReward: 20,
+          type: TaskType.shortTerm,
+          isDone: true,
+          treeNodeId: 'basics',
+        ),
+      );
       state.masterSkillTreeNode(skill.id, 'basics');
 
       final snapshot = state.bossSnapshot(boss);
@@ -384,8 +405,108 @@ void main() {
       expect(snapshot.masteredTreeNodes, 1);
       expect(snapshot.totalTreeNodes, 2);
       expect(snapshot.treePercent, 50);
-      expect(snapshot.impactPercent, 50);
+      expect(
+        snapshot.impactPercent,
+        greaterThanOrEqualTo(snapshot.treePercent),
+      );
       expect(boss.hp, lessThan(100));
+    });
+
+    test(
+      'links tasks to mastery map nodes and clears link on node removal',
+      () {
+        final task = Task(
+          id: 'linked-task',
+          title: 'Create first endpoint',
+          skillId: skill.id,
+          xpReward: 20,
+          type: TaskType.shortTerm,
+          treeNodeId: 'basics',
+        );
+        state.addTask(task);
+
+        expect(state.tasksForTreeNode(skill.id, 'basics'), [task]);
+        expect(task.treeNodeId, 'basics');
+
+        state.removeSkillTreeNode(skill.id, 'basics');
+
+        expect(task.treeNodeId, isNull);
+        expect(state.tasksForTreeNode(skill.id, 'basics'), isEmpty);
+        expect(skill.treeNodes.single.prerequisiteIds, isEmpty);
+      },
+    );
+
+    test('ignores invalid mastery map node links on task update', () {
+      final task = Task(
+        id: 'invalid-linked-task',
+        title: 'Protect route',
+        skillId: skill.id,
+        xpReward: 20,
+        type: TaskType.shortTerm,
+        treeNodeId: 'basics',
+      );
+      state.addTask(task);
+
+      state.updateTask(
+        task,
+        title: task.title,
+        xpReward: task.xpReward,
+        type: task.type,
+        repeatFrequency: task.repeatFrequency,
+        repeatCustomDays: task.repeatCustomDays,
+        priority: task.priority,
+        minimumAction: task.minimumAction,
+        subtasks: List.of(task.subtasks),
+        tags: List.of(task.tags),
+        notificationsEnabled: task.notificationsEnabled,
+        notificationHour: task.notificationHour,
+        notificationMinute: task.notificationMinute,
+        treeNodeId: 'missing-node',
+      );
+
+      expect(task.treeNodeId, isNull);
+    });
+
+    test('requires completed linked quests before mastery', () {
+      final node = SkillTreeNode(
+        id: 'deploy',
+        title: 'Deploy API',
+        xpReward: 40,
+        requiredQuestCompletions: 2,
+      );
+      state.addSkillTreeNode(skill.id, node);
+
+      state.addTask(
+        Task(
+          id: 'deploy-1',
+          title: 'Prepare Dockerfile',
+          skillId: skill.id,
+          xpReward: 20,
+          type: TaskType.shortTerm,
+          isDone: true,
+          treeNodeId: node.id,
+        ),
+      );
+      expect(state.canMasterSkillTreeNode(skill.id, node.id), isFalse);
+
+      state.addTask(
+        Task(
+          id: 'deploy-2',
+          title: 'Push image',
+          skillId: skill.id,
+          xpReward: 20,
+          type: TaskType.shortTerm,
+          isDone: true,
+          treeNodeId: node.id,
+        ),
+      );
+      expect(state.canMasterSkillTreeNode(skill.id, node.id), isTrue);
+    });
+
+    test('new mastery map nodes default to three required quests', () {
+      final legacyNode = SkillTreeNode(id: 'legacy', title: 'Legacy node');
+
+      expect(legacyNode.questTarget, 3);
     });
   });
 

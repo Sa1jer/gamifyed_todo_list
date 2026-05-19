@@ -238,9 +238,8 @@ class ProgressHubContent extends StatelessWidget {
                         icon: Icons.auto_stories,
                         color: const Color(0xFFAF52DE),
                         title: 'Летопись',
-                        subtitle: 'Ранги, боссы, освоение и недели',
-                        value:
-                            '${profileRankForLevel(state.profile.level).label} • Ур. ${state.profile.level}',
+                        subtitle: 'Уровни, боссы, освоение и недели',
+                        value: 'Ур. ${state.profile.level}',
                         onTap: onOpenCharacterTimeline,
                       ),
                     ],

@@ -13,6 +13,7 @@ import 'profile_dialog.dart';
 import 'faq_dialog.dart';
 import 'progress_hub_dialog.dart';
 import 'planning_workspace.dart';
+import 'mastery_map_workspace.dart';
 import 'character_timeline_dialog.dart';
 import 'daily_victories_dialog.dart';
 import 'reward_animations.dart';
@@ -22,24 +23,27 @@ import 'weekly_analytics_dialog.dart';
 // TOP BAR
 // ═══════════════════════════════════════════════════════════════════════════════
 
-enum WorkspaceMode { act, plan, progress }
+enum WorkspaceMode { act, plan, mastery, progress }
 
 extension _WorkspaceModeMeta on WorkspaceMode {
   String get label => switch (this) {
     WorkspaceMode.act => 'Действовать',
     WorkspaceMode.plan => 'Планировать',
+    WorkspaceMode.mastery => 'Карта',
     WorkspaceMode.progress => 'Прогресс',
   };
 
   IconData get icon => switch (this) {
     WorkspaceMode.act => Icons.flash_on,
     WorkspaceMode.plan => Icons.edit_note,
+    WorkspaceMode.mastery => Icons.account_tree,
     WorkspaceMode.progress => Icons.dashboard_customize,
   };
 
   Color get color => switch (this) {
     WorkspaceMode.act => const Color(0xFFFF9500),
     WorkspaceMode.plan => const Color(0xFF4A9EFF),
+    WorkspaceMode.mastery => const Color(0xFF4A9EFF),
     WorkspaceMode.progress => const Color(0xFF34C759),
   };
 }
@@ -488,7 +492,6 @@ class ProfileBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final profile = AppStateProvider.of(context).profile;
-    final rank = profileRankForLevel(profile.level);
     final sfc = surface(isDark);
     final txt = textColor(isDark);
     final sub = subtext(isDark);
@@ -579,8 +582,6 @@ class ProfileBar extends StatelessWidget {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              RankBadge(label: rank.label, color: rank.color),
-                              const SizedBox(width: 6),
                               LvlBadge(
                                 level: profile.level,
                                 color: const Color(0xFF4A9EFF),
@@ -765,6 +766,11 @@ class _MainPageState extends State<MainPage> {
                         key: const ValueKey('plan-workspace'),
                         isDark: isDark,
                       ),
+                      WorkspaceMode.mastery => _MasteryWorkspace(
+                        key: const ValueKey('mastery-workspace'),
+                        isDark: isDark,
+                        onComplete: _onComplete,
+                      ),
                       WorkspaceMode.progress => _ProgressWorkspace(
                         key: const ValueKey('progress-workspace'),
                         state: s,
@@ -866,6 +872,22 @@ class _PlanWorkspace extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PlanningWorkspace(isDark: isDark);
+  }
+}
+
+class _MasteryWorkspace extends StatelessWidget {
+  final bool isDark;
+  final Function(String taskId, Offset pos) onComplete;
+
+  const _MasteryWorkspace({
+    super.key,
+    required this.isDark,
+    required this.onComplete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return MasteryMapWorkspace(isDark: isDark, onCompleteTask: onComplete);
   }
 }
 
