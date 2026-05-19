@@ -32,6 +32,34 @@ class _MasterySelection {
     : type = _MasterySelectionType.quest;
 }
 
+List<Task> _sortedActiveQuests(Iterable<Task> tasks) {
+  final list = tasks.toList();
+  list.sort((a, b) {
+    final priority = a.priority.index.compareTo(b.priority.index);
+    if (priority != 0) return priority;
+    return b.updatedAt.compareTo(a.updatedAt);
+  });
+  return list;
+}
+
+List<Task> _sortedCompletedQuests(Iterable<Task> tasks) {
+  final list = tasks.toList();
+  list.sort((a, b) => _questSortDate(b).compareTo(_questSortDate(a)));
+  return list;
+}
+
+DateTime _questSortDate(Task task) => task.lastCompletedAt ?? task.updatedAt;
+
+List<Task> _freeQuestsForSkill(Skill skill, Iterable<Task> tasks) {
+  final validNodeIds = skill.treeNodes.map((node) => node.id).toSet();
+  return tasks
+      .where(
+        (task) =>
+            task.treeNodeId == null || !validNodeIds.contains(task.treeNodeId),
+      )
+      .toList();
+}
+
 class MasteryMapWorkspace extends StatefulWidget {
   final bool isDark;
   final void Function(String taskId, Offset position) onCompleteTask;
@@ -276,9 +304,9 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
                 notificationMinute: notificationMinute,
                 treeNodeId: treeNodeId,
               );
-              final nextSelection = task.treeNodeId == null
+              final nextSelection = treeNodeId == null
                   ? _MasterySelection.skill(skill.id)
-                  : _MasterySelection.quest(skill.id, task.treeNodeId, task.id);
+                  : _MasterySelection.quest(skill.id, treeNodeId, task.id);
               setState(() => _selection = nextSelection);
               onSaved?.call(nextSelection);
             },
@@ -439,7 +467,7 @@ class _MasteryMapHero extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    'Навыки — как сферы на canvas: выберите шар, и его узлы раскроются ветками мастерства.',
+                    'Навыки раскрываются в карту мастерства. Квесты выбранного узла живут справа — canvas остаётся чистым.',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -515,9 +543,6 @@ class _MasteryMapBody extends StatelessWidget {
           onCollapse: () => onSelectionChanged(null),
           onSelectNode: (skill, node) =>
               onSelectionChanged(_MasterySelection.node(skill.id, node.id)),
-          onSelectQuest: (skill, node, task) => onSelectionChanged(
-            _MasterySelection.quest(skill.id, node?.id, task.id),
-          ),
         );
         final inspector = _MasteryMapInspector(
           state: state,
@@ -525,6 +550,9 @@ class _MasteryMapBody extends StatelessWidget {
           selection: selection,
           onSelectSkill: (skill) =>
               onSelectionChanged(_MasterySelection.skill(skill.id)),
+          onSelectQuest: (skill, task) => onSelectionChanged(
+            _MasterySelection.quest(skill.id, task.treeNodeId, task.id),
+          ),
           onAddRoot: onAddRoot,
           onAddChild: onAddChild,
           onAddQuest: onAddQuest,
@@ -567,8 +595,6 @@ class _OrbMasteryMapCanvas extends StatelessWidget {
   final ValueChanged<Skill> onSelectSkill;
   final VoidCallback onCollapse;
   final void Function(Skill skill, SkillTreeNode node) onSelectNode;
-  final void Function(Skill skill, SkillTreeNode? node, Task task)
-  onSelectQuest;
 
   const _OrbMasteryMapCanvas({
     required this.state,
@@ -577,7 +603,6 @@ class _OrbMasteryMapCanvas extends StatelessWidget {
     required this.onSelectSkill,
     required this.onCollapse,
     required this.onSelectNode,
-    required this.onSelectQuest,
   });
 
   @override
@@ -679,31 +704,6 @@ class _OrbMasteryMapCanvas extends StatelessWidget {
                               ),
                             );
                           }),
-                        if (selectedSkill != null)
-                          ...layout.taskLeaves.map((leaf) {
-                            final node = leaf.node;
-                            return AnimatedPositioned(
-                              key: ValueKey('quest-leaf-${leaf.task.id}'),
-                              duration: kMotionSlow,
-                              curve: kMotionCurve,
-                              left: leaf.position.dx - 34,
-                              top: leaf.position.dy - 33,
-                              width: 68,
-                              height: 74,
-                              child: _QuestLeafButton(
-                                task: leaf.task,
-                                isDark: isDark,
-                                color: selectedSkill.color,
-                                lane: leaf.lane,
-                                selected: selection?.taskId == leaf.task.id,
-                                onTap: () => onSelectQuest(
-                                  selectedSkill,
-                                  node,
-                                  leaf.task,
-                                ),
-                              ),
-                            );
-                          }),
                       ],
                     ),
                   ),
@@ -743,13 +743,9 @@ class _OrbMasteryMapCanvas extends StatelessWidget {
     final selectedShape = selectedSkill == null
         ? const _TreeShape(xById: {}, depthById: {}, maxDepth: 0)
         : _buildSingleSkillTree(selectedSkill);
-    final selectedTasks = selectedSkill == null
-        ? const <Task>[]
-        : state.tasksForSkill(selectedSkill.id);
-    final taskLoad = selectedTasks.length * 18.0;
     final treeReach = selectedSkill == null
         ? 0.0
-        : 470.0 + selectedShape.maxDepth * 170.0 + taskLoad;
+        : 470.0 + selectedShape.maxDepth * 170.0;
     final dockBottom = selectedSkill != null && minSize.width < 760;
     final double width = math
         .max(
@@ -797,15 +793,6 @@ class _OrbMasteryMapCanvas extends StatelessWidget {
             selectedCenter,
             dockBottom ? -math.pi / 2 : 0,
           );
-    final taskLeaves = selectedSkill == null || selectedCenter == null
-        ? const <_TaskLeafLayout>[]
-        : _placeTaskLeaves(
-            state,
-            selectedSkill,
-            nodePositions,
-            selectedCenter,
-            dockBottom ? -math.pi / 2 : 0,
-          );
 
     return _OrbCanvasLayout(
       size: Size(
@@ -820,7 +807,6 @@ class _OrbMasteryMapCanvas extends StatelessWidget {
       selectedSkill: selectedSkill,
       skillPositions: skillPositions,
       nodePositions: nodePositions,
-      taskLeaves: taskLeaves,
     );
   }
 
@@ -884,7 +870,7 @@ class _OrbMasteryMapCanvas extends StatelessWidget {
       angleById[node.id] = angle;
       final children = childrenByParent[node.id] ?? const <SkillTreeNode>[];
       if (children.isEmpty) return;
-      final spread = math.min(1.35, math.max(0.45, children.length * 0.28));
+      final spread = math.min(0.95, math.max(0.32, children.length * 0.22));
       for (var i = 0; i < children.length; i++) {
         final childAngle =
             angle +
@@ -925,173 +911,13 @@ class _OrbMasteryMapCanvas extends StatelessWidget {
     for (final node in skill.treeNodes) {
       final depth = shape.depthById[node.id] ?? 0;
       final localAngle = shape.xById[node.id] ?? -math.pi / 2;
-      final angle = growAngle + (localAngle + math.pi / 2) * 0.86;
+      final angle = growAngle + (localAngle + math.pi / 2) * 0.68;
       final radius = 165.0 + depth * 154.0;
       positions[node.id] =
           skillCenter + Offset(math.cos(angle), math.sin(angle)) * radius;
     }
     return positions;
   }
-
-  List<_TaskLeafLayout> _placeTaskLeaves(
-    AppState state,
-    Skill skill,
-    Map<String, Offset> nodePositions,
-    Offset skillCenter,
-    double growAngle,
-  ) {
-    final leaves = <_TaskLeafLayout>[];
-    final validNodeIds = skill.treeNodes.map((node) => node.id).toSet();
-
-    for (final node in skill.treeNodes) {
-      final nodePosition = nodePositions[node.id];
-      if (nodePosition == null) continue;
-      final parentId = node.prerequisiteIds
-          .where((id) => nodePositions.containsKey(id))
-          .firstOrNull;
-      final parentPosition = parentId == null
-          ? skillCenter
-          : nodePositions[parentId]!;
-      final linkedTasks = state.tasksForTreeNode(skill.id, node.id);
-      final activeTasks = _sortActiveTasks(
-        linkedTasks.where((task) => !task.isDone),
-      );
-      final completedTasks = _sortCompletedTasks(
-        linkedTasks.where((task) => task.isDone),
-      );
-      final baseAngle = math.atan2(
-        nodePosition.dy - parentPosition.dy,
-        nodePosition.dx - parentPosition.dx,
-      );
-      leaves.addAll(
-        _taskLeafLane(
-          tasks: activeTasks,
-          node: node,
-          parentPosition: nodePosition,
-          baseAngle: baseAngle,
-          lane: _TaskLeafLane.nodeActive,
-        ),
-      );
-      leaves.addAll(
-        _taskLeafLane(
-          tasks: completedTasks,
-          node: node,
-          parentPosition: nodePosition,
-          baseAngle: baseAngle + 0.72,
-          lane: _TaskLeafLane.nodeCompleted,
-          distance: 98,
-        ),
-      );
-    }
-
-    final freeTasks = state
-        .tasksForSkill(skill.id)
-        .where(
-          (task) =>
-              task.treeNodeId == null ||
-              !validNodeIds.contains(task.treeNodeId),
-        )
-        .toList();
-    if (freeTasks.isNotEmpty) {
-      final activeFreeTasks = _sortActiveTasks(
-        freeTasks.where((task) => !task.isDone),
-      );
-      final completedFreeTasks = _sortCompletedTasks(
-        freeTasks.where((task) => task.isDone),
-      );
-      leaves.addAll(
-        _taskLeafLane(
-          tasks: activeFreeTasks,
-          node: null,
-          parentPosition: skillCenter,
-          baseAngle: growAngle + 0.95,
-          lane: _TaskLeafLane.freeActive,
-          distance: 190,
-        ),
-      );
-      leaves.addAll(
-        _taskLeafLane(
-          tasks: completedFreeTasks,
-          node: null,
-          parentPosition: skillCenter,
-          baseAngle: growAngle + 1.72,
-          lane: _TaskLeafLane.freeCompleted,
-          distance: 170,
-        ),
-      );
-    }
-    return leaves;
-  }
-
-  List<Task> _sortActiveTasks(Iterable<Task> tasks) {
-    final list = tasks.toList();
-    list.sort((a, b) {
-      final priority = a.priority.index.compareTo(b.priority.index);
-      if (priority != 0) return priority;
-      return b.updatedAt.compareTo(a.updatedAt);
-    });
-    return list;
-  }
-
-  List<Task> _sortCompletedTasks(Iterable<Task> tasks) {
-    final list = tasks.toList();
-    list.sort((a, b) => _taskMapDate(b).compareTo(_taskMapDate(a)));
-    return list;
-  }
-
-  DateTime _taskMapDate(Task task) => task.lastCompletedAt ?? task.updatedAt;
-
-  List<_TaskLeafLayout> _taskLeafLane({
-    required List<Task> tasks,
-    required SkillTreeNode? node,
-    required Offset parentPosition,
-    required double baseAngle,
-    required _TaskLeafLane lane,
-    double distance = 112,
-  }) {
-    if (tasks.isEmpty) return const [];
-    final leaves = <_TaskLeafLayout>[];
-    final direction = Offset(math.cos(baseAngle), math.sin(baseAngle));
-    final normal = Offset(-direction.dy, direction.dx);
-    const perRow = 4;
-    for (var i = 0; i < tasks.length; i++) {
-      final row = i ~/ perRow;
-      final col = i % perRow;
-      final itemsInRow = math.min(perRow, tasks.length - row * perRow);
-      final centeredCol = col - (itemsInRow - 1) / 2;
-      leaves.add(
-        _TaskLeafLayout(
-          task: tasks[i],
-          node: node,
-          lane: lane,
-          position:
-              parentPosition +
-              direction * (distance + row * 68.0) +
-              normal * (centeredCol * 50.0),
-          parentPosition: parentPosition,
-        ),
-      );
-    }
-    return leaves;
-  }
-}
-
-enum _TaskLeafLane { nodeActive, nodeCompleted, freeActive, freeCompleted }
-
-class _TaskLeafLayout {
-  final Task task;
-  final SkillTreeNode? node;
-  final _TaskLeafLane lane;
-  final Offset position;
-  final Offset parentPosition;
-
-  const _TaskLeafLayout({
-    required this.task,
-    required this.node,
-    required this.lane,
-    required this.position,
-    required this.parentPosition,
-  });
 }
 
 class _OrbCanvasLayout {
@@ -1100,7 +926,6 @@ class _OrbCanvasLayout {
   final Skill? selectedSkill;
   final Map<Skill, Offset> skillPositions;
   final Map<String, Offset> nodePositions;
-  final List<_TaskLeafLayout> taskLeaves;
 
   const _OrbCanvasLayout({
     required this.size,
@@ -1108,7 +933,6 @@ class _OrbCanvasLayout {
     required this.selectedSkill,
     required this.skillPositions,
     required this.nodePositions,
-    required this.taskLeaves,
   });
 }
 
@@ -1121,7 +945,7 @@ class _OrbMasteryMapPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final dotPaint = Paint()
-      ..color = (isDark ? Colors.white : Colors.black).withAlpha(10)
+      ..color = (isDark ? Colors.white : Colors.black).withAlpha(7)
       ..style = PaintingStyle.fill;
     for (var x = 24.0; x < size.width; x += 42) {
       for (var y = 24.0; y < size.height; y += 42) {
@@ -1174,59 +998,35 @@ class _OrbMasteryMapPainter extends CustomPainter {
       final color = status == SkillTreeNodeStatus.active
           ? selectedSkill.color
           : skillTreeNodeStatusColor[status]!;
-      final paint = Paint()
+      final alpha = switch (status) {
+        SkillTreeNodeStatus.locked => 46,
+        SkillTreeNodeStatus.active => 135,
+        SkillTreeNodeStatus.mastered => 112,
+      };
+      final width = switch (status) {
+        SkillTreeNodeStatus.locked => 1.5,
+        SkillTreeNodeStatus.active => 2.6,
+        SkillTreeNodeStatus.mastered => 2.2,
+      };
+      final path = _organicConnectionPath(
+        start,
+        end,
+        bend: status == SkillTreeNodeStatus.active ? 0.18 : 0.14,
+      );
+      final glowPaint = Paint()
         ..color = color.withAlpha(
-          status == SkillTreeNodeStatus.locked ? 76 : 175,
+          status == SkillTreeNodeStatus.active ? 24 : 14,
         )
         ..style = PaintingStyle.stroke
-        ..strokeWidth = status == SkillTreeNodeStatus.locked ? 2.2 : 4
-        ..strokeCap = StrokeCap.round;
-      final middle = Offset.lerp(start, end, 0.5)!;
-      final controlOffset =
-          Offset(-(end.dy - start.dy), end.dx - start.dx) * 0.12;
-      final path = Path()
-        ..moveTo(start.dx, start.dy)
-        ..quadraticBezierTo(
-          middle.dx + controlOffset.dx,
-          middle.dy + controlOffset.dy,
-          end.dx,
-          end.dy,
-        );
-      canvas.drawPath(path, paint);
-    }
-
-    for (final leaf in layout.taskLeaves) {
-      final color = leaf.task.isDone
-          ? const Color(0xFF34C759)
-          : leaf.node == null
-          ? const Color(0xFFFF9500)
-          : selectedSkill.color;
-      final start = _edgePoint(
-        leaf.parentPosition,
-        leaf.position,
-        leaf.node == null ? _skillOrbRadius : _nodeOrbRadius(leaf.node!),
-      );
-      final end = _edgePoint(
-        leaf.position,
-        leaf.parentPosition,
-        _taskLeafRadius(leaf),
-      );
+        ..strokeWidth = width + 5
+        ..strokeCap = StrokeCap.round
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
       final paint = Paint()
-        ..color = color.withAlpha(leaf.task.isDone ? 72 : 145)
+        ..color = color.withAlpha(alpha)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = leaf.task.isDone ? 1.8 : 2.8
+        ..strokeWidth = width
         ..strokeCap = StrokeCap.round;
-      final middle = Offset.lerp(start, end, 0.58)!;
-      final controlOffset =
-          Offset(-(end.dy - start.dy), end.dx - start.dx) * 0.09;
-      final path = Path()
-        ..moveTo(start.dx, start.dy)
-        ..quadraticBezierTo(
-          middle.dx + controlOffset.dx,
-          middle.dy + controlOffset.dy,
-          end.dx,
-          end.dy,
-        );
+      canvas.drawPath(path, glowPaint);
       canvas.drawPath(path, paint);
     }
   }
@@ -1242,14 +1042,38 @@ class _OrbMasteryMapPainter extends CustomPainter {
     };
   }
 
-  double _taskLeafRadius(_TaskLeafLayout leaf) =>
-      leaf.task.isDone || leaf.lane == _TaskLeafLane.freeCompleted ? 16 : 18;
-
   Offset _edgePoint(Offset from, Offset to, double radius) {
     final delta = to - from;
     final distance = delta.distance;
     if (distance == 0) return from;
     return from + delta / distance * radius;
+  }
+
+  Path _organicConnectionPath(
+    Offset start,
+    Offset end, {
+    double bend = 0.22,
+    double sag = 0.0,
+  }) {
+    final delta = end - start;
+    final distance = delta.distance;
+    if (distance == 0) {
+      return Path()..moveTo(start.dx, start.dy);
+    }
+
+    final direction = delta / distance;
+    final normal = Offset(-direction.dy, direction.dx);
+    final curvature = math.min(90.0, math.max(26.0, distance * bend));
+    final c1 = start + direction * (distance * 0.35) + normal * curvature;
+    final c2 =
+        start +
+        direction * (distance * 0.72) -
+        normal * (curvature * 0.45) +
+        Offset(0, sag);
+
+    return Path()
+      ..moveTo(start.dx, start.dy)
+      ..cubicTo(c1.dx, c1.dy, c2.dx, c2.dy, end.dx, end.dy);
   }
 
   @override
@@ -1449,7 +1273,7 @@ class _SelectSkillHint extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Ветка раскроется из шара.',
+                  'Мастерство на карте, квесты — справа.',
                   style: TextStyle(color: subtext(isDark), fontSize: 10.5),
                 ),
               ],
@@ -1629,125 +1453,6 @@ class _MapNodeButtonState extends State<_MapNodeButton> {
   }
 }
 
-class _QuestLeafButton extends StatefulWidget {
-  final Task task;
-  final bool isDark;
-  final Color color;
-  final _TaskLeafLane lane;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _QuestLeafButton({
-    required this.task,
-    required this.isDark,
-    required this.color,
-    required this.lane,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  State<_QuestLeafButton> createState() => _QuestLeafButtonState();
-}
-
-class _QuestLeafButtonState extends State<_QuestLeafButton> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final task = widget.task;
-    final isDark = widget.isDark;
-    final selected = widget.selected;
-    final lane = widget.lane;
-    final showLabel = selected || _hovered;
-    final freeBranch =
-        lane == _TaskLeafLane.freeActive || lane == _TaskLeafLane.freeCompleted;
-    final dotColor = task.isDone
-        ? const Color(0xFF34C759)
-        : freeBranch
-        ? const Color(0xFFFF9500)
-        : widget.color;
-    return PressFeedback(
-      scale: 0.9,
-      tooltip: task.title,
-      onTap: widget.onTap,
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedContainer(
-              duration: kMotionStandard,
-              curve: kMotionCurve,
-              width: selected ? 38 : 32,
-              height: selected ? 38 : 32,
-              decoration: BoxDecoration(
-                color: surface(isDark).withAlpha(task.isDone ? 205 : 242),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: selected ? Colors.white : dotColor,
-                  width: selected ? 2.5 : 1.8,
-                ),
-                boxShadow: [
-                  if (selected || !task.isDone)
-                    BoxShadow(color: dotColor.withAlpha(45), blurRadius: 12),
-                ],
-              ),
-              child: Icon(
-                task.isDone
-                    ? Icons.check
-                    : freeBranch
-                    ? Icons.route
-                    : Icons.flag,
-                color: dotColor,
-                size: selected ? 17 : 14,
-              ),
-            ),
-            AnimatedSize(
-              duration: kMotionStandard,
-              curve: kMotionCurve,
-              child: showLabel
-                  ? Padding(
-                      padding: const EdgeInsets.only(top: 5),
-                      child: Container(
-                        constraints: const BoxConstraints(maxWidth: 82),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: surface(isDark).withAlpha(isDark ? 210 : 238),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: dotColor.withAlpha(65)),
-                        ),
-                        child: Text(
-                          task.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: task.isDone
-                                ? subtext(isDark)
-                                : textColor(isDark),
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w900,
-                            decoration: task.isDone
-                                ? TextDecoration.lineThrough
-                                : TextDecoration.none,
-                          ),
-                        ),
-                      ),
-                    )
-                  : const SizedBox(height: 5),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _MapCanvasAction extends StatelessWidget {
   final bool isDark;
   final String label;
@@ -1803,6 +1508,7 @@ class _MasteryMapInspector extends StatelessWidget {
   final bool isDark;
   final _MasterySelection? selection;
   final ValueChanged<Skill> onSelectSkill;
+  final void Function(Skill skill, Task task) onSelectQuest;
   final ValueChanged<Skill> onAddRoot;
   final void Function(Skill skill, SkillTreeNode node) onAddChild;
   final void Function(Skill skill, SkillTreeNode? node) onAddQuest;
@@ -1817,6 +1523,7 @@ class _MasteryMapInspector extends StatelessWidget {
     required this.isDark,
     required this.selection,
     required this.onSelectSkill,
+    required this.onSelectQuest,
     required this.onAddRoot,
     required this.onAddChild,
     required this.onAddQuest,
@@ -1890,6 +1597,9 @@ class _MasteryMapInspector extends StatelessWidget {
             node: node,
             onAddChild: () => onAddChild(skill, node),
             onAddQuest: () => onAddQuest(skill, node),
+            onSelectQuest: (task) => onSelectQuest(skill, task),
+            onEditQuest: (task) => onEditQuest(skill, task),
+            onCompleteQuest: onCompleteQuest,
             onMaster: () => onMasterNode(skill, node),
             onDelete: () => onDeleteNode(skill, node),
           ),
@@ -1899,7 +1609,9 @@ class _MasteryMapInspector extends StatelessWidget {
             skill: skill,
             onAddRoot: () => onAddRoot(skill),
             onAddQuest: () => onAddQuest(skill, null),
-            onSelectSkill: onSelectSkill,
+            onSelectQuest: (task) => onSelectQuest(skill, task),
+            onEditQuest: (task) => onEditQuest(skill, task),
+            onCompleteQuest: onCompleteQuest,
           ),
         },
       ),
@@ -1997,7 +1709,9 @@ class _SkillInspector extends StatelessWidget {
   final Skill skill;
   final VoidCallback onAddRoot;
   final VoidCallback onAddQuest;
-  final ValueChanged<Skill> onSelectSkill;
+  final ValueChanged<Task> onSelectQuest;
+  final ValueChanged<Task> onEditQuest;
+  final void Function(String taskId, Offset position) onCompleteQuest;
 
   const _SkillInspector({
     required this.state,
@@ -2005,7 +1719,9 @@ class _SkillInspector extends StatelessWidget {
     required this.skill,
     required this.onAddRoot,
     required this.onAddQuest,
-    required this.onSelectSkill,
+    required this.onSelectQuest,
+    required this.onEditQuest,
+    required this.onCompleteQuest,
   });
 
   @override
@@ -2013,6 +1729,17 @@ class _SkillInspector extends StatelessWidget {
     final tasks = state.tasksForSkill(skill.id);
     final activeTasks = tasks.where((task) => !task.isDone).length;
     final doneTasks = tasks.length - activeTasks;
+    final freeTasks = _freeQuestsForSkill(skill, tasks);
+    final freeTaskIds = freeTasks.map((task) => task.id).toSet();
+    final linkedActiveTasks = _sortedActiveQuests(
+      tasks.where((task) => !task.isDone && !freeTaskIds.contains(task.id)),
+    );
+    final freeActiveTasks = _sortedActiveQuests(
+      freeTasks.where((task) => !task.isDone),
+    );
+    final completedTasks = _sortedCompletedQuests(
+      tasks.where((task) => task.isDone),
+    );
     final txt = textColor(isDark);
     final sub = subtext(isDark);
 
@@ -2066,7 +1793,7 @@ class _SkillInspector extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         Text(
-          'Навыки на карте',
+          'Квесты навыка',
           style: TextStyle(
             color: txt,
             fontSize: 13,
@@ -2075,59 +1802,31 @@ class _SkillInspector extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Expanded(
-          child: ListView.separated(
-            itemCount: state.skills.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 7),
-            itemBuilder: (context, index) {
-              final item = state.skills[index];
-              final selected = item.id == skill.id;
-              return PressFeedback(
-                scale: 0.98,
-                onTap: () => onSelectSkill(item),
-                child: Container(
-                  padding: const EdgeInsets.all(9),
-                  decoration: BoxDecoration(
-                    color: selected
-                        ? item.color.withAlpha(22)
-                        : (isDark
-                              ? const Color(0xFF14141C)
-                              : const Color(0xFFF4F5FA)),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: selected
-                          ? item.color.withAlpha(100)
-                          : borderColor(isDark),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(item.icon, color: item.color, size: 17),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          item.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: selected ? textColor(isDark) : sub,
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                      Text(
-                        '${item.masteredTreeNodeCount}/${item.treeNodes.length}',
-                        style: TextStyle(
-                          color: item.color,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
+          child: _InspectorQuestList(
+            state: state,
+            isDark: isDark,
+            color: skill.color,
+            sections: [
+              _QuestListSection(
+                title: 'Активные',
+                tasks: linkedActiveTasks,
+                emptyText: 'Привязанных активных квестов пока нет.',
+              ),
+              _QuestListSection(
+                title: 'Свободные без узла',
+                tasks: freeActiveTasks,
+                emptyText: 'Все активные квесты уже привязаны к узлам.',
+              ),
+              _QuestListSection(
+                title: 'Выполненные',
+                tasks: completedTasks,
+                emptyText: 'Завершённых квестов пока нет.',
+                muted: true,
+              ),
+            ],
+            onSelectQuest: onSelectQuest,
+            onEditQuest: onEditQuest,
+            onCompleteQuest: onCompleteQuest,
           ),
         ),
         const SizedBox(height: 12),
@@ -2161,6 +1860,9 @@ class _NodeInspector extends StatelessWidget {
   final SkillTreeNode node;
   final VoidCallback onAddChild;
   final VoidCallback onAddQuest;
+  final ValueChanged<Task> onSelectQuest;
+  final ValueChanged<Task> onEditQuest;
+  final void Function(String taskId, Offset position) onCompleteQuest;
   final VoidCallback onMaster;
   final VoidCallback onDelete;
 
@@ -2171,6 +1873,9 @@ class _NodeInspector extends StatelessWidget {
     required this.node,
     required this.onAddChild,
     required this.onAddQuest,
+    required this.onSelectQuest,
+    required this.onEditQuest,
+    required this.onCompleteQuest,
     required this.onMaster,
     required this.onDelete,
   });
@@ -2184,6 +1889,12 @@ class _NodeInspector extends StatelessWidget {
     final completed = state.completedTasksForTreeNode(skill.id, node.id);
     final target = node.questTarget;
     final linkedTasks = state.tasksForTreeNode(skill.id, node.id);
+    final activeNodeTasks = _sortedActiveQuests(
+      linkedTasks.where((task) => !task.isDone),
+    );
+    final completedNodeTasks = _sortedCompletedQuests(
+      linkedTasks.where((task) => task.isDone),
+    );
     final ready = state.canMasterSkillTreeNode(skill.id, node.id);
     final sub = subtext(isDark);
 
@@ -2248,28 +1959,27 @@ class _NodeInspector extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Expanded(
-          child: linkedTasks.isEmpty
-              ? Center(
-                  child: Text(
-                    'Квестов нет.\nСоздайте практику для этого этапа.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: sub,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      height: 1.35,
-                    ),
-                  ),
-                )
-              : ListView.separated(
-                  itemCount: linkedTasks.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 7),
-                  itemBuilder: (context, index) => _LinkedQuestRow(
-                    task: linkedTasks[index],
-                    isDark: isDark,
-                    color: skill.color,
-                  ),
-                ),
+          child: _InspectorQuestList(
+            state: state,
+            isDark: isDark,
+            color: skill.color,
+            sections: [
+              _QuestListSection(
+                title: 'Активные квесты узла',
+                tasks: activeNodeTasks,
+                emptyText: 'Создайте практику для этого этапа.',
+              ),
+              _QuestListSection(
+                title: 'Выполненные квесты узла',
+                tasks: completedNodeTasks,
+                emptyText: 'Выполненных квестов узла пока нет.',
+                muted: true,
+              ),
+            ],
+            onSelectQuest: onSelectQuest,
+            onEditQuest: onEditQuest,
+            onCompleteQuest: onCompleteQuest,
+          ),
         ),
         const SizedBox(height: 12),
         Wrap(
@@ -3057,51 +2767,241 @@ class _MetricCard extends StatelessWidget {
   }
 }
 
-class _LinkedQuestRow extends StatelessWidget {
-  final Task task;
+class _QuestListSection {
+  final String title;
+  final List<Task> tasks;
+  final String emptyText;
+  final bool muted;
+
+  const _QuestListSection({
+    required this.title,
+    required this.tasks,
+    required this.emptyText,
+    this.muted = false,
+  });
+}
+
+class _InspectorQuestList extends StatelessWidget {
+  final AppState state;
   final bool isDark;
   final Color color;
+  final List<_QuestListSection> sections;
+  final ValueChanged<Task> onSelectQuest;
+  final ValueChanged<Task> onEditQuest;
+  final void Function(String taskId, Offset position) onCompleteQuest;
 
-  const _LinkedQuestRow({
-    required this.task,
+  const _InspectorQuestList({
+    required this.state,
     required this.isDark,
     required this.color,
+    required this.sections,
+    required this.onSelectQuest,
+    required this.onEditQuest,
+    required this.onCompleteQuest,
   });
 
   @override
   Widget build(BuildContext context) {
     final sub = subtext(isDark);
-    return Container(
-      padding: const EdgeInsets.all(9),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF14141C) : const Color(0xFFF4F5FA),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: borderColor(isDark)),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            task.isDone ? Icons.check_circle : Icons.radio_button_unchecked,
-            color: task.isDone ? const Color(0xFF34C759) : color,
-            size: 16,
+    final hasTasks = sections.any((section) => section.tasks.isNotEmpty);
+
+    if (!hasTasks) {
+      return Center(
+        child: Text(
+          sections.firstOrNull?.emptyText ?? 'Квестов пока нет.',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: sub,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            height: 1.35,
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              task.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: task.isDone ? sub : textColor(isDark),
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                decoration: task.isDone
-                    ? TextDecoration.lineThrough
-                    : TextDecoration.none,
-              ),
+        ),
+      );
+    }
+
+    return ListView(
+      children: [
+        for (final section in sections) ...[
+          Padding(
+            padding: const EdgeInsets.only(bottom: 7),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '${section.title} (${section.tasks.length})',
+                    style: TextStyle(
+                      color: section.muted ? sub : textColor(isDark),
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
+          if (section.tasks.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                section.emptyText,
+                style: TextStyle(
+                  color: sub,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          for (final task in section.tasks)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 7),
+              child: _InspectorQuestRow(
+                state: state,
+                task: task,
+                isDark: isDark,
+                color: color,
+                muted: section.muted,
+                onSelect: () => onSelectQuest(task),
+                onEdit: () => onEditQuest(task),
+                onComplete: onCompleteQuest,
+              ),
+            ),
+          const SizedBox(height: 6),
         ],
+      ],
+    );
+  }
+}
+
+class _InspectorQuestRow extends StatelessWidget {
+  final AppState state;
+  final Task task;
+  final bool isDark;
+  final Color color;
+  final bool muted;
+  final VoidCallback onSelect;
+  final VoidCallback onEdit;
+  final void Function(String taskId, Offset position) onComplete;
+
+  const _InspectorQuestRow({
+    required this.state,
+    required this.task,
+    required this.isDark,
+    required this.color,
+    required this.muted,
+    required this.onSelect,
+    required this.onEdit,
+    required this.onComplete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final done = task.isDone;
+    final sub = subtext(isDark);
+    final rowColor = done ? const Color(0xFF34C759) : color;
+    final metadata = [
+      typeLabel[task.type]!,
+      priorityLabel[task.priority]!,
+      if (task.hasMinimumAction) 'минимум есть',
+    ].join(' · ');
+
+    return PressFeedback(
+      scale: 0.985,
+      onTap: onSelect,
+      child: AnimatedContainer(
+        duration: kMotionStandard,
+        curve: kMotionCurve,
+        padding: const EdgeInsets.all(9),
+        decoration: BoxDecoration(
+          color: muted || done
+              ? surface(isDark).withAlpha(isDark ? 112 : 176)
+              : (isDark ? const Color(0xFF14141C) : const Color(0xFFF4F5FA)),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: done ? rowColor.withAlpha(42) : borderColor(isDark),
+          ),
+        ),
+        child: Row(
+          children: [
+            Builder(
+              builder: (buttonContext) => PressFeedback(
+                scale: 0.9,
+                tooltip: done ? 'Вернуть в активные' : 'Завершить квест',
+                onTap: () {
+                  if (done) {
+                    AppFeedback.selection();
+                    state.uncompleteTask(task.id);
+                    return;
+                  }
+                  final box = buttonContext.findRenderObject() as RenderBox?;
+                  onComplete(
+                    task.id,
+                    box?.localToGlobal(Offset.zero) ?? Offset.zero,
+                  );
+                },
+                child: Icon(
+                  done ? Icons.check_circle : Icons.radio_button_unchecked,
+                  color: done ? const Color(0xFF34C759) : rowColor,
+                  size: 18,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          task.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: done ? sub : textColor(isDark),
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w900,
+                            decoration: done
+                                ? TextDecoration.lineThrough
+                                : TextDecoration.none,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '+${task.xpReward} XP',
+                        style: TextStyle(
+                          color: done ? sub : rowColor,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    done ? 'Завершено' : metadata,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: sub,
+                      fontSize: 10.8,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 6),
+            PressFeedback(
+              scale: 0.9,
+              tooltip: 'Редактировать',
+              onTap: onEdit,
+              child: Icon(Icons.edit_outlined, color: sub, size: 17),
+            ),
+          ],
+        ),
       ),
     );
   }
