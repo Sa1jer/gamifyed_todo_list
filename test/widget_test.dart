@@ -6,6 +6,7 @@ import 'package:todo_list_app/storage_service.dart';
 
 class InMemoryStorageService extends StorageService {
   bool? _theme;
+  int? _bestStreak;
 
   @override
   Future<void> init() async {}
@@ -89,6 +90,14 @@ class InMemoryStorageService extends StorageService {
 
   @override
   Future<void> saveWeeklyGoals(List<WeeklyGoal> goals) async {}
+
+  @override
+  Future<int?> loadBestStreak() async => _bestStreak;
+
+  @override
+  Future<void> saveBestStreak(int value) async {
+    _bestStreak = value;
+  }
 }
 
 void main() {

@@ -50,6 +50,37 @@ List<Task> _sortedCompletedQuests(Iterable<Task> tasks) {
 
 DateTime _questSortDate(Task task) => task.lastCompletedAt ?? task.updatedAt;
 
+double _adaptiveSkillLabelFontSize(String text, bool selected) {
+  final length = text.trim().length;
+  final base = selected ? 14.5 : 13.5;
+  if (length <= 10) return base;
+  if (length <= 16) return base - 1.0;
+  if (length <= 24) return base - 2.1;
+  return base - 3.0;
+}
+
+double _adaptiveQuestTitleFontSize(String text) {
+  final length = text.trim().length;
+  if (length <= 24) return 13.2;
+  if (length <= 42) return 12.6;
+  return 12.0;
+}
+
+double _adaptiveInspectorTitleFontSize(String text) {
+  final length = text.trim().length;
+  if (length <= 18) return 17.0;
+  if (length <= 32) return 15.8;
+  return 14.8;
+}
+
+double _adaptiveNodeLabelFontSize(String text) {
+  final length = text.trim().length;
+  if (length <= 10) return 12.0;
+  if (length <= 18) return 11.2;
+  if (length <= 26) return 10.5;
+  return 10.0;
+}
+
 List<Task> _freeQuestsForSkill(Skill skill, Iterable<Task> tasks) {
   final validNodeIds = skill.treeNodes.map((node) => node.id).toSet();
   return tasks
@@ -653,10 +684,10 @@ class _OrbMasteryMapCanvas extends StatelessWidget {
                             key: ValueKey('map-skill-orb-${skill.id}'),
                             duration: kMotionSlow,
                             curve: kMotionCurve,
-                            left: position.dx - 58,
-                            top: position.dy - 60,
-                            width: 116,
-                            height: 128,
+                            left: position.dx - 90,
+                            top: position.dy - 70,
+                            width: 180,
+                            height: 156,
                             child: _SkillOrbButton(
                               skill: skill,
                               isDark: isDark,
@@ -753,7 +784,7 @@ class _OrbMasteryMapCanvas extends StatelessWidget {
           selectedSkill == null
               ? 720
               : dockBottom
-              ? math.max(980, state.skills.length * 104 + 180)
+              ? math.max(980, state.skills.length * 132 + 240)
               : 980,
         )
         .toDouble();
@@ -764,7 +795,7 @@ class _OrbMasteryMapCanvas extends StatelessWidget {
               ? 620
               : dockBottom
               ? 860
-              : math.max(760, state.skills.length * 98 + 170),
+              : math.max(760, state.skills.length * 118 + 190),
         )
         .toDouble();
     final center = Offset(width / 2, height / 2);
@@ -820,7 +851,7 @@ class _OrbMasteryMapCanvas extends StatelessWidget {
       ring++;
       capacity += 6;
     }
-    final radius = 112.0 + ring * 100.0;
+    final radius = 150.0 + ring * 128.0;
     final angle =
         (remaining / capacity) * math.pi * 2 +
         (count.isEven ? math.pi / capacity : 0) -
@@ -834,10 +865,10 @@ class _OrbMasteryMapCanvas extends StatelessWidget {
     bool bottomDock,
   ) {
     if (bottomDock) {
-      final x = 94.0 + originalIndex * 102.0;
+      final x = 112.0 + originalIndex * 132.0;
       return Offset(x, math.max(520.0, viewport.height - 84.0));
     }
-    final y = 92.0 + originalIndex * 98.0;
+    final y = 105.0 + originalIndex * 118.0;
     return Offset(86, y);
   }
 
@@ -1148,29 +1179,29 @@ class _SkillOrbButton extends StatelessWidget {
                   alignment: Alignment.center,
                   clipBehavior: Clip.none,
                   children: [
-                    Icon(
-                      skill.icon,
-                      color: skill.color,
-                      size: selected ? 31 : 27,
+                    Transform.translate(
+                      offset: const Offset(0, -5),
+                      child: Icon(
+                        skill.icon,
+                        color: skill.color.withAlpha(selected ? 245 : 220),
+                        size: selected ? 31 : 27,
+                      ),
                     ),
                     Positioned(
-                      top: -8,
-                      child: Container(
-                        width: 25,
-                        height: 25,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: surface(isDark),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: skill.color),
-                        ),
-                        child: Text(
-                          '${skill.level}',
-                          style: TextStyle(
-                            color: skill.color,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w900,
-                          ),
+                      bottom: 7,
+                      child: Text(
+                        '${skill.level}',
+                        style: TextStyle(
+                          color: skill.color.withAlpha(selected ? 255 : 255),
+                          fontSize: selected ? 18 : 16,
+                          height: 1,
+                          fontWeight: FontWeight.w900,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black.withAlpha(isDark ? 200 : 80),
+                              blurRadius: 8,
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -1179,18 +1210,47 @@ class _SkillOrbButton extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 9),
-            Text(
-              skill.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: selected ? textColor(isDark) : subtext(isDark),
-                fontSize: 12,
-                fontWeight: selected ? FontWeight.w900 : FontWeight.w800,
-              ),
+            _AdaptiveOrbLabel(
+              text: skill.name,
+              isDark: isDark,
+              selected: selected,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AdaptiveOrbLabel extends StatelessWidget {
+  final String text;
+  final bool isDark;
+  final bool selected;
+
+  const _AdaptiveOrbLabel({
+    required this.text,
+    required this.isDark,
+    required this.selected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: selected ? 190 : 160,
+      height: 46,
+      child: Center(
+        child: Text(
+          text,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          softWrap: true,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: selected ? textColor(isDark) : subtext(isDark),
+            fontSize: _adaptiveSkillLabelFontSize(text, selected),
+            height: 1.05,
+            fontWeight: selected ? FontWeight.w900 : FontWeight.w800,
+          ),
         ),
       ),
     );
@@ -1297,7 +1357,7 @@ class _TreeShape {
   });
 }
 
-class _MapNodeButton extends StatefulWidget {
+class _MapNodeButton extends StatelessWidget {
   final AppState state;
   final Skill skill;
   final SkillTreeNode node;
@@ -1316,20 +1376,7 @@ class _MapNodeButton extends StatefulWidget {
   });
 
   @override
-  State<_MapNodeButton> createState() => _MapNodeButtonState();
-}
-
-class _MapNodeButtonState extends State<_MapNodeButton> {
-  bool _hovered = false;
-
-  @override
   Widget build(BuildContext context) {
-    final state = widget.state;
-    final skill = widget.skill;
-    final node = widget.node;
-    final isDark = widget.isDark;
-    final selected = widget.selected;
-    final showLabel = selected || _hovered;
     final status = skill.treeNodeStatus(node);
     final statusColor = status == SkillTreeNodeStatus.active
         ? skill.color
@@ -1349,104 +1396,101 @@ class _MapNodeButtonState extends State<_MapNodeButton> {
 
     return PressFeedback(
       scale: 0.94,
-      tooltip: node.title,
-      onTap: widget.onTap,
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            AnimatedContainer(
-              duration: kMotionStandard,
-              curve: kMotionCurve,
-              width: diameter,
-              height: diameter,
-              decoration: BoxDecoration(
-                color: status == SkillTreeNodeStatus.locked
-                    ? surface(isDark).withAlpha(isDark ? 180 : 230)
-                    : statusColor.withAlpha(isDark ? 34 : 24),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: selected ? Colors.white : statusColor,
-                  width: selected ? 3 : 2,
-                ),
-                boxShadow: [
-                  if (selected || status == SkillTreeNodeStatus.active)
-                    BoxShadow(
-                      color: statusColor.withAlpha(selected ? 105 : 50),
-                      blurRadius: selected ? 26 : 18,
-                    ),
-                ],
+      onTap: onTap,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          AnimatedContainer(
+            duration: kMotionStandard,
+            curve: kMotionCurve,
+            width: diameter,
+            height: diameter,
+            decoration: BoxDecoration(
+              color: status == SkillTreeNodeStatus.locked
+                  ? surface(isDark).withAlpha(isDark ? 180 : 230)
+                  : statusColor.withAlpha(isDark ? 34 : 24),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: selected ? Colors.white : statusColor,
+                width: selected ? 3 : 2,
               ),
-              child: Stack(
-                clipBehavior: Clip.none,
-                alignment: Alignment.center,
-                children: [
-                  Icon(icon, color: statusColor, size: diameter * 0.42),
-                  Positioned(
-                    bottom: -10,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 7,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? const Color(0xFF0D0D12)
-                            : const Color(0xFFF7F8FC),
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: statusColor, width: 1.5),
-                      ),
-                      child: Text(
-                        '${math.min(completed, target)}/$target',
-                        style: TextStyle(
-                          color: statusColor,
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w900,
-                        ),
+              boxShadow: [
+                if (selected || status == SkillTreeNodeStatus.active)
+                  BoxShadow(
+                    color: statusColor.withAlpha(selected ? 105 : 50),
+                    blurRadius: selected ? 26 : 18,
+                  ),
+              ],
+            ),
+            child: Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.center,
+              children: [
+                Icon(icon, color: statusColor, size: diameter * 0.42),
+                Positioned(
+                  bottom: -10,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? const Color(0xFF0D0D12)
+                          : const Color(0xFFF7F8FC),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: statusColor, width: 1.5),
+                    ),
+                    child: Text(
+                      '${math.min(completed, target)}/$target',
+                      style: TextStyle(
+                        color: statusColor,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            AnimatedSize(
-              duration: kMotionStandard,
-              curve: kMotionCurve,
-              child: showLabel
-                  ? Padding(
-                      padding: const EdgeInsets.only(top: 13),
-                      child: Container(
-                        constraints: const BoxConstraints(maxWidth: 92),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 7,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: surface(isDark).withAlpha(isDark ? 214 : 235),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: statusColor.withAlpha(70)),
-                        ),
-                        child: Text(
-                          node.title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: status == SkillTreeNodeStatus.locked
-                                ? subtext(isDark)
-                                : textColor(isDark),
-                            fontSize: 10.5,
-                            height: 1.05,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ),
-                    )
-                  : const SizedBox(height: 13),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 13),
+            child: _AdaptiveNodeLabel(
+              text: node.title,
+              color: status == SkillTreeNodeStatus.locked
+                  ? subtext(isDark)
+                  : textColor(isDark),
             ),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AdaptiveNodeLabel extends StatelessWidget {
+  final String text;
+  final Color color;
+
+  const _AdaptiveNodeLabel({required this.text, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 108,
+      height: 30,
+      child: Text(
+        text,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        softWrap: true,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: color,
+          fontSize: _adaptiveNodeLabelFontSize(text),
+          height: 1.05,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
@@ -2664,6 +2708,8 @@ class _InspectorTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final titleFontSize = _adaptiveInspectorTitleFontSize(title);
+
     return Row(
       children: [
         Container(
@@ -2687,8 +2733,8 @@ class _InspectorTitle extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: textColor(isDark),
-                  fontSize: 17,
-                  height: 1.1,
+                  fontSize: titleFontSize,
+                  height: 1.08,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -2904,6 +2950,7 @@ class _InspectorQuestRow extends StatelessWidget {
       priorityLabel[task.priority]!,
       if (task.hasMinimumAction) 'минимум есть',
     ].join(' · ');
+    final titleFontSize = _adaptiveQuestTitleFontSize(task.title);
 
     return PressFeedback(
       scale: 0.985,
@@ -2911,7 +2958,7 @@ class _InspectorQuestRow extends StatelessWidget {
       child: AnimatedContainer(
         duration: kMotionStandard,
         curve: kMotionCurve,
-        padding: const EdgeInsets.all(9),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         decoration: BoxDecoration(
           color: muted || done
               ? surface(isDark).withAlpha(isDark ? 112 : 176)
@@ -2922,6 +2969,7 @@ class _InspectorQuestRow extends StatelessWidget {
           ),
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Builder(
               builder: (buttonContext) => PressFeedback(
@@ -2951,35 +2999,22 @@ class _InspectorQuestRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          task.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: done ? sub : textColor(isDark),
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w900,
-                            decoration: done
-                                ? TextDecoration.lineThrough
-                                : TextDecoration.none,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '+${task.xpReward} XP',
-                        style: TextStyle(
-                          color: done ? sub : rowColor,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ],
+                  Text(
+                    task.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    softWrap: true,
+                    style: TextStyle(
+                      color: done ? sub : textColor(isDark),
+                      fontSize: titleFontSize,
+                      height: 1.12,
+                      fontWeight: FontWeight.w900,
+                      decoration: done
+                          ? TextDecoration.lineThrough
+                          : TextDecoration.none,
+                    ),
                   ),
-                  const SizedBox(height: 3),
+                  const SizedBox(height: 4),
                   Text(
                     done ? 'Завершено' : metadata,
                     maxLines: 1,
@@ -2993,12 +3028,27 @@ class _InspectorQuestRow extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 6),
-            PressFeedback(
-              scale: 0.9,
-              tooltip: 'Редактировать',
-              onTap: onEdit,
-              child: Icon(Icons.edit_outlined, color: sub, size: 17),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '+${task.xpReward} XP',
+                  style: TextStyle(
+                    color: done ? sub : rowColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                PressFeedback(
+                  scale: 0.9,
+                  tooltip: 'Редактировать',
+                  onTap: onEdit,
+                  child: Icon(Icons.edit_outlined, color: sub, size: 17),
+                ),
+              ],
             ),
           ],
         ),

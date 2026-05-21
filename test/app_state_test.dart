@@ -9,6 +9,7 @@ import 'package:todo_list_app/utils.dart';
 
 class _InMemoryStorageService extends StorageService {
   bool? _theme;
+  int? _bestStreak;
 
   @override
   Future<void> init() async {}
@@ -32,6 +33,14 @@ class _InMemoryStorageService extends StorageService {
 
   @override
   Future<void> saveSfxEnabled(bool enabled) async {}
+
+  @override
+  Future<int?> loadBestStreak() async => _bestStreak;
+
+  @override
+  Future<void> saveBestStreak(int value) async {
+    _bestStreak = value;
+  }
 
   @override
   Future<List<Skill>> loadSkills() async => [];
@@ -148,6 +157,38 @@ void main() {
 
       expect(task.streak, 0);
       expect(state.profile.streakProtectionCharges, 0);
+    });
+
+    test('reset clears repeating minimum action progress', () {
+      final now = DateTime.now();
+      task
+        ..isDone = true
+        ..minimumAction = 'Start small'
+        ..minimumActionDoneAt = now.subtract(const Duration(hours: 2))
+        ..minimumActionEarnedXP = 10
+        ..earnedXP = 10
+        ..nextResetAt = now.subtract(const Duration(minutes: 1));
+
+      state.checkResets();
+
+      expect(task.isDone, isFalse);
+      expect(task.minimumActionDoneAt, isNull);
+      expect(task.minimumActionEarnedXP, 0);
+      expect(state.canCompleteMinimumAction(task), isTrue);
+    });
+
+    test('best streak does not decrease after undo', () {
+      task.streak = 6;
+
+      state.completeTask(task.id);
+
+      expect(task.streak, 7);
+      expect(state.bestStreak, 7);
+
+      state.uncompleteTask(task.id);
+
+      expect(task.streak, 6);
+      expect(state.bestStreak, 7);
     });
   });
 
@@ -549,6 +590,10 @@ void main() {
       );
       expect(chestBuff.expiresAt, isNotNull);
       expect(chestBuff.expiresAt!.isAfter(DateTime.now()), isTrue);
+      expect(
+        chestBuff.expiresAt!.difference(DateTime.now()),
+        greaterThan(const Duration(hours: 23)),
+      );
     });
 
     test('undo removes an invalid daily chest and its opened buff', () {
@@ -765,6 +810,49 @@ void main() {
       expect(state.activeBuffs, hasLength(1));
       expect(state.activeBuffs.first.charges, 1);
       expect(state.previewBuffBonusXP(task), 4);
+    });
+
+    test('buff bonus is capped per quest', () {
+      final task = state.tasks.firstWhere(
+        (candidate) => candidate.title == 'Пройти урок: функции и замыкания',
+      );
+      state.buffs.addAll([
+        Buff(
+          id: 'buff-1',
+          type: BuffType.nextQuestXpBoost,
+          title: 'Boost 1',
+          description: '+25%',
+          bonusPercent: 25,
+          charges: 1,
+          createdAt: DateTime.now(),
+        ),
+        Buff(
+          id: 'buff-2',
+          type: BuffType.nextQuestXpBoost,
+          title: 'Boost 2',
+          description: '+25%',
+          bonusPercent: 25,
+          charges: 1,
+          createdAt: DateTime.now(),
+        ),
+        Buff(
+          id: 'buff-3',
+          type: BuffType.nextQuestXpBoost,
+          title: 'Boost 3',
+          description: '+25%',
+          bonusPercent: 25,
+          charges: 1,
+          createdAt: DateTime.now(),
+        ),
+      ]);
+
+      expect(state.previewBuffBonusXP(task), 10);
+
+      state.completeTask(task.id);
+
+      expect(task.bonusXpEarned, 10);
+      expect(task.consumedBuffIds, ['buff-1', 'buff-2']);
+      expect(state.activeBuffs.map((buff) => buff.id), ['buff-3']);
     });
   });
 }

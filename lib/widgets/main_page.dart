@@ -765,6 +765,8 @@ class _MainPageState extends State<MainPage> {
                       WorkspaceMode.plan => _PlanWorkspace(
                         key: const ValueKey('plan-workspace'),
                         isDark: isDark,
+                        onOpenMasteryMap: () =>
+                            setState(() => _mode = WorkspaceMode.mastery),
                       ),
                       WorkspaceMode.mastery => _MasteryWorkspace(
                         key: const ValueKey('mastery-workspace'),
@@ -866,12 +868,20 @@ class _ActWorkspace extends StatelessWidget {
 
 class _PlanWorkspace extends StatelessWidget {
   final bool isDark;
+  final VoidCallback onOpenMasteryMap;
 
-  const _PlanWorkspace({super.key, required this.isDark});
+  const _PlanWorkspace({
+    super.key,
+    required this.isDark,
+    required this.onOpenMasteryMap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return PlanningWorkspace(isDark: isDark);
+    return PlanningWorkspace(
+      isDark: isDark,
+      onOpenMasteryMap: onOpenMasteryMap,
+    );
   }
 }
 

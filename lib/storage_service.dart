@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'models.dart';
@@ -23,6 +23,7 @@ class StorageService {
   static const String _tasksSavedKey = 'tasksSaved';
   static const String _isDarkKey = 'isDark';
   static const String _sfxEnabledKey = 'sfxEnabled';
+  static const String _bestStreakKey = 'bestStreak';
 
   late Box<String> _skills;
   late Box<String> _tasks;
@@ -179,7 +180,12 @@ class StorageService {
     }
   }
 
-  T _readEnum<T>(List<T> values, Object? raw, T fallback) {
+  T _readEnum<T extends Enum>(List<T> values, Object? raw, T fallback) {
+    if (raw is String) {
+      final byName = values.where((value) => value.name == raw).firstOrNull;
+      if (byName != null) return byName;
+    }
+
     final index = raw is int
         ? raw
         : raw is num
@@ -223,6 +229,25 @@ class StorageService {
   Future<void> saveSfxEnabled(bool enabled) async {
     _ensureInit();
     await _meta.put(_sfxEnabledKey, enabled ? 'true' : 'false');
+  }
+
+  @visibleForTesting
+  String debugEncodeTask(Task task) => _encodeTask(task);
+
+  @visibleForTesting
+  Task debugDecodeTask(String json) => _decodeTask(json);
+
+  @visibleForTesting
+  Achievement debugDecodeAchievement(String json) => _decodeAchievement(json);
+
+  Future<int?> loadBestStreak() async {
+    _ensureInit();
+    return _readNullableIntValue(_meta.get(_bestStreakKey));
+  }
+
+  Future<void> saveBestStreak(int value) async {
+    _ensureInit();
+    await _meta.put(_bestStreakKey, value.toString());
   }
 
   Future<void> saveSkills(List<Skill> skills) async {
@@ -277,7 +302,7 @@ class StorageService {
       'xp': profile.xp,
       'totalXpEarned': profile.totalXpEarned,
       'age': profile.age,
-      'gender': profile.gender?.index,
+      'gender': profile.gender?.name,
       'avatarBytes': profile.avatarBytes != null
           ? base64Encode(profile.avatarBytes!)
           : null,
@@ -547,15 +572,15 @@ class StorageService {
     'title': t.title,
     'skillId': t.skillId,
     'xpReward': t.xpReward,
-    'type': t.type.index,
+    'type': t.type.name,
     'isDone': t.isDone,
     'streak': t.streak,
     'earnedXP': t.earnedXP,
-    'repeatFrequency': t.repeatFrequency.index,
+    'repeatFrequency': t.repeatFrequency.name,
     'repeatCustomDays': t.repeatCustomDays,
     'nextResetAt': t.nextResetAt?.toIso8601String(),
     'lastCompletedAt': t.lastCompletedAt?.toIso8601String(),
-    'priority': t.priority.index,
+    'priority': t.priority.name,
     'minimumAction': t.minimumAction,
     'minimumActionDoneAt': t.minimumActionDoneAt?.toIso8601String(),
     'minimumActionEarnedXP': t.minimumActionEarnedXP,
@@ -697,7 +722,7 @@ class StorageService {
     'id': chest.id,
     'title': chest.title,
     'description': chest.description,
-    'rarity': chest.rarity.index,
+    'rarity': chest.rarity.name,
     'sourceKey': chest.sourceKey,
     'skillId': chest.skillId,
     'unlockedAt': chest.unlockedAt.toIso8601String(),
@@ -720,7 +745,7 @@ class StorageService {
 
   String _encodeBuff(Buff buff) => jsonEncode({
     'id': buff.id,
-    'type': buff.type.index,
+    'type': buff.type.name,
     'title': buff.title,
     'description': buff.description,
     'bonusPercent': buff.bonusPercent,

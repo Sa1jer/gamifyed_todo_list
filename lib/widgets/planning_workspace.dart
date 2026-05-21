@@ -6,10 +6,335 @@ import '../utils.dart';
 import 'dialogs.dart';
 import 'shared.dart';
 
+enum _PlanningIssueKind {
+  missingGoal,
+  noActiveQuests,
+  missingMinimum,
+  missingNode,
+  emptyNode,
+  longTermWithoutSteps,
+  shortTitle,
+  repeatingWithoutReminder,
+  heavyArchive,
+}
+
+class _PlanningIssue {
+  final _PlanningIssueKind kind;
+  final int priority;
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String subtitle;
+  final String actionLabel;
+  final Task? task;
+  final SkillTreeNode? node;
+
+  const _PlanningIssue({
+    required this.kind,
+    required this.priority,
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.subtitle,
+    required this.actionLabel,
+    this.task,
+    this.node,
+  });
+}
+
+class _PlanningDiagnostics {
+  final Skill skill;
+  final List<Task> activeTasks;
+  final List<Task> completedTasks;
+  final List<Task> attentionTasks;
+  final List<Task> freeTasks;
+  final List<Task> repeatingTasks;
+  final List<Task> longTermTasks;
+  final List<Task> unlinkedTasks;
+  final List<Task> missingMinimumTasks;
+  final List<Task> largeWithoutStepsTasks;
+  final List<Task> repeatingWithoutReminderTasks;
+  final List<SkillTreeNode> emptyNodes;
+  final List<_PlanningIssue> issues;
+  final int readinessPercent;
+  final int linkedActiveTaskCount;
+  final int activeNodeCount;
+  final int lockedNodeCount;
+
+  const _PlanningDiagnostics({
+    required this.skill,
+    required this.activeTasks,
+    required this.completedTasks,
+    required this.attentionTasks,
+    required this.freeTasks,
+    required this.repeatingTasks,
+    required this.longTermTasks,
+    required this.unlinkedTasks,
+    required this.missingMinimumTasks,
+    required this.largeWithoutStepsTasks,
+    required this.repeatingWithoutReminderTasks,
+    required this.emptyNodes,
+    required this.issues,
+    required this.readinessPercent,
+    required this.linkedActiveTaskCount,
+    required this.activeNodeCount,
+    required this.lockedNodeCount,
+  });
+
+  int get masteredNodeCount => skill.masteredTreeNodeCount;
+}
+
+_PlanningDiagnostics _buildPlanningDiagnostics(
+  AppState state,
+  Skill skill, {
+  List<Task>? tasks,
+}) {
+  final skillTasks = tasks ?? state.tasksForSkill(skill.id);
+  final validNodeIds = skill.treeNodes.map((node) => node.id).toSet();
+  final activeTasks = _sortPlanningTasks(
+    skillTasks.where((task) => !task.isDone),
+  );
+  final completedTasks = skillTasks.where((task) => task.isDone).toList()
+    ..sort(_compareCompletedTasksNewestFirst);
+  final repeatingTasks = _sortPlanningTasks(
+    activeTasks.where((task) => task.type == TaskType.repeating),
+  );
+  final longTermTasks = _sortPlanningTasks(
+    activeTasks.where((task) => task.type == TaskType.longTerm),
+  );
+  final unlinkedTasks = _sortPlanningTasks(
+    activeTasks.where(
+      (task) =>
+          task.treeNodeId == null || !validNodeIds.contains(task.treeNodeId),
+    ),
+  );
+  final missingMinimumTasks = _sortPlanningTasks(
+    activeTasks.where((task) => !task.hasMinimumAction),
+  );
+  final largeWithoutStepsTasks = _sortPlanningTasks(
+    activeTasks.where((task) => _looksLarge(task) && task.subtasks.isEmpty),
+  );
+  final shortTitleTasks = _sortPlanningTasks(
+    activeTasks.where((task) => task.title.trim().length < 3),
+  );
+  final repeatingWithoutReminderTasks = _sortPlanningTasks(
+    activeTasks.where(
+      (task) => task.type == TaskType.repeating && !task.notificationsEnabled,
+    ),
+  );
+  final emptyNodes = skill.treeNodes.where((node) {
+    return !skillTasks.any((task) => task.treeNodeId == node.id);
+  }).toList();
+  final linkedActiveTaskCount = activeTasks.length - unlinkedTasks.length;
+  final activeNodeCount = skill.treeNodes
+      .where((node) => skill.treeNodeStatus(node) == SkillTreeNodeStatus.active)
+      .length;
+  final lockedNodeCount = skill.treeNodes
+      .where((node) => skill.treeNodeStatus(node) == SkillTreeNodeStatus.locked)
+      .length;
+
+  final attentionIds = <String>{
+    ...missingMinimumTasks.map((task) => task.id),
+    ...largeWithoutStepsTasks.map((task) => task.id),
+    ...shortTitleTasks.map((task) => task.id),
+    ...repeatingWithoutReminderTasks.map((task) => task.id),
+  };
+  final attentionTasks = _sortPlanningTasks(
+    activeTasks.where((task) => attentionIds.contains(task.id)),
+  );
+
+  var readiness = 0;
+  if (skill.goal.trim().isNotEmpty) readiness += 15;
+  if (activeTasks.isNotEmpty) readiness += 15;
+  if (repeatingTasks.isNotEmpty) readiness += 10;
+  if (_atLeastHalf(
+    activeTasks.length,
+    activeTasks.where((t) => t.hasMinimumAction).length,
+  )) {
+    readiness += 15;
+  }
+  if (skill.treeNodes.isNotEmpty) readiness += 15;
+  if (_atLeastHalf(activeTasks.length, linkedActiveTaskCount)) readiness += 15;
+  if (skill.treeNodes.isNotEmpty && emptyNodes.isEmpty) readiness += 10;
+  if (longTermTasks.isEmpty || largeWithoutStepsTasks.isEmpty) readiness += 5;
+
+  final issues = <_PlanningIssue>[];
+  if (skill.goal.trim().isEmpty) {
+    issues.add(
+      const _PlanningIssue(
+        kind: _PlanningIssueKind.missingGoal,
+        priority: 0,
+        icon: Icons.flag_outlined,
+        color: Color(0xFFFF9500),
+        title: 'Нет цели навыка',
+        subtitle: 'Опишите, зачем этот навык прокачивается.',
+        actionLabel: 'Цель',
+      ),
+    );
+  }
+  if (activeTasks.isEmpty) {
+    issues.add(
+      const _PlanningIssue(
+        kind: _PlanningIssueKind.noActiveQuests,
+        priority: 1,
+        icon: Icons.post_add,
+        color: Color(0xFF4A9EFF),
+        title: 'Нет активных квестов',
+        subtitle: 'Добавьте следующий практический шаг.',
+        actionLabel: 'Квест',
+      ),
+    );
+  }
+  for (final task in missingMinimumTasks.take(4)) {
+    issues.add(
+      _PlanningIssue(
+        kind: _PlanningIssueKind.missingMinimum,
+        priority: 2,
+        icon: Icons.bolt_outlined,
+        color: const Color(0xFF4A9EFF),
+        title: 'Нет лёгкого старта',
+        subtitle: task.title,
+        actionLabel: 'Исправить',
+        task: task,
+      ),
+    );
+  }
+  for (final task in unlinkedTasks.take(4)) {
+    issues.add(
+      _PlanningIssue(
+        kind: _PlanningIssueKind.missingNode,
+        priority: 3,
+        icon: Icons.account_tree_outlined,
+        color: const Color(0xFFFF9500),
+        title: 'Квест без узла карты',
+        subtitle: task.title,
+        actionLabel: 'Связать',
+        task: task,
+      ),
+    );
+  }
+  for (final node in emptyNodes.take(3)) {
+    issues.add(
+      _PlanningIssue(
+        kind: _PlanningIssueKind.emptyNode,
+        priority: 4,
+        icon: Icons.hub_outlined,
+        color: const Color(0xFFFF9500),
+        title: 'Узел без практики',
+        subtitle: node.title,
+        actionLabel: 'Квест',
+        node: node,
+      ),
+    );
+  }
+  for (final task in largeWithoutStepsTasks.take(3)) {
+    issues.add(
+      _PlanningIssue(
+        kind: _PlanningIssueKind.longTermWithoutSteps,
+        priority: 5,
+        icon: Icons.splitscreen,
+        color: const Color(0xFFFF9500),
+        title: 'Большой квест без шагов',
+        subtitle: task.title,
+        actionLabel: 'Разбить',
+        task: task,
+      ),
+    );
+  }
+  for (final task in shortTitleTasks.take(2)) {
+    issues.add(
+      _PlanningIssue(
+        kind: _PlanningIssueKind.shortTitle,
+        priority: 6,
+        icon: Icons.short_text,
+        color: const Color(0xFF8E8E93),
+        title: 'Слишком короткое название',
+        subtitle: task.title,
+        actionLabel: 'Уточнить',
+        task: task,
+      ),
+    );
+  }
+  for (final task in repeatingWithoutReminderTasks.take(2)) {
+    issues.add(
+      _PlanningIssue(
+        kind: _PlanningIssueKind.repeatingWithoutReminder,
+        priority: 7,
+        icon: Icons.notifications_none,
+        color: const Color(0xFFAF52DE),
+        title: 'Повтор без напоминания',
+        subtitle: task.title,
+        actionLabel: 'Настроить',
+        task: task,
+      ),
+    );
+  }
+  if (completedTasks.length >= 20) {
+    issues.add(
+      _PlanningIssue(
+        kind: _PlanningIssueKind.heavyArchive,
+        priority: 9,
+        icon: Icons.inventory_2_outlined,
+        color: const Color(0xFF8E8E93),
+        title: 'Архив разросся',
+        subtitle: '${completedTasks.length} выполненных квестов в истории.',
+        actionLabel: 'Архив',
+      ),
+    );
+  }
+  issues.sort((a, b) => a.priority.compareTo(b.priority));
+
+  return _PlanningDiagnostics(
+    skill: skill,
+    activeTasks: activeTasks,
+    completedTasks: completedTasks,
+    attentionTasks: attentionTasks,
+    freeTasks: unlinkedTasks,
+    repeatingTasks: repeatingTasks,
+    longTermTasks: longTermTasks,
+    unlinkedTasks: unlinkedTasks,
+    missingMinimumTasks: missingMinimumTasks,
+    largeWithoutStepsTasks: largeWithoutStepsTasks,
+    repeatingWithoutReminderTasks: repeatingWithoutReminderTasks,
+    emptyNodes: emptyNodes,
+    issues: issues,
+    readinessPercent: readiness.clamp(0, 100),
+    linkedActiveTaskCount: linkedActiveTaskCount,
+    activeNodeCount: activeNodeCount,
+    lockedNodeCount: lockedNodeCount,
+  );
+}
+
+bool _atLeastHalf(int total, int value) {
+  if (total == 0) return false;
+  return value / total >= 0.5;
+}
+
+List<Task> _sortPlanningTasks(Iterable<Task> tasks) {
+  final list = tasks.toList();
+  list.sort((a, b) {
+    final priority = a.priority.index.compareTo(b.priority.index);
+    if (priority != 0) return priority;
+    return b.updatedAt.compareTo(a.updatedAt);
+  });
+  return list;
+}
+
+Color _readinessColor(int value) {
+  if (value >= 75) return const Color(0xFF34C759);
+  if (value >= 45) return const Color(0xFFFF9500);
+  return const Color(0xFFFF3B30);
+}
+
 class PlanningWorkspace extends StatefulWidget {
   final bool isDark;
+  final VoidCallback? onOpenMasteryMap;
 
-  const PlanningWorkspace({super.key, required this.isDark});
+  const PlanningWorkspace({
+    super.key,
+    required this.isDark,
+    this.onOpenMasteryMap,
+  });
 
   @override
   State<PlanningWorkspace> createState() => _PlanningWorkspaceState();
@@ -62,6 +387,13 @@ class _PlanningWorkspaceState extends State<PlanningWorkspace> {
                             : () => _addTask(context, skill),
                         onEditTask: (task) => _editTask(context, skill!, task),
                         onDeleteTask: (task) => state.removeTask(task.id),
+                        onAddQuestToNode: skill == null
+                            ? null
+                            : (node) => _addTaskForNode(
+                                context,
+                                skill,
+                                treeNodeId: node.id,
+                              ),
                       ),
                       const SizedBox(height: 10),
                       _PlanningInspector(
@@ -71,6 +403,23 @@ class _PlanningWorkspaceState extends State<PlanningWorkspace> {
                         onAddTask: skill == null
                             ? null
                             : () => _addTask(context, skill),
+                        onEditSkill: skill == null
+                            ? null
+                            : () => _editSkill(context, skill),
+                        onEditTask: skill == null
+                            ? null
+                            : (task) => _editTask(context, skill, task),
+                        onAddNode: skill == null
+                            ? null
+                            : () => _addNode(context, skill),
+                        onAddQuestToNode: skill == null
+                            ? null
+                            : (node) => _addTaskForNode(
+                                context,
+                                skill,
+                                treeNodeId: node.id,
+                              ),
+                        onOpenMasteryMap: widget.onOpenMasteryMap,
                         onDeleteSkill: skill == null
                             ? null
                             : () => state.removeSkill(skill.id),
@@ -110,6 +459,13 @@ class _PlanningWorkspaceState extends State<PlanningWorkspace> {
                           : () => _addTask(context, skill),
                       onEditTask: (task) => _editTask(context, skill!, task),
                       onDeleteTask: (task) => state.removeTask(task.id),
+                      onAddQuestToNode: skill == null
+                          ? null
+                          : (node) => _addTaskForNode(
+                              context,
+                              skill,
+                              treeNodeId: node.id,
+                            ),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -122,6 +478,23 @@ class _PlanningWorkspaceState extends State<PlanningWorkspace> {
                       onAddTask: skill == null
                           ? null
                           : () => _addTask(context, skill),
+                      onEditSkill: skill == null
+                          ? null
+                          : () => _editSkill(context, skill),
+                      onEditTask: skill == null
+                          ? null
+                          : (task) => _editTask(context, skill, task),
+                      onAddNode: skill == null
+                          ? null
+                          : () => _addNode(context, skill),
+                      onAddQuestToNode: skill == null
+                          ? null
+                          : (node) => _addTaskForNode(
+                              context,
+                              skill,
+                              treeNodeId: node.id,
+                            ),
+                      onOpenMasteryMap: widget.onOpenMasteryMap,
                       onDeleteSkill: skill == null
                           ? null
                           : () => state.removeSkill(skill.id),
@@ -177,6 +550,29 @@ class _PlanningWorkspaceState extends State<PlanningWorkspace> {
 
   void _addTask(BuildContext context, Skill skill) {
     _addTaskForNode(context, skill, treeNodeId: null);
+  }
+
+  void _addNode(BuildContext context, Skill skill) {
+    final state = AppStateProvider.of(context);
+    showDialog(
+      context: context,
+      builder: (_) => AddSkillTreeNodeDialog(
+        isDark: state.isDark,
+        skill: skill,
+        onSave: (title, description, xpReward, requiredQuestCompletions) {
+          state.addSkillTreeNode(
+            skill.id,
+            SkillTreeNode(
+              id: uid(),
+              title: title,
+              description: description,
+              xpReward: xpReward,
+              requiredQuestCompletions: requiredQuestCompletions,
+            ),
+          );
+        },
+      ),
+    );
   }
 
   void _addTaskForNode(
@@ -589,6 +985,7 @@ class _SkillBlueprintPanel extends StatelessWidget {
   final VoidCallback? onAddTask;
   final ValueChanged<Task> onEditTask;
   final ValueChanged<Task> onDeleteTask;
+  final ValueChanged<SkillTreeNode>? onAddQuestToNode;
 
   const _SkillBlueprintPanel({
     required this.state,
@@ -602,6 +999,7 @@ class _SkillBlueprintPanel extends StatelessWidget {
     required this.onAddTask,
     required this.onEditTask,
     required this.onDeleteTask,
+    required this.onAddQuestToNode,
   });
 
   @override
@@ -623,21 +1021,38 @@ class _SkillBlueprintPanel extends StatelessWidget {
     }
 
     final tasks = state.tasksForSkill(selected.id);
-    final active = tasks.where((task) => !task.isDone).toList();
-    final done = tasks.where((task) => task.isDone).toList()
-      ..sort(_compareCompletedTasksNewestFirst);
+    final diagnostics = _buildPlanningDiagnostics(
+      state,
+      selected,
+      tasks: tasks,
+    );
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _SkillPassportHeader(
           skill: selected,
           isDark: isDark,
-          activeCount: active.length,
-          doneCount: done.length,
+          activeCount: diagnostics.activeTasks.length,
+          doneCount: diagnostics.completedTasks.length,
           onEditSkill: onEditSkill!,
           onAddTask: onAddTask!,
         ),
         PanelDivider(isDark: isDark),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          child: _SystemStateCard(diagnostics: diagnostics, isDark: isDark),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+          child: _SetupBacklogSection(
+            diagnostics: diagnostics,
+            isDark: isDark,
+            onEditSkill: onEditSkill!,
+            onAddTask: onAddTask!,
+            onEditTask: onEditTask,
+            onAddQuestToNode: onAddQuestToNode,
+          ),
+        ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
           child: _SectionTitle(
@@ -652,8 +1067,7 @@ class _SkillBlueprintPanel extends StatelessWidget {
           Expanded(
             child: _QuestPlanList(
               skill: selected,
-              activeTasks: active,
-              doneTasks: done,
+              diagnostics: diagnostics,
               isDark: isDark,
               archiveExpanded: archiveExpanded,
               scrollable: true,
@@ -665,8 +1079,7 @@ class _SkillBlueprintPanel extends StatelessWidget {
         else
           _QuestPlanList(
             skill: selected,
-            activeTasks: active,
-            doneTasks: done,
+            diagnostics: diagnostics,
             isDark: isDark,
             archiveExpanded: archiveExpanded,
             scrollable: false,
@@ -678,6 +1091,329 @@ class _SkillBlueprintPanel extends StatelessWidget {
     );
 
     return AppPanel(isDark: isDark, child: content);
+  }
+}
+
+class _SystemStateCard extends StatelessWidget {
+  final _PlanningDiagnostics diagnostics;
+  final bool isDark;
+
+  const _SystemStateCard({required this.diagnostics, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _readinessColor(diagnostics.readinessPercent);
+    final skill = diagnostics.skill;
+    final rows = [
+      _SystemCheckData(
+        ok: skill.goal.trim().isNotEmpty,
+        label: skill.goal.trim().isNotEmpty
+            ? 'Цель описана'
+            : 'Нет цели навыка',
+        warning: 'Опишите, зачем прокачивать навык.',
+      ),
+      _SystemCheckData(
+        ok: diagnostics.activeTasks.isNotEmpty,
+        label: diagnostics.activeTasks.isNotEmpty
+            ? 'Есть активные квесты'
+            : 'Нет активных квестов',
+        warning: 'Добавьте хотя бы один следующий шаг.',
+      ),
+      _SystemCheckData(
+        ok: diagnostics.missingMinimumTasks.isEmpty,
+        label: diagnostics.missingMinimumTasks.isEmpty
+            ? 'Лёгкие старты настроены'
+            : '${diagnostics.missingMinimumTasks.length} без минимума',
+        warning: 'Добавьте минимальное действие.',
+      ),
+      _SystemCheckData(
+        ok: diagnostics.unlinkedTasks.isEmpty,
+        label: diagnostics.unlinkedTasks.isEmpty
+            ? 'Квесты связаны с картой'
+            : '${diagnostics.unlinkedTasks.length} без узла',
+        warning: 'Привяжите квесты к узлам мастерства.',
+      ),
+      _SystemCheckData(
+        ok: diagnostics.emptyNodes.isEmpty,
+        label: diagnostics.emptyNodes.isEmpty
+            ? 'Узлы имеют практику'
+            : '${diagnostics.emptyNodes.length} узл. без практики',
+        warning: 'Создайте квесты для пустых узлов.',
+      ),
+      _SystemCheckData(
+        ok: diagnostics.largeWithoutStepsTasks.isEmpty,
+        label: diagnostics.largeWithoutStepsTasks.isEmpty
+            ? 'Большие квесты разбиты'
+            : '${diagnostics.largeWithoutStepsTasks.length} без подзадач',
+        warning: 'Разбейте долгосрочные квесты.',
+      ),
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withAlpha(isDark ? 13 : 9),
+        borderRadius: BorderRadius.circular(13),
+        border: Border.all(color: color.withAlpha(55)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.rule_folder_outlined, color: color, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Состояние системы',
+                  style: TextStyle(
+                    color: textColor(isDark),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              Text(
+                '${diagnostics.readinessPercent}%',
+                style: TextStyle(
+                  color: color,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          XPBar(
+            progress: diagnostics.readinessPercent / 100,
+            color: color,
+            height: 7,
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 7,
+            runSpacing: 7,
+            children: rows
+                .map((row) => _SystemCheckChip(data: row, isDark: isDark))
+                .toList(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SystemCheckData {
+  final bool ok;
+  final String label;
+  final String warning;
+
+  const _SystemCheckData({
+    required this.ok,
+    required this.label,
+    required this.warning,
+  });
+}
+
+class _SystemCheckChip extends StatelessWidget {
+  final _SystemCheckData data;
+  final bool isDark;
+
+  const _SystemCheckChip({required this.data, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = data.ok ? const Color(0xFF34C759) : const Color(0xFFFF9500);
+    return Tooltip(
+      message: data.ok ? data.label : data.warning,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          color: color.withAlpha(isDark ? 14 : 10),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: color.withAlpha(45)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              data.ok ? Icons.check_circle : Icons.warning_amber_rounded,
+              color: color,
+              size: 14,
+            ),
+            const SizedBox(width: 5),
+            Text(
+              data.label,
+              style: TextStyle(
+                color: data.ok ? textColor(isDark) : color,
+                fontSize: 11.5,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SetupBacklogSection extends StatelessWidget {
+  final _PlanningDiagnostics diagnostics;
+  final bool isDark;
+  final VoidCallback onEditSkill;
+  final VoidCallback onAddTask;
+  final ValueChanged<Task> onEditTask;
+  final ValueChanged<SkillTreeNode>? onAddQuestToNode;
+
+  const _SetupBacklogSection({
+    required this.diagnostics,
+    required this.isDark,
+    required this.onEditSkill,
+    required this.onAddTask,
+    required this.onEditTask,
+    required this.onAddQuestToNode,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final issues = diagnostics.issues.take(5).toList();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: (isDark ? Colors.black : Colors.white).withAlpha(
+          isDark ? 24 : 120,
+        ),
+        borderRadius: BorderRadius.circular(13),
+        border: Border.all(color: borderColor(isDark)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SectionTitle(
+            isDark: isDark,
+            icon: Icons.construction,
+            title: 'Требует настройки',
+            subtitle: issues.isEmpty
+                ? 'Система навыка собрана устойчиво.'
+                : 'Быстрые правки, которые улучшат структуру навыка.',
+            dense: true,
+          ),
+          const SizedBox(height: 10),
+          if (issues.isEmpty)
+            _InspectorHint(
+              isDark: isDark,
+              icon: Icons.check_circle,
+              color: const Color(0xFF34C759),
+              title: 'Завала нет',
+              subtitle: 'Можно спокойно планировать следующий слой квестов.',
+            )
+          else
+            ...issues.map(
+              (issue) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: _SetupIssueRow(
+                  issue: issue,
+                  isDark: isDark,
+                  onTap: _actionFor(issue),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  VoidCallback? _actionFor(_PlanningIssue issue) {
+    if (issue.task != null) return () => onEditTask(issue.task!);
+    if (issue.node != null && onAddQuestToNode != null) {
+      return () => onAddQuestToNode!(issue.node!);
+    }
+    return switch (issue.kind) {
+      _PlanningIssueKind.missingGoal => onEditSkill,
+      _PlanningIssueKind.noActiveQuests => onAddTask,
+      _ => null,
+    };
+  }
+}
+
+class _SetupIssueRow extends StatelessWidget {
+  final _PlanningIssue issue;
+  final bool isDark;
+  final VoidCallback? onTap;
+
+  const _SetupIssueRow({
+    required this.issue,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: issue.color.withAlpha(isDark ? 12 : 8),
+        borderRadius: BorderRadius.circular(11),
+        border: Border.all(color: issue.color.withAlpha(38)),
+      ),
+      child: Row(
+        children: [
+          Icon(issue.icon, color: issue.color, size: 17),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  issue.title,
+                  style: TextStyle(
+                    color: textColor(isDark),
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  issue.subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: subtext(isDark),
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (onTap != null) ...[
+            const SizedBox(width: 8),
+            PressFeedback(
+              onTap: onTap!,
+              tooltip: issue.actionLabel,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                decoration: BoxDecoration(
+                  color: issue.color.withAlpha(isDark ? 18 : 12),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: issue.color.withAlpha(55)),
+                ),
+                child: Text(
+                  issue.actionLabel,
+                  style: TextStyle(
+                    color: issue.color,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }
 
@@ -923,8 +1659,7 @@ class _SkillChecklistCard extends StatelessWidget {
 
 class _QuestPlanList extends StatelessWidget {
   final Skill skill;
-  final List<Task> activeTasks;
-  final List<Task> doneTasks;
+  final _PlanningDiagnostics diagnostics;
   final bool isDark;
   final bool archiveExpanded;
   final bool scrollable;
@@ -934,8 +1669,7 @@ class _QuestPlanList extends StatelessWidget {
 
   const _QuestPlanList({
     required this.skill,
-    required this.activeTasks,
-    required this.doneTasks,
+    required this.diagnostics,
     required this.isDark,
     required this.archiveExpanded,
     required this.scrollable,
@@ -946,11 +1680,12 @@ class _QuestPlanList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final sections = _buildSections();
     final child = Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       child: Column(
         children: [
-          if (activeTasks.isEmpty)
+          if (diagnostics.activeTasks.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 28),
               child: EmptyStateMessage(
@@ -961,31 +1696,22 @@ class _QuestPlanList extends StatelessWidget {
               ),
             )
           else
-            ...activeTasks.asMap().entries.map((entry) {
-              final task = entry.value;
-              return Padding(
-                padding: EdgeInsets.only(
-                  bottom: entry.key == activeTasks.length - 1 ? 0 : 8,
+            ...sections.map(
+              (section) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _QuestPlanSection(
+                  skill: skill,
+                  section: section,
+                  isDark: isDark,
+                  onEditTask: onEditTask,
+                  onDeleteTask: onDeleteTask,
                 ),
-                child: MotionListItem(
-                  key: ValueKey('planning-active-task-${task.id}'),
-                  index: entry.key,
-                  child: _PlanningTaskRow(
-                    skill: skill,
-                    task: task,
-                    isDark: isDark,
-                    skillColor: skill.color,
-                    onEdit: () => onEditTask(task),
-                    onDelete: () => onDeleteTask(task),
-                  ),
-                ),
-              );
-            }),
-          if (doneTasks.isNotEmpty) ...[
-            const SizedBox(height: 12),
+              ),
+            ),
+          if (diagnostics.completedTasks.isNotEmpty) ...[
             _ArchiveHeader(
               isDark: isDark,
-              count: doneTasks.length,
+              count: diagnostics.completedTasks.length,
               expanded: archiveExpanded,
               onTap: onArchiveToggle,
             ),
@@ -994,11 +1720,14 @@ class _QuestPlanList extends StatelessWidget {
               expandedChild: Column(
                 children: [
                   const SizedBox(height: 8),
-                  ...doneTasks.asMap().entries.map((entry) {
+                  ...diagnostics.completedTasks.asMap().entries.map((entry) {
                     final task = entry.value;
                     return Padding(
                       padding: EdgeInsets.only(
-                        bottom: entry.key == doneTasks.length - 1 ? 0 : 8,
+                        bottom:
+                            entry.key == diagnostics.completedTasks.length - 1
+                            ? 0
+                            : 8,
                       ),
                       child: _PlanningTaskRow(
                         skill: skill,
@@ -1020,6 +1749,164 @@ class _QuestPlanList extends StatelessWidget {
     );
 
     return scrollable ? SingleChildScrollView(child: child) : child;
+  }
+
+  List<_QuestPlanSectionData> _buildSections() {
+    final assigned = <String>{};
+
+    List<Task> take(List<Task> tasks) {
+      final result = tasks.where((task) => assigned.add(task.id)).toList();
+      return result;
+    }
+
+    final sections = <_QuestPlanSectionData>[];
+    void addSection(
+      String title,
+      String subtitle,
+      IconData icon,
+      List<Task> tasks,
+    ) {
+      if (tasks.isEmpty) return;
+      sections.add(
+        _QuestPlanSectionData(
+          title: title,
+          subtitle: subtitle,
+          icon: icon,
+          tasks: tasks,
+        ),
+      );
+    }
+
+    addSection(
+      'Требуют внимания',
+      'Качество задачи можно улучшить',
+      Icons.construction,
+      take(diagnostics.attentionTasks),
+    );
+    addSection(
+      'Без узла',
+      'Эти квесты пока не двигают карту мастерства',
+      Icons.account_tree_outlined,
+      take(diagnostics.freeTasks),
+    );
+    addSection(
+      'Повторяющиеся',
+      'Ритм и привычки навыка',
+      Icons.repeat,
+      take(diagnostics.repeatingTasks),
+    );
+    addSection(
+      'Долгосрочные',
+      'Большие направления и проекты',
+      Icons.flag,
+      take(diagnostics.longTermTasks),
+    );
+    addSection(
+      'Активные',
+      'Остальные настроенные квесты',
+      Icons.playlist_add_check,
+      take(diagnostics.activeTasks),
+    );
+
+    return sections;
+  }
+}
+
+class _QuestPlanSectionData {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final List<Task> tasks;
+
+  const _QuestPlanSectionData({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.tasks,
+  });
+}
+
+class _QuestPlanSection extends StatelessWidget {
+  final Skill skill;
+  final _QuestPlanSectionData section;
+  final bool isDark;
+  final ValueChanged<Task> onEditTask;
+  final ValueChanged<Task> onDeleteTask;
+
+  const _QuestPlanSection({
+    required this.skill,
+    required this.section,
+    required this.isDark,
+    required this.onEditTask,
+    required this.onDeleteTask,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final sub = subtext(isDark);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(section.icon, color: const Color(0xFF4A9EFF), size: 15),
+            const SizedBox(width: 7),
+            Expanded(
+              child: Text(
+                section.title,
+                style: TextStyle(
+                  color: textColor(isDark),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            Text(
+              '${section.tasks.length}',
+              style: TextStyle(
+                color: sub,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 2),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            section.subtitle,
+            style: TextStyle(
+              color: sub,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        ...section.tasks.asMap().entries.map((entry) {
+          final task = entry.value;
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: entry.key == section.tasks.length - 1 ? 0 : 8,
+            ),
+            child: MotionListItem(
+              key: ValueKey('planning-${section.title}-${task.id}'),
+              index: entry.key,
+              child: _PlanningTaskRow(
+                skill: skill,
+                task: task,
+                isDark: isDark,
+                skillColor: skill.color,
+                onEdit: () => onEditTask(task),
+                onDelete: () => onDeleteTask(task),
+              ),
+            ),
+          );
+        }),
+      ],
+    );
   }
 }
 
@@ -1192,6 +2079,11 @@ class _PlanningInspector extends StatelessWidget {
   final Skill? skill;
   final bool isDark;
   final VoidCallback? onAddTask;
+  final VoidCallback? onEditSkill;
+  final ValueChanged<Task>? onEditTask;
+  final VoidCallback? onAddNode;
+  final ValueChanged<SkillTreeNode>? onAddQuestToNode;
+  final VoidCallback? onOpenMasteryMap;
   final VoidCallback? onDeleteSkill;
 
   const _PlanningInspector({
@@ -1199,6 +2091,11 @@ class _PlanningInspector extends StatelessWidget {
     required this.skill,
     required this.isDark,
     required this.onAddTask,
+    required this.onEditSkill,
+    required this.onEditTask,
+    required this.onAddNode,
+    required this.onAddQuestToNode,
+    required this.onOpenMasteryMap,
     required this.onDeleteSkill,
   });
 
@@ -1221,14 +2118,15 @@ class _PlanningInspector extends StatelessWidget {
                 isDark: isDark,
                 icon: Icons.manage_search,
                 title: 'Инспектор',
-                subtitle: 'Выберите навык, чтобы увидеть подсказки.',
+                subtitle: 'Выберите навык, чтобы увидеть диагностику.',
               ),
               const SizedBox(height: 32),
               EmptyStateMessage(
                 isDark: isDark,
-                icon: Icons.rule,
-                title: 'План пока не выбран',
-                subtitle: 'Инспектор проверит структуру квестов.',
+                icon: Icons.construction,
+                title: 'Мастерская системы',
+                subtitle:
+                    'Здесь видно, что в навыке плохо настроено и что улучшить первым.',
               ),
               const SizedBox(height: 32),
             ],
@@ -1237,22 +2135,20 @@ class _PlanningInspector extends StatelessWidget {
       );
     }
 
-    final tasks = state.tasksForSkill(selected.id);
-    final active = tasks.where((task) => !task.isDone).toList();
-    final done = tasks.length - active.length;
-    final repeating = active.where((task) => task.type == TaskType.repeating);
-    final reminders = active.where((task) => task.notificationsEnabled).length;
-    final missingMinimum = active
-        .where((task) => !task.hasMinimumAction)
+    final diagnostics = _buildPlanningDiagnostics(state, selected);
+    final reminders = diagnostics.activeTasks
+        .where((task) => task.notificationsEnabled)
         .length;
-    final largeWithoutSteps = active
-        .where((task) => _looksLarge(task) && task.subtasks.isEmpty)
-        .length;
-    final insights = _insightsFor(
-      active: active,
-      missingMinimum: missingMinimum,
-      largeWithoutSteps: largeWithoutSteps,
-    );
+    final topIssues = diagnostics.issues.take(3).toList();
+    final quickQuestNode =
+        diagnostics.emptyNodes.firstOrNull ??
+        selected.treeNodes
+            .where(
+              (node) =>
+                  selected.treeNodeStatus(node) == SkillTreeNodeStatus.active,
+            )
+            .firstOrNull ??
+        selected.treeNodes.firstOrNull;
 
     return AppPanel(
       isDark: isDark,
@@ -1265,9 +2161,11 @@ class _PlanningInspector extends StatelessWidget {
               isDark: isDark,
               icon: Icons.manage_search,
               title: 'Инспектор планирования',
-              subtitle: 'Мягко показывает, где систему стоит уточнить.',
+              subtitle: 'Что можно улучшить прямо сейчас.',
             ),
             const SizedBox(height: 8),
+            _ReadinessMiniCard(diagnostics: diagnostics, isDark: isDark),
+            const SizedBox(height: 12),
             GridView.count(
               crossAxisCount: 2,
               mainAxisSpacing: 8,
@@ -1280,21 +2178,21 @@ class _PlanningInspector extends StatelessWidget {
                   isDark: isDark,
                   icon: Icons.playlist_add_check,
                   label: 'Активно',
-                  value: '${active.length}',
+                  value: '${diagnostics.activeTasks.length}',
                   color: const Color(0xFF4A9EFF),
                 ),
                 _PlanningMetric(
                   isDark: isDark,
                   icon: Icons.inventory_2_outlined,
                   label: 'Архив',
-                  value: '$done',
+                  value: '${diagnostics.completedTasks.length}',
                   color: const Color(0xFF8E8E93),
                 ),
                 _PlanningMetric(
                   isDark: isDark,
                   icon: Icons.repeat,
                   label: 'Повторы',
-                  value: '${repeating.length}',
+                  value: '${diagnostics.repeatingTasks.length}',
                   color: const Color(0xFF34C759),
                 ),
                 _PlanningMetric(
@@ -1307,10 +2205,21 @@ class _PlanningInspector extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 14),
+            _MasteryMapPlanningCard(
+              diagnostics: diagnostics,
+              isDark: isDark,
+              onAddNode: onAddNode,
+              onOpenMasteryMap: onOpenMasteryMap,
+              onAddQuestToNode:
+                  onAddQuestToNode == null || quickQuestNode == null
+                  ? null
+                  : () => onAddQuestToNode?.call(quickQuestNode),
+            ),
+            const SizedBox(height: 14),
             _SkillChecklistCard(state: state, skill: selected, isDark: isDark),
             const SizedBox(height: 14),
             Text(
-              'Что уточнить',
+              'Главные проблемы',
               style: TextStyle(
                 color: txt,
                 fontSize: 14,
@@ -1318,20 +2227,23 @@ class _PlanningInspector extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            if (insights.isEmpty)
+            if (topIssues.isEmpty)
               _InspectorHint(
                 isDark: isDark,
                 icon: Icons.check_circle,
                 color: const Color(0xFF34C759),
                 title: 'Структура выглядит устойчиво',
-                subtitle:
-                    'Есть квесты, карта мастерства или понятные маленькие шаги.',
+                subtitle: 'Можно проектировать следующий слой навыка.',
               )
             else
-              ...insights.map(
-                (insight) => Padding(
+              ...topIssues.map(
+                (issue) => Padding(
                   padding: const EdgeInsets.only(bottom: 8),
-                  child: insight,
+                  child: _SetupIssueRow(
+                    issue: issue,
+                    isDark: isDark,
+                    onTap: _actionFor(issue),
+                  ),
                 ),
               ),
             const SizedBox(height: 8),
@@ -1346,6 +2258,22 @@ class _PlanningInspector extends StatelessWidget {
                     color: const Color(0xFF4A9EFF),
                     isDark: isDark,
                     onTap: onAddTask!,
+                  ),
+                if (onAddNode != null)
+                  _OutlineActionButton(
+                    label: 'Узел',
+                    icon: Icons.account_tree,
+                    color: const Color(0xFF4A9EFF),
+                    isDark: isDark,
+                    onTap: onAddNode!,
+                  ),
+                if (onOpenMasteryMap != null)
+                  _OutlineActionButton(
+                    label: 'Карта',
+                    icon: Icons.map_outlined,
+                    color: const Color(0xFF8E8E93),
+                    isDark: isDark,
+                    onTap: onOpenMasteryMap!,
                   ),
               ],
             ),
@@ -1375,64 +2303,173 @@ class _PlanningInspector extends StatelessWidget {
     );
   }
 
-  List<Widget> _insightsFor({
-    required List<Task> active,
-    required int missingMinimum,
-    required int largeWithoutSteps,
-  }) {
-    final result = <Widget>[];
-    if (active.isEmpty) {
-      result.add(
-        _InspectorHint(
-          isDark: isDark,
-          icon: Icons.post_add,
-          color: const Color(0xFF4A9EFF),
-          title: 'Добавить первый квест',
-          subtitle: 'У цели есть направление, но пока нет следующего шага.',
-        ),
-      );
+  VoidCallback? _actionFor(_PlanningIssue issue) {
+    if (issue.task != null && onEditTask != null) {
+      return () => onEditTask!(issue.task!);
     }
-    if (largeWithoutSteps > 0) {
-      result.add(
-        _InspectorHint(
-          isDark: isDark,
-          icon: Icons.splitscreen,
-          color: const Color(0xFFFF9500),
-          title: 'Разбить крупные квесты',
-          subtitle: '$largeWithoutSteps задач выглядят большими без подзадач.',
-        ),
-      );
+    if (issue.node != null && onAddQuestToNode != null) {
+      return () => onAddQuestToNode!(issue.node!);
     }
-    if (missingMinimum > 0) {
-      result.add(
-        _InspectorHint(
-          isDark: isDark,
-          icon: Icons.bolt_outlined,
-          color: const Color(0xFF4A9EFF),
-          title: 'Добавить лёгкий старт',
-          subtitle: '$missingMinimum активных задач без минимального действия.',
-        ),
-      );
-    }
-    final repeatingWithoutReminder = active
-        .where(
-          (task) =>
-              task.type == TaskType.repeating && !task.notificationsEnabled,
-        )
-        .length;
-    if (repeatingWithoutReminder > 0) {
-      result.add(
-        _InspectorHint(
-          isDark: isDark,
-          icon: Icons.notifications_none,
-          color: const Color(0xFFAF52DE),
-          title: 'Проверить напоминания',
-          subtitle:
-              '$repeatingWithoutReminder повторяющихся квестов без сигнала.',
-        ),
-      );
-    }
-    return result.take(4).toList();
+    return switch (issue.kind) {
+      _PlanningIssueKind.missingGoal => onEditSkill,
+      _PlanningIssueKind.noActiveQuests => onAddTask,
+      _ => null,
+    };
+  }
+}
+
+class _ReadinessMiniCard extends StatelessWidget {
+  final _PlanningDiagnostics diagnostics;
+  final bool isDark;
+
+  const _ReadinessMiniCard({required this.diagnostics, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _readinessColor(diagnostics.readinessPercent);
+    return Container(
+      padding: const EdgeInsets.all(11),
+      decoration: BoxDecoration(
+        color: color.withAlpha(isDark ? 13 : 9),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withAlpha(48)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.health_and_safety_outlined, color: color, size: 17),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Готовность системы',
+                  style: TextStyle(
+                    color: textColor(isDark),
+                    fontSize: 12.8,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              Text(
+                '${diagnostics.readinessPercent}%',
+                style: TextStyle(
+                  color: color,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          XPBar(
+            progress: diagnostics.readinessPercent / 100,
+            color: color,
+            height: 6,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MasteryMapPlanningCard extends StatelessWidget {
+  final _PlanningDiagnostics diagnostics;
+  final bool isDark;
+  final VoidCallback? onAddNode;
+  final VoidCallback? onOpenMasteryMap;
+  final VoidCallback? onAddQuestToNode;
+
+  const _MasteryMapPlanningCard({
+    required this.diagnostics,
+    required this.isDark,
+    required this.onAddNode,
+    required this.onOpenMasteryMap,
+    required this.onAddQuestToNode,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final skill = diagnostics.skill;
+    final total = skill.treeNodes.length;
+    final mastered = diagnostics.masteredNodeCount;
+    final active = diagnostics.activeNodeCount;
+    final locked = diagnostics.lockedNodeCount;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF4A9EFF).withAlpha(isDark ? 12 : 8),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF4A9EFF).withAlpha(42)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SectionTitle(
+            isDark: isDark,
+            icon: Icons.account_tree,
+            title: 'Карта мастерства',
+            subtitle: total == 0
+                ? 'У навыка пока нет узлов.'
+                : '$total узл. · $mastered освоено · $active активно · $locked закрыто',
+            dense: true,
+          ),
+          const SizedBox(height: 9),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              _SoftPill(
+                label: '${diagnostics.emptyNodes.length} без практики',
+                color: diagnostics.emptyNodes.isEmpty
+                    ? const Color(0xFF34C759)
+                    : const Color(0xFFFF9500),
+                isDark: isDark,
+              ),
+              _SoftPill(
+                label: '${diagnostics.unlinkedTasks.length} квест. без узла',
+                color: diagnostics.unlinkedTasks.isEmpty
+                    ? const Color(0xFF34C759)
+                    : const Color(0xFFFF9500),
+                isDark: isDark,
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 7,
+            runSpacing: 7,
+            children: [
+              if (onAddNode != null)
+                _OutlineActionButton(
+                  label: 'Узел',
+                  icon: Icons.add,
+                  color: const Color(0xFF4A9EFF),
+                  isDark: isDark,
+                  onTap: onAddNode!,
+                ),
+              if (onAddQuestToNode != null)
+                _OutlineActionButton(
+                  label: 'Квест к узлу',
+                  icon: Icons.add_task,
+                  color: const Color(0xFFFF9500),
+                  isDark: isDark,
+                  onTap: onAddQuestToNode!,
+                ),
+              if (onOpenMasteryMap != null)
+                _OutlineActionButton(
+                  label: 'Открыть карту',
+                  icon: Icons.map_outlined,
+                  color: const Color(0xFF8E8E93),
+                  isDark: isDark,
+                  onTap: onOpenMasteryMap!,
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }
 

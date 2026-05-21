@@ -17,6 +17,8 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _notifications =
       FlutterLocalNotificationsPlugin();
   bool _initialized = false;
+  bool? _permissionsGranted;
+  Future<bool>? _permissionRequestInFlight;
 
   Future<void> init() async {
     if (_initialized) return;
@@ -66,6 +68,24 @@ class NotificationService {
   }
 
   Future<bool> requestPermissions() async {
+    final cached = _permissionsGranted;
+    if (cached != null) return cached;
+
+    final inFlight = _permissionRequestInFlight;
+    if (inFlight != null) return inFlight;
+
+    final request = _requestPermissionsUnlocked();
+    _permissionRequestInFlight = request;
+    try {
+      final granted = await request;
+      _permissionsGranted = granted;
+      return granted;
+    } finally {
+      _permissionRequestInFlight = null;
+    }
+  }
+
+  Future<bool> _requestPermissionsUnlocked() async {
     final android = _notifications
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin

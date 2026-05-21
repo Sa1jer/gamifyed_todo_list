@@ -13,6 +13,9 @@ class AppState extends ChangeNotifier {
   static const Duration _resetCheckInterval = Duration(minutes: 15);
   static const Duration _saveDebounceDuration = Duration(milliseconds: 750);
   static const int _maxStreakProtectionCharges = 1;
+  static const int _maxHistoryEntries = 2000;
+  static const int _maxBuffBonusPercent = 50;
+  static const Duration _buffLifetime = Duration(hours: 24);
 
   bool _isDark = true;
   bool _sfxEnabled = true;
@@ -257,6 +260,7 @@ class AppState extends ChangeNotifier {
     final loadedRewardChests = await _storage.loadRewardChests();
     final loadedBuffs = await _storage.loadBuffs();
     final loadedWeeklyGoals = await _storage.loadWeeklyGoals();
+    final loadedBestStreak = await _storage.loadBestStreak();
     final hasSavedSkills = await _storage.hasSavedSkills();
     final hasSavedTasks = await _storage.hasSavedTasks();
     final savedTheme = await _storage.loadTheme();
@@ -335,6 +339,7 @@ class AppState extends ChangeNotifier {
       selectedSkillId = null;
     }
 
+    _bestStreak = loadedBestStreak ?? 0;
     _recalculateBestStreakFromTasks();
     final changed = _resetExpiredTasks();
     _syncAllBosses();
@@ -416,6 +421,7 @@ class AppState extends ChangeNotifier {
     await _storage.saveRewardChests(rewardChests);
     await _storage.saveBuffs(buffs);
     await _storage.saveWeeklyGoals(weeklyGoals);
+    await _storage.saveBestStreak(_bestStreak);
   }
 
   // ── Theme ────────────────────────────────────────────────────────────────────
@@ -450,6 +456,8 @@ class AppState extends ChangeNotifier {
         final resetFrom = t.nextResetAt!;
         t.isDone = false;
         t.earnedXP = 0;
+        t.minimumActionDoneAt = null;
+        t.minimumActionEarnedXP = 0;
         t.nextResetAt = nextResetFrom(
           resetFrom,
           t.repeatFrequency,
@@ -1462,10 +1470,11 @@ class AppState extends ChangeNotifier {
     final applicableBuffs = activeBuffs
         .where((buff) => _buffAppliesToTask(buff, task))
         .toList(growable: false);
-    final bonusPercent = applicableBuffs.fold<int>(
+    final totalBonusPercent = applicableBuffs.fold<int>(
       0,
       (sum, buff) => sum + buff.bonusPercent,
     );
+    final bonusPercent = math.min(_maxBuffBonusPercent, totalBonusPercent);
     final bonusXp = bonusPercent <= 0
         ? 0
         : math.max(1, (baseEarned * bonusPercent / 100).round());
@@ -1482,10 +1491,16 @@ class AppState extends ChangeNotifier {
     }
 
     final consumedBuffIds = <String>[];
+    var consumedBonusPercent = 0;
     for (final buff in buffs.where((buff) => buff.isActive).toList()) {
       if (!_buffAppliesToTask(buff, task)) continue;
+      if (consumedBonusPercent >= _maxBuffBonusPercent) continue;
       buff.charges = math.max(0, buff.charges - 1);
       consumedBuffIds.add(buff.id);
+      consumedBonusPercent = math.min(
+        _maxBuffBonusPercent,
+        consumedBonusPercent + buff.bonusPercent,
+      );
     }
     return (
       bonusXp: outcome.bonusXp,
@@ -1557,7 +1572,7 @@ class AppState extends ChangeNotifier {
     if (stats == null) return;
 
     final dayKey = _dayKey(stats.date);
-    final expiresAt = _endOfDay(stats.date);
+    final expiresAt = _buffExpiresAt();
 
     if (stats.tasksCompleted >= 3) {
       _grantBehaviorBuff(
@@ -1655,7 +1670,7 @@ class AppState extends ChangeNotifier {
   Buff _createBuffFromChest(RewardChest chest) {
     final skill = chest.skillId == null ? null : _skillById(chest.skillId!);
     final now = DateTime.now();
-    final expiresAt = _endOfDay(now);
+    final expiresAt = _buffExpiresAt(now);
 
     switch (chest.rarity) {
       case RewardRarity.common:
@@ -1664,7 +1679,7 @@ class AppState extends ChangeNotifier {
                 id: uid(),
                 type: BuffType.nextQuestXpBoost,
                 title: 'Импульс',
-                description: 'Следующий квест даст +15% XP до конца дня.',
+                description: 'Следующий квест даст +15% XP в течение 24 часов.',
                 bonusPercent: 15,
                 charges: 1,
                 createdAt: now,
@@ -1677,7 +1692,7 @@ class AppState extends ChangeNotifier {
                 type: BuffType.questRushXpBoost,
                 title: 'Темп',
                 description:
-                    'Следующие 2 квеста дадут по +10% XP до конца дня.',
+                    'Следующие 2 квеста дадут по +10% XP в течение 24 часов.',
                 bonusPercent: 10,
                 charges: 2,
                 createdAt: now,
@@ -1692,7 +1707,7 @@ class AppState extends ChangeNotifier {
             type: BuffType.skillFocusXpBoost,
             title: 'Резонанс навыка',
             description:
-                'Следующий квест по навыку ${skill.name} даст +25% XP до конца дня.',
+                'Следующий квест по навыку ${skill.name} даст +25% XP в течение 24 часов.',
             bonusPercent: 25,
             charges: 1,
             skillId: skill.id,
@@ -1706,7 +1721,8 @@ class AppState extends ChangeNotifier {
           id: uid(),
           type: BuffType.questRushXpBoost,
           title: 'Боевой ритм',
-          description: 'Следующие 2 квеста дадут по +15% XP до конца дня.',
+          description:
+              'Следующие 2 квеста дадут по +15% XP в течение 24 часов.',
           bonusPercent: 15,
           charges: 2,
           createdAt: now,
@@ -1719,7 +1735,8 @@ class AppState extends ChangeNotifier {
           id: uid(),
           type: BuffType.questRushXpBoost,
           title: 'Критический заряд',
-          description: 'Следующие 2 квеста дадут по +35% XP до конца дня.',
+          description:
+              'Следующие 2 квеста дадут по +35% XP в течение 24 часов.',
           bonusPercent: 35,
           charges: 2,
           createdAt: now,
@@ -1730,8 +1747,8 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  DateTime _endOfDay(DateTime date) {
-    return DateTime(date.year, date.month, date.day + 1);
+  DateTime _buffExpiresAt([DateTime? now]) {
+    return (now ?? DateTime.now()).add(_buffLifetime);
   }
 
   String _dayKey(DateTime date) {
@@ -2010,9 +2027,10 @@ class AppState extends ChangeNotifier {
   }
 
   void _recalculateBestStreakFromTasks() {
-    _bestStreak = tasks
+    final currentBest = tasks
         .where((t) => t.type == TaskType.repeating)
         .fold(0, (max, t) => math.max(max, t.streak));
+    _bestStreak = math.max(_bestStreak, currentBest);
   }
 
   void _decrementDailyStats(int xp, [int skillLevelsLost = 0]) {
@@ -2043,6 +2061,9 @@ class AppState extends ChangeNotifier {
         at: DateTime.now(),
       ),
     );
+    if (history.length > _maxHistoryEntries) {
+      history.removeRange(_maxHistoryEntries, history.length);
+    }
     _invalidateHistoryCaches();
   }
 
