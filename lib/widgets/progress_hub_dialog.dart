@@ -53,8 +53,7 @@ class ProgressHubDialog extends StatelessWidget {
         width: dialogWidth,
         constraints: BoxConstraints(maxHeight: maxHeight),
         showCloseButton: true,
-        subtitle:
-            'Вторичные RPG-разделы собраны здесь, чтобы главный экран оставался про действие.',
+        subtitle: 'Что получилось, какой навык вырос и что продолжить.',
         onClose: () => Navigator.pop(context),
         onOpenDailyVictories: onOpenDailyVictories,
         onOpenCharacterTimeline: onOpenCharacterTimeline,
@@ -95,8 +94,7 @@ class ProgressHubContent extends StatelessWidget {
     this.width,
     this.constraints,
     this.showCloseButton = false,
-    this.subtitle =
-        'Статистика, календарь, боссы и трофеи собраны отдельно от режима действия.',
+    this.subtitle = 'Что получилось, какой навык вырос и что продолжить.',
     this.onClose,
     required this.onOpenDailyVictories,
     required this.onOpenCharacterTimeline,
@@ -115,17 +113,20 @@ class ProgressHubContent extends StatelessWidget {
     final txt = textColor(isDark);
     final sub = subtext(isDark);
     final bdr = borderColor(isDark);
+    final story = _ProgressStorySnapshot.fromState(state);
     final unlockedAchievements = state.achievements
         .where((achievement) => achievement.isUnlocked)
         .length;
-    final completedDays = state.completionHistoryByDate.length;
-    final todayEntries = _todayEntries(state);
-    final todayXp = todayEntries.fold<int>(0, (sum, entry) => sum + entry.xp);
-    final currentWeekEntries = _currentWeekEntries(state);
-    final currentWeekXp = currentWeekEntries.fold<int>(
-      0,
-      (sum, entry) => sum + entry.xp,
-    );
+    final trophyValue = state.unopenedRewardChests.isNotEmpty
+        ? '${state.unopenedRewardChests.length} новых'
+        : state.activeBuffs.isNotEmpty
+        ? 'эффекты активны'
+        : 'нет событий';
+    final resistanceValue = state.activeBossThreatCount > 0
+        ? 'есть сопротивление'
+        : state.activeBosses.isNotEmpty
+        ? 'события пути'
+        : 'спокойно';
 
     return Container(
       width: width,
@@ -157,7 +158,7 @@ class ProgressHubContent extends StatelessWidget {
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: const Icon(
-                    Icons.dashboard_customize,
+                    Icons.auto_stories,
                     color: Color(0xFF4A9EFF),
                     size: 22,
                   ),
@@ -168,7 +169,7 @@ class ProgressHubContent extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Центр прогресса',
+                        'История роста',
                         style: TextStyle(
                           color: txt,
                           fontSize: 19,
@@ -184,13 +185,15 @@ class ProgressHubContent extends StatelessWidget {
                           height: 1.25,
                         ),
                       ),
+                      const SizedBox(height: 9),
+                      _ProgressStoryFacts(story: story, isDark: isDark),
                     ],
                   ),
                 ),
                 if (showCloseButton && onClose != null)
                   PressFeedback(
                     scale: 0.94,
-                    tooltip: 'Закрыть центр прогресса',
+                    tooltip: 'Закрыть историю роста',
                     onTap: onClose!,
                     child: Icon(Icons.close, color: sub, size: 22),
                   ),
@@ -206,9 +209,9 @@ class ProgressHubContent extends StatelessWidget {
                 children: [
                   _ProgressHubSection(
                     isDark: isDark,
-                    title: 'Сначала итоги',
+                    title: 'История роста',
                     subtitle:
-                        'Быстрый ответ: что получилось и куда растёт персонаж.',
+                        'Сначала то, что уже получилось и стало частью пути.',
                     startIndex: 0,
                     cards: [
                       _ProgressHubCard(
@@ -217,9 +220,7 @@ class ProgressHubContent extends StatelessWidget {
                         color: const Color(0xFFFF9500),
                         title: 'Победы дня',
                         subtitle: 'Итог сегодняшнего рывка',
-                        value: todayEntries.isEmpty
-                            ? 'ждёт первой победы'
-                            : '$todayXp XP • ${_questCount(todayEntries.length)}',
+                        value: story.todayValue,
                         onTap: onOpenDailyVictories,
                       ),
                       _ProgressHubCard(
@@ -228,9 +229,7 @@ class ProgressHubContent extends StatelessWidget {
                         color: const Color(0xFF34C759),
                         title: 'Неделя',
                         subtitle: 'XP, квесты, навыки и риск серии',
-                        value: currentWeekEntries.isEmpty
-                            ? 'пока пусто'
-                            : '$currentWeekXp XP • ${_questCount(currentWeekEntries.length)}',
+                        value: story.weekValue,
                         onTap: onOpenWeekly,
                       ),
                       _ProgressHubCard(
@@ -238,25 +237,32 @@ class ProgressHubContent extends StatelessWidget {
                         icon: Icons.auto_stories,
                         color: const Color(0xFFAF52DE),
                         title: 'Летопись',
-                        subtitle: 'Уровни, боссы, освоение и недели',
+                        subtitle: 'Уровни, сопротивление, освоение и недели',
                         value: 'Ур. ${state.profile.level}',
                         onTap: onOpenCharacterTimeline,
                       ),
                     ],
                   ),
                   const SizedBox(height: 14),
+                  _ProgressContinueCard(
+                    story: story,
+                    isDark: isDark,
+                    onTap: story.continuationPrefersWeekly
+                        ? onOpenWeekly
+                        : onOpenCharacterTimeline,
+                  ),
+                  const SizedBox(height: 14),
                   _ProgressHubSection(
                     isDark: isDark,
-                    title: 'Понять прогресс',
-                    subtitle:
-                        'Цифры и журнал, когда хочется разобраться глубже.',
-                    startIndex: 3,
+                    title: 'Разобраться глубже',
+                    subtitle: 'Цифры и журнал остаются рядом, но не первыми.',
+                    startIndex: 4,
                     cards: [
                       _ProgressHubCard(
                         isDark: isDark,
                         icon: Icons.bar_chart,
                         color: const Color(0xFF4A9EFF),
-                        title: 'Статистика',
+                        title: 'Срез роста',
                         subtitle: 'XP, уровни, темп дня',
                         value: '${state.todayStats?.xpEarned ?? 0} XP сегодня',
                         onTap: onOpenStats,
@@ -265,9 +271,9 @@ class ProgressHubContent extends StatelessWidget {
                         isDark: isDark,
                         icon: Icons.calendar_month,
                         color: const Color(0xFF30D158),
-                        title: 'Календарь',
+                        title: 'Календарь квестов',
                         subtitle: 'Когда реально закрывались квесты',
-                        value: '$completedDays активных дней',
+                        value: '${story.completedDays} активных дней',
                         onTap: onOpenCalendar,
                       ),
                       _ProgressHubCard(
@@ -284,22 +290,11 @@ class ProgressHubContent extends StatelessWidget {
                   const SizedBox(height: 14),
                   _ProgressHubSection(
                     isDark: isDark,
-                    title: 'Игровые системы',
+                    title: 'Трофеи и события',
                     subtitle:
-                        'Игровые механики, которые поддерживают мотивацию.',
-                    startIndex: 6,
+                        'Трофеи, достижения и сопротивление — последствия прогресса, а не работа на сегодня.',
+                    startIndex: 7,
                     cards: [
-                      _ProgressHubCard(
-                        isDark: isDark,
-                        icon: Icons.shield,
-                        color: const Color(0xFFFF2D55),
-                        title: 'Боссы',
-                        subtitle: 'Плохие привычки и сопротивление',
-                        value: state.activeBossThreatCount > 0
-                            ? '${state.activeBossThreatCount} атакуют'
-                            : '${state.activeBosses.length} активных',
-                        onTap: onOpenBosses,
-                      ),
                       _ProgressHubCard(
                         isDark: isDark,
                         icon: Icons.emoji_events,
@@ -314,11 +309,19 @@ class ProgressHubContent extends StatelessWidget {
                         isDark: isDark,
                         icon: Icons.redeem,
                         color: const Color(0xFFFF9500),
-                        title: 'Награды',
-                        subtitle: 'Сундуки и активные баффы',
-                        value:
-                            '${state.unopenedRewardChests.length} сундуков • ${state.activeBuffs.length} баффов',
+                        title: 'Трофеи',
+                        subtitle: 'Сундуки и эффекты после действий',
+                        value: trophyValue,
                         onTap: onOpenRewards,
+                      ),
+                      _ProgressHubCard(
+                        isDark: isDark,
+                        icon: Icons.shield,
+                        color: const Color(0xFFFF2D55),
+                        title: 'Сопротивление',
+                        subtitle: 'События сопротивления и побед',
+                        value: resistanceValue,
+                        onTap: onOpenBosses,
                       ),
                     ],
                   ),
@@ -348,7 +351,7 @@ class ProgressHubContent extends StatelessWidget {
                   const SizedBox(width: 9),
                   Expanded(
                     child: Text(
-                      'Принцип интерфейса: сначала действие, потом анализ. Если хочешь просто двигаться дальше, вернись в режим “Действовать”.',
+                      'Прогресс здесь рассказывает историю роста. Если хочешь не анализировать, а двигаться дальше, вернись в режим “Действовать”.',
                       style: TextStyle(color: sub, fontSize: 12, height: 1.3),
                     ),
                   ),
@@ -358,6 +361,408 @@ class ProgressHubContent extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ProgressStorySnapshot {
+  final int todayXp;
+  final int todayQuestCount;
+  final int weekXp;
+  final int weekQuestCount;
+  final int completedDays;
+  final _ProgressSkillStory? topSkill;
+  final _ProgressContinuation continuation;
+
+  const _ProgressStorySnapshot({
+    required this.todayXp,
+    required this.todayQuestCount,
+    required this.weekXp,
+    required this.weekQuestCount,
+    required this.completedDays,
+    required this.topSkill,
+    required this.continuation,
+  });
+
+  factory _ProgressStorySnapshot.fromState(AppState state) {
+    final todayEntries = _todayEntries(state);
+    final weekEntries = _currentWeekEntries(state);
+    final topSkill = _topSkillStory(weekEntries);
+    final lastCompletedEntry = _latestCompletedEntry(state);
+
+    return _ProgressStorySnapshot(
+      todayXp: todayEntries.fold<int>(0, (sum, entry) => sum + entry.xp),
+      todayQuestCount: todayEntries.length,
+      weekXp: weekEntries.fold<int>(0, (sum, entry) => sum + entry.xp),
+      weekQuestCount: weekEntries.length,
+      completedDays: state.completionHistoryByDate.length,
+      topSkill: topSkill,
+      continuation: _buildContinuation(state, topSkill, lastCompletedEntry),
+    );
+  }
+
+  String get todayValue => todayQuestCount == 0
+      ? 'ждёт первой победы'
+      : '$todayXp XP • ${_questCount(todayQuestCount)}';
+
+  String get weekValue => weekQuestCount == 0
+      ? 'пока пусто'
+      : '$weekXp XP • ${_questCount(weekQuestCount)}';
+
+  String get topSkillValue => topSkill == null
+      ? 'пока нет фокуса'
+      : '${topSkill!.name} • ${topSkill!.xp} XP';
+
+  bool get continuationPrefersWeekly => continuation.prefersWeekly;
+}
+
+class _ProgressSkillStory {
+  final String skillId;
+  final String name;
+  final Color color;
+  final IconData icon;
+  final int xp;
+  final int questCount;
+
+  const _ProgressSkillStory({
+    required this.skillId,
+    required this.name,
+    required this.color,
+    required this.icon,
+    required this.xp,
+    required this.questCount,
+  });
+}
+
+class _ProgressContinuation {
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String subtitle;
+  final String value;
+  final bool prefersWeekly;
+
+  const _ProgressContinuation({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.prefersWeekly,
+  });
+}
+
+_ProgressSkillStory? _topSkillStory(List<HistoryEntry> entries) {
+  if (entries.isEmpty) return null;
+
+  final bySkill = <String, List<HistoryEntry>>{};
+  for (final entry in entries) {
+    bySkill.putIfAbsent(entry.skillId, () => []).add(entry);
+  }
+
+  _ProgressSkillStory? best;
+  for (final skillEntries in bySkill.values) {
+    final first = skillEntries.first;
+    final xp = skillEntries.fold<int>(0, (sum, entry) => sum + entry.xp);
+    final story = _ProgressSkillStory(
+      skillId: first.skillId,
+      name: first.skillName,
+      color: first.skillColor,
+      icon: first.skillIcon,
+      xp: xp,
+      questCount: skillEntries.length,
+    );
+    if (best == null ||
+        story.xp > best.xp ||
+        (story.xp == best.xp && story.questCount > best.questCount)) {
+      best = story;
+    }
+  }
+
+  return best;
+}
+
+HistoryEntry? _latestCompletedEntry(AppState state) {
+  final entries = state.history.where((entry) => entry.isCompletion).toList()
+    ..sort((a, b) => b.at.compareTo(a.at));
+  return entries.firstOrNull;
+}
+
+_ProgressContinuation _buildContinuation(
+  AppState state,
+  _ProgressSkillStory? topSkill,
+  HistoryEntry? lastCompletedEntry,
+) {
+  final weeklySkill = topSkill == null
+      ? null
+      : state.skills.where((skill) => skill.id == topSkill.skillId).firstOrNull;
+
+  if (topSkill != null && weeklySkill != null) {
+    final activeStage = weeklySkill.treeNodes
+        .where(
+          (node) =>
+              weeklySkill.treeNodeStatus(node) == SkillTreeNodeStatus.active,
+        )
+        .firstOrNull;
+    final activeTasks = state
+        .tasksForSkill(weeklySkill.id)
+        .where((task) => !task.isDone)
+        .toList();
+
+    if (activeStage != null) {
+      return _ProgressContinuation(
+        icon: weeklySkill.icon,
+        color: weeklySkill.color,
+        title: 'Продолжить ${weeklySkill.name}',
+        subtitle: 'Активный этап: ${activeStage.title}',
+        value: '${topSkill.xp} XP на неделе',
+        prefersWeekly: true,
+      );
+    }
+    if (activeTasks.isNotEmpty) {
+      return _ProgressContinuation(
+        icon: weeklySkill.icon,
+        color: weeklySkill.color,
+        title: 'Продолжить ${weeklySkill.name}',
+        subtitle: 'Следующий квест: ${activeTasks.first.title}',
+        value: '${topSkill.questCount} квест. на неделе',
+        prefersWeekly: true,
+      );
+    }
+  }
+
+  if (lastCompletedEntry != null) {
+    return _ProgressContinuation(
+      icon: lastCompletedEntry.skillIcon,
+      color: lastCompletedEntry.skillColor,
+      title: 'Вернуться к ${lastCompletedEntry.skillName}',
+      subtitle: 'Последний квест: ${lastCompletedEntry.taskTitle}',
+      value: '+${lastCompletedEntry.xp} XP последним',
+      prefersWeekly: false,
+    );
+  }
+
+  final firstSkill = state.skills.firstOrNull;
+  if (firstSkill != null) {
+    final activeStage = firstSkill.treeNodes
+        .where(
+          (node) =>
+              firstSkill.treeNodeStatus(node) == SkillTreeNodeStatus.active,
+        )
+        .firstOrNull;
+    return _ProgressContinuation(
+      icon: firstSkill.icon,
+      color: firstSkill.color,
+      title: 'Начать рост: ${firstSkill.name}',
+      subtitle: activeStage == null
+          ? 'Сделай первый квест и получи стартовый XP.'
+          : 'Первый этап: ${activeStage.title}',
+      value: 'ждёт первой победы',
+      prefersWeekly: false,
+    );
+  }
+
+  return const _ProgressContinuation(
+    icon: Icons.bolt,
+    color: Color(0xFF4A9EFF),
+    title: 'Рост начнётся после первого квеста',
+    subtitle: 'Создай навык, закрой минимальный шаг и вернись сюда.',
+    value: 'пока пусто',
+    prefersWeekly: false,
+  );
+}
+
+class _ProgressStoryFacts extends StatelessWidget {
+  final _ProgressStorySnapshot story;
+  final bool isDark;
+
+  const _ProgressStoryFacts({required this.story, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        _ProgressStoryFactChip(
+          isDark: isDark,
+          label: 'Сегодня',
+          value: story.todayQuestCount == 0
+              ? 'нет побед'
+              : '${story.todayXp} XP',
+          color: const Color(0xFFFF9500),
+        ),
+        _ProgressStoryFactChip(
+          isDark: isDark,
+          label: 'Неделя',
+          value: story.weekQuestCount == 0 ? 'пусто' : '${story.weekXp} XP',
+          color: const Color(0xFF34C759),
+        ),
+        _ProgressStoryFactChip(
+          isDark: isDark,
+          label: 'Главный навык',
+          value: story.topSkillValue,
+          color: story.topSkill?.color ?? const Color(0xFF4A9EFF),
+        ),
+      ],
+    );
+  }
+}
+
+class _ProgressStoryFactChip extends StatelessWidget {
+  final bool isDark;
+  final String label;
+  final String value;
+  final Color color;
+
+  const _ProgressStoryFactChip({
+    required this.isDark,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withAlpha(isDark ? 16 : 11),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withAlpha(40)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '$label: ',
+            style: TextStyle(
+              color: subtext(isDark),
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProgressContinueCard extends StatelessWidget {
+  final _ProgressStorySnapshot story;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  const _ProgressContinueCard({
+    required this.story,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final continuation = story.continuation;
+    final txt = textColor(isDark);
+    final sub = subtext(isDark);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Что продолжить',
+          style: TextStyle(
+            color: txt,
+            fontSize: 13.5,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          'Один мягкий ориентир из уже сделанного.',
+          style: TextStyle(color: sub, fontSize: 11.5),
+        ),
+        const SizedBox(height: 10),
+        PressFeedback(
+          onTap: onTap,
+          tooltip: 'Открыть подробности роста',
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(13),
+            decoration: BoxDecoration(
+              color: continuation.color.withAlpha(isDark ? 13 : 9),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: continuation.color.withAlpha(46)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: continuation.color.withAlpha(24),
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+                  child: Icon(
+                    continuation.icon,
+                    color: continuation.color,
+                    size: 21,
+                  ),
+                ),
+                const SizedBox(width: 11),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        continuation.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: txt,
+                          fontSize: 13.8,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        continuation.subtitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: sub,
+                          fontSize: 11.5,
+                          height: 1.2,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        continuation.value,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: continuation.color,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right, color: sub.withAlpha(150), size: 18),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

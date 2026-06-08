@@ -46,10 +46,7 @@ class _PlanningDiagnostics {
   final Skill skill;
   final List<Task> activeTasks;
   final List<Task> completedTasks;
-  final List<Task> attentionTasks;
-  final List<Task> freeTasks;
   final List<Task> repeatingTasks;
-  final List<Task> longTermTasks;
   final List<Task> unlinkedTasks;
   final List<Task> missingMinimumTasks;
   final List<Task> largeWithoutStepsTasks;
@@ -65,10 +62,7 @@ class _PlanningDiagnostics {
     required this.skill,
     required this.activeTasks,
     required this.completedTasks,
-    required this.attentionTasks,
-    required this.freeTasks,
     required this.repeatingTasks,
-    required this.longTermTasks,
     required this.unlinkedTasks,
     required this.missingMinimumTasks,
     required this.largeWithoutStepsTasks,
@@ -82,6 +76,9 @@ class _PlanningDiagnostics {
   });
 
   int get masteredNodeCount => skill.masteredTreeNodeCount;
+  _PlanningIssue? get primaryIssue => issues.isEmpty ? null : issues.first;
+  List<_PlanningIssue> get secondaryIssues =>
+      issues.length <= 1 ? const [] : issues.skip(1).toList();
 }
 
 _PlanningDiagnostics _buildPlanningDiagnostics(
@@ -132,16 +129,6 @@ _PlanningDiagnostics _buildPlanningDiagnostics(
   final lockedNodeCount = skill.treeNodes
       .where((node) => skill.treeNodeStatus(node) == SkillTreeNodeStatus.locked)
       .length;
-
-  final attentionIds = <String>{
-    ...missingMinimumTasks.map((task) => task.id),
-    ...largeWithoutStepsTasks.map((task) => task.id),
-    ...shortTitleTasks.map((task) => task.id),
-    ...repeatingWithoutReminderTasks.map((task) => task.id),
-  };
-  final attentionTasks = _sortPlanningTasks(
-    activeTasks.where((task) => attentionIds.contains(task.id)),
-  );
 
   var readiness = 0;
   if (skill.goal.trim().isNotEmpty) readiness += 15;
@@ -206,7 +193,7 @@ _PlanningDiagnostics _buildPlanningDiagnostics(
         priority: 3,
         icon: Icons.account_tree_outlined,
         color: const Color(0xFFFF9500),
-        title: 'Квест без узла карты',
+        title: 'Квест без этапа',
         subtitle: task.title,
         actionLabel: 'Связать',
         task: task,
@@ -220,9 +207,9 @@ _PlanningDiagnostics _buildPlanningDiagnostics(
         priority: 4,
         icon: Icons.hub_outlined,
         color: const Color(0xFFFF9500),
-        title: 'Узел без практики',
+        title: 'Этап без практики',
         subtitle: node.title,
-        actionLabel: 'Квест',
+        actionLabel: 'Квест к этапу',
         node: node,
       ),
     );
@@ -288,10 +275,7 @@ _PlanningDiagnostics _buildPlanningDiagnostics(
     skill: skill,
     activeTasks: activeTasks,
     completedTasks: completedTasks,
-    attentionTasks: attentionTasks,
-    freeTasks: unlinkedTasks,
     repeatingTasks: repeatingTasks,
-    longTermTasks: longTermTasks,
     unlinkedTasks: unlinkedTasks,
     missingMinimumTasks: missingMinimumTasks,
     largeWithoutStepsTasks: largeWithoutStepsTasks,
@@ -357,75 +341,38 @@ class _PlanningWorkspaceState extends State<PlanningWorkspace> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               if (constraints.maxWidth < 980) {
-                return SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      SizedBox(
-                        height: 315,
-                        child: _PlanningSkillRail(
-                          state: state,
-                          isDark: isDark,
-                          onAddSkill: () => _addSkill(context),
+                return _MobilePlanningFlow(
+                  state: state,
+                  skill: skill,
+                  isDark: isDark,
+                  archiveExpanded: _archiveExpanded,
+                  onArchiveToggle: () =>
+                      setState(() => _archiveExpanded = !_archiveExpanded),
+                  onAddSkill: () => _addSkill(context),
+                  onEditSkill: skill == null
+                      ? null
+                      : () => _editSkill(context, skill),
+                  onAddTask: skill == null
+                      ? null
+                      : () => _addTask(context, skill),
+                  onEditTask: skill == null
+                      ? null
+                      : (task) => _editTask(context, skill, task),
+                  onDeleteTask: (task) => state.removeTask(task.id),
+                  onAddNode: skill == null
+                      ? null
+                      : () => _addNode(context, skill),
+                  onAddQuestToNode: skill == null
+                      ? null
+                      : (node) => _addTaskForNode(
+                          context,
+                          skill,
+                          treeNodeId: node.id,
                         ),
-                      ),
-                      const SizedBox(height: 10),
-                      _SkillBlueprintPanel(
-                        state: state,
-                        skill: skill,
-                        isDark: isDark,
-                        archiveExpanded: _archiveExpanded,
-                        expandTaskList: false,
-                        onArchiveToggle: () => setState(
-                          () => _archiveExpanded = !_archiveExpanded,
-                        ),
-                        onAddSkill: () => _addSkill(context),
-                        onEditSkill: skill == null
-                            ? null
-                            : () => _editSkill(context, skill),
-                        onAddTask: skill == null
-                            ? null
-                            : () => _addTask(context, skill),
-                        onEditTask: (task) => _editTask(context, skill!, task),
-                        onDeleteTask: (task) => state.removeTask(task.id),
-                        onAddQuestToNode: skill == null
-                            ? null
-                            : (node) => _addTaskForNode(
-                                context,
-                                skill,
-                                treeNodeId: node.id,
-                              ),
-                      ),
-                      const SizedBox(height: 10),
-                      _PlanningInspector(
-                        state: state,
-                        skill: skill,
-                        isDark: isDark,
-                        onAddTask: skill == null
-                            ? null
-                            : () => _addTask(context, skill),
-                        onEditSkill: skill == null
-                            ? null
-                            : () => _editSkill(context, skill),
-                        onEditTask: skill == null
-                            ? null
-                            : (task) => _editTask(context, skill, task),
-                        onAddNode: skill == null
-                            ? null
-                            : () => _addNode(context, skill),
-                        onAddQuestToNode: skill == null
-                            ? null
-                            : (node) => _addTaskForNode(
-                                context,
-                                skill,
-                                treeNodeId: node.id,
-                              ),
-                        onOpenMasteryMap: widget.onOpenMasteryMap,
-                        onDeleteSkill: skill == null
-                            ? null
-                            : () => state.removeSkill(skill.id),
-                      ),
-                    ],
-                  ),
+                  onOpenMasteryMap: widget.onOpenMasteryMap,
+                  onDeleteSkill: skill == null
+                      ? null
+                      : () => state.removeSkill(skill.id),
                 );
               }
 
@@ -447,10 +394,9 @@ class _PlanningWorkspaceState extends State<PlanningWorkspace> {
                       skill: skill,
                       isDark: isDark,
                       archiveExpanded: _archiveExpanded,
-                      expandTaskList: true,
+                      internalScroll: true,
                       onArchiveToggle: () =>
                           setState(() => _archiveExpanded = !_archiveExpanded),
-                      onAddSkill: () => _addSkill(context),
                       onEditSkill: skill == null
                           ? null
                           : () => _editSkill(context, skill),
@@ -515,16 +461,44 @@ class _PlanningWorkspaceState extends State<PlanningWorkspace> {
       context: context,
       builder: (_) => AddSkillDialog(
         isDark: state.isDark,
-        onSave: (name, goal, checklist, color, icon) => state.addSkill(
-          Skill(
-            id: uid(),
-            name: name,
-            goal: goal,
-            color: color,
-            icon: icon,
-            checklist: checklist,
-          ),
-        ),
+        onSave:
+            (
+              name,
+              goal,
+              checklist,
+              color,
+              icon,
+              initialTreeNodes,
+              initialQuest,
+            ) {
+              final skillId = uid();
+              state.addSkill(
+                Skill(
+                  id: skillId,
+                  name: name,
+                  goal: goal,
+                  color: color,
+                  icon: icon,
+                  checklist: checklist,
+                  treeNodes: initialTreeNodes,
+                ),
+              );
+              state.selectSkill(skillId);
+              if (initialQuest != null) {
+                state.addTask(
+                  Task(
+                    id: uid(),
+                    title: initialQuest.title,
+                    skillId: skillId,
+                    xpReward: 20,
+                    type: TaskType.shortTerm,
+                    priority: Priority.medium,
+                    minimumAction: initialQuest.minimumAction,
+                    treeNodeId: initialQuest.treeNodeId,
+                  ),
+                );
+              }
+            },
       ),
     );
   }
@@ -536,7 +510,7 @@ class _PlanningWorkspaceState extends State<PlanningWorkspace> {
       builder: (_) => AddSkillDialog(
         isDark: state.isDark,
         existing: skill,
-        onSave: (name, goal, checklist, color, icon) => state.updateSkill(
+        onSave: (name, goal, checklist, color, icon, _, _) => state.updateSkill(
           skill,
           name: name,
           goal: goal,
@@ -973,14 +947,713 @@ class _PlanningSkillTileState extends State<_PlanningSkillTile> {
   }
 }
 
+class _MobilePlanningFlow extends StatelessWidget {
+  final AppState state;
+  final Skill? skill;
+  final bool isDark;
+  final bool archiveExpanded;
+  final VoidCallback onArchiveToggle;
+  final VoidCallback onAddSkill;
+  final VoidCallback? onEditSkill;
+  final VoidCallback? onAddTask;
+  final ValueChanged<Task>? onEditTask;
+  final ValueChanged<Task> onDeleteTask;
+  final VoidCallback? onAddNode;
+  final ValueChanged<SkillTreeNode>? onAddQuestToNode;
+  final VoidCallback? onOpenMasteryMap;
+  final VoidCallback? onDeleteSkill;
+
+  const _MobilePlanningFlow({
+    required this.state,
+    required this.skill,
+    required this.isDark,
+    required this.archiveExpanded,
+    required this.onArchiveToggle,
+    required this.onAddSkill,
+    required this.onEditSkill,
+    required this.onAddTask,
+    required this.onEditTask,
+    required this.onDeleteTask,
+    required this.onAddNode,
+    required this.onAddQuestToNode,
+    required this.onOpenMasteryMap,
+    required this.onDeleteSkill,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = skill;
+
+    if (selected == null) {
+      return SingleChildScrollView(
+        child: Column(
+          children: [
+            _MobilePlanningSkillSelector(
+              state: state,
+              isDark: isDark,
+              onAddSkill: onAddSkill,
+            ),
+            const SizedBox(height: 10),
+            AppPanel(
+              isDark: isDark,
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: EmptyStateMessage(
+                  isDark: isDark,
+                  icon: Icons.construction,
+                  title: 'Выберите навык',
+                  subtitle:
+                      'Мастерская покажет один навык, его квесты и ближайшую настройку.',
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final tasks = state.tasksForSkill(selected.id);
+    final diagnostics = _buildPlanningDiagnostics(
+      state,
+      selected,
+      tasks: tasks,
+    );
+
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          _MobilePlanningSkillSelector(
+            state: state,
+            isDark: isDark,
+            onAddSkill: onAddSkill,
+          ),
+          const SizedBox(height: 10),
+          AppPanel(
+            isDark: isDark,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _MobileSkillPassportHeader(
+                  skill: selected,
+                  diagnostics: diagnostics,
+                  isDark: isDark,
+                  onEditSkill: onEditSkill!,
+                  onAddTask: onAddTask!,
+                ),
+                PanelDivider(isDark: isDark),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                  child: _SectionTitle(
+                    isDark: isDark,
+                    icon: Icons.format_list_bulleted,
+                    title: 'Активные квесты',
+                    subtitle: 'Сначала рабочий план, настройка ниже.',
+                    dense: true,
+                  ),
+                ),
+                _QuestPlanList(
+                  skill: selected,
+                  diagnostics: diagnostics,
+                  isDark: isDark,
+                  archiveExpanded: false,
+                  onArchiveToggle: onArchiveToggle,
+                  onEditTask: onEditTask!,
+                  onDeleteTask: onDeleteTask,
+                  showArchive: false,
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+                  child: _SetupBacklogSection(
+                    diagnostics: diagnostics,
+                    isDark: isDark,
+                    onEditSkill: onEditSkill!,
+                    onAddTask: onAddTask!,
+                    onEditTask: onEditTask!,
+                    onAddQuestToNode: onAddQuestToNode,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  child: _ReadinessMiniCard(
+                    diagnostics: diagnostics,
+                    isDark: isDark,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          _MobilePlanningActions(
+            diagnostics: diagnostics,
+            isDark: isDark,
+            onAddTask: onAddTask,
+            onEditSkill: onEditSkill,
+            onAddNode: onAddNode,
+            onAddQuestToNode: onAddQuestToNode,
+            onOpenMasteryMap: onOpenMasteryMap,
+            onDeleteSkill: onDeleteSkill,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MobilePlanningSkillSelector extends StatelessWidget {
+  final AppState state;
+  final bool isDark;
+  final VoidCallback onAddSkill;
+
+  const _MobilePlanningSkillSelector({
+    required this.state,
+    required this.isDark,
+    required this.onAddSkill,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final txt = textColor(isDark);
+    final sub = subtext(isDark);
+    final selected = state.selectedSkill;
+
+    return SizedBox(
+      height: 98,
+      child: AppPanel(
+        isDark: isDark,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(
+                    Icons.construction,
+                    color: Color(0xFF4A9EFF),
+                    size: 16,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      selected == null
+                          ? 'Мастерская навыка'
+                          : 'Настройка: ${selected.name}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: txt,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  SmallBtn(
+                    label: 'Навык',
+                    icon: Icons.add,
+                    color: const Color(0xFF4A9EFF),
+                    tooltip: 'Создать навык и первый квест',
+                    onTap: onAddSkill,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: state.skills.isEmpty
+                    ? Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Создайте навык — он сразу получит этап и первый квест.',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: sub,
+                            fontSize: 11.5,
+                            height: 1.2,
+                          ),
+                        ),
+                      )
+                    : ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: state.skills.length,
+                        separatorBuilder: (_, _) => const SizedBox(width: 7),
+                        itemBuilder: (context, index) {
+                          final skill = state.skills[index];
+                          return _MobilePlanningSkillChip(
+                            skill: skill,
+                            isDark: isDark,
+                            taskCount: state.activeTaskCountForSkill(skill.id),
+                            selected: state.selectedSkillId == skill.id,
+                            onTap: () => state.selectSkill(skill.id),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MobilePlanningSkillChip extends StatelessWidget {
+  final Skill skill;
+  final bool isDark;
+  final int taskCount;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _MobilePlanningSkillChip({
+    required this.skill,
+    required this.isDark,
+    required this.taskCount,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = skill.color;
+    final sub = subtext(isDark);
+
+    return PressFeedback(
+      scale: 0.97,
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: kMotionStandard,
+        curve: kMotionCurve,
+        constraints: const BoxConstraints(minWidth: 118, maxWidth: 165),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        decoration: BoxDecoration(
+          color: selected
+              ? color.withAlpha(isDark ? 30 : 20)
+              : color.withAlpha(isDark ? 12 : 8),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: selected ? color.withAlpha(92) : color.withAlpha(34),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(skill.icon, color: color, size: 15),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                skill.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: selected ? color : textColor(isDark),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              '$taskCount',
+              style: TextStyle(
+                color: selected ? color : sub,
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MobileSkillPassportHeader extends StatelessWidget {
+  final Skill skill;
+  final _PlanningDiagnostics diagnostics;
+  final bool isDark;
+  final VoidCallback onEditSkill;
+  final VoidCallback onAddTask;
+
+  const _MobileSkillPassportHeader({
+    required this.skill,
+    required this.diagnostics,
+    required this.isDark,
+    required this.onEditSkill,
+    required this.onAddTask,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final txt = textColor(isDark);
+    final sub = subtext(isDark);
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: skill.color.withAlpha(isDark ? 34 : 25),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(skill.icon, color: skill.color, size: 21),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      skill.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: txt,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      skill.goal.isEmpty ? 'Цель пока не описана' : skill.goal,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: sub,
+                        fontSize: 12,
+                        height: 1.2,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: XPBar(
+                  progress: skill.progress,
+                  color: skill.color,
+                  height: 6,
+                ),
+              ),
+              const SizedBox(width: 9),
+              Text(
+                'Ур. ${skill.level}',
+                style: TextStyle(
+                  color: skill.color,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 7,
+            runSpacing: 7,
+            children: [
+              _SoftPill(
+                label: '${diagnostics.activeTasks.length} активных',
+                color: const Color(0xFF4A9EFF),
+                isDark: isDark,
+              ),
+              _SoftPill(
+                label: '${skill.treeNodes.length} этап.',
+                color: const Color(0xFFFF9500),
+                isDark: isDark,
+              ),
+              _OutlineActionButton(
+                label: 'Редактировать',
+                icon: Icons.edit,
+                color: const Color(0xFF8E8E93),
+                isDark: isDark,
+                onTap: onEditSkill,
+              ),
+              SmallBtn(
+                label: 'Квест',
+                icon: Icons.add,
+                color: const Color(0xFF4A9EFF),
+                tooltip: 'Создать квест',
+                onTap: onAddTask,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MobilePlanningActions extends StatelessWidget {
+  final _PlanningDiagnostics diagnostics;
+  final bool isDark;
+  final VoidCallback? onAddTask;
+  final VoidCallback? onEditSkill;
+  final VoidCallback? onAddNode;
+  final ValueChanged<SkillTreeNode>? onAddQuestToNode;
+  final VoidCallback? onOpenMasteryMap;
+  final VoidCallback? onDeleteSkill;
+
+  const _MobilePlanningActions({
+    required this.diagnostics,
+    required this.isDark,
+    required this.onAddTask,
+    required this.onEditSkill,
+    required this.onAddNode,
+    required this.onAddQuestToNode,
+    required this.onOpenMasteryMap,
+    required this.onDeleteSkill,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = this.isDark;
+    final sub = subtext(isDark);
+
+    return AppPanel(
+      isDark: isDark,
+      child: PressFeedback(
+        scale: 0.985,
+        tooltip: 'Открыть настройки навыка',
+        onTap: () => _openPlanningMobileDetails(context),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              const Icon(Icons.tune, color: Color(0xFF4A9EFF), size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Настройки навыка',
+                  style: TextStyle(
+                    color: textColor(isDark),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              Text(
+                'этапы · карта · действия',
+                style: TextStyle(
+                  color: sub,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Icon(Icons.keyboard_arrow_up, color: sub, size: 18),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openPlanningMobileDetails(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _PlanningMobileDetailsSheet(
+        diagnostics: diagnostics,
+        isDark: isDark,
+        onAddTask: onAddTask,
+        onEditSkill: onEditSkill,
+        onAddNode: onAddNode,
+        onAddQuestToNode: onAddQuestToNode,
+        onOpenMasteryMap: onOpenMasteryMap,
+        onDeleteSkill: onDeleteSkill,
+      ),
+    );
+  }
+}
+
+class _PlanningMobileDetailsSheet extends StatelessWidget {
+  final _PlanningDiagnostics diagnostics;
+  final bool isDark;
+  final VoidCallback? onAddTask;
+  final VoidCallback? onEditSkill;
+  final VoidCallback? onAddNode;
+  final ValueChanged<SkillTreeNode>? onAddQuestToNode;
+  final VoidCallback? onOpenMasteryMap;
+  final VoidCallback? onDeleteSkill;
+
+  const _PlanningMobileDetailsSheet({
+    required this.diagnostics,
+    required this.isDark,
+    required this.onAddTask,
+    required this.onEditSkill,
+    required this.onAddNode,
+    required this.onAddQuestToNode,
+    required this.onOpenMasteryMap,
+    required this.onDeleteSkill,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final quickQuestNode =
+        diagnostics.emptyNodes.firstOrNull ??
+        diagnostics.skill.treeNodes
+            .where(
+              (node) =>
+                  diagnostics.skill.treeNodeStatus(node) ==
+                  SkillTreeNodeStatus.active,
+            )
+            .firstOrNull ??
+        diagnostics.skill.treeNodes.firstOrNull;
+    final reminders = diagnostics.activeTasks
+        .where((task) => task.notificationsEnabled)
+        .length;
+
+    VoidCallback? closeThen(VoidCallback? action) {
+      if (action == null) return null;
+      return () {
+        Navigator.pop(context);
+        action();
+      };
+    }
+
+    return SafeArea(
+      top: false,
+      child: FractionallySizedBox(
+        heightFactor: 0.86,
+        child: AppPanel(
+          isDark: isDark,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _SectionTitle(
+                  isDark: isDark,
+                  icon: Icons.tune,
+                  title: 'Настройки навыка',
+                  subtitle: 'Детали системы без перегруза основной ленты.',
+                ),
+                const SizedBox(height: 12),
+                _ReadinessMiniCard(diagnostics: diagnostics, isDark: isDark),
+                const SizedBox(height: 10),
+                GridView.count(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
+                  childAspectRatio: 1.65,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    _PlanningMetric(
+                      isDark: isDark,
+                      icon: Icons.playlist_add_check,
+                      label: 'Активно',
+                      value: '${diagnostics.activeTasks.length}',
+                      color: const Color(0xFF4A9EFF),
+                    ),
+                    _PlanningMetric(
+                      isDark: isDark,
+                      icon: Icons.inventory_2_outlined,
+                      label: 'Архив',
+                      value: '${diagnostics.completedTasks.length}',
+                      color: const Color(0xFF8E8E93),
+                    ),
+                    _PlanningMetric(
+                      isDark: isDark,
+                      icon: Icons.repeat,
+                      label: 'Повторы',
+                      value: '${diagnostics.repeatingTasks.length}',
+                      color: const Color(0xFF34C759),
+                    ),
+                    _PlanningMetric(
+                      isDark: isDark,
+                      icon: Icons.notifications_active,
+                      label: 'Напомин.',
+                      value: '$reminders',
+                      color: const Color(0xFFAF52DE),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _MasteryMapPlanningCard(
+                  diagnostics: diagnostics,
+                  isDark: isDark,
+                  onAddNode: closeThen(onAddNode),
+                  onOpenMasteryMap: closeThen(onOpenMasteryMap),
+                  onAddQuestToNode:
+                      onAddQuestToNode == null || quickQuestNode == null
+                      ? null
+                      : closeThen(() => onAddQuestToNode!(quickQuestNode)),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    if (onAddTask != null)
+                      _OutlineActionButton(
+                        label: 'Квест',
+                        icon: Icons.add_task,
+                        color: const Color(0xFF4A9EFF),
+                        isDark: isDark,
+                        onTap: closeThen(onAddTask)!,
+                      ),
+                    if (onAddNode != null)
+                      _OutlineActionButton(
+                        label: 'Этап',
+                        icon: Icons.account_tree,
+                        color: const Color(0xFF4A9EFF),
+                        isDark: isDark,
+                        onTap: closeThen(onAddNode)!,
+                      ),
+                    if (onOpenMasteryMap != null)
+                      _OutlineActionButton(
+                        label: 'Открыть карту',
+                        icon: Icons.map_outlined,
+                        color: const Color(0xFF8E8E93),
+                        isDark: isDark,
+                        onTap: closeThen(onOpenMasteryMap)!,
+                      ),
+                    if (onEditSkill != null)
+                      _OutlineActionButton(
+                        label: 'Редактировать',
+                        icon: Icons.edit,
+                        color: const Color(0xFF8E8E93),
+                        isDark: isDark,
+                        onTap: closeThen(onEditSkill)!,
+                      ),
+                    if (onDeleteSkill != null)
+                      _OutlineActionButton(
+                        label: 'Удалить навык',
+                        icon: Icons.delete_outline,
+                        color: const Color(0xFFFF3B30),
+                        isDark: isDark,
+                        onTap: closeThen(onDeleteSkill)!,
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _SkillBlueprintPanel extends StatelessWidget {
   final AppState state;
   final Skill? skill;
   final bool isDark;
   final bool archiveExpanded;
-  final bool expandTaskList;
+  final bool internalScroll;
   final VoidCallback onArchiveToggle;
-  final VoidCallback onAddSkill;
   final VoidCallback? onEditSkill;
   final VoidCallback? onAddTask;
   final ValueChanged<Task> onEditTask;
@@ -992,9 +1665,8 @@ class _SkillBlueprintPanel extends StatelessWidget {
     required this.skill,
     required this.isDark,
     required this.archiveExpanded,
-    required this.expandTaskList,
+    required this.internalScroll,
     required this.onArchiveToggle,
-    required this.onAddSkill,
     required this.onEditSkill,
     required this.onAddTask,
     required this.onEditTask,
@@ -1014,7 +1686,8 @@ class _SkillBlueprintPanel extends StatelessWidget {
             isDark: isDark,
             icon: Icons.keyboard_backspace,
             title: 'Выберите навык',
-            subtitle: 'Паспорт навыка и план квестов откроются здесь.',
+            subtitle:
+                'Мастерская покажет активные квесты и одно ближайшее улучшение.',
           ),
         ),
       );
@@ -1026,69 +1699,61 @@ class _SkillBlueprintPanel extends StatelessWidget {
       selected,
       tasks: tasks,
     );
-    final content = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _SkillPassportHeader(
-          skill: selected,
+    final children = <Widget>[
+      _SkillPassportHeader(
+        skill: selected,
+        isDark: isDark,
+        activeCount: diagnostics.activeTasks.length,
+        doneCount: diagnostics.completedTasks.length,
+        onEditSkill: onEditSkill!,
+        onAddTask: onAddTask!,
+      ),
+      PanelDivider(isDark: isDark),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+        child: _SectionTitle(
           isDark: isDark,
-          activeCount: diagnostics.activeTasks.length,
-          doneCount: diagnostics.completedTasks.length,
+          icon: Icons.format_list_bulleted,
+          title: 'Активные квесты',
+          subtitle: 'Сначала рабочий план, подсказки ниже.',
+        ),
+      ),
+      _QuestPlanList(
+        skill: selected,
+        diagnostics: diagnostics,
+        isDark: isDark,
+        archiveExpanded: archiveExpanded,
+        onArchiveToggle: onArchiveToggle,
+        onEditTask: onEditTask,
+        onDeleteTask: onDeleteTask,
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+        child: _SetupBacklogSection(
+          diagnostics: diagnostics,
+          isDark: isDark,
           onEditSkill: onEditSkill!,
           onAddTask: onAddTask!,
+          onEditTask: onEditTask,
+          onAddQuestToNode: onAddQuestToNode,
         ),
-        PanelDivider(isDark: isDark),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-          child: _SystemStateCard(diagnostics: diagnostics, isDark: isDark),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-          child: _SetupBacklogSection(
-            diagnostics: diagnostics,
-            isDark: isDark,
-            onEditSkill: onEditSkill!,
-            onAddTask: onAddTask!,
-            onEditTask: onEditTask,
-            onAddQuestToNode: onAddQuestToNode,
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-          child: _SectionTitle(
-            isDark: isDark,
-            icon: Icons.format_list_bulleted,
-            title: 'План квестов',
-            subtitle:
-                'Здесь квесты настраиваются, а не закрываются в один клик.',
-          ),
-        ),
-        if (expandTaskList)
-          Expanded(
-            child: _QuestPlanList(
-              skill: selected,
-              diagnostics: diagnostics,
-              isDark: isDark,
-              archiveExpanded: archiveExpanded,
-              scrollable: true,
-              onArchiveToggle: onArchiveToggle,
-              onEditTask: onEditTask,
-              onDeleteTask: onDeleteTask,
-            ),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        child: _SystemStateCard(diagnostics: diagnostics, isDark: isDark),
+      ),
+    ];
+
+    final content = internalScroll
+        ? ListView(
+            key: PageStorageKey('planning-blueprint-${selected.id}'),
+            padding: EdgeInsets.zero,
+            children: children,
           )
-        else
-          _QuestPlanList(
-            skill: selected,
-            diagnostics: diagnostics,
-            isDark: isDark,
-            archiveExpanded: archiveExpanded,
-            scrollable: false,
-            onArchiveToggle: onArchiveToggle,
-            onEditTask: onEditTask,
-            onDeleteTask: onDeleteTask,
-          ),
-      ],
-    );
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: children,
+          );
 
     return AppPanel(isDark: isDark, child: content);
   }
@@ -1124,33 +1789,19 @@ class _SystemStateCard extends StatelessWidget {
         label: diagnostics.missingMinimumTasks.isEmpty
             ? 'Лёгкие старты настроены'
             : '${diagnostics.missingMinimumTasks.length} без минимума',
-        warning: 'Добавьте минимальное действие.',
+        warning: 'Добавьте минимальный шаг.',
       ),
       _SystemCheckData(
         ok: diagnostics.unlinkedTasks.isEmpty,
         label: diagnostics.unlinkedTasks.isEmpty
-            ? 'Квесты связаны с картой'
-            : '${diagnostics.unlinkedTasks.length} без узла',
-        warning: 'Привяжите квесты к узлам мастерства.',
-      ),
-      _SystemCheckData(
-        ok: diagnostics.emptyNodes.isEmpty,
-        label: diagnostics.emptyNodes.isEmpty
-            ? 'Узлы имеют практику'
-            : '${diagnostics.emptyNodes.length} узл. без практики',
-        warning: 'Создайте квесты для пустых узлов.',
-      ),
-      _SystemCheckData(
-        ok: diagnostics.largeWithoutStepsTasks.isEmpty,
-        label: diagnostics.largeWithoutStepsTasks.isEmpty
-            ? 'Большие квесты разбиты'
-            : '${diagnostics.largeWithoutStepsTasks.length} без подзадач',
-        warning: 'Разбейте долгосрочные квесты.',
+            ? 'Квесты связаны с этапами'
+            : '${diagnostics.unlinkedTasks.length} без этапа',
+        warning: 'Привяжите квесты к этапам мастерства.',
       ),
     ];
 
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: color.withAlpha(isDark ? 13 : 9),
         borderRadius: BorderRadius.circular(13),
@@ -1165,7 +1816,7 @@ class _SystemStateCard extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Состояние системы',
+                  'Готовность системы',
                   style: TextStyle(
                     color: textColor(isDark),
                     fontSize: 14,
@@ -1187,12 +1838,12 @@ class _SystemStateCard extends StatelessWidget {
           XPBar(
             progress: diagnostics.readinessPercent / 100,
             color: color,
-            height: 7,
+            height: 5,
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Wrap(
-            spacing: 7,
-            runSpacing: 7,
+            spacing: 6,
+            runSpacing: 6,
             children: rows
                 .map((row) => _SystemCheckChip(data: row, isDark: isDark))
                 .toList(),
@@ -1227,7 +1878,7 @@ class _SystemCheckChip extends StatelessWidget {
     return Tooltip(
       message: data.ok ? data.label : data.warning,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
         decoration: BoxDecoration(
           color: color.withAlpha(isDark ? 14 : 10),
           borderRadius: BorderRadius.circular(999),
@@ -1246,7 +1897,7 @@ class _SystemCheckChip extends StatelessWidget {
               data.label,
               style: TextStyle(
                 color: data.ok ? textColor(isDark) : color,
-                fontSize: 11.5,
+                fontSize: 11,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -1257,7 +1908,7 @@ class _SystemCheckChip extends StatelessWidget {
   }
 }
 
-class _SetupBacklogSection extends StatelessWidget {
+class _SetupBacklogSection extends StatefulWidget {
   final _PlanningDiagnostics diagnostics;
   final bool isDark;
   final VoidCallback onEditSkill;
@@ -1275,67 +1926,248 @@ class _SetupBacklogSection extends StatelessWidget {
   });
 
   @override
+  State<_SetupBacklogSection> createState() => _SetupBacklogSectionState();
+}
+
+class _SetupBacklogSectionState extends State<_SetupBacklogSection> {
+  bool _expanded = false;
+
+  @override
   Widget build(BuildContext context) {
-    final issues = diagnostics.issues.take(5).toList();
+    final diagnostics = widget.diagnostics;
+    final isDark = widget.isDark;
+    final primaryIssue = diagnostics.primaryIssue;
+    final secondaryIssues = diagnostics.secondaryIssues;
+    final accent = primaryIssue?.color ?? const Color(0xFF34C759);
+    final action = primaryIssue == null ? null : _actionFor(primaryIssue);
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: (isDark ? Colors.black : Colors.white).withAlpha(
-          isDark ? 24 : 120,
-        ),
+        color: accent.withAlpha(isDark ? 12 : 8),
         borderRadius: BorderRadius.circular(13),
-        border: Border.all(color: borderColor(isDark)),
+        border: Border.all(color: accent.withAlpha(44)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SectionTitle(
-            isDark: isDark,
-            icon: Icons.construction,
-            title: 'Требует настройки',
-            subtitle: issues.isEmpty
-                ? 'Система навыка собрана устойчиво.'
-                : 'Быстрые правки, которые улучшат структуру навыка.',
-            dense: true,
+          Row(
+            children: [
+              Icon(
+                primaryIssue == null
+                    ? Icons.check_circle
+                    : Icons.tips_and_updates_outlined,
+                color: accent,
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Что улучшить первым',
+                  style: TextStyle(
+                    color: textColor(isDark),
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              if (secondaryIssues.isNotEmpty)
+                PressFeedback(
+                  onTap: () => setState(() => _expanded = !_expanded),
+                  tooltip: _expanded
+                      ? 'Скрыть дополнительные подсказки'
+                      : 'Показать ещё',
+                  child: Row(
+                    children: [
+                      Text(
+                        'Ещё ${secondaryIssues.length}',
+                        style: TextStyle(
+                          color: subtext(isDark),
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(width: 3),
+                      Icon(
+                        _expanded
+                            ? Icons.keyboard_arrow_up
+                            : Icons.keyboard_arrow_down,
+                        color: subtext(isDark),
+                        size: 18,
+                      ),
+                    ],
+                  ),
+                ),
+            ],
           ),
-          const SizedBox(height: 10),
-          if (issues.isEmpty)
+          const SizedBox(height: 9),
+          if (primaryIssue == null)
             _InspectorHint(
               isDark: isDark,
               icon: Icons.check_circle,
               color: const Color(0xFF34C759),
-              title: 'Завала нет',
-              subtitle: 'Можно спокойно планировать следующий слой квестов.',
+              title: 'Система собрана',
+              subtitle: 'Можно планировать следующий квест или новый этап.',
             )
           else
-            ...issues.map(
-              (issue) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: _SetupIssueRow(
-                  issue: issue,
-                  isDark: isDark,
-                  onTap: _actionFor(issue),
-                ),
-              ),
+            _PrimaryPlanningIssueCard(
+              issue: primaryIssue,
+              isDark: isDark,
+              onTap: action,
             ),
+          MotionExpandable(
+            expanded: _expanded && secondaryIssues.isNotEmpty,
+            expandedChild: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 10),
+                Text(
+                  'Дополнительные подсказки',
+                  style: TextStyle(
+                    color: subtext(isDark),
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                ...secondaryIssues.map(
+                  (issue) => Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: _SetupIssueRow(
+                      issue: issue,
+                      isDark: isDark,
+                      onTap: _actionFor(issue),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
   VoidCallback? _actionFor(_PlanningIssue issue) {
-    if (issue.task != null) return () => onEditTask(issue.task!);
-    if (issue.node != null && onAddQuestToNode != null) {
-      return () => onAddQuestToNode!(issue.node!);
+    if (issue.task != null) return () => widget.onEditTask(issue.task!);
+    if (issue.node != null && widget.onAddQuestToNode != null) {
+      return () => widget.onAddQuestToNode!(issue.node!);
     }
     return switch (issue.kind) {
-      _PlanningIssueKind.missingGoal => onEditSkill,
-      _PlanningIssueKind.noActiveQuests => onAddTask,
+      _PlanningIssueKind.missingGoal => widget.onEditSkill,
+      _PlanningIssueKind.noActiveQuests => widget.onAddTask,
       _ => null,
     };
   }
+}
+
+class _PrimaryPlanningIssueCard extends StatelessWidget {
+  final _PlanningIssue issue;
+  final bool isDark;
+  final VoidCallback? onTap;
+
+  const _PrimaryPlanningIssueCard({
+    required this.issue,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final guidance = _planningIssueGuidance(issue);
+
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: (isDark ? Colors.black : Colors.white).withAlpha(
+          isDark ? 30 : 150,
+        ),
+        borderRadius: BorderRadius.circular(11),
+        border: Border.all(color: issue.color.withAlpha(38)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(issue.icon, color: issue.color, size: 18),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  issue.title,
+                  style: TextStyle(
+                    color: textColor(isDark),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  guidance,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: subtext(isDark),
+                    fontSize: 11.6,
+                    height: 1.25,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (onTap != null) ...[
+            const SizedBox(width: 8),
+            PressFeedback(
+              onTap: onTap!,
+              tooltip: issue.actionLabel,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                decoration: BoxDecoration(
+                  color: issue.color.withAlpha(isDark ? 20 : 13),
+                  borderRadius: BorderRadius.circular(9),
+                  border: Border.all(color: issue.color.withAlpha(58)),
+                ),
+                child: Text(
+                  issue.actionLabel,
+                  style: TextStyle(
+                    color: issue.color,
+                    fontSize: 11.4,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+String _planningIssueGuidance(_PlanningIssue issue) {
+  return switch (issue.kind) {
+    _PlanningIssueKind.missingGoal =>
+      'Опиши смысл навыка, чтобы квесты не ощущались случайным списком.',
+    _PlanningIssueKind.noActiveQuests =>
+      'Создай первый практический шаг, который можно сделать уже завтра.',
+    _PlanningIssueKind.missingMinimum =>
+      'Добавь лёгкий старт: маленькое действие снижает сопротивление.',
+    _PlanningIssueKind.missingNode =>
+      'Свяжи квест с этапом, чтобы карта мастерства показывала путь.',
+    _PlanningIssueKind.emptyNode =>
+      'Создай квест-практику: этап должен двигаться реальными действиями.',
+    _PlanningIssueKind.longTermWithoutSteps =>
+      'Разбей большой квест на шаги, чтобы он перестал быть туманной целью.',
+    _PlanningIssueKind.shortTitle =>
+      'Уточни формулировку, чтобы сразу было понятно следующее действие.',
+    _PlanningIssueKind.repeatingWithoutReminder =>
+      'Настрой напоминание, если привычка легко теряется в течение дня.',
+    _PlanningIssueKind.heavyArchive =>
+      'Архив уже большой: держи фокус на активных квестах, а не на прошлом.',
+  };
 }
 
 class _SetupIssueRow extends StatelessWidget {
@@ -1352,7 +2184,7 @@ class _SetupIssueRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
       decoration: BoxDecoration(
         color: issue.color.withAlpha(isDark ? 12 : 8),
         borderRadius: BorderRadius.circular(11),
@@ -1360,8 +2192,8 @@ class _SetupIssueRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(issue.icon, color: issue.color, size: 17),
-          const SizedBox(width: 9),
+          Icon(issue.icon, color: issue.color, size: 16),
+          const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1370,18 +2202,18 @@ class _SetupIssueRow extends StatelessWidget {
                   issue.title,
                   style: TextStyle(
                     color: textColor(isDark),
-                    fontSize: 12.5,
+                    fontSize: 12.2,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 1),
                 Text(
                   issue.subtitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: subtext(isDark),
-                    fontSize: 11.5,
+                    fontSize: 11.1,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -1394,7 +2226,7 @@ class _SetupIssueRow extends StatelessWidget {
               onTap: onTap!,
               tooltip: issue.actionLabel,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
                 decoration: BoxDecoration(
                   color: issue.color.withAlpha(isDark ? 18 : 12),
                   borderRadius: BorderRadius.circular(8),
@@ -1404,7 +2236,7 @@ class _SetupIssueRow extends StatelessWidget {
                   issue.actionLabel,
                   style: TextStyle(
                     color: issue.color,
-                    fontSize: 11.5,
+                    fontSize: 11.2,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -1554,140 +2386,37 @@ class _SkillPassportHeader extends StatelessWidget {
   }
 }
 
-class _SkillChecklistCard extends StatelessWidget {
-  final AppState state;
-  final Skill skill;
-  final bool isDark;
-
-  const _SkillChecklistCard({
-    required this.state,
-    required this.skill,
-    required this.isDark,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final sub = subtext(isDark);
-    final items = skill.checklist;
-    final done = skill.checklistCompletedCount;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: (isDark ? Colors.black : Colors.white).withAlpha(
-            isDark ? 28 : 120,
-          ),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: borderColor(isDark)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _SectionTitle(
-              isDark: isDark,
-              icon: Icons.checklist,
-              title: 'Чек-лист навыка',
-              subtitle: items.isEmpty
-                  ? 'Добавьте шаги в редактировании навыка.'
-                  : '$done/${items.length} шагов отмечено',
-              dense: true,
-            ),
-            if (items.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              ...items.asMap().entries.take(4).map((entry) {
-                final index = entry.key;
-                final checked = index < skill.checklistDone.length
-                    ? skill.checklistDone[index]
-                    : false;
-                return InkWell(
-                  borderRadius: BorderRadius.circular(8),
-                  onTap: () => state.toggleChecklistItem(skill.id, index),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      children: [
-                        Icon(
-                          checked
-                              ? Icons.check_circle
-                              : Icons.radio_button_unchecked,
-                          color: checked ? skill.color : sub,
-                          size: 17,
-                        ),
-                        const SizedBox(width: 7),
-                        Expanded(
-                          child: Text(
-                            entry.value,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: checked ? sub : textColor(isDark),
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w600,
-                              decoration: checked
-                                  ? TextDecoration.lineThrough
-                                  : TextDecoration.none,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }),
-              if (items.length > 4)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    'Ещё ${items.length - 4} шагов в редактировании навыка',
-                    style: TextStyle(
-                      color: sub,
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _QuestPlanList extends StatelessWidget {
   final Skill skill;
   final _PlanningDiagnostics diagnostics;
   final bool isDark;
   final bool archiveExpanded;
-  final bool scrollable;
   final VoidCallback onArchiveToggle;
   final ValueChanged<Task> onEditTask;
   final ValueChanged<Task> onDeleteTask;
+  final bool showArchive;
 
   const _QuestPlanList({
     required this.skill,
     required this.diagnostics,
     required this.isDark,
     required this.archiveExpanded,
-    required this.scrollable,
     required this.onArchiveToggle,
     required this.onEditTask,
     required this.onDeleteTask,
+    this.showArchive = true,
   });
 
   @override
   Widget build(BuildContext context) {
-    final sections = _buildSections();
-    final child = Padding(
+    return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (diagnostics.activeTasks.isEmpty)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 28),
+              padding: const EdgeInsets.symmetric(vertical: 18),
               child: EmptyStateMessage(
                 isDark: isDark,
                 icon: Icons.post_add,
@@ -1696,19 +2425,30 @@ class _QuestPlanList extends StatelessWidget {
               ),
             )
           else
-            ...sections.map(
-              (section) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _QuestPlanSection(
-                  skill: skill,
-                  section: section,
-                  isDark: isDark,
-                  onEditTask: onEditTask,
-                  onDeleteTask: onDeleteTask,
+            ...diagnostics.activeTasks.asMap().entries.map((entry) {
+              final task = entry.value;
+              return Padding(
+                padding: EdgeInsets.only(
+                  bottom: entry.key == diagnostics.activeTasks.length - 1
+                      ? 0
+                      : 7,
                 ),
-              ),
-            ),
-          if (diagnostics.completedTasks.isNotEmpty) ...[
+                child: MotionListItem(
+                  key: ValueKey('planning-active-${task.id}'),
+                  index: entry.key,
+                  child: _PlanningTaskRow(
+                    skill: skill,
+                    task: task,
+                    isDark: isDark,
+                    skillColor: skill.color,
+                    onEdit: () => onEditTask(task),
+                    onDelete: () => onDeleteTask(task),
+                  ),
+                ),
+              );
+            }),
+          if (showArchive && diagnostics.completedTasks.isNotEmpty) ...[
+            SizedBox(height: diagnostics.activeTasks.isEmpty ? 0 : 10),
             _ArchiveHeader(
               isDark: isDark,
               count: diagnostics.completedTasks.length,
@@ -1727,7 +2467,7 @@ class _QuestPlanList extends StatelessWidget {
                         bottom:
                             entry.key == diagnostics.completedTasks.length - 1
                             ? 0
-                            : 8,
+                            : 7,
                       ),
                       child: _PlanningTaskRow(
                         skill: skill,
@@ -1746,166 +2486,6 @@ class _QuestPlanList extends StatelessWidget {
           ],
         ],
       ),
-    );
-
-    return scrollable ? SingleChildScrollView(child: child) : child;
-  }
-
-  List<_QuestPlanSectionData> _buildSections() {
-    final assigned = <String>{};
-
-    List<Task> take(List<Task> tasks) {
-      final result = tasks.where((task) => assigned.add(task.id)).toList();
-      return result;
-    }
-
-    final sections = <_QuestPlanSectionData>[];
-    void addSection(
-      String title,
-      String subtitle,
-      IconData icon,
-      List<Task> tasks,
-    ) {
-      if (tasks.isEmpty) return;
-      sections.add(
-        _QuestPlanSectionData(
-          title: title,
-          subtitle: subtitle,
-          icon: icon,
-          tasks: tasks,
-        ),
-      );
-    }
-
-    addSection(
-      'Требуют внимания',
-      'Качество задачи можно улучшить',
-      Icons.construction,
-      take(diagnostics.attentionTasks),
-    );
-    addSection(
-      'Без узла',
-      'Эти квесты пока не двигают карту мастерства',
-      Icons.account_tree_outlined,
-      take(diagnostics.freeTasks),
-    );
-    addSection(
-      'Повторяющиеся',
-      'Ритм и привычки навыка',
-      Icons.repeat,
-      take(diagnostics.repeatingTasks),
-    );
-    addSection(
-      'Долгосрочные',
-      'Большие направления и проекты',
-      Icons.flag,
-      take(diagnostics.longTermTasks),
-    );
-    addSection(
-      'Активные',
-      'Остальные настроенные квесты',
-      Icons.playlist_add_check,
-      take(diagnostics.activeTasks),
-    );
-
-    return sections;
-  }
-}
-
-class _QuestPlanSectionData {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final List<Task> tasks;
-
-  const _QuestPlanSectionData({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.tasks,
-  });
-}
-
-class _QuestPlanSection extends StatelessWidget {
-  final Skill skill;
-  final _QuestPlanSectionData section;
-  final bool isDark;
-  final ValueChanged<Task> onEditTask;
-  final ValueChanged<Task> onDeleteTask;
-
-  const _QuestPlanSection({
-    required this.skill,
-    required this.section,
-    required this.isDark,
-    required this.onEditTask,
-    required this.onDeleteTask,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final sub = subtext(isDark);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(section.icon, color: const Color(0xFF4A9EFF), size: 15),
-            const SizedBox(width: 7),
-            Expanded(
-              child: Text(
-                section.title,
-                style: TextStyle(
-                  color: textColor(isDark),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ),
-            Text(
-              '${section.tasks.length}',
-              style: TextStyle(
-                color: sub,
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 2),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            section.subtitle,
-            style: TextStyle(
-              color: sub,
-              fontSize: 11.5,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        ...section.tasks.asMap().entries.map((entry) {
-          final task = entry.value;
-          return Padding(
-            padding: EdgeInsets.only(
-              bottom: entry.key == section.tasks.length - 1 ? 0 : 8,
-            ),
-            child: MotionListItem(
-              key: ValueKey('planning-${section.title}-${task.id}'),
-              index: entry.key,
-              child: _PlanningTaskRow(
-                skill: skill,
-                task: task,
-                isDark: isDark,
-                skillColor: skill.color,
-                onEdit: () => onEditTask(task),
-                onDelete: () => onDeleteTask(task),
-              ),
-            ),
-          );
-        }),
-      ],
     );
   }
 }
@@ -1936,7 +2516,7 @@ class _PlanningTaskRow extends StatelessWidget {
     final reminder = _reminderLabel(task);
 
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: (isDark ? const Color(0xFF101018) : const Color(0xFFF8F9FD))
             .withAlpha(done ? 145 : 255),
@@ -1947,8 +2527,8 @@ class _PlanningTaskRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 28,
-            height: 28,
+            width: 24,
+            height: 24,
             decoration: BoxDecoration(
               color: skillColor.withAlpha(done ? 18 : 28),
               borderRadius: BorderRadius.circular(8),
@@ -1956,21 +2536,22 @@ class _PlanningTaskRow extends StatelessWidget {
             child: Icon(
               done ? Icons.inventory_2_outlined : Icons.edit_note,
               color: done ? sub : skillColor,
-              size: 16,
+              size: 14,
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   task.title,
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: done ? sub : txt,
-                    fontSize: 14,
+                    fontSize: 13,
+                    height: 1.12,
                     fontWeight: FontWeight.w800,
                     decoration: done
                         ? TextDecoration.lineThrough
@@ -1985,15 +2566,15 @@ class _PlanningTaskRow extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: sub,
-                      fontSize: 12,
+                      fontSize: 11.5,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
-                const SizedBox(height: 8),
+                const SizedBox(height: 7),
                 Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
+                  spacing: 4,
+                  runSpacing: 4,
                   children: [
                     TaskBadge(
                       label: typeLabel[task.type]!,
@@ -2024,7 +2605,7 @@ class _PlanningTaskRow extends StatelessWidget {
                       ),
                     if (task.tags.isNotEmpty)
                       TaskBadge(
-                        label: '${task.tags.length} тег.',
+                        label: '${task.tags.length} конт.',
                         color: const Color(0xFF8E8E93),
                         icon: Icons.sell_outlined,
                       ),
@@ -2056,7 +2637,7 @@ class _PlanningTaskRow extends StatelessWidget {
             children: [
               MiniBtn(
                 icon: Icons.edit,
-                color: const Color(0xFF4A9EFF),
+                color: const Color(0xFF8E8E93),
                 onTap: onEdit,
                 tooltip: 'Настроить квест',
               ),
@@ -2102,7 +2683,6 @@ class _PlanningInspector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final selected = skill;
-    final txt = textColor(isDark);
     final sub = subtext(isDark);
 
     if (selected == null) {
@@ -2118,7 +2698,7 @@ class _PlanningInspector extends StatelessWidget {
                 isDark: isDark,
                 icon: Icons.manage_search,
                 title: 'Инспектор',
-                subtitle: 'Выберите навык, чтобы увидеть диагностику.',
+                subtitle: 'Выберите навык, чтобы увидеть ближайшую настройку.',
               ),
               const SizedBox(height: 32),
               EmptyStateMessage(
@@ -2126,7 +2706,7 @@ class _PlanningInspector extends StatelessWidget {
                 icon: Icons.construction,
                 title: 'Мастерская системы',
                 subtitle:
-                    'Здесь видно, что в навыке плохо настроено и что улучшить первым.',
+                    'Выберите навык, чтобы увидеть настройку, которая облегчит следующий квест.',
               ),
               const SizedBox(height: 32),
             ],
@@ -2139,7 +2719,7 @@ class _PlanningInspector extends StatelessWidget {
     final reminders = diagnostics.activeTasks
         .where((task) => task.notificationsEnabled)
         .length;
-    final topIssues = diagnostics.issues.take(3).toList();
+    final primaryIssue = diagnostics.primaryIssue;
     final quickQuestNode =
         diagnostics.emptyNodes.firstOrNull ??
         selected.treeNodes
@@ -2165,7 +2745,7 @@ class _PlanningInspector extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             _ReadinessMiniCard(diagnostics: diagnostics, isDark: isDark),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             GridView.count(
               crossAxisCount: 2,
               mainAxisSpacing: 8,
@@ -2204,7 +2784,7 @@ class _PlanningInspector extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
             _MasteryMapPlanningCard(
               diagnostics: diagnostics,
               isDark: isDark,
@@ -2215,38 +2795,30 @@ class _PlanningInspector extends StatelessWidget {
                   ? null
                   : () => onAddQuestToNode?.call(quickQuestNode),
             ),
-            const SizedBox(height: 14),
-            _SkillChecklistCard(state: state, skill: selected, isDark: isDark),
-            const SizedBox(height: 14),
-            Text(
-              'Главные проблемы',
-              style: TextStyle(
-                color: txt,
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
-              ),
+            const SizedBox(height: 12),
+            _SectionTitle(
+              isDark: isDark,
+              icon: Icons.tips_and_updates_outlined,
+              title: 'Следующее улучшение',
+              subtitle: 'Одна настройка, которая сильнее всего поможет завтра.',
+              dense: true,
             ),
             const SizedBox(height: 8),
-            if (topIssues.isEmpty)
+            if (primaryIssue == null)
               _InspectorHint(
                 isDark: isDark,
                 icon: Icons.check_circle,
                 color: const Color(0xFF34C759),
                 title: 'Структура выглядит устойчиво',
-                subtitle: 'Можно проектировать следующий слой навыка.',
+                subtitle: 'Можно добавить следующий квест или этап.',
               )
             else
-              ...topIssues.map(
-                (issue) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: _SetupIssueRow(
-                    issue: issue,
-                    isDark: isDark,
-                    onTap: _actionFor(issue),
-                  ),
-                ),
+              _PrimaryPlanningIssueCard(
+                issue: primaryIssue,
+                isDark: isDark,
+                onTap: _actionFor(primaryIssue),
               ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -2261,7 +2833,7 @@ class _PlanningInspector extends StatelessWidget {
                   ),
                 if (onAddNode != null)
                   _OutlineActionButton(
-                    label: 'Узел',
+                    label: 'Этап',
                     icon: Icons.account_tree,
                     color: const Color(0xFF4A9EFF),
                     isDark: isDark,
@@ -2277,9 +2849,9 @@ class _PlanningInspector extends StatelessWidget {
                   ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             Divider(color: borderColor(isDark)),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(
               'Опасная зона',
               style: TextStyle(
@@ -2411,8 +2983,8 @@ class _MasteryMapPlanningCard extends StatelessWidget {
             icon: Icons.account_tree,
             title: 'Карта мастерства',
             subtitle: total == 0
-                ? 'У навыка пока нет узлов.'
-                : '$total узл. · $mastered освоено · $active активно · $locked закрыто',
+                ? 'У навыка пока нет этапов.'
+                : '$total этап. · $mastered освоено · $active активно · $locked закрыто',
             dense: true,
           ),
           const SizedBox(height: 9),
@@ -2428,7 +3000,7 @@ class _MasteryMapPlanningCard extends StatelessWidget {
                 isDark: isDark,
               ),
               _SoftPill(
-                label: '${diagnostics.unlinkedTasks.length} квест. без узла',
+                label: '${diagnostics.unlinkedTasks.length} квест. без этапа',
                 color: diagnostics.unlinkedTasks.isEmpty
                     ? const Color(0xFF34C759)
                     : const Color(0xFFFF9500),
@@ -2443,7 +3015,7 @@ class _MasteryMapPlanningCard extends StatelessWidget {
             children: [
               if (onAddNode != null)
                 _OutlineActionButton(
-                  label: 'Узел',
+                  label: 'Этап',
                   icon: Icons.add,
                   color: const Color(0xFF4A9EFF),
                   isDark: isDark,
@@ -2451,7 +3023,7 @@ class _MasteryMapPlanningCard extends StatelessWidget {
                 ),
               if (onAddQuestToNode != null)
                 _OutlineActionButton(
-                  label: 'Квест к узлу',
+                  label: 'Квест к этапу',
                   icon: Icons.add_task,
                   color: const Color(0xFFFF9500),
                   isDark: isDark,

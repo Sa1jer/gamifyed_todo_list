@@ -120,7 +120,7 @@ void main() {
     await tester.tap(find.byIcon(Icons.dashboard_customize).first);
     await tester.pump();
 
-    expect(find.text('Центр прогресса'), findsOneWidget);
+    expect(find.text('История роста'), findsWidgets);
 
     await tester.tap(find.byIcon(Icons.edit_note).first);
     await tester.pump();

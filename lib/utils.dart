@@ -149,10 +149,10 @@ RankInfo? nextSkillRankForLevel(int level) =>
 enum TaskType { repeating, shortTerm, midTerm, longTerm }
 
 const typeLabel = {
-  TaskType.repeating: 'Повторяющаяся',
-  TaskType.shortTerm: 'Краткосрочная',
-  TaskType.midTerm: 'Среднесрочная',
-  TaskType.longTerm: 'Долгосрочная',
+  TaskType.repeating: 'Привычка',
+  TaskType.shortTerm: 'Разово',
+  TaskType.midTerm: 'Проект',
+  TaskType.longTerm: 'Большая цель',
 };
 const typeColor = {
   TaskType.repeating: Color(0xFF4A9EFF),

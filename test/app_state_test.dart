@@ -409,7 +409,7 @@ void main() {
       );
       final message = state.masterSkillTreeNode(skill.id, basics.id);
 
-      expect(message, contains('Узел освоен'));
+      expect(message, contains('Этап освоен'));
       expect(message, contains('+20 XP'));
       expect(basics.isMastered, isTrue);
       expect(skill.treeNodeStatus(auth), SkillTreeNodeStatus.active);
@@ -797,7 +797,7 @@ void main() {
 
       final message = state.completeTask(task.id);
 
-      expect(message, contains('бафф +4'));
+      expect(message, contains('эффект +4'));
       expect(task.earnedXP, 24);
       expect(task.bonusXpEarned, 4);
       expect(state.activeBuffs, isEmpty);

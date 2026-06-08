@@ -709,7 +709,7 @@ class _ProfileTimelineButton extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Уровни, боссы, освоение и сильные недели',
+                    'Уровни, сопротивление, освоение и сильные недели',
                     style: TextStyle(color: sub, fontSize: 11.5),
                   ),
                 ],

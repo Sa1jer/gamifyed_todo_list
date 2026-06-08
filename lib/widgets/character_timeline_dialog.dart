@@ -72,7 +72,7 @@ class CharacterTimelineDialog extends StatelessWidget {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          'Уровни, карта мастерства, боссы и важные недели',
+                          'Уровни, этапы мастерства, сопротивление и важные недели',
                           style: TextStyle(color: sub, fontSize: 12.5),
                         ),
                       ],
@@ -180,7 +180,7 @@ class _CharacterTimelineSummary {
           _TimelineEvent(
             kind: _TimelineKind.tree,
             at: masteredAt,
-            title: 'Освоен узел “${node.title}”',
+            title: 'Освоен этап “${node.title}”',
             subtitle:
                 '${skill.name} стал глубже • +${node.xpReward} XP за освоение',
             icon: Icons.account_tree,
@@ -202,7 +202,7 @@ class _CharacterTimelineSummary {
         _TimelineEvent(
           kind: _TimelineKind.boss,
           at: boss.defeatedAt!,
-          title: 'Побеждён босс “${boss.title}”',
+          title: 'Преодолено сопротивление “${boss.title}”',
           subtitle: skill == null
               ? 'Сопротивление стало слабее'
               : '${skill.name}: сопротивление стало слабее',
@@ -284,8 +284,8 @@ class _TimelineEvent {
   String get kindLabel => switch (kind) {
     _TimelineKind.profile => 'Персонаж',
     _TimelineKind.skill => 'Навык',
-    _TimelineKind.tree => 'Карта',
-    _TimelineKind.boss => 'Босс',
+    _TimelineKind.tree => 'Этап',
+    _TimelineKind.boss => 'Сопротивление',
     _TimelineKind.week => 'Неделя',
     _TimelineKind.achievement => 'Трофей',
   };
@@ -504,8 +504,8 @@ class _TimelineHero extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   summary.hasEvents
-                      ? 'Здесь собраны события, которые меняли персонажа: уровни, освоение, боссы и сильные недели.'
-                      : 'Летопись начнётся после первых больших событий: закрытых квестов, освоенных узлов и побед над боссами.',
+                      ? 'Здесь собраны события, которые меняли персонажа: уровни, освоение, сопротивление и сильные недели.'
+                      : 'Летопись начнётся после первых больших событий: закрытых квестов, освоенных этапов и преодоления сопротивления.',
                   style: TextStyle(color: sub, fontSize: 13.2, height: 1.35),
                 ),
               ],
@@ -542,7 +542,7 @@ class _TimelineMetrics extends StatelessWidget {
               icon: Icons.auto_stories,
               color: const Color(0xFFAF52DE),
               value: '${summary.events.length}',
-              label: 'Событий в летописи',
+              label: 'Рубежей роста',
             ),
             _TimelineMetricTile(
               width: itemWidth,
@@ -550,7 +550,7 @@ class _TimelineMetrics extends StatelessWidget {
               icon: Icons.account_tree,
               color: const Color(0xFF4A9EFF),
               value: '${summary.masteredNodes}',
-              label: 'Узлов освоено',
+              label: 'Этапов освоено',
             ),
             _TimelineMetricTile(
               width: itemWidth,
@@ -558,7 +558,7 @@ class _TimelineMetrics extends StatelessWidget {
               icon: Icons.shield,
               color: const Color(0xFFFF2D55),
               value: '${summary.defeatedBosses}',
-              label: 'Боссов побеждено',
+              label: 'Сопротивлений пройдено',
             ),
             _TimelineMetricTile(
               width: itemWidth,
@@ -660,7 +660,7 @@ class _TimelineList extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Таймлайн событий',
+                  'Рубежи роста',
                   style: TextStyle(
                     color: txt,
                     fontSize: 15,
@@ -672,7 +672,7 @@ class _TimelineList extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Обычные задачи остаются в журнале XP. Здесь только рубежи роста.',
+            'Обычные квесты остаются в журнале XP. Здесь только рубежи роста.',
             style: TextStyle(color: sub, fontSize: 11.5),
           ),
           const SizedBox(height: 14),
@@ -901,7 +901,7 @@ class _TimelineEmpty extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Освой узел дерева, победи босса или закрой сильную неделю.',
+            'Освой этап мастерства, пройди сопротивление или закрой сильную неделю.',
             textAlign: TextAlign.center,
             style: TextStyle(color: sub.withAlpha(170), fontSize: 12),
           ),

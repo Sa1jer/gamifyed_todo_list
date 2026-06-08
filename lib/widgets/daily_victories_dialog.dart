@@ -196,7 +196,8 @@ class _DailyVictorySummary {
       ))
         _VictoryEvent(
           title: buff.title,
-          subtitle: '+${buff.bonusPercent}% XP • ${_chargeCount(buff.charges)}',
+          subtitle:
+              'Пассивный эффект • +${buff.bonusPercent}% XP • ${_chargeCount(buff.charges)}',
           icon: Icons.bolt,
           color: const Color(0xFF34C759),
           at: buff.createdAt,
@@ -219,7 +220,7 @@ class _DailyVictorySummary {
       ))
         _VictoryEvent(
           title: boss.title,
-          subtitle: 'Босс побеждён',
+          subtitle: 'Сопротивление преодолено',
           icon: Icons.shield,
           color: skillsById[boss.skillId]?.color ?? const Color(0xFFFF2D55),
           at: boss.defeatedAt!,
@@ -240,15 +241,15 @@ class _DailyVictorySummary {
   int get improvedSkills => skillStats.length;
   bool get hasWins => completedQuests > 0 || events.isNotEmpty;
 
-  String get rankLabel {
-    if (completedQuests >= 7 || totalXp >= 220) return 'S-день';
-    if (completedQuests >= 5 || totalXp >= 150) return 'A-день';
-    if (completedQuests >= 3 || totalXp >= 80) return 'B-день';
+  String get dayToneLabel {
+    if (completedQuests >= 7 || totalXp >= 220) return 'Сильный день';
+    if (completedQuests >= 5 || totalXp >= 150) return 'Большой рывок';
+    if (completedQuests >= 3 || totalXp >= 80) return 'День роста';
     if (completedQuests >= 1) return 'Победа дня';
     return 'День ждёт старта';
   }
 
-  Color get rankColor {
+  Color get dayToneColor {
     if (completedQuests >= 7 || totalXp >= 220) return const Color(0xFFFFCC00);
     if (completedQuests >= 5 || totalXp >= 150) return const Color(0xFFFF2D55);
     if (completedQuests >= 3 || totalXp >= 80) return const Color(0xFFFF9500);
@@ -361,9 +362,9 @@ class _VictoryHero extends StatelessWidget {
                         ),
                       ),
                     ),
-                    _RankPill(
-                      label: summary.rankLabel,
-                      color: summary.rankColor,
+                    _TonePill(
+                      label: summary.dayToneLabel,
+                      color: summary.dayToneColor,
                       isDark: isDark,
                     ),
                   ],
@@ -433,7 +434,7 @@ class _VictoryMetrics extends StatelessWidget {
               icon: Icons.redeem,
               color: const Color(0xFFFF9500),
               value: '${summary.events.length}',
-              label: 'Игровых событий',
+              label: 'Трофеев и событий',
             ),
           ],
         );
@@ -586,8 +587,8 @@ class _EventsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return _SectionShell(
       isDark: isDark,
-      title: 'Награды и события',
-      subtitle: 'Сундуки, баффы, достижения, боссы',
+      title: 'Трофеи и события',
+      subtitle: 'Сундуки, пассивные эффекты, достижения, сопротивление',
       icon: Icons.auto_awesome,
       color: const Color(0xFFFF9500),
       child: summary.events.isEmpty
@@ -595,7 +596,7 @@ class _EventsSection extends StatelessWidget {
               isDark: isDark,
               icon: Icons.redeem,
               text:
-                  'Событий пока нет. Они появятся после наград, баффов и больших побед.',
+                  'Событий пока нет. Они появятся после трофеев, пассивных эффектов и больших побед.',
             )
           : Column(
               children: [
@@ -898,12 +899,12 @@ class _VictoryEntryTile extends StatelessWidget {
   }
 }
 
-class _RankPill extends StatelessWidget {
+class _TonePill extends StatelessWidget {
   final String label;
   final Color color;
   final bool isDark;
 
-  const _RankPill({
+  const _TonePill({
     required this.label,
     required this.color,
     required this.isDark,

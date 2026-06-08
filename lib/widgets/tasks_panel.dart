@@ -26,9 +26,6 @@ class TasksPanel extends StatefulWidget {
 }
 
 class _TasksPanelState extends State<TasksPanel> {
-  bool _checklistExpanded = false;
-  String? _lastSkillId;
-
   @override
   Widget build(BuildContext context) {
     final s = AppStateProvider.of(context);
@@ -38,15 +35,6 @@ class _TasksPanelState extends State<TasksPanel> {
     final sub = subtext(isDark);
     final bdr = borderColor(isDark);
     final skill = s.selectedSkill;
-
-    if (s.selectedSkillId != _lastSkillId) {
-      _lastSkillId = s.selectedSkillId;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _checklistExpanded) {
-          setState(() => _checklistExpanded = false);
-        }
-      });
-    }
 
     if (skill == null) {
       final hasSkills = s.skills.isNotEmpty;
@@ -79,7 +67,7 @@ class _TasksPanelState extends State<TasksPanel> {
                 hasSkills
                     ? (widget.planningMode
                           ? 'Здесь откроются цель, прогресс и квесты навыка'
-                          : 'Задачи откроются здесь')
+                          : 'Квесты откроются здесь')
                     : 'После навыка можно будет добавить первый квест',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: sub.withAlpha(180), fontSize: 13),
@@ -94,7 +82,6 @@ class _TasksPanelState extends State<TasksPanel> {
     final active = allTasks.where((t) => !t.isDone).toList();
     final done = allTasks.where((t) => t.isDone).toList()
       ..sort(_compareCompletedTasksNewestFirst);
-    final hasChecklist = skill.checklist.isNotEmpty;
     return Container(
       decoration: BoxDecoration(
         color: sfc,
@@ -121,7 +108,7 @@ class _TasksPanelState extends State<TasksPanel> {
                   child: Icon(skill.icon, color: skill.color, size: 16),
                 ),
                 const SizedBox(width: 10),
-                // Name + goal (no longer a toggle — checklist button is separate)
+                // Name + goal
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -145,20 +132,6 @@ class _TasksPanelState extends State<TasksPanel> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                // FIX: Checklist toggle button — same style as SmallBtn, parallel to it
-                if (hasChecklist)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: _ChecklistBtn(
-                      done: skill.checklistCompletedCount,
-                      total: skill.checklist.length,
-                      expanded: _checklistExpanded,
-                      color: skill.color,
-                      onTap: () => setState(
-                        () => _checklistExpanded = !_checklistExpanded,
-                      ),
-                    ),
-                  ),
                 if (widget.planningMode) ...[
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -183,7 +156,7 @@ class _TasksPanelState extends State<TasksPanel> {
                 ],
                 HoverScale(
                   child: SmallBtn(
-                    label: 'Новая задача',
+                    label: 'Новый квест',
                     icon: Icons.add,
                     color: skill.color,
                     tooltip: 'Создать квест для навыка “${skill.name}”',
@@ -214,89 +187,6 @@ class _TasksPanelState extends State<TasksPanel> {
               ],
             ),
           ),
-
-          // ── Expandable Checklist ─────────────────────────────────────────────────
-          if (hasChecklist)
-            AnimatedSize(
-              duration: kMotionSlow,
-              curve: kMotionCurve,
-              child: _checklistExpanded
-                  ? Container(
-                      margin: const EdgeInsets.fromLTRB(14, 0, 14, 8),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: skill.color.withAlpha(12),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: skill.color.withAlpha(50)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: List.generate(skill.checklist.length, (i) {
-                          final isDone = skill.checklistDone[i];
-                          return MotionListItem(
-                            key: ValueKey('skill-check-${skill.id}-$i'),
-                            index: i,
-                            slide: 4,
-                            child: GestureDetector(
-                              onTap: () => s.toggleChecklistItem(skill.id, i),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 4,
-                                ),
-                                child: Row(
-                                  children: [
-                                    AnimatedContainer(
-                                      duration: kMotionStandard,
-                                      curve: kMotionCurve,
-                                      width: 16,
-                                      height: 16,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(3),
-                                        border: Border.all(
-                                          color: isDone ? skill.color : sub,
-                                          width: 1.5,
-                                        ),
-                                        color: isDone
-                                            ? skill.color
-                                            : Colors.transparent,
-                                      ),
-                                      child: isDone
-                                          ? const Icon(
-                                              Icons.check,
-                                              size: 11,
-                                              color: Colors.white,
-                                            )
-                                          : null,
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Text(
-                                        skill.checklist[i],
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: isDone
-                                              ? sub
-                                              : textColor(isDark),
-                                          decoration: isDone
-                                              ? TextDecoration.lineThrough
-                                              : null,
-                                          decorationColor: sub,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          );
-                        }),
-                      ),
-                    )
-                  : const SizedBox.shrink(),
-            ),
 
           Container(height: 1, color: borderColor(isDark)),
 
@@ -521,7 +411,7 @@ class _EmptyTasksState extends StatelessWidget {
             ),
             const SizedBox(height: 5),
             Text(
-              'Для “$skillName” пока нет действий. Начните с маленького квеста или лёгкого старта.',
+              'Для “$skillName” пока нет действий. Добавьте один маленький квест и минимальный шаг.',
               textAlign: TextAlign.center,
               style: TextStyle(color: sub, fontSize: 12, height: 1.3),
             ),
@@ -548,82 +438,6 @@ int _compareCompletedTasksNewestFirst(Task a, Task b) {
   final byCompletion = bDate.compareTo(aDate);
   if (byCompletion != 0) return byCompletion;
   return b.createdAt.compareTo(a.createdAt);
-}
-
-// ─── Checklist Button ─────────────────────────────────────────────────────────
-// Same visual weight as SmallBtn, placed inline before "+ Задача"
-
-class _ChecklistBtn extends StatefulWidget {
-  final int done, total;
-  final bool expanded;
-  final Color color;
-  final VoidCallback onTap;
-  const _ChecklistBtn({
-    required this.done,
-    required this.total,
-    required this.expanded,
-    required this.color,
-    required this.onTap,
-  });
-  @override
-  State<_ChecklistBtn> createState() => _ChecklistBtnState();
-}
-
-class _ChecklistBtnState extends State<_ChecklistBtn> {
-  bool _p = false;
-  @override
-  Widget build(BuildContext context) {
-    final accent = widget.expanded ? darken(widget.color) : widget.color;
-    return Tooltip(
-      message: widget.expanded
-          ? 'Скрыть чек-лист цели'
-          : 'Показать чек-лист цели',
-      child: GestureDetector(
-        onTapDown: (_) => setState(() => _p = true),
-        onTapUp: (_) {
-          setState(() => _p = false);
-          widget.onTap();
-        },
-        onTapCancel: () => setState(() => _p = false),
-        child: AnimatedScale(
-          scale: _p ? 0.94 : 1.0,
-          duration: kMotionFast,
-          curve: kMotionCurve,
-          child: AnimatedContainer(
-            duration: kMotionFast,
-            curve: kMotionCurve,
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: _p ? accent.withAlpha(24) : Colors.transparent,
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: accent, width: 1.2),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  widget.expanded
-                      ? Icons.check_box
-                      : Icons.check_box_outline_blank,
-                  color: accent,
-                  size: 10,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '${widget.done}/${widget.total}',
-                  style: TextStyle(
-                    color: accent,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -704,8 +518,8 @@ class _TaskTileState extends State<TaskTile> {
               children: [
                 Tooltip(
                   message: t.isDone
-                      ? 'Вернуть задачу в активные и откатить XP'
-                      : 'Выполнить задачу и начислить XP',
+                      ? 'Вернуть квест в активные и откатить XP'
+                      : 'Выполнить квест и начислить XP',
                   child: PressFeedback(
                     scale: 0.94,
                     onTap: () {
@@ -853,15 +667,6 @@ class _TaskTileState extends State<TaskTile> {
                         spacing: 6,
                         runSpacing: 4,
                         children: [
-                          if (t.priority != Priority.medium)
-                            TaskBadge(
-                              label: priorityLabel[t.priority]!,
-                              color: priorityColor[t.priority]!,
-                            ),
-                          TaskBadge(
-                            label: typeLabel[t.type]!,
-                            color: typeColor[t.type]!,
-                          ),
                           TaskBadge(
                             icon: Icons.auto_awesome,
                             label: t.isDone
@@ -872,7 +677,7 @@ class _TaskTileState extends State<TaskTile> {
                           if (!t.isDone && widget.previewBuffBonus > 0)
                             TaskBadge(
                               icon: Icons.bolt,
-                              label: 'бафф +${widget.previewBuffBonus}',
+                              label: 'эффект +${widget.previewBuffBonus}',
                               color: const Color(0xFF34C759),
                             ),
                           if (t.isDone && t.bonusXpEarned > 0)
@@ -893,53 +698,29 @@ class _TaskTileState extends State<TaskTile> {
                               label: '+${t.minimumActionEarnedXP} XP',
                               color: widget.skillColor,
                             ),
-                          if (!t.isDone &&
-                              t.type == TaskType.repeating &&
-                              previewMultiplier > 1)
-                            TaskBadge(
-                              icon: Icons.local_fire_department,
-                              label: '×$previewMultiplier',
-                              color: const Color(0xFFFF9500),
-                            ),
-                          if (t.streak > 0 && t.type == TaskType.repeating)
-                            Text(
-                              '${t.streak} д.',
-                              style: TextStyle(color: sub, fontSize: 11),
-                            ),
                           if (t.type == TaskType.repeating) ...[
                             TaskBadge(
                               icon: Icons.repeat,
                               label: freqLabel[t.repeatFrequency]!,
                               color: const Color(0xFF4A9EFF),
                             ),
+                            if (!t.isDone && previewMultiplier > 1)
+                              TaskBadge(
+                                icon: Icons.local_fire_department,
+                                label: '×$previewMultiplier',
+                                color: const Color(0xFFFF9500),
+                              ),
+                            if (t.streak > 0)
+                              Text(
+                                '${t.streak} д.',
+                                style: TextStyle(color: sub, fontSize: 11),
+                              ),
                             if (t.isDone && t.nextResetAt != null)
                               Text(
                                 formatResetLabel(t.nextResetAt),
                                 style: TextStyle(color: sub, fontSize: 11),
                               ),
                           ],
-                          if (t.subtasks.isNotEmpty)
-                            TaskBadge(
-                              icon: Icons.checklist,
-                              label:
-                                  '${t.subtaskCompletedCount}/${t.subtasks.length}',
-                              color: const Color(0xFF34C759),
-                            ),
-                          if (t.notificationsEnabled)
-                            TaskBadge(
-                              icon: Icons.notifications_active,
-                              label:
-                                  t.notificationHour != null &&
-                                      t.notificationMinute != null
-                                  ? '${t.notificationHour.toString().padLeft(2, '0')}:${t.notificationMinute.toString().padLeft(2, '0')}'
-                                  : 'Напоминание',
-                              color: const Color(0xFFAF52DE),
-                            ),
-                          ...t.tags
-                              .take(3)
-                              .map(
-                                (tag) => TaskBadge(label: '#$tag', color: sub),
-                              ),
                         ],
                       ),
                     ],
@@ -959,13 +740,13 @@ class _TaskTileState extends State<TaskTile> {
                           MiniBtn(
                             icon: Icons.edit,
                             color: sub,
-                            tooltip: 'Редактировать задачу',
+                            tooltip: 'Редактировать квест',
                             onTap: _edit,
                           ),
                           MiniBtn(
                             icon: Icons.delete_outline,
                             color: const Color(0xFFFF3B30),
-                            tooltip: 'Удалить задачу',
+                            tooltip: 'Удалить квест',
                             onTap: _delete,
                           ),
                         ],

@@ -929,11 +929,11 @@ class _XPBubbleTone {
       );
     }
 
-    if (lower.contains('босс')) {
+    if (lower.contains('босс') || lower.contains('сопротивлен')) {
       return _XPBubbleTone(
         icon: Icons.shield,
         color: const Color(0xFFFF2D55),
-        title: customTitle ?? 'Босс ослаб',
+        title: customTitle ?? 'Сопротивление ослабло',
         subtitle: customSubtitle,
       );
     }
@@ -947,11 +947,11 @@ class _XPBubbleTone {
       );
     }
 
-    if (lower.contains('бафф')) {
+    if (lower.contains('бафф') || lower.contains('пассивн')) {
       return _XPBubbleTone(
         icon: Icons.bolt,
         color: const Color(0xFF34C759),
-        title: customTitle ?? 'Бафф сработал',
+        title: customTitle ?? 'Эффект сработал',
         subtitle: customSubtitle,
       );
     }
@@ -1039,7 +1039,13 @@ class DlgField extends StatelessWidget {
 
 class DlgActions extends StatelessWidget {
   final VoidCallback onCancel, onSave;
-  const DlgActions({super.key, required this.onCancel, required this.onSave});
+  final String saveLabel;
+  const DlgActions({
+    super.key,
+    required this.onCancel,
+    required this.onSave,
+    this.saveLabel = 'Сохранить',
+  });
   @override
   Widget build(BuildContext context) => Row(
     mainAxisAlignment: MainAxisAlignment.end,
@@ -1071,9 +1077,9 @@ class DlgActions extends StatelessWidget {
             color: const Color(0xFF4A9EFF),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: const Text(
-            'Сохранить',
-            style: TextStyle(
+          child: Text(
+            saveLabel,
+            style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w600,
               fontSize: 14,

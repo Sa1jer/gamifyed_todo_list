@@ -7,15 +7,32 @@ import 'shared.dart';
 class TodayDashboard extends StatefulWidget {
   final Function(String id, Offset pos) onComplete;
   final Function(String id, Offset pos) onMinimumAction;
+  final VoidCallback? onCreateFirstSkill;
 
   const TodayDashboard({
     super.key,
     required this.onComplete,
     required this.onMinimumAction,
+    this.onCreateFirstSkill,
   });
 
   static Skill? _skillFor(AppState state, Task task) {
     return state.skills.where((skill) => skill.id == task.skillId).firstOrNull;
+  }
+
+  static SkillTreeNode? _stageFor(AppState state, Task task) {
+    final skill = _skillFor(state, task);
+    final nodeId = task.treeNodeId;
+    if (skill == null || nodeId == null) return null;
+    return skill.treeNodes.where((node) => node.id == nodeId).firstOrNull;
+  }
+
+  static bool _isActiveStageTask(AppState state, Task task) {
+    final skill = _skillFor(state, task);
+    final stage = _stageFor(state, task);
+    return skill != null &&
+        stage != null &&
+        skill.treeNodeStatus(stage) == SkillTreeNodeStatus.active;
   }
 
   static Task? _pickNextTask(AppState state, List<Task> tasks) {
@@ -27,16 +44,31 @@ class TodayDashboard extends StatefulWidget {
   static List<Task> _sortedTasks(AppState state, List<Task> tasks) {
     final result = [...tasks];
     result.sort((a, b) {
+      final byRisk = _riskScore(a).compareTo(_riskScore(b));
+      if (byRisk != 0) return byRisk;
+
+      final byMinimum = _minimumScore(a).compareTo(_minimumScore(b));
+      if (byMinimum != 0) return byMinimum;
+
+      final byStage = _stageScore(state, a).compareTo(_stageScore(state, b));
+      if (byStage != 0) return byStage;
+
+      final byRepeating = _repeatingScore(a).compareTo(_repeatingScore(b));
+      if (byRepeating != 0) return byRepeating;
+
       final byPriority = _priorityScore(
         a.priority,
       ).compareTo(_priorityScore(b.priority));
       if (byPriority != 0) return byPriority;
 
-      final byType = _typeScore(a).compareTo(_typeScore(b));
-      if (byType != 0) return byType;
-
       final byXp = state.previewEarnedXP(b).compareTo(state.previewEarnedXP(a));
       if (byXp != 0) return byXp;
+
+      final byUpdated = b.updatedAt.compareTo(a.updatedAt);
+      if (byUpdated != 0) return byUpdated;
+
+      final byCreated = b.createdAt.compareTo(a.createdAt);
+      if (byCreated != 0) return byCreated;
 
       return a.title.compareTo(b.title);
     });
@@ -62,12 +94,25 @@ class TodayDashboard extends StatefulWidget {
     Priority.low => 2,
   };
 
-  static int _typeScore(Task task) => switch (task.type) {
-    TaskType.repeating => task.nextResetAt == null ? 1 : 0,
-    TaskType.shortTerm => 2,
-    TaskType.midTerm => 3,
-    TaskType.longTerm => 4,
-  };
+  static int _riskScore(Task task) {
+    final resetAt = task.nextResetAt;
+    if (task.type != TaskType.repeating || resetAt == null) return 1;
+    final untilReset = resetAt.difference(DateTime.now());
+    return !untilReset.isNegative && untilReset <= const Duration(hours: 24)
+        ? 0
+        : 1;
+  }
+
+  static int _minimumScore(Task task) =>
+      task.hasMinimumAction && !task.isDone && !task.isMinimumActionDone
+      ? 0
+      : 1;
+
+  static int _stageScore(AppState state, Task task) =>
+      _isActiveStageTask(state, task) ? 0 : 1;
+
+  static int _repeatingScore(Task task) =>
+      task.type == TaskType.repeating ? 0 : 1;
 
   static bool _shouldRecommendMinimumAction(Task task) {
     return task.hasMinimumAction &&
@@ -92,9 +137,6 @@ class _TodayDashboardState extends State<TodayDashboard> {
     final isDark = state.isDark;
     final txt = textColor(isDark);
     final sub = subtext(isDark);
-    final activeBossThreats = state.activeBossThreatCount;
-    final activeBuffs = state.activeBuffs.length;
-    final unopenedChests = state.unopenedRewardChests.length;
     final activeTasks = state.tasks.where((task) => !task.isDone).toList();
     final dailyTasks = activeTasks
         .where((task) => task.type == TaskType.repeating)
@@ -102,193 +144,190 @@ class _TodayDashboardState extends State<TodayDashboard> {
     final nextTask = TodayDashboard._pickNextTask(state, activeTasks);
     final riskyTasks = TodayDashboard._riskTasks(dailyTasks);
     final stats = state.todayStats;
-    final statusLabels = _todayStatusLabels(
-      state: state,
-      activeBossThreats: activeBossThreats,
-      activeBuffs: activeBuffs,
-      unopenedChests: unopenedChests,
-    );
+    final statusLabels = _todayStatusLabels(state: state);
 
-    return AnimatedContainer(
-      duration: kMotionSlow,
-      curve: kMotionCurve,
-      height: _expanded ? 258 : 76,
-      child: AppPanel(
-        isDark: isDark,
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(12, _expanded ? 12 : 9, 12, 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final pinActions = constraints.maxWidth >= 1100;
-                  final actionReserve =
-                      (constraints.maxWidth * (pinActions ? 0.45 : 0.52))
-                          .clamp(260.0, 720.0)
-                          .toDouble();
-                  final titleBlock = Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Действовать сегодня',
-                        style: TextStyle(
-                          color: txt,
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        'Сначала следующий квест. Аналитика и трофеи живут в “Прогрессе”.',
-                        style: TextStyle(color: sub, fontSize: 11),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  );
-                  final statusRow = _TodayStatusRow(
-                    labels: statusLabels,
-                    compact: !_expanded,
-                  );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compactDashboard = constraints.maxWidth < 720;
 
-                  return SizedBox(
-                    width: constraints.maxWidth,
-                    height: 52,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Positioned(
-                          left: 0,
-                          right: actionReserve + 12,
-                          top: 0,
-                          bottom: 0,
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.auto_awesome,
-                                color: Color(0xFFFFCC00),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(child: titleBlock),
-                            ],
-                          ),
-                        ),
-                        Positioned(
-                          right: 0,
-                          top: 0,
-                          bottom: 0,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              ConstrainedBox(
-                                constraints: BoxConstraints(
-                                  maxWidth: actionReserve - 44,
-                                ),
-                                child: SingleChildScrollView(
-                                  scrollDirection: Axis.horizontal,
-                                  reverse: true,
-                                  child: statusRow,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              _CollapseButton(
-                                expanded: _expanded,
-                                color: sub,
-                                onTap: () =>
-                                    setState(() => _expanded = !_expanded),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-              Expanded(
-                child: ClipRect(
-                  child: MotionFadeSlideSwitcher(
-                    child: _expanded
-                        ? Padding(
-                            key: const ValueKey('today-expanded-content'),
-                            padding: const EdgeInsets.only(top: 8),
-                            child: LayoutBuilder(
-                              builder: (context, constraints) {
-                                final content = _DashboardContent(
-                                  state: state,
-                                  nextTask: nextTask,
-                                  riskyTasks: riskyTasks,
-                                  activeTasks: activeTasks,
-                                  dailyTasks: dailyTasks,
-                                  todayTasks: stats?.tasksCompleted ?? 0,
-                                  todayXp: stats?.xpEarned ?? 0,
-                                  isDark: isDark,
-                                  onComplete: widget.onComplete,
-                                  onMinimumAction: widget.onMinimumAction,
-                                );
-
-                                if (constraints.maxWidth >= 960) {
-                                  return content;
-                                }
-
-                                return SingleChildScrollView(
-                                  scrollDirection: Axis.horizontal,
-                                  child: SizedBox(width: 960, child: content),
-                                );
-                              },
+        return AnimatedContainer(
+          duration: kMotionSlow,
+          curve: kMotionCurve,
+          height: _expanded ? (compactDashboard ? 236 : 258) : 76,
+          child: AppPanel(
+            isDark: isDark,
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(12, _expanded ? 12 : 9, 12, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final pinActions = constraints.maxWidth >= 1100;
+                      final actionReserve =
+                          (constraints.maxWidth * (pinActions ? 0.45 : 0.52))
+                              .clamp(220.0, 720.0)
+                              .toDouble();
+                      final titleBlock = Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Действовать сегодня',
+                            style: TextStyle(
+                              color: txt,
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
                             ),
-                          )
-                        : const SizedBox.shrink(
-                            key: ValueKey('today-collapsed-content'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
+                          Text(
+                            compactDashboard
+                                ? 'Следующий шаг — без настройки системы.'
+                                : 'Сначала следующий квест. Аналитика и трофеи живут в “Прогрессе”.',
+                            style: TextStyle(color: sub, fontSize: 11),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      );
+                      final statusRow = _TodayStatusRow(
+                        labels: statusLabels,
+                        compact: !_expanded,
+                      );
+
+                      return SizedBox(
+                        width: constraints.maxWidth,
+                        height: 52,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Positioned(
+                              left: 0,
+                              right: actionReserve + 12,
+                              top: 0,
+                              bottom: 0,
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.auto_awesome,
+                                    color: Color(0xFFFFCC00),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(child: titleBlock),
+                                ],
+                              ),
+                            ),
+                            Positioned(
+                              right: 0,
+                              top: 0,
+                              bottom: 0,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  ConstrainedBox(
+                                    constraints: BoxConstraints(
+                                      maxWidth: actionReserve - 44,
+                                    ),
+                                    child: SingleChildScrollView(
+                                      scrollDirection: Axis.horizontal,
+                                      reverse: true,
+                                      child: statusRow,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _CollapseButton(
+                                    expanded: _expanded,
+                                    color: sub,
+                                    onTap: () =>
+                                        setState(() => _expanded = !_expanded),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
-                ),
+                  Expanded(
+                    child: ClipRect(
+                      child: MotionFadeSlideSwitcher(
+                        child: _expanded
+                            ? Padding(
+                                key: const ValueKey('today-expanded-content'),
+                                padding: const EdgeInsets.only(top: 8),
+                                child: LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    final content = _DashboardContent(
+                                      state: state,
+                                      nextTask: nextTask,
+                                      riskyTasks: riskyTasks,
+                                      activeTasks: activeTasks,
+                                      dailyTasks: dailyTasks,
+                                      todayTasks: stats?.tasksCompleted ?? 0,
+                                      todayXp: stats?.xpEarned ?? 0,
+                                      isDark: isDark,
+                                      onComplete: widget.onComplete,
+                                      onMinimumAction: widget.onMinimumAction,
+                                      onCreateFirstSkill:
+                                          widget.onCreateFirstSkill,
+                                    );
+
+                                    if (constraints.maxWidth < 720) {
+                                      return _CompactDashboardContent(
+                                        state: state,
+                                        nextTask: nextTask,
+                                        isDark: isDark,
+                                        onComplete: widget.onComplete,
+                                        onMinimumAction: widget.onMinimumAction,
+                                        onCreateFirstSkill:
+                                            widget.onCreateFirstSkill,
+                                      );
+                                    }
+
+                                    if (constraints.maxWidth >= 960) {
+                                      return content;
+                                    }
+
+                                    return SingleChildScrollView(
+                                      scrollDirection: Axis.horizontal,
+                                      child: SizedBox(
+                                        width: 960,
+                                        child: content,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              )
+                            : const SizedBox.shrink(
+                                key: ValueKey('today-collapsed-content'),
+                              ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  List<_TodayStatusLabelData> _todayStatusLabels({
-    required AppState state,
-    required int activeBossThreats,
-    required int activeBuffs,
-    required int unopenedChests,
-  }) {
+  List<_TodayStatusLabelData> _todayStatusLabels({required AppState state}) {
     return [
       _TodayStatusLabelData(
         label: 'до ур. ${state.profile.level + 1}',
         value: '${state.profile.xpNeeded - state.profile.xp} XP',
         color: const Color(0xFF4A9EFF),
       ),
-      if (activeBossThreats > 0)
-        _TodayStatusLabelData(
-          label: 'боссы',
-          value: '$activeBossThreats атакуют',
-          color: const Color(0xFFFF3B30),
-        ),
-      if (activeBuffs > 0)
-        _TodayStatusLabelData(
-          label: 'баффы',
-          value: '$activeBuffs активно',
-          color: const Color(0xFF34C759),
-        ),
       if (state.profile.streakProtectionCharges > 0)
         _TodayStatusLabelData(
           label: 'защита',
           value: '${state.profile.streakProtectionCharges} амулет',
           color: const Color(0xFF4A9EFF),
-        ),
-      if (unopenedChests > 0)
-        _TodayStatusLabelData(
-          label: 'награды',
-          value: '$unopenedChests сундук',
-          color: const Color(0xFFFFCC00),
         ),
     ];
   }
@@ -305,6 +344,7 @@ class _DashboardContent extends StatelessWidget {
   final bool isDark;
   final Function(String id, Offset pos) onComplete;
   final Function(String id, Offset pos) onMinimumAction;
+  final VoidCallback? onCreateFirstSkill;
 
   const _DashboardContent({
     required this.state,
@@ -317,6 +357,7 @@ class _DashboardContent extends StatelessWidget {
     required this.isDark,
     required this.onComplete,
     required this.onMinimumAction,
+    required this.onCreateFirstSkill,
   });
 
   @override
@@ -335,6 +376,7 @@ class _DashboardContent extends StatelessWidget {
             isDark: isDark,
             onComplete: onComplete,
             onMinimumAction: onMinimumAction,
+            onCreateFirstSkill: onCreateFirstSkill,
           ),
         ),
         const SizedBox(width: 10),
@@ -373,6 +415,39 @@ class _DashboardContent extends StatelessWidget {
   }
 }
 
+class _CompactDashboardContent extends StatelessWidget {
+  final AppState state;
+  final Task? nextTask;
+  final bool isDark;
+  final Function(String id, Offset pos) onComplete;
+  final Function(String id, Offset pos) onMinimumAction;
+  final VoidCallback? onCreateFirstSkill;
+
+  const _CompactDashboardContent({
+    required this.state,
+    required this.nextTask,
+    required this.isDark,
+    required this.onComplete,
+    required this.onMinimumAction,
+    required this.onCreateFirstSkill,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _NextActionCard(
+      state: state,
+      task: nextTask,
+      skill: nextTask == null
+          ? null
+          : TodayDashboard._skillFor(state, nextTask!),
+      isDark: isDark,
+      onComplete: onComplete,
+      onMinimumAction: onMinimumAction,
+      onCreateFirstSkill: onCreateFirstSkill,
+    );
+  }
+}
+
 class _NextActionCard extends StatelessWidget {
   final AppState state;
   final Task? task;
@@ -380,6 +455,7 @@ class _NextActionCard extends StatelessWidget {
   final bool isDark;
   final Function(String id, Offset pos) onComplete;
   final Function(String id, Offset pos) onMinimumAction;
+  final VoidCallback? onCreateFirstSkill;
 
   const _NextActionCard({
     required this.state,
@@ -388,6 +464,7 @@ class _NextActionCard extends StatelessWidget {
     required this.isDark,
     required this.onComplete,
     required this.onMinimumAction,
+    required this.onCreateFirstSkill,
   });
 
   @override
@@ -417,10 +494,19 @@ class _NextActionCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               hasSkills
-                  ? 'Можно добавить маленький квест или выбрать навык слева.'
-                  : 'Перейдите в “Планировать” и создайте направление прокачки.',
+                  ? 'Добавьте один маленький квест или минимальный шаг.'
+                  : 'Создайте навык: первый этап и первый квест появятся сразу.',
               style: TextStyle(color: sub, fontSize: 12, height: 1.25),
             ),
+            if (!hasSkills && onCreateFirstSkill != null) ...[
+              const SizedBox(height: 12),
+              SmallBtn(
+                label: 'Создать первый навык',
+                icon: Icons.add,
+                color: accent,
+                onTap: onCreateFirstSkill!,
+              ),
+            ],
           ],
         ),
       );
@@ -434,8 +520,9 @@ class _NextActionCard extends StatelessWidget {
     final displayedXp = canStartMinimum ? minimumXp : fullDisplayedXp;
     final actionLabel = canStartMinimum ? 'Начать' : 'Выполнить';
     final actionTooltip = canStartMinimum
-        ? 'Сделать минимальное действие и получить частичный XP'
+        ? 'Сделать минимальный шаг и получить частичный XP'
         : 'Закрыть квест полностью и начислить XP';
+    final stage = TodayDashboard._stageFor(state, task!);
 
     return _SoftCard(
       isDark: isDark,
@@ -451,7 +538,7 @@ class _NextActionCard extends StatelessWidget {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  'Следующий квест',
+                  'Следующий квест · первое полезное действие',
                   style: TextStyle(
                     color: accent,
                     fontSize: 12.5,
@@ -471,7 +558,7 @@ class _NextActionCard extends StatelessWidget {
                 const SizedBox(width: 6),
                 TaskBadge(
                   icon: Icons.bolt,
-                  label: 'бафф +$buffBonus',
+                  label: 'эффект +$buffBonus',
                   color: const Color(0xFF34C759),
                 ),
               ],
@@ -489,6 +576,19 @@ class _NextActionCard extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
+          if (stage != null) ...[
+            const SizedBox(height: 5),
+            Text(
+              'Этап: ${stage.title}',
+              style: TextStyle(
+                color: sub,
+                fontSize: 11.2,
+                fontWeight: FontWeight.w700,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
           if (canStartMinimum) ...[
             const SizedBox(height: 8),
             _MinimumActionHint(
@@ -702,7 +802,7 @@ class _QuestQueue extends StatelessWidget {
                   ? Center(
                       key: const ValueKey('quest-queue-empty'),
                       child: Text(
-                        'Нет активных квестов',
+                        'Добавьте один маленький квест',
                         style: TextStyle(color: sub, fontSize: 12),
                       ),
                     )
@@ -723,6 +823,7 @@ class _QuestQueue extends StatelessWidget {
                           child: _QuestMiniRow(
                             task: task,
                             skill: skill,
+                            stage: TodayDashboard._stageFor(state, task),
                             xp: state.previewEarnedXP(task),
                             buffBonus: state.previewBuffBonusXP(task),
                             minimumXp: state.previewMinimumActionXP(task),
@@ -744,6 +845,7 @@ class _QuestQueue extends StatelessWidget {
 class _QuestMiniRow extends StatelessWidget {
   final Task task;
   final Skill? skill;
+  final SkillTreeNode? stage;
   final int xp;
   final int buffBonus;
   final int minimumXp;
@@ -754,6 +856,7 @@ class _QuestMiniRow extends StatelessWidget {
   const _QuestMiniRow({
     required this.task,
     required this.skill,
+    required this.stage,
     required this.xp,
     required this.buffBonus,
     required this.minimumXp,
@@ -773,11 +876,16 @@ class _QuestMiniRow extends StatelessWidget {
     final title = recommendsMinimum
         ? 'Минимум: ${task.minimumAction}'
         : task.title;
+    final xpText = buffBonus > 0
+        ? '+${xp + buffBonus} XP • эффект +$buffBonus'
+        : '+$xp XP';
     final subtitle = recommendsMinimum
-        ? 'Лёгкий старт • ${task.title} • +$minimumXp XP'
-        : buffBonus > 0
-        ? '${typeLabel[task.type]} • +${xp + buffBonus} XP • бафф +$buffBonus'
-        : '${typeLabel[task.type]} • +$xp XP';
+        ? 'Лёгкий старт • +$minimumXp XP'
+        : stage != null
+        ? 'Этап: ${stage!.title} • $xpText'
+        : task.type == TaskType.repeating
+        ? '${typeLabel[task.type]} • $xpText'
+        : xpText;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),

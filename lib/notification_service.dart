@@ -158,7 +158,7 @@ class NotificationService {
       body: body,
       scheduledDate: scheduledDate,
       notificationDetails: _taskNotificationDetails(
-        channelDescription: 'Уведомления о повторяющихся задачах',
+        channelDescription: 'Уведомления о повторяющихся квестах',
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       matchDateTimeComponents: switch (repeatMode) {
@@ -183,7 +183,7 @@ class NotificationService {
       body: body,
       scheduledDate: tzTime,
       notificationDetails: _taskNotificationDetails(
-        channelDescription: 'Уведомления о задачах',
+        channelDescription: 'Уведомления о квестах',
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
     );
@@ -207,7 +207,7 @@ class NotificationService {
       title: title,
       body: body,
       notificationDetails: _taskNotificationDetails(
-        channelDescription: 'Уведомления о задачах',
+        channelDescription: 'Уведомления о квестах',
       ),
     );
   }
@@ -218,7 +218,7 @@ class NotificationService {
     return NotificationDetails(
       android: AndroidNotificationDetails(
         'task_reminders',
-        'Напоминания о задачах',
+        'Напоминания о квестах',
         channelDescription: channelDescription,
         importance: Importance.high,
         priority: Priority.high,

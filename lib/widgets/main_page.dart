@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../feedback_service.dart';
+import '../models.dart';
 import '../utils.dart';
 import 'shared.dart';
 import 'dialogs.dart';
@@ -33,6 +34,13 @@ extension _WorkspaceModeMeta on WorkspaceMode {
     WorkspaceMode.progress => 'Прогресс',
   };
 
+  String get shortLabel => switch (this) {
+    WorkspaceMode.act => 'Сейчас',
+    WorkspaceMode.plan => 'План',
+    WorkspaceMode.mastery => 'Карта',
+    WorkspaceMode.progress => 'Рост',
+  };
+
   IconData get icon => switch (this) {
     WorkspaceMode.act => Icons.flash_on,
     WorkspaceMode.plan => Icons.edit_note,
@@ -56,6 +64,7 @@ class TopBar extends StatelessWidget {
   final ValueChanged<WorkspaceMode> onModeChanged;
   final GlobalKey? rewardsKey;
   final VoidCallback? onRewardsTap;
+  final bool showModeSwitch;
   const TopBar({
     super.key,
     required this.isDark,
@@ -65,6 +74,7 @@ class TopBar extends StatelessWidget {
     required this.onModeChanged,
     this.rewardsKey,
     this.onRewardsTap,
+    this.showModeSwitch = true,
   });
 
   @override
@@ -78,16 +88,8 @@ class TopBar extends StatelessWidget {
         ? isDark
               ? const Color(0xFFFFCC00)
               : const Color(0xFFB87500)
-        : activeBuffsCount > 0
-        ? isDark
-              ? const Color(0xFF34C759)
-              : const Color(0xFF218A3C)
         : sub;
-    final rewardsBadge = rewardsCount > 0
-        ? '$rewardsCount'
-        : activeBuffsCount > 0
-        ? '$activeBuffsCount'
-        : null;
+    final rewardsBadge = rewardsCount > 0 ? '$rewardsCount' : null;
 
     return Container(
       width: double.infinity,
@@ -97,6 +99,8 @@ class TopBar extends StatelessWidget {
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 900;
           final veryCompact = constraints.maxWidth < 560;
+          final showCompactModeLabels =
+              constraints.maxWidth >= 520 && constraints.maxWidth < 900;
 
           return Row(
             children: [
@@ -117,23 +121,26 @@ class TopBar extends StatelessWidget {
                   ),
                 ),
               ],
-              SizedBox(width: compact ? 10 : 18),
-              _WorkspaceModeSwitch(
-                mode: mode,
-                isDark: isDark,
-                compact: compact,
-                onChanged: onModeChanged,
-              ),
+              if (showModeSwitch) ...[
+                SizedBox(width: compact ? 10 : 18),
+                _WorkspaceModeSwitch(
+                  mode: mode,
+                  isDark: isDark,
+                  compact: compact,
+                  showCompactLabels: showCompactModeLabels,
+                  onChanged: onModeChanged,
+                ),
+              ],
               const Spacer(),
               _TopBarPillButton(
                 key: rewardsKey,
                 icon: Icons.redeem,
-                label: 'Награды',
+                label: 'Трофеи',
                 tooltip: rewardsCount > 0
                     ? 'Открыть новые сундуки'
                     : activeBuffsCount > 0
-                    ? 'Посмотреть активные баффы'
-                    : 'Открыть награды и баффы',
+                    ? 'Посмотреть пассивные эффекты'
+                    : 'Открыть трофеи после действий',
                 color: rewardsColor,
                 badge: rewardsBadge,
                 compact: compact,
@@ -185,12 +192,14 @@ class _WorkspaceModeSwitch extends StatelessWidget {
   final WorkspaceMode mode;
   final bool isDark;
   final bool compact;
+  final bool showCompactLabels;
   final ValueChanged<WorkspaceMode> onChanged;
 
   const _WorkspaceModeSwitch({
     required this.mode,
     required this.isDark,
     required this.compact,
+    this.showCompactLabels = false,
     required this.onChanged,
   });
 
@@ -213,6 +222,7 @@ class _WorkspaceModeSwitch extends StatelessWidget {
               mode: item,
               isDark: isDark,
               compact: compact,
+              showCompactLabel: showCompactLabels,
               selected: item == mode,
               onTap: () => onChanged(item),
             ),
@@ -226,6 +236,7 @@ class _WorkspaceModeButton extends StatefulWidget {
   final WorkspaceMode mode;
   final bool isDark;
   final bool compact;
+  final bool showCompactLabel;
   final bool selected;
   final VoidCallback onTap;
 
@@ -233,6 +244,7 @@ class _WorkspaceModeButton extends StatefulWidget {
     required this.mode,
     required this.isDark,
     required this.compact,
+    this.showCompactLabel = false,
     required this.selected,
     required this.onTap,
   });
@@ -297,10 +309,10 @@ class _WorkspaceModeButtonState extends State<_WorkspaceModeButton> {
                   color: widget.selected ? color : sub,
                   size: 15,
                 ),
-                if (!widget.compact) ...[
+                if (!widget.compact || widget.showCompactLabel) ...[
                   const SizedBox(width: 5),
                   Text(
-                    widget.mode.label,
+                    widget.compact ? widget.mode.shortLabel : widget.mode.label,
                     style: TextStyle(
                       color: widget.selected ? color : sub,
                       fontSize: 12,
@@ -318,6 +330,87 @@ class _WorkspaceModeButtonState extends State<_WorkspaceModeButton> {
     );
 
     return Tooltip(message: widget.mode.label, child: button);
+  }
+}
+
+class _MobileWorkspaceNav extends StatelessWidget {
+  final WorkspaceMode mode;
+  final bool isDark;
+  final ValueChanged<WorkspaceMode> onChanged;
+
+  const _MobileWorkspaceNav({
+    required this.mode,
+    required this.isDark,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bdr = borderColor(isDark);
+    final sub = subtext(isDark);
+
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+        decoration: BoxDecoration(
+          color: surface(isDark),
+          border: Border(top: BorderSide(color: bdr)),
+        ),
+        child: Row(
+          children: [
+            for (final item in WorkspaceMode.values)
+              Expanded(
+                child: PressFeedback(
+                  scale: 0.96,
+                  tooltip: item.label,
+                  onTap: () => onChanged(item),
+                  child: AnimatedContainer(
+                    duration: kMotionStandard,
+                    curve: kMotionCurve,
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      color: item == mode
+                          ? item.color.withAlpha(isDark ? 34 : 24)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: item == mode
+                            ? item.color.withAlpha(75)
+                            : Colors.transparent,
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          item.icon,
+                          color: item == mode ? item.color : sub,
+                          size: 18,
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          item.shortLabel,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: item == mode ? item.color : sub,
+                            fontSize: 11,
+                            fontWeight: item == mode
+                                ? FontWeight.w900
+                                : FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -725,113 +818,179 @@ class _MainPageState extends State<MainPage> {
     _showRewardNotifications(s);
   }
 
+  void _addSkill(BuildContext context) {
+    final state = AppStateProvider.of(context);
+    showDialog(
+      context: context,
+      builder: (_) => AddSkillDialog(
+        isDark: state.isDark,
+        onSave:
+            (
+              name,
+              goal,
+              checklist,
+              color,
+              icon,
+              initialTreeNodes,
+              initialQuest,
+            ) {
+              final skillId = uid();
+              state.addSkill(
+                Skill(
+                  id: skillId,
+                  name: name,
+                  goal: goal,
+                  color: color,
+                  icon: icon,
+                  checklist: checklist,
+                  treeNodes: initialTreeNodes,
+                ),
+              );
+              state.selectSkill(skillId);
+              if (initialQuest != null) {
+                state.addTask(
+                  Task(
+                    id: uid(),
+                    title: initialQuest.title,
+                    skillId: skillId,
+                    xpReward: 20,
+                    type: TaskType.shortTerm,
+                    priority: Priority.medium,
+                    minimumAction: initialQuest.minimumAction,
+                    treeNodeId: initialQuest.treeNodeId,
+                  ),
+                );
+              }
+            },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = AppStateProvider.of(context);
     final isDark = s.isDark;
 
-    return Scaffold(
-      backgroundColor: isDark
-          ? const Color(0xFF0F0F13)
-          : const Color(0xFFF0F2F8),
-      body: Stack(
-        key: _pageStackKey,
-        children: [
-          Column(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final mobileShell = constraints.maxWidth < 760;
+
+        void changeMode(WorkspaceMode mode) {
+          if (_mode == mode) return;
+          setState(() => _mode = mode);
+        }
+
+        return Scaffold(
+          backgroundColor: isDark
+              ? const Color(0xFF0F0F13)
+              : const Color(0xFFF0F2F8),
+          body: Stack(
+            key: _pageStackKey,
             children: [
-              TopBar(
-                isDark: isDark,
-                onToggle: widget.onToggleTheme,
-                state: s,
-                mode: _mode,
-                onModeChanged: (mode) {
-                  if (_mode == mode) return;
-                  setState(() => _mode = mode);
-                },
-                rewardsKey: _rewardsButtonKey,
-                onRewardsTap: () => _openRewardsDialog(s),
-              ),
-              ProfileBar(isDark: isDark),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-                  child: MotionFadeSlideSwitcher(
-                    child: switch (_mode) {
-                      WorkspaceMode.act => _ActWorkspace(
-                        key: const ValueKey('act-workspace'),
-                        onComplete: _onComplete,
-                        onMinimumAction: _onMinimumAction,
-                      ),
-                      WorkspaceMode.plan => _PlanWorkspace(
-                        key: const ValueKey('plan-workspace'),
-                        isDark: isDark,
-                        onOpenMasteryMap: () =>
-                            setState(() => _mode = WorkspaceMode.mastery),
-                      ),
-                      WorkspaceMode.mastery => _MasteryWorkspace(
-                        key: const ValueKey('mastery-workspace'),
-                        isDark: isDark,
-                        onComplete: _onComplete,
-                      ),
-                      WorkspaceMode.progress => _ProgressWorkspace(
-                        key: const ValueKey('progress-workspace'),
-                        state: s,
-                        isDark: isDark,
-                        onOpenDailyVictories: () => showDialog(
-                          context: context,
-                          builder: (_) => DailyVictoriesDialog(state: s),
-                        ),
-                        onOpenCharacterTimeline: () => showDialog(
-                          context: context,
-                          builder: (_) => CharacterTimelineDialog(state: s),
-                        ),
-                        onOpenWeekly: () => showDialog(
-                          context: context,
-                          builder: (_) => WeeklyAnalyticsDialog(state: s),
-                        ),
-                        onOpenStats: () => showDialog(
-                          context: context,
-                          builder: (_) => StatsDialog(state: s),
-                        ),
-                        onOpenCalendar: () => showDialog(
-                          context: context,
-                          builder: (_) => CalendarDialog(state: s),
-                        ),
-                        onOpenBosses: () => showDialog(
-                          context: context,
-                          builder: (_) => BossesDialog(state: s),
-                        ),
-                        onOpenAchievements: () => showDialog(
-                          context: context,
-                          builder: (_) => AchievementsDialog(
-                            achievements: s.achievements,
-                            isDark: isDark,
-                          ),
-                        ),
-                        onOpenHistory: () => showDialog(
-                          context: context,
-                          builder: (_) =>
-                              HistoryDialog(history: s.history, isDark: isDark),
-                        ),
-                        onOpenRewards: () => _openRewardsDialog(s),
-                      ),
-                    },
+              Column(
+                children: [
+                  TopBar(
+                    isDark: isDark,
+                    onToggle: widget.onToggleTheme,
+                    state: s,
+                    mode: _mode,
+                    onModeChanged: changeMode,
+                    rewardsKey: _rewardsButtonKey,
+                    onRewardsTap: () => _openRewardsDialog(s),
+                    showModeSwitch: !mobileShell,
                   ),
-                ),
+                  ProfileBar(isDark: isDark),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                      child: MotionFadeSlideSwitcher(
+                        child: switch (_mode) {
+                          WorkspaceMode.act => _ActWorkspace(
+                            key: const ValueKey('act-workspace'),
+                            onComplete: _onComplete,
+                            onMinimumAction: _onMinimumAction,
+                            onCreateFirstSkill: () => _addSkill(context),
+                          ),
+                          WorkspaceMode.plan => _PlanWorkspace(
+                            key: const ValueKey('plan-workspace'),
+                            isDark: isDark,
+                            onOpenMasteryMap: () =>
+                                setState(() => _mode = WorkspaceMode.mastery),
+                          ),
+                          WorkspaceMode.mastery => _MasteryWorkspace(
+                            key: const ValueKey('mastery-workspace'),
+                            isDark: isDark,
+                            onComplete: _onComplete,
+                          ),
+                          WorkspaceMode.progress => _ProgressWorkspace(
+                            key: const ValueKey('progress-workspace'),
+                            state: s,
+                            isDark: isDark,
+                            onOpenDailyVictories: () => showDialog(
+                              context: context,
+                              builder: (_) => DailyVictoriesDialog(state: s),
+                            ),
+                            onOpenCharacterTimeline: () => showDialog(
+                              context: context,
+                              builder: (_) => CharacterTimelineDialog(state: s),
+                            ),
+                            onOpenWeekly: () => showDialog(
+                              context: context,
+                              builder: (_) => WeeklyAnalyticsDialog(state: s),
+                            ),
+                            onOpenStats: () => showDialog(
+                              context: context,
+                              builder: (_) => StatsDialog(state: s),
+                            ),
+                            onOpenCalendar: () => showDialog(
+                              context: context,
+                              builder: (_) => CalendarDialog(state: s),
+                            ),
+                            onOpenBosses: () => showDialog(
+                              context: context,
+                              builder: (_) => BossesDialog(state: s),
+                            ),
+                            onOpenAchievements: () => showDialog(
+                              context: context,
+                              builder: (_) => AchievementsDialog(
+                                achievements: s.achievements,
+                                isDark: isDark,
+                              ),
+                            ),
+                            onOpenHistory: () => showDialog(
+                              context: context,
+                              builder: (_) => HistoryDialog(
+                                history: s.history,
+                                isDark: isDark,
+                              ),
+                            ),
+                            onOpenRewards: () => _openRewardsDialog(s),
+                          ),
+                        },
+                      ),
+                    ),
+                  ),
+                  if (mobileShell)
+                    _MobileWorkspaceNav(
+                      mode: _mode,
+                      isDark: isDark,
+                      onChanged: changeMode,
+                    ),
+                ],
               ),
+              if (_rewardNotice != null)
+                _RewardNoticePopover(
+                  notice: _rewardNotice!,
+                  anchor: _rewardNoticeAnchor,
+                  isDark: isDark,
+                  onShow: () => _openRewardsDialog(s),
+                  onHide: () => setState(() => _rewardNotice = null),
+                ),
+              ..._bubbles,
             ],
           ),
-          if (_rewardNotice != null)
-            _RewardNoticePopover(
-              notice: _rewardNotice!,
-              anchor: _rewardNoticeAnchor,
-              isDark: isDark,
-              onShow: () => _openRewardsDialog(s),
-              onHide: () => setState(() => _rewardNotice = null),
-            ),
-          ..._bubbles,
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -839,11 +998,13 @@ class _MainPageState extends State<MainPage> {
 class _ActWorkspace extends StatelessWidget {
   final void Function(String taskId, Offset position) onComplete;
   final void Function(String taskId, Offset position) onMinimumAction;
+  final VoidCallback onCreateFirstSkill;
 
   const _ActWorkspace({
     super.key,
     required this.onComplete,
     required this.onMinimumAction,
+    required this.onCreateFirstSkill,
   });
 
   @override
@@ -853,6 +1014,7 @@ class _ActWorkspace extends StatelessWidget {
         TodayDashboard(
           onComplete: onComplete,
           onMinimumAction: onMinimumAction,
+          onCreateFirstSkill: onCreateFirstSkill,
         ),
         const SizedBox(height: 8),
         Expanded(
@@ -935,8 +1097,7 @@ class _ProgressWorkspace extends StatelessWidget {
       child: ProgressHubContent(
         state: state,
         isDark: isDark,
-        subtitle:
-            'Здесь живут аналитика, календарь, боссы, достижения и награды. Режим без срочности: только понять прогресс.',
+        subtitle: 'Что получилось, какой навык вырос и что продолжить.',
         onOpenDailyVictories: onOpenDailyVictories,
         onOpenCharacterTimeline: onOpenCharacterTimeline,
         onOpenWeekly: onOpenWeekly,
@@ -967,8 +1128,8 @@ class _SkillTaskWorkspace extends StatelessWidget {
         if (constraints.maxWidth < 760) {
           return Column(
             children: [
-              const SizedBox(height: 280, child: SkillsPanel()),
-              const SizedBox(height: 10),
+              const _CompactSkillSelector(),
+              const SizedBox(height: 8),
               Expanded(
                 child: TasksPanel(
                   onComplete: onComplete,
@@ -999,6 +1160,219 @@ class _SkillTaskWorkspace extends StatelessWidget {
   }
 }
 
+class _CompactSkillSelector extends StatelessWidget {
+  const _CompactSkillSelector();
+
+  @override
+  Widget build(BuildContext context) {
+    final state = AppStateProvider.of(context);
+    final isDark = state.isDark;
+    final txt = textColor(isDark);
+    final sub = subtext(isDark);
+    final selectedSkill = state.selectedSkill;
+
+    return SizedBox(
+      height: 98,
+      child: AppPanel(
+        isDark: isDark,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.bolt, color: const Color(0xFF4A9EFF), size: 16),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      selectedSkill == null
+                          ? 'Выберите навык'
+                          : 'Фокус: ${selectedSkill.name}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: txt,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  SmallBtn(
+                    label: 'Навык',
+                    icon: Icons.add,
+                    color: const Color(0xFF4A9EFF),
+                    tooltip: 'Создать навык и первый квест',
+                    onTap: () => _addSkill(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: state.skills.isEmpty
+                    ? Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Создайте навык — приложение сразу добавит первый этап и первый квест.',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: sub,
+                            fontSize: 11.5,
+                            height: 1.2,
+                          ),
+                        ),
+                      )
+                    : ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: state.skills.length,
+                        separatorBuilder: (_, _) => const SizedBox(width: 7),
+                        itemBuilder: (_, index) {
+                          final skill = state.skills[index];
+                          final selected = state.selectedSkillId == skill.id;
+                          return _CompactSkillChip(
+                            skill: skill,
+                            selected: selected,
+                            isDark: isDark,
+                            taskCount: state.activeTaskCountForSkill(skill.id),
+                            onTap: () => state.selectSkill(skill.id),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _addSkill(BuildContext context) {
+    final state = AppStateProvider.of(context);
+    showDialog(
+      context: context,
+      builder: (_) => AddSkillDialog(
+        isDark: state.isDark,
+        onSave:
+            (
+              name,
+              goal,
+              checklist,
+              color,
+              icon,
+              initialTreeNodes,
+              initialQuest,
+            ) {
+              final skillId = uid();
+              state.addSkill(
+                Skill(
+                  id: skillId,
+                  name: name,
+                  goal: goal,
+                  color: color,
+                  icon: icon,
+                  checklist: checklist,
+                  treeNodes: initialTreeNodes,
+                ),
+              );
+              state.selectSkill(skillId);
+              if (initialQuest != null) {
+                state.addTask(
+                  Task(
+                    id: uid(),
+                    title: initialQuest.title,
+                    skillId: skillId,
+                    xpReward: 20,
+                    type: TaskType.shortTerm,
+                    priority: Priority.medium,
+                    minimumAction: initialQuest.minimumAction,
+                    treeNodeId: initialQuest.treeNodeId,
+                  ),
+                );
+              }
+            },
+      ),
+    );
+  }
+}
+
+class _CompactSkillChip extends StatefulWidget {
+  final Skill skill;
+  final bool selected;
+  final bool isDark;
+  final int taskCount;
+  final VoidCallback onTap;
+
+  const _CompactSkillChip({
+    required this.skill,
+    required this.selected,
+    required this.isDark,
+    required this.taskCount,
+    required this.onTap,
+  });
+
+  @override
+  State<_CompactSkillChip> createState() => _CompactSkillChipState();
+}
+
+class _CompactSkillChipState extends State<_CompactSkillChip> {
+  @override
+  Widget build(BuildContext context) {
+    final skill = widget.skill;
+    final sub = subtext(widget.isDark);
+    final color = skill.color;
+
+    return PressFeedback(
+      scale: 0.97,
+      onTap: widget.onTap,
+      child: AnimatedContainer(
+        duration: kMotionStandard,
+        curve: kMotionCurve,
+        constraints: const BoxConstraints(minWidth: 118, maxWidth: 162),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        decoration: BoxDecoration(
+          color: widget.selected
+              ? color.withAlpha(widget.isDark ? 30 : 20)
+              : color.withAlpha(widget.isDark ? 12 : 8),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: widget.selected ? color.withAlpha(90) : color.withAlpha(34),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(skill.icon, color: color, size: 15),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                skill.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: widget.selected ? color : textColor(widget.isDark),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              '${widget.taskCount}',
+              style: TextStyle(
+                color: widget.selected ? color : sub,
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _RewardNotice {
   final List<String> chestTitles;
   final List<String> buffTitles;
@@ -1021,11 +1395,13 @@ class _RewardNotice {
           ? 'Открыто достижение'
           : 'Открыты достижения';
     }
-    if (hasChests && hasBuffs) return 'Награды обновлены';
+    if (hasChests && hasBuffs) return 'Трофеи обновлены';
     if (hasChests) {
       return chestTitles.length == 1 ? 'Получен сундук' : 'Получены сундуки';
     }
-    return buffTitles.length == 1 ? 'Активирован бафф' : 'Активированы баффы';
+    return buffTitles.length == 1
+        ? 'Пассивный эффект активен'
+        : 'Пассивные эффекты активны';
   }
 
   String get subtitle {
@@ -1041,7 +1417,7 @@ class _RewardNotice {
       parts.add(
         buffTitles.length == 1
             ? buffTitles.first
-            : '${buffTitles.length} активных баффа',
+            : '${buffTitles.length} пассивных эффекта',
       );
     }
     if (hasAchievements) {

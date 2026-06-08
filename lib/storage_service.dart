@@ -555,7 +555,7 @@ class StorageService {
   SkillTreeNode _decodeSkillTreeNode(Map<String, dynamic> d) {
     return SkillTreeNode(
       id: _readString(d, 'id', uid()),
-      title: _readString(d, 'title', 'Узел навыка'),
+      title: _readString(d, 'title', 'Этап навыка'),
       description: _readString(d, 'description'),
       xpReward: _readInt(d, 'xpReward', 20),
       requiredQuestCompletions: _readInt(d, 'requiredQuestCompletions', 3),
@@ -707,7 +707,7 @@ class StorageService {
     final d = _decodeMap(json);
     return Boss(
       id: _readString(d, 'id', uid()),
-      title: _readString(d, 'title', 'Босс'),
+      title: _readString(d, 'title', 'Сопротивление'),
       skillId: _readString(d, 'skillId'),
       hp: _readInt(d, 'hp', 100),
       maxHp: _readPositiveInt(d, 'maxHp', 100),
@@ -762,7 +762,7 @@ class StorageService {
     return Buff(
       id: _readString(d, 'id', uid()),
       type: _readEnum(BuffType.values, d['type'], BuffType.nextQuestXpBoost),
-      title: _readString(d, 'title', 'Бафф'),
+      title: _readString(d, 'title', 'Пассивный эффект'),
       description: _readString(d, 'description'),
       bonusPercent: _readInt(d, 'bonusPercent'),
       charges: _readInt(d, 'charges'),

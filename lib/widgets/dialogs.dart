@@ -259,7 +259,7 @@ class _AchievementCard extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// HISTORY DIALOG  (unchanged)
+// HISTORY DIALOG
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class HistoryDialog extends StatelessWidget {
@@ -285,19 +285,36 @@ class HistoryDialog extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(22, 20, 16, 14),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'История персонажа',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                      color: txt,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Журнал XP',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            color: txt,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Подробности закрытых квестов, XP и откатов.',
+                          style: TextStyle(
+                            color: sub,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 12),
                   PressFeedback(
                     scale: 0.94,
-                    tooltip: 'Закрыть историю',
+                    tooltip: 'Закрыть журнал',
                     onTap: () => Navigator.pop(context),
                     child: Icon(Icons.close, color: sub, size: 22),
                   ),
@@ -314,12 +331,12 @@ class HistoryDialog extends StatelessWidget {
                           Icon(Icons.menu_book, color: sub, size: 38),
                           const SizedBox(height: 12),
                           Text(
-                            'История пуста',
+                            'Журнал пока пуст',
                             style: TextStyle(color: sub, fontSize: 15),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Выполни задачу — она появится здесь',
+                            'Закрой первый квест — здесь появятся детали роста',
                             style: TextStyle(
                               color: sub.withAlpha(160),
                               fontSize: 12,
@@ -392,7 +409,7 @@ class _HistoryCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    e.isCompletion ? 'Цель выполнена' : 'Выполнение отменено',
+                    e.isCompletion ? 'Квест закрыт' : 'Откат квеста',
                     style: TextStyle(
                       color: sub,
                       fontSize: 11,
@@ -426,7 +443,7 @@ class _HistoryCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            e.isCompletion ? '+${e.xp} опыта' : '-${e.xp} опыта',
+            e.isCompletion ? '+${e.xp} XP' : '-${e.xp} XP',
             style: TextStyle(
               color: e.isCompletion ? c : const Color(0xFFFF3B30),
               fontWeight: FontWeight.bold,
@@ -686,17 +703,79 @@ class _ColorChoiceButtonState extends State<_ColorChoiceButton> {
 //            showing all icons at once (2 rows visible, scrollable vertically).
 // ═══════════════════════════════════════════════════════════════════════════════
 
+typedef SkillSaveCallback =
+    void Function(
+      String name,
+      String goal,
+      List<String> checklist,
+      Color color,
+      IconData icon,
+      List<SkillTreeNode> initialTreeNodes,
+      InitialSkillQuestDraft? initialQuest,
+    );
+
+class InitialSkillQuestDraft {
+  final String title;
+  final String minimumAction;
+  final String? treeNodeId;
+
+  const InitialSkillQuestDraft({
+    required this.title,
+    required this.minimumAction,
+    required this.treeNodeId,
+  });
+}
+
+class _FirstRunPathStep extends StatelessWidget {
+  final String number;
+  final String label;
+  final Color color;
+
+  const _FirstRunPathStep({
+    required this.number,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withAlpha(24),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withAlpha(95)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '$number.',
+            style: TextStyle(
+              color: color,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class AddSkillDialog extends StatefulWidget {
   final bool isDark;
   final Skill? existing;
-  final Function(
-    String name,
-    String goal,
-    List<String> checklist,
-    Color color,
-    IconData icon,
-  )
-  onSave;
+  final SkillSaveCallback onSave;
   const AddSkillDialog({
     super.key,
     required this.isDark,
@@ -711,7 +790,12 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
   final _nameCtrl = TextEditingController();
   final _goalCtrl = TextEditingController();
   final _checkCtrl = TextEditingController();
+  final _firstStageCtrl = TextEditingController(text: 'Основа');
+  final _firstQuestCtrl = TextEditingController();
+  final _firstMinimumCtrl = TextEditingController();
   final List<String> _items = [];
+  bool _criteriaExpanded = false;
+  bool _showValidation = false;
   Color _color = const Color(0xFF4A9EFF);
   IconData _icon = Icons.fitness_center;
 
@@ -734,6 +818,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
       _nameCtrl.text = ex.name;
       _goalCtrl.text = ex.goal;
       _items.addAll(ex.checklist);
+      _criteriaExpanded = ex.checklist.isNotEmpty;
       _color = ex.color;
       _icon = ex.icon;
     }
@@ -744,6 +829,9 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
     _nameCtrl.dispose();
     _goalCtrl.dispose();
     _checkCtrl.dispose();
+    _firstStageCtrl.dispose();
+    _firstQuestCtrl.dispose();
+    _firstMinimumCtrl.dispose();
     super.dispose();
   }
 
@@ -786,6 +874,10 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
                 ),
               ),
               const SizedBox(height: 16),
+              if (widget.existing == null) ...[
+                _buildFirstRunPathIntro(fBg, txt, sub, bdr),
+                const SizedBox(height: 14),
+              ],
               DlgField(
                 label: 'Название навыка',
                 ctrl: _nameCtrl,
@@ -804,6 +896,29 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
                 bdr: bdr,
                 min: 2,
               ),
+              if (widget.existing == null) ...[
+                const SizedBox(height: 10),
+                DlgField(
+                  label: 'Первый этап',
+                  ctrl: _firstStageCtrl,
+                  fBg: fBg,
+                  txt: txt,
+                  sub: sub,
+                  bdr: bdr,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Стартовая ступень мастерства. Квесты позже будут двигать этот этап.',
+                  style: TextStyle(
+                    color: sub,
+                    fontSize: 11.5,
+                    height: 1.3,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _buildFirstActionSection(fBg, txt, sub, bdr),
+              ],
               const SizedBox(height: 14),
 
               // ── Icon grid (scrollable, 2 rows visible) ──────────────────────────
@@ -867,79 +982,291 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
               ),
               const SizedBox(height: 14),
 
-              // ── Checklist ────────────────────────────────────────────────────────
-              SubLbl('Чек-лист', sub),
-              const SizedBox(height: 8),
-              ..._items.asMap().entries.map(
-                (e) => MotionListItem(
-                  key: ValueKey('skill-check-${e.key}-${e.value}'),
-                  index: e.key,
-                  slide: 4,
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.check_box_outline_blank,
-                          size: 15,
-                          color: sub,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            e.value,
-                            style: TextStyle(color: txt, fontSize: 13),
-                          ),
-                        ),
-                        Tooltip(
-                          message: 'Удалить пункт чек-листа',
-                          child: GestureDetector(
-                            onTap: () => setState(() => _items.removeAt(e.key)),
-                            child: const Icon(
-                              Icons.close,
-                              size: 15,
-                              color: Color(0xFFFF3B30),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _checkCtrl,
-                      style: TextStyle(color: txt, fontSize: 13),
-                      decoration: InputDecoration(
-                        hintText: '+ Добавить пункт',
-                        hintStyle: TextStyle(color: sub, fontSize: 13),
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                      onSubmitted: (_) => _addItem(),
-                    ),
-                  ),
-                  Tooltip(
-                    message: 'Добавить пункт чек-листа',
-                    child: GestureDetector(
-                      onTap: _addItem,
-                      child: const Icon(
-                        Icons.add_circle_outline,
-                        color: Color(0xFF4A9EFF),
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              _buildCriteriaSection(fBg, txt, sub, bdr),
               const SizedBox(height: 22),
-              DlgActions(onCancel: () => Navigator.pop(context), onSave: _save),
+              DlgActions(
+                onCancel: () => Navigator.pop(context),
+                onSave: _save,
+                saveLabel: widget.existing == null ? 'Создать' : 'Сохранить',
+              ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildFirstRunPathIntro(Color fBg, Color txt, Color sub, Color bdr) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: fBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: bdr),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              _FirstRunPathStep(number: '1', label: 'Навык', color: _color),
+              Icon(Icons.chevron_right, color: sub, size: 17),
+              _FirstRunPathStep(
+                number: '2',
+                label: 'Первый этап',
+                color: _color,
+              ),
+              Icon(Icons.chevron_right, color: sub, size: 17),
+              _FirstRunPathStep(
+                number: '3',
+                label: 'Первый квест',
+                color: _color,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Создайте направление роста, стартовую ступень и действие, которое можно начать сегодня.',
+            style: TextStyle(
+              color: sub,
+              fontSize: 11.5,
+              height: 1.3,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFirstActionSection(Color fBg, Color txt, Color sub, Color bdr) {
+    final warn =
+        _showValidation &&
+        (_firstQuestCtrl.text.trim().isEmpty ||
+            _firstMinimumCtrl.text.trim().isEmpty);
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: fBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: warn ? const Color(0xFFFF3B30).withAlpha(150) : bdr,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.flag_outlined, color: _color, size: 17),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Первое действие',
+                  style: TextStyle(
+                    color: txt,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Новый навык сразу получит квест-практику. Минимальный шаг — это то, что можно сделать сегодня.',
+            style: TextStyle(
+              color: sub,
+              fontSize: 11.5,
+              height: 1.3,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 10),
+          DlgField(
+            label: 'Первый квест',
+            ctrl: _firstQuestCtrl,
+            fBg: fBg,
+            txt: txt,
+            sub: sub,
+            bdr: bdr,
+          ),
+          const SizedBox(height: 10),
+          DlgField(
+            label: 'Минимальный шаг',
+            ctrl: _firstMinimumCtrl,
+            fBg: fBg,
+            txt: txt,
+            sub: sub,
+            bdr: bdr,
+            min: 2,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Например: открыть проект, сделать 5 минут, записать первый подход.',
+            style: TextStyle(
+              color: sub,
+              fontSize: 11,
+              height: 1.25,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          if (warn) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Заполни первый квест и минимальный шаг, чтобы навык не остался пустым.',
+              style: TextStyle(
+                color: const Color(0xFFFF3B30).withAlpha(220),
+                fontSize: 11.5,
+                height: 1.25,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCriteriaSection(Color fBg, Color txt, Color sub, Color bdr) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: fBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: bdr),
+      ),
+      child: Column(
+        children: [
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => setState(() => _criteriaExpanded = !_criteriaExpanded),
+            child: Row(
+              children: [
+                Icon(Icons.fact_check_outlined, color: _color, size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Критерии навыка',
+                    style: TextStyle(
+                      color: txt,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                Text(
+                  '${_items.length}',
+                  style: TextStyle(
+                    color: sub,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                AnimatedRotation(
+                  turns: _criteriaExpanded ? 0.5 : 0,
+                  duration: kMotionStandard,
+                  curve: kMotionCurve,
+                  child: Icon(Icons.expand_more, color: sub, size: 17),
+                ),
+              ],
+            ),
+          ),
+          MotionExpandable(
+            expanded: _criteriaExpanded,
+            expandedChild: Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Column(
+                children: [
+                  if (_items.isEmpty)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Необязательно: критерии помогают описать, что значит “навык стал лучше”.',
+                        style: TextStyle(
+                          color: sub,
+                          fontSize: 11.5,
+                          height: 1.3,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ..._items.asMap().entries.map(
+                    (e) => MotionListItem(
+                      key: ValueKey('skill-criteria-${e.key}-${e.value}'),
+                      index: e.key,
+                      slide: 4,
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.check_box_outline_blank,
+                              size: 15,
+                              color: sub,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                e.value,
+                                style: TextStyle(color: txt, fontSize: 13),
+                              ),
+                            ),
+                            Tooltip(
+                              message: 'Удалить критерий навыка',
+                              child: GestureDetector(
+                                onTap: () =>
+                                    setState(() => _items.removeAt(e.key)),
+                                child: const Icon(
+                                  Icons.close,
+                                  size: 15,
+                                  color: Color(0xFFFF3B30),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _checkCtrl,
+                          style: TextStyle(color: txt, fontSize: 13),
+                          decoration: InputDecoration(
+                            hintText: '+ Добавить критерий',
+                            hintStyle: TextStyle(color: sub, fontSize: 13),
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                          onSubmitted: (_) => _addItem(),
+                        ),
+                      ),
+                      Tooltip(
+                        message: 'Добавить критерий навыка',
+                        child: GestureDetector(
+                          onTap: _addItem,
+                          child: const Icon(
+                            Icons.add_circle_outline,
+                            color: Color(0xFF4A9EFF),
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -956,8 +1283,49 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
 
   void _save() {
     if (_nameCtrl.text.trim().isEmpty) return;
-    widget.onSave(_nameCtrl.text.trim(), _goalCtrl.text, _items, _color, _icon);
+    final isNew = widget.existing == null;
+    if (isNew &&
+        (_firstQuestCtrl.text.trim().isEmpty ||
+            _firstMinimumCtrl.text.trim().isEmpty)) {
+      setState(() => _showValidation = true);
+      return;
+    }
+    final initialTreeNodes = _initialTreeNodes();
+    widget.onSave(
+      _nameCtrl.text.trim(),
+      _goalCtrl.text,
+      _items,
+      _color,
+      _icon,
+      initialTreeNodes,
+      _initialQuest(initialTreeNodes),
+    );
     Navigator.pop(context);
+  }
+
+  InitialSkillQuestDraft? _initialQuest(List<SkillTreeNode> initialTreeNodes) {
+    if (widget.existing != null) return null;
+    return InitialSkillQuestDraft(
+      title: _firstQuestCtrl.text.trim(),
+      minimumAction: _firstMinimumCtrl.text.trim(),
+      treeNodeId: initialTreeNodes.firstOrNull?.id,
+    );
+  }
+
+  List<SkillTreeNode> _initialTreeNodes() {
+    if (widget.existing != null) return [];
+    final title = _firstStageCtrl.text.trim().isEmpty
+        ? 'Основа'
+        : _firstStageCtrl.text.trim();
+    return [
+      SkillTreeNode(
+        id: uid(),
+        title: title,
+        description: '',
+        xpReward: 30,
+        requiredQuestCompletions: 3,
+      ),
+    ];
   }
 }
 
@@ -1035,10 +1403,10 @@ class _SkillTreeDialogState extends State<SkillTreeDialog> {
                     ),
                   ),
                   SmallBtn(
-                    label: 'Новый корень',
+                    label: 'Новый этап',
                     icon: Icons.add,
                     color: skill.color,
-                    tooltip: 'Создать новый корневой узел карты',
+                    tooltip: 'Создать первый этап карты',
                     onTap: () => _showAddNode(context, skill),
                   ),
                   const SizedBox(width: 10),
@@ -1242,8 +1610,8 @@ class _SkillTreeIntro extends StatelessWidget {
         border: Border.all(color: color.withAlpha(40)),
       ),
       child: Text(
-        'Узел = этап навыка. Квесты = действия, которые двигают этап. '
-        'Освоение узла = зафиксированный milestone.',
+        'Этап навыка = ступень мастерства. Квесты = действия, которые двигают этап. '
+        'Освоение этапа = зафиксированный milestone.',
         style: TextStyle(
           color: subtext(isDark),
           fontSize: 12,
@@ -1737,7 +2105,7 @@ class _EmptyNodeInspector extends StatelessWidget {
         Icon(Icons.account_tree_outlined, color: color, size: 30),
         const SizedBox(height: 12),
         Text(
-          'Выберите узел',
+          'Выберите этап',
           style: TextStyle(
             color: textColor(isDark),
             fontSize: 17,
@@ -1746,7 +2114,7 @@ class _EmptyNodeInspector extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text(
-          'Узел — это этап навыка. Создавайте квесты для узла, выполняйте их и фиксируйте освоение.',
+          'Этап — это ступень навыка. Создавайте квесты для этапа, выполняйте их и фиксируйте освоение.',
           style: TextStyle(
             color: subtext(isDark),
             fontSize: 12.5,
@@ -1755,7 +2123,7 @@ class _EmptyNodeInspector extends StatelessWidget {
         ),
         const Spacer(),
         SmallBtn(
-          label: 'Первый узел',
+          label: 'Первый этап',
           icon: Icons.add,
           color: color,
           onTap: onAddRoot ?? () {},
@@ -1880,7 +2248,7 @@ class _SelectedNodeInspector extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         Text(
-          'Квесты узла',
+          'Квесты этапа',
           style: TextStyle(
             color: txt,
             fontSize: 13,
@@ -1892,7 +2260,7 @@ class _SelectedNodeInspector extends StatelessWidget {
           child: linkedTasks.isEmpty
               ? Center(
                   child: Text(
-                    'Пока нет квестов.\nСоздайте квест, чтобы двинуть узел.',
+                    'Пока нет квестов.\nСоздайте квест, чтобы двинуть этап.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: sub,
@@ -1924,7 +2292,7 @@ class _SelectedNodeInspector extends StatelessWidget {
               onTap: onAddQuest ?? () {},
             ),
             SmallBtn(
-              label: 'Дочерний узел',
+              label: 'Следующий этап',
               icon: Icons.account_tree,
               color: skill.color,
               onTap: onAddChild ?? () {},
@@ -1945,7 +2313,7 @@ class _SelectedNodeInspector extends StatelessWidget {
             const SizedBox(width: 10),
             PressFeedback(
               scale: 0.94,
-              tooltip: 'Удалить узел',
+              tooltip: 'Удалить этап',
               onTap: onDelete ?? () {},
               child: Icon(Icons.delete_outline, color: sub, size: 21),
             ),
@@ -2171,7 +2539,7 @@ class _SkillTreeEmptyState extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           SmallBtn(
-            label: 'Добавить узел',
+            label: 'Добавить этап',
             icon: Icons.add,
             color: color,
             onTap: onAdd,
@@ -2240,7 +2608,7 @@ class _AddSkillTreeNodeDialogState extends State<AddSkillTreeNodeDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              DlgHeader(title: 'Новый узел карты', txtColor: txt),
+              DlgHeader(title: 'Новый этап карты', txtColor: txt),
               const SizedBox(height: 16),
               if (widget.parentNode != null) ...[
                 Container(
@@ -2273,7 +2641,7 @@ class _AddSkillTreeNodeDialogState extends State<AddSkillTreeNodeDialog> {
                 const SizedBox(height: 12),
               ],
               DlgField(
-                label: 'Название узла',
+                label: 'Название этапа',
                 ctrl: _titleCtrl,
                 fBg: fBg,
                 txt: txt,
@@ -2293,7 +2661,7 @@ class _AddSkillTreeNodeDialogState extends State<AddSkillTreeNodeDialog> {
               const SizedBox(height: 14),
               Row(
                 children: [
-                  SubLbl('Награда', sub),
+                  SubLbl('XP за освоение', sub),
                   const Spacer(),
                   TaskBadge(
                     icon: Icons.auto_awesome,
@@ -2313,7 +2681,7 @@ class _AddSkillTreeNodeDialogState extends State<AddSkillTreeNodeDialog> {
               ),
               Row(
                 children: [
-                  SubLbl('Размер узла', sub),
+                  SubLbl('Размер этапа', sub),
                   const Spacer(),
                   TaskBadge(
                     icon: Icons.flag,
@@ -2355,7 +2723,7 @@ class _AddSkillTreeNodeDialogState extends State<AddSkillTreeNodeDialog> {
               ),
               const SizedBox(height: 10),
               Text(
-                'Размер определяет, сколько связанных квестов нужно завершить перед освоением узла.',
+                'Размер определяет, сколько связанных квестов нужно завершить перед освоением этапа.',
                 style: TextStyle(
                   color: sub,
                   fontSize: 12,
@@ -2473,6 +2841,31 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   bool get _overCap => _xp > _softCap;
   bool get _hasMinimumAction =>
       _minimumActionEnabled && _minimumActionCtrl.text.trim().isNotEmpty;
+  bool get _showBigQuestTools =>
+      _type == TaskType.midTerm ||
+      _type == TaskType.longTerm ||
+      _subtasks.isNotEmpty;
+  String get _advancedSummary {
+    final parts = <String>[];
+    if (_type != TaskType.shortTerm) parts.add(typeLabel[_type]!);
+    if (_treeNodeId != null) parts.add('этап');
+    if (_notificationsEnabled) parts.add('напоминание');
+    if (_subtasks.isNotEmpty) parts.add('${_subtasks.length} шаг.');
+    if (_tags.isNotEmpty) parts.add('${_tags.length} конт.');
+    return parts.isEmpty
+        ? 'Поведение, этап, контексты и баланс'
+        : parts.join(' · ');
+  }
+
+  SkillTreeNode? get _initialStage {
+    if (widget.existing != null) return null;
+    final skill = widget.skill;
+    if (skill == null || widget.initialTreeNodeId == null) return null;
+    return skill.treeNodes
+        .where((node) => node.id == widget.initialTreeNodeId)
+        .firstOrNull;
+  }
+
   bool get _looksBigTask =>
       _type == TaskType.midTerm ||
       _type == TaskType.longTerm ||
@@ -2501,7 +2894,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
       return 'Лучше разбить';
     }
     if (!_hasSpecificTitle) return 'Уточни действие';
-    return 'Хорошая задача';
+    return 'Хороший квест';
   }
 
   void _refreshDraft() {
@@ -2542,6 +2935,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
       }
     } else {
       _treeNodeId = widget.initialTreeNodeId;
+      _minimumActionEnabled = widget.initialTreeNodeId != null;
     }
     _titleCtrl.addListener(_refreshDraft);
     _minimumActionCtrl.addListener(_refreshDraft);
@@ -2580,13 +2974,17 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
             children: [
               DlgHeader(
                 title: widget.existing != null
-                    ? 'Редактировать задачу'
-                    : 'Новая задача',
+                    ? 'Редактировать квест'
+                    : 'Новый квест',
                 txtColor: txt,
               ),
               const SizedBox(height: 16),
+              if (_initialStage case final stage?) ...[
+                _buildStageContextCard(stage, txt, sub, bdr, c, isDark),
+                const SizedBox(height: 14),
+              ],
               DlgField(
-                label: 'Название задачи',
+                label: 'Что сделать?',
                 ctrl: _titleCtrl,
                 fBg: fBg,
                 txt: txt,
@@ -2596,143 +2994,76 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
               const SizedBox(height: 16),
               _buildMinimumActionSection(fBg, txt, sub, bdr, c),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  SubLbl('Награда XP', sub),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: c.withAlpha(30),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '$_xp XP',
-                      style: TextStyle(
-                        color: c,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              Slider(
-                value: _xp.toDouble(),
-                min: 5,
-                max: 1000,
-                divisions: 199,
-                activeColor: c,
-                inactiveColor: c.withAlpha(40),
-                onChanged: (v) => setState(() => _xp = v.round()),
-              ),
-              AnimatedSize(
-                duration: kMotionSlow,
-                curve: kMotionCurve,
-                child: _overCap
-                    ? Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 7,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFF9500).withAlpha(20),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: const Color(0xFFFF9500).withAlpha(80),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.warning_amber_rounded,
-                              color: Color(0xFFFF9500),
-                              size: 15,
-                            ),
-                            const SizedBox(width: 7),
-                            Expanded(
-                              child: Text(
-                                'Не рекомендуется: лимит для «${typeLabel[_type]}» — $_softCap XP.',
-                                style: const TextStyle(
-                                  color: Color(0xFFFF9500),
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : const SizedBox.shrink(),
-              ),
-              SubLbl('Тип задачи', sub),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: TaskType.values.map((t) {
-                  final sel = _type == t;
-                  final tc = typeColor[t]!;
-                  return _DialogChoiceChip(
-                    label: typeLabel[t]!,
-                    color: tc,
-                    selected: sel,
-                    backgroundColor: fBg,
-                    borderColor: bdr,
-                    inactiveTextColor: sub,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    radius: 999,
-                    selectedWeight: FontWeight.w700,
-                    onTap: () => setState(() {
-                      _type = t;
-                      if (t == TaskType.repeating) {
-                        _advancedExpanded = true;
-                      }
-                    }),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 16),
-              SubLbl('Приоритет', sub),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: Priority.values.map((priority) {
-                  final sel = _priority == priority;
-                  final pc = priorityColor[priority]!;
-                  return _DialogChoiceChip(
-                    label: priorityLabel[priority]!,
-                    color: pc,
-                    selected: sel,
-                    backgroundColor: fBg,
-                    borderColor: bdr,
-                    inactiveTextColor: sub,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    radius: 999,
-                    selectedWeight: FontWeight.w700,
-                    onTap: () => setState(() => _priority = priority),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 16),
-              _buildQualityCheck(fBg, txt, sub, bdr, c),
-              const SizedBox(height: 16),
               _buildAdvancedSection(fBg, txt, sub, bdr, c, isDark),
               const SizedBox(height: 22),
-              DlgActions(onCancel: () => Navigator.pop(context), onSave: _save),
+              DlgActions(
+                onCancel: () => Navigator.pop(context),
+                onSave: _save,
+                saveLabel: widget.existing == null ? 'Создать' : 'Сохранить',
+              ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildStageContextCard(
+    SkillTreeNode stage,
+    Color txt,
+    Color sub,
+    Color bdr,
+    Color color,
+    bool isDark,
+  ) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(11),
+      decoration: BoxDecoration(
+        color: color.withAlpha(isDark ? 18 : 12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withAlpha(58)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: color.withAlpha(28),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(Icons.account_tree, color: color, size: 18),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Этап: ${stage.title}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: txt,
+                    fontSize: 13.2,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Этот квест двигает выбранный этап мастерства.',
+                  style: TextStyle(
+                    color: sub,
+                    fontSize: 11.5,
+                    height: 1.3,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -2767,7 +3098,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Минимальное действие',
+                      'Минимальный шаг',
                       style: TextStyle(
                         color: txt,
                         fontSize: 13,
@@ -2776,7 +3107,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Лёгкий вход, если задача кажется тяжёлой',
+                      'Лёгкий вход, если квест кажется тяжёлым',
                       style: TextStyle(color: sub, fontSize: 11.5),
                     ),
                   ],
@@ -2830,6 +3161,284 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     );
   }
 
+  Widget _advancedCard({
+    required bool isDark,
+    required Color bdr,
+    required Widget child,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF181820) : const Color(0xFFFFFFFF),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: bdr.withAlpha(180)),
+      ),
+      child: child,
+    );
+  }
+
+  Widget _buildXpSection(Color sub, Color bdr, Color color, bool isDark) {
+    return _advancedCard(
+      isDark: isDark,
+      bdr: bdr,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              SubLbl('XP за квест', sub),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 3,
+                ),
+                decoration: BoxDecoration(
+                  color: color.withAlpha(30),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '$_xp XP',
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          Slider(
+            value: _xp.toDouble(),
+            min: 5,
+            max: 1000,
+            divisions: 199,
+            activeColor: color,
+            inactiveColor: color.withAlpha(40),
+            onChanged: (v) => setState(() => _xp = v.round()),
+          ),
+          AnimatedSize(
+            duration: kMotionSlow,
+            curve: kMotionCurve,
+            child: _overCap
+                ? Container(
+                    margin: const EdgeInsets.only(top: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 7,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFF9500).withAlpha(20),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: const Color(0xFFFF9500).withAlpha(80),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.warning_amber_rounded,
+                          color: Color(0xFFFF9500),
+                          size: 15,
+                        ),
+                        const SizedBox(width: 7),
+                        Expanded(
+                          child: Text(
+                            'Не рекомендуется: лимит для «${typeLabel[_type]}» — $_softCap XP.',
+                            style: const TextStyle(
+                              color: Color(0xFFFF9500),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTypeSection(Color sub, Color bdr, bool isDark) {
+    return _advancedCard(
+      isDark: isDark,
+      bdr: bdr,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SubLbl('Тип квеста', sub),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: TaskType.values.map((t) {
+              final sel = _type == t;
+              final tc = typeColor[t]!;
+              return _DialogChoiceChip(
+                label: typeLabel[t]!,
+                color: tc,
+                selected: sel,
+                backgroundColor: isDark
+                    ? const Color(0xFF23232D)
+                    : const Color(0xFFF0F0F5),
+                borderColor: bdr,
+                inactiveTextColor: sub,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                radius: 999,
+                selectedWeight: FontWeight.w700,
+                onTap: () => setState(() {
+                  _type = t;
+                  if (t == TaskType.repeating) {
+                    _advancedExpanded = true;
+                  }
+                }),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPrioritySection(Color sub, Color bdr, bool isDark) {
+    return _advancedCard(
+      isDark: isDark,
+      bdr: bdr,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SubLbl('Ручной фокус', sub),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: Priority.values.map((priority) {
+              final sel = _priority == priority;
+              final pc = priorityColor[priority]!;
+              return _DialogChoiceChip(
+                label: priorityLabel[priority]!,
+                color: pc,
+                selected: sel,
+                backgroundColor: isDark
+                    ? const Color(0xFF23232D)
+                    : const Color(0xFFF0F0F5),
+                borderColor: bdr,
+                inactiveTextColor: sub,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                radius: 999,
+                selectedWeight: FontWeight.w700,
+                onTap: () => setState(() => _priority = priority),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBehaviorSection(
+    Color fBg,
+    Color txt,
+    Color sub,
+    Color bdr,
+    Color color,
+    bool isDark,
+  ) {
+    return _advancedCard(
+      isDark: isDark,
+      bdr: bdr,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.route_outlined, color: color, size: 16),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Поведение',
+                      style: TextStyle(
+                        color: txt,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Тип квеста, повторяемость и напоминание.',
+                      style: TextStyle(color: sub, fontSize: 11.3),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _buildTypeSection(sub, bdr, isDark),
+          if (_type == TaskType.repeating) ...[
+            const SizedBox(height: 10),
+            _buildRepeatSection(fBg, txt, sub, bdr, isDark),
+          ],
+          const SizedBox(height: 10),
+          _buildNotificationSection(fBg, txt, sub, bdr, color),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBalanceFocusSection(
+    Color sub,
+    Color bdr,
+    Color color,
+    bool isDark,
+  ) {
+    return _advancedCard(
+      isDark: isDark,
+      bdr: bdr,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.tune_rounded, color: color, size: 16),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Баланс и фокус',
+                  style: TextStyle(
+                    color: textColor(isDark),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 3),
+          Text(
+            'Вторичные настройки: ручной XP и фокус.',
+            style: TextStyle(color: sub, fontSize: 11.3),
+          ),
+          const SizedBox(height: 10),
+          _buildXpSection(sub, bdr, color, isDark),
+          const SizedBox(height: 10),
+          _buildPrioritySection(sub, bdr, isDark),
+        ],
+      ),
+    );
+  }
+
   Widget _buildAdvancedSection(
     Color fBg,
     Color txt,
@@ -2849,7 +3458,8 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
         children: [
           _sectionToggle(
             icon: Icons.tune_rounded,
-            title: 'Дополнительно',
+            title: 'Настройки квеста',
+            subtitle: _advancedSummary,
             expanded: _advancedExpanded,
             color: color,
             txt: txt,
@@ -2863,44 +3473,46 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (_type == TaskType.repeating) ...[
-                    _buildRepeatSection(fBg, txt, sub, bdr, isDark),
-                    const SizedBox(height: 12),
-                  ],
+                  _buildBehaviorSection(fBg, txt, sub, bdr, color, isDark),
+                  const SizedBox(height: 10),
                   if (widget.skill?.treeNodes.isNotEmpty ?? false) ...[
                     _buildTreeNodeSection(fBg, txt, sub, bdr, color, isDark),
                     const SizedBox(height: 10),
                   ],
+                  if (_showBigQuestTools) ...[
+                    _buildTextListEditor(
+                      title: 'Большой квест',
+                      hint: '+ Добавить шаг',
+                      items: _subtasks,
+                      ctrl: _subtaskCtrl,
+                      color: color,
+                      txt: txt,
+                      sub: sub,
+                      bdr: bdr,
+                      expanded: _subtasksExpanded,
+                      onToggle: () => setState(
+                        () => _subtasksExpanded = !_subtasksExpanded,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
                   _buildTextListEditor(
-                    title: 'Подзадачи',
-                    hint: '+ Добавить подзадачу',
-                    items: _subtasks,
-                    ctrl: _subtaskCtrl,
-                    color: color,
-                    txt: txt,
-                    sub: sub,
-                    bdr: bdr,
-                    expanded: _subtasksExpanded,
-                    onToggle: () =>
-                        setState(() => _subtasksExpanded = !_subtasksExpanded),
-                  ),
-                  const SizedBox(height: 10),
-                  _buildTextListEditor(
-                    title: 'Теги',
-                    hint: '+ Добавить тег',
+                    title: 'Контексты',
+                    hint: '+ Добавить контекст',
                     items: _tags,
                     ctrl: _tagCtrl,
                     color: color,
                     txt: txt,
                     sub: sub,
                     bdr: bdr,
-                    prefix: '#',
                     expanded: _tagsExpanded,
                     onToggle: () =>
                         setState(() => _tagsExpanded = !_tagsExpanded),
                   ),
                   const SizedBox(height: 10),
-                  _buildNotificationSection(fBg, txt, sub, bdr, color),
+                  _buildQualityCheck(fBg, txt, sub, bdr, color),
+                  const SizedBox(height: 10),
+                  _buildBalanceFocusSection(sub, bdr, color, isDark),
                 ],
               ),
             ),
@@ -2943,7 +3555,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Карта мастерства',
+                      'Этап мастерства',
                       style: TextStyle(
                         color: txt,
                         fontSize: 13,
@@ -2966,7 +3578,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
             runSpacing: 7,
             children: [
               _DialogChoiceChip(
-                label: 'Без узла',
+                label: 'Без этапа',
                 color: const Color(0xFF8E8E93),
                 selected: selectedNodeId == null,
                 backgroundColor: isDark
@@ -3138,7 +3750,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
             ),
             if (subtitle.isNotEmpty) ...[
               SizedBox(
-                width: compact ? 28 : 88,
+                width: compact ? 28 : 188,
                 child: Text(
                   subtitle,
                   textAlign: TextAlign.right,
@@ -3189,7 +3801,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _sectionToggle(
-            icon: title == 'Теги' ? Icons.sell_outlined : Icons.checklist,
+            icon: title == 'Контексты' ? Icons.sell_outlined : Icons.checklist,
             title: title,
             subtitle: '${items.length}',
             expanded: expanded,
@@ -3299,7 +3911,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     Color color,
   ) {
     final qualityColor = switch (_qualityStatus) {
-      'Хорошая задача' => const Color(0xFF34C759),
+      'Хороший квест' => const Color(0xFF34C759),
       'Уточни действие' => const Color(0xFFFFCC00),
       _ => const Color(0xFFFF9500),
     };
@@ -3316,7 +3928,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
         children: [
           _sectionToggle(
             icon: Icons.rule_folder_outlined,
-            title: 'Качество задачи',
+            title: 'Качество квеста',
             expanded: _qualityExpanded,
             color: qualityColor,
             txt: txt,
@@ -3347,8 +3959,8 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                   const SizedBox(height: 6),
                   _qualityRow(
                     ok: _xp > 0,
-                    okLabel: 'Есть XP-награда',
-                    warnLabel: 'Нужна XP-награда',
+                    okLabel: 'XP настроен',
+                    warnLabel: 'Добавь XP для обратной связи',
                     txt: txt,
                     sub: sub,
                   ),
@@ -3356,7 +3968,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                   _qualityRow(
                     ok: !_looksBigTask || _subtasks.isNotEmpty,
                     okLabel: 'Структура уже разбита на шаги',
-                    warnLabel: 'Для большой задачи лучше добавить 2–3 шага',
+                    warnLabel: 'Для большого квеста лучше добавить 2–3 шага',
                     txt: txt,
                     sub: sub,
                   ),
@@ -3374,7 +3986,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                         border: Border.all(color: color.withAlpha(48)),
                       ),
                       child: Text(
-                        'Задача выглядит большой. Добавь минимум или 2–3 шага, чтобы легче начать.',
+                        'Квест выглядит большим. Добавь минимум или 2–3 шага, чтобы легче начать.',
                         style: TextStyle(
                           color: txt,
                           fontSize: 11.5,
@@ -3583,7 +4195,7 @@ class StatsDialog extends StatelessWidget {
                   ),
                   const SizedBox(width: 10),
                   Text(
-                    'Статистика',
+                    'Срез роста',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 18,
@@ -3593,7 +4205,7 @@ class StatsDialog extends StatelessWidget {
                   const Spacer(),
                   PressFeedback(
                     scale: 0.94,
-                    tooltip: 'Закрыть статистику',
+                    tooltip: 'Закрыть срез роста',
                     onTap: () => Navigator.pop(context),
                     child: Icon(Icons.close, color: sub, size: 22),
                   ),
@@ -3606,11 +4218,13 @@ class StatsDialog extends StatelessWidget {
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   children: [
+                    _buildGrowthSnapshot(state, isDark, txt, sub),
+                    const SizedBox(height: 12),
                     Row(
                       children: [
                         Expanded(
                           child: _StatCard(
-                            title: 'Выполнено задач',
+                            title: 'Выполнено квестов',
                             value: '${state.totalTasksCompleted}',
                             icon: Icons.check_circle,
                             color: const Color(0xFF34C759),
@@ -3671,12 +4285,71 @@ class StatsDialog extends StatelessWidget {
     );
   }
 
+  Widget _buildGrowthSnapshot(AppState s, bool isDark, Color txt, Color sub) {
+    final summary =
+        'Закрыто ${s.totalTasksCompleted} квестов · лучшая серия ${s.bestStreak} дн. · ур. ${s.profile.level} · ${s.profile.totalXpEarned} XP';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF4A9EFF).withAlpha(12),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF4A9EFF).withAlpha(38)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: const Color(0xFF4A9EFF).withAlpha(isDark ? 28 : 22),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.auto_stories,
+              color: Color(0xFF4A9EFF),
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Коротко о росте',
+                  style: TextStyle(
+                    color: txt,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  summary,
+                  style: TextStyle(
+                    color: sub,
+                    fontSize: 12,
+                    height: 1.25,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSkillStats(AppState s, bool isDark, Color txt, Color sub) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'По навыкам',
+          'Навыки и квесты',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: txt,
@@ -3760,7 +4433,7 @@ class StatsDialog extends StatelessWidget {
     final chartColor = const Color(0xFF4A9EFF);
 
     return _ChartPanel(
-      title: 'XP за 7 дней',
+      title: 'Ритм XP',
       subtitle: maxXp == 0
           ? 'Пока тихая неделя. Первый квест сразу оживит график.'
           : 'Ритм недели виден по дням, а не только по общему числу.',
@@ -3863,7 +4536,7 @@ class StatsDialog extends StatelessWidget {
 
     if (points.isEmpty) {
       return _ChartPanel(
-        title: 'Прогресс навыков',
+        title: 'Навыки ближе к уровню',
         subtitle: 'Добавьте навык, чтобы здесь появился RPG-срез развития.',
         icon: Icons.auto_graph,
         color: chartColor,
@@ -3873,7 +4546,7 @@ class StatsDialog extends StatelessWidget {
     }
 
     return _ChartPanel(
-      title: 'Прогресс навыков',
+      title: 'Навыки ближе к уровню',
       subtitle: 'Быстрый срез: какие навыки ближе всего к следующему уровню.',
       icon: Icons.auto_graph,
       color: chartColor,
@@ -4008,7 +4681,7 @@ class StatsDialog extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _TodayStatItem(
-                label: 'Задач',
+                label: 'Квестов',
                 value: '${stats?.tasksCompleted ?? 0}',
                 color: const Color(0xFF4A9EFF),
               ),
@@ -4257,6 +4930,7 @@ class RewardsDialog extends StatefulWidget {
 
 class _RewardsDialogState extends State<RewardsDialog> {
   _RewardReveal? _lastReveal;
+  bool _buffsExpanded = false;
 
   @override
   Widget build(BuildContext context) {
@@ -4293,7 +4967,7 @@ class _RewardsDialogState extends State<RewardsDialog> {
                   const Icon(Icons.redeem, color: Color(0xFFFFCC00), size: 22),
                   const SizedBox(width: 10),
                   Text(
-                    'Награды и баффы',
+                    'Трофеи после действий',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 18,
@@ -4303,7 +4977,7 @@ class _RewardsDialogState extends State<RewardsDialog> {
                   const Spacer(),
                   PressFeedback(
                     scale: 0.94,
-                    tooltip: 'Закрыть награды и баффы',
+                    tooltip: 'Закрыть трофеи',
                     onTap: () => Navigator.pop(context),
                     child: Icon(Icons.close, color: sub, size: 22),
                   ),
@@ -4321,7 +4995,7 @@ class _RewardsDialogState extends State<RewardsDialog> {
                       children: [
                         Expanded(
                           child: _StatCard(
-                            title: 'Неоткрыто',
+                            title: 'Новые сундуки',
                             value: '${unopened.length}',
                             icon: Icons.inventory_2,
                             color: const Color(0xFFFFCC00),
@@ -4331,7 +5005,7 @@ class _RewardsDialogState extends State<RewardsDialog> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: _StatCard(
-                            title: 'Активные баффы',
+                            title: 'Пассивные эффекты',
                             value: '${buffs.length}',
                             icon: Icons.bolt,
                             color: const Color(0xFF34C759),
@@ -4342,7 +5016,7 @@ class _RewardsDialogState extends State<RewardsDialog> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'Награды появляются за заметные рывки: сильный день, рубеж серии или победу над боссом.',
+                      'Трофеи появляются после заметных действий: сильного дня, рубежа серии или победы над сопротивлением.',
                       style: TextStyle(color: sub, fontSize: 12, height: 1.35),
                     ),
                     MotionExpandable(
@@ -4360,7 +5034,7 @@ class _RewardsDialogState extends State<RewardsDialog> {
                             ),
                     ),
                     Text(
-                      'Сундуки',
+                      'Новые сундуки',
                       style: TextStyle(
                         color: txt,
                         fontSize: 14,
@@ -4375,7 +5049,7 @@ class _RewardsDialogState extends State<RewardsDialog> {
                               icon: Icons.inventory_2_outlined,
                               title: 'Пока нет сундуков',
                               subtitle:
-                                  'Закрой сильный день, удержи серию или победи босса, чтобы получить награду.',
+                                  'Закрой сильный день, удержи серию или пройди событие сопротивления, чтобы получить трофей.',
                               isDark: isDark,
                             )
                           : Column(
@@ -4404,48 +5078,99 @@ class _RewardsDialogState extends State<RewardsDialog> {
                             ),
                     ),
                     const SizedBox(height: 18),
-                    Text(
-                      'Активные баффы',
-                      style: TextStyle(
-                        color: txt,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () =>
+                          setState(() => _buffsExpanded = !_buffsExpanded),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.bolt,
+                              color: const Color(0xFF34C759).withAlpha(190),
+                              size: 16,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Пассивные эффекты',
+                                style: TextStyle(
+                                  color: txt,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            TaskBadge(
+                              label: '${buffs.length}',
+                              color: const Color(0xFF34C759),
+                            ),
+                            const SizedBox(width: 8),
+                            Icon(
+                              _buffsExpanded
+                                  ? Icons.expand_less
+                                  : Icons.expand_more,
+                              color: sub,
+                              size: 18,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    MotionFadeSlideSwitcher(
-                      child: buffs.isEmpty
-                          ? _RewardsEmptyState(
-                              key: const ValueKey('empty-buffs'),
-                              icon: Icons.bolt_outlined,
-                              title: 'Нет активных баффов',
-                              subtitle:
-                                  'Открой сундук, и здесь появится временное усиление для следующих квестов.',
-                              isDark: isDark,
-                            )
-                          : Column(
-                              key: const ValueKey('buff-list'),
-                              children: buffs.asMap().entries.map((entry) {
-                                final buff = entry.value;
-                                return MotionListItem(
-                                  key: ValueKey('buff-${buff.id}'),
-                                  index: entry.key,
-                                  slide: 5,
-                                  child: _ActiveBuffCard(
-                                    buff: buff,
-                                    skill: buff.skillId == null
-                                        ? null
-                                        : widget.state.skills
-                                              .where(
-                                                (skill) =>
-                                                    skill.id == buff.skillId,
-                                              )
-                                              .firstOrNull,
-                                    isDark: isDark,
-                                  ),
-                                );
-                              }).toList(),
-                            ),
+                    MotionExpandable(
+                      expanded: _buffsExpanded,
+                      collapsedChild: Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          buffs.isEmpty
+                              ? 'Эффектов сейчас нет. Они появятся после открытия сундуков.'
+                              : 'Эффекты применятся сами, когда подойдут к квесту.',
+                          style: TextStyle(
+                            color: sub,
+                            fontSize: 11.5,
+                            height: 1.35,
+                          ),
+                        ),
+                      ),
+                      expandedChild: Padding(
+                        padding: const EdgeInsets.only(top: 10),
+                        child: MotionFadeSlideSwitcher(
+                          child: buffs.isEmpty
+                              ? _RewardsEmptyState(
+                                  key: const ValueKey('empty-buffs'),
+                                  icon: Icons.bolt_outlined,
+                                  title: 'Нет пассивных эффектов',
+                                  subtitle:
+                                      'Открой сундук, и здесь появится временное усиление для следующих квестов.',
+                                  isDark: isDark,
+                                )
+                              : Column(
+                                  key: const ValueKey('buff-list'),
+                                  children: buffs.asMap().entries.map((entry) {
+                                    final buff = entry.value;
+                                    return MotionListItem(
+                                      key: ValueKey('buff-${buff.id}'),
+                                      index: entry.key,
+                                      slide: 5,
+                                      child: _ActiveBuffCard(
+                                        buff: buff,
+                                        skill: buff.skillId == null
+                                            ? null
+                                            : widget.state.skills
+                                                  .where(
+                                                    (skill) =>
+                                                        skill.id ==
+                                                        buff.skillId,
+                                                  )
+                                                  .firstOrNull,
+                                        isDark: isDark,
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -4731,7 +5456,7 @@ class _RewardChestCard extends StatelessWidget {
             label: 'Открыть',
             icon: Icons.auto_awesome,
             color: rarityColor,
-            tooltip: 'Открыть сундук и получить награду',
+            tooltip: 'Открыть сундук и получить трофей',
             onTap: onOpen,
           ),
         ],
@@ -4934,7 +5659,7 @@ class _BossesDialogState extends State<BossesDialog> {
                   const Icon(Icons.shield, color: Color(0xFFFF2D55), size: 22),
                   const SizedBox(width: 10),
                   Text(
-                    'Боссы',
+                    'События сопротивления',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 18,
@@ -4944,7 +5669,7 @@ class _BossesDialogState extends State<BossesDialog> {
                   const Spacer(),
                   PressFeedback(
                     scale: 0.94,
-                    tooltip: 'Закрыть боссов',
+                    tooltip: 'Закрыть события сопротивления',
                     onTap: () => Navigator.pop(context),
                     child: Icon(Icons.close, color: sub, size: 22),
                   ),
@@ -4957,7 +5682,7 @@ class _BossesDialogState extends State<BossesDialog> {
             MotionExpandable(
               expanded: _expanded,
               collapsedChild: Tooltip(
-                message: 'Показать объяснение механики боссов',
+                message: 'Показать объяснение событий сопротивления',
                 child: GestureDetector(
                   onTap: () => setState(() => _expanded = true),
                   child: Container(
@@ -4970,7 +5695,7 @@ class _BossesDialogState extends State<BossesDialog> {
                         Icon(Icons.info_outline, color: sub, size: 16),
                         const SizedBox(width: 8),
                         Text(
-                          'Что такое боссы?',
+                          'Зачем здесь сопротивление?',
                           style: TextStyle(color: sub, fontSize: 12),
                         ),
                         const Spacer(),
@@ -5002,7 +5727,7 @@ class _BossesDialogState extends State<BossesDialog> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'Что такое боссы?',
+                          'События сопротивления',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: txt,
@@ -5025,7 +5750,7 @@ class _BossesDialogState extends State<BossesDialog> {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'Босс — это плохая привычка или негативная черта. Теперь он слабеет не только от серии, но и от важных задач, лёгких стартов и общего прогресса по навыку.',
+                      'Сопротивление — это образ препятствия на пути навыка. Оно слабеет от выполненных квестов, лёгких стартов и общего прогресса, но не требует отдельного управления каждый день.',
                       style: TextStyle(color: sub, fontSize: 12, height: 1.4),
                     ),
                     const SizedBox(height: 10),
@@ -5055,12 +5780,12 @@ class _BossesDialogState extends State<BossesDialog> {
                             Icon(Icons.shield_outlined, color: sub, size: 38),
                             const SizedBox(height: 12),
                             Text(
-                              'Нет активных боссов',
+                              'Нет событий сопротивления',
                               style: TextStyle(color: sub, fontSize: 15),
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Создайте босса для навыка',
+                              'Их можно добавить для навыка, где нужен образ препятствия.',
                               style: TextStyle(
                                 color: sub.withAlpha(160),
                                 fontSize: 12,
@@ -5101,10 +5826,10 @@ class _BossesDialogState extends State<BossesDialog> {
                   Expanded(
                     child: HoverScale(
                       child: SmallBtn(
-                        label: 'Добавить босса',
+                        label: 'Добавить событие',
                         icon: Icons.add,
                         color: const Color(0xFFFF2D55),
-                        tooltip: 'Создать босса-привычку',
+                        tooltip: 'Добавить событие сопротивления',
                         onTap: () => _showAddBoss(context, widget.state),
                       ),
                     ),
@@ -5276,7 +6001,7 @@ class _BossCard extends StatelessWidget {
                 ),
               const SizedBox(width: 8),
               Tooltip(
-                message: 'Удалить босса',
+                message: 'Удалить событие сопротивления',
                 child: GestureDetector(
                   onTap: onDelete,
                   child: Icon(Icons.delete_outline, color: sub, size: 18),
@@ -5437,10 +6162,10 @@ class _AddBossDialogState extends State<_AddBossDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              DlgHeader(title: 'Новый босс', txtColor: txt),
+              DlgHeader(title: 'Новое сопротивление', txtColor: txt),
               const SizedBox(height: 16),
               DlgField(
-                label: 'Название босса',
+                label: 'Название события',
                 ctrl: _titleCtrl,
                 fBg: fBg,
                 txt: txt,
@@ -5522,7 +6247,7 @@ class _AddBossDialogState extends State<_AddBossDialog> {
                 onChanged: (v) => setState(() => _streak = v.round()),
               ),
               Text(
-                'Серия остаётся главным рычагом, но босс также слабеет от важных задач, лёгких стартов и прогресса по навыку.',
+                'Серия остаётся главным рычагом, но сопротивление также слабеет от важных квестов, лёгких стартов и прогресса по навыку.',
                 style: TextStyle(color: sub, fontSize: 11, height: 1.3),
               ),
               const SizedBox(height: 16),
@@ -5595,6 +6320,7 @@ class _CalendarDialogState extends State<CalendarDialog> {
             Padding(
               padding: const EdgeInsets.fromLTRB(22, 20, 16, 14),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Icon(
                     Icons.calendar_month,
@@ -5602,18 +6328,34 @@ class _CalendarDialogState extends State<CalendarDialog> {
                     size: 22,
                   ),
                   const SizedBox(width: 10),
-                  Text(
-                    'Календарь',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                      color: txt,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Календарь квестов',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            color: txt,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Дни реальных действий и закрытых квестов.',
+                          style: TextStyle(
+                            color: sub,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 12),
                   PressFeedback(
                     scale: 0.94,
-                    tooltip: 'Закрыть календарь',
+                    tooltip: 'Закрыть календарь квестов',
                     onTap: () => Navigator.pop(context),
                     child: Icon(Icons.close, color: sub, size: 22),
                   ),
@@ -5851,7 +6593,7 @@ class _CalendarDialogState extends State<CalendarDialog> {
                 ),
                 const Spacer(),
                 Text(
-                  '${selectedEntries.length} выполн.',
+                  _calendarQuestCount(selectedEntries.length),
                   style: TextStyle(color: sub, fontSize: 12),
                 ),
               ],
@@ -5863,7 +6605,7 @@ class _CalendarDialogState extends State<CalendarDialog> {
                   ? Center(
                       key: const ValueKey('calendar-empty-day'),
                       child: Text(
-                        'Нет выполненных задач',
+                        'В этот день квесты не закрывались',
                         style: TextStyle(color: sub, fontSize: 12),
                       ),
                     )
@@ -5939,6 +6681,18 @@ class _CalendarDialogState extends State<CalendarDialog> {
         ],
       ),
     );
+  }
+
+  String _calendarQuestCount(int count) {
+    final mod10 = count % 10;
+    final mod100 = count % 100;
+    if (mod10 == 1 && mod100 != 11) {
+      return '$count квест';
+    }
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
+      return '$count квеста';
+    }
+    return '$count квестов';
   }
 
   void _selectMonth(int year, int month) {

@@ -121,7 +121,8 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
           isDark: isDark,
           icon: Icons.account_tree_outlined,
           title: 'Карта мастерства пока пустая',
-          subtitle: 'Создайте навык, а затем добавьте первые узлы мастерства.',
+          subtitle:
+              'Создайте навык: карта покажет этапы, а квесты останутся в панели деталей.',
         ),
       );
     }
@@ -148,7 +149,6 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
               state.removeTask(task.id);
               setState(() => _selection = null);
             },
-            onCompleteQuest: widget.onCompleteTask,
             onMasterNode: (skill, node) =>
                 state.masterSkillTreeNode(skill.id, node.id),
             onDeleteNode: (skill, node) {
@@ -433,7 +433,6 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
                                 state.removeTask(task.id);
                                 updateSelection(null);
                               },
-                              onCompleteQuest: widget.onCompleteTask,
                               onMasterNode: (skill, node) =>
                                   state.masterSkillTreeNode(skill.id, node.id),
                               onDeleteNode: (skill, node) {
@@ -498,7 +497,7 @@ class _MasteryMapHero extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    'Навыки раскрываются в карту мастерства. Квесты выбранного узла живут справа — canvas остаётся чистым.',
+                    'Карта показывает путь навыка: этапы, связи и следующий шаг мастерства. Квесты здесь — практика для этапов.',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -535,7 +534,6 @@ class _MasteryMapBody extends StatelessWidget {
   final void Function(Skill skill, SkillTreeNode? node) onAddQuest;
   final void Function(Skill skill, Task task) onEditQuest;
   final ValueChanged<Task> onDeleteQuest;
-  final void Function(String taskId, Offset position) onCompleteQuest;
   final void Function(Skill skill, SkillTreeNode node) onMasterNode;
   final void Function(Skill skill, SkillTreeNode node) onDeleteNode;
 
@@ -549,7 +547,6 @@ class _MasteryMapBody extends StatelessWidget {
     required this.onAddQuest,
     required this.onEditQuest,
     required this.onDeleteQuest,
-    required this.onCompleteQuest,
     required this.onMasterNode,
     required this.onDeleteNode,
     this.fullscreen = false,
@@ -565,16 +562,100 @@ class _MasteryMapBody extends StatelessWidget {
           isDark: isDark,
           selection: selection,
           onSelectSkill: (skill) {
-            if (selection?.skillId == skill.id) {
+            if (selection?.type == _MasterySelectionType.skill &&
+                selection?.skillId == skill.id) {
               onSelectionChanged(null);
               return;
             }
             onSelectionChanged(_MasterySelection.skill(skill.id));
           },
           onCollapse: () => onSelectionChanged(null),
-          onSelectNode: (skill, node) =>
-              onSelectionChanged(_MasterySelection.node(skill.id, node.id)),
+          onSelectNode: (skill, node) {
+            if (selection?.type == _MasterySelectionType.node &&
+                selection?.skillId == skill.id &&
+                selection?.nodeId == node.id) {
+              onSelectionChanged(_MasterySelection.skill(skill.id));
+              return;
+            }
+            onSelectionChanged(_MasterySelection.node(skill.id, node.id));
+          },
         );
+        if (narrow) {
+          final canvasHeight = fullscreen
+              ? (constraints.maxHeight * 0.68).clamp(420.0, 680.0).toDouble()
+              : (constraints.maxHeight * 0.58).clamp(340.0, 500.0).toDouble();
+
+          void openDetails() {
+            showModalBottomSheet<void>(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+              builder: (sheetContext) {
+                void closeThen(VoidCallback action) {
+                  Navigator.pop(sheetContext);
+                  action();
+                }
+
+                return SafeArea(
+                  top: false,
+                  child: FractionallySizedBox(
+                    heightFactor: 0.86,
+                    child: _MobileMasterySelectionPanel(
+                      state: state,
+                      isDark: isDark,
+                      selection: selection,
+                      onSelectSkill: (skill) {
+                        Navigator.pop(sheetContext);
+                        onSelectionChanged(_MasterySelection.skill(skill.id));
+                      },
+                      onSelectQuest: (skill, task) {
+                        Navigator.pop(sheetContext);
+                        onSelectionChanged(
+                          _MasterySelection.quest(
+                            skill.id,
+                            task.treeNodeId,
+                            task.id,
+                          ),
+                        );
+                      },
+                      onAddRoot: (skill) => closeThen(() => onAddRoot(skill)),
+                      onAddChild: (skill, node) =>
+                          closeThen(() => onAddChild(skill, node)),
+                      onAddQuest: (skill, node) =>
+                          closeThen(() => onAddQuest(skill, node)),
+                      onEditQuest: (skill, task) =>
+                          closeThen(() => onEditQuest(skill, task)),
+                      onDeleteQuest: (task) =>
+                          closeThen(() => onDeleteQuest(task)),
+                      onMasterNode: (skill, node) =>
+                          closeThen(() => onMasterNode(skill, node)),
+                      onDeleteNode: (skill, node) =>
+                          closeThen(() => onDeleteNode(skill, node)),
+                    ),
+                  ),
+                );
+              },
+            );
+          }
+
+          return SingleChildScrollView(
+            child: Column(
+              children: [
+                SizedBox(height: canvasHeight, child: canvas),
+                const SizedBox(height: 10),
+                _MasteryMobileSelectionSummary(
+                  state: state,
+                  isDark: isDark,
+                  selection: selection,
+                  onSelectSkill: (skill) =>
+                      onSelectionChanged(_MasterySelection.skill(skill.id)),
+                  onOpenDetails: selection == null ? null : openDetails,
+                ),
+              ],
+            ),
+          );
+        }
+
         final inspector = _MasteryMapInspector(
           state: state,
           isDark: isDark,
@@ -589,22 +670,9 @@ class _MasteryMapBody extends StatelessWidget {
           onAddQuest: onAddQuest,
           onEditQuest: onEditQuest,
           onDeleteQuest: onDeleteQuest,
-          onCompleteQuest: onCompleteQuest,
           onMasterNode: onMasterNode,
           onDeleteNode: onDeleteNode,
         );
-
-        if (narrow) {
-          return SingleChildScrollView(
-            child: Column(
-              children: [
-                SizedBox(height: fullscreen ? 640 : 520, child: canvas),
-                const SizedBox(height: 10),
-                inspector,
-              ],
-            ),
-          );
-        }
 
         return Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -656,6 +724,11 @@ class _OrbMasteryMapCanvas extends StatelessWidget {
 
           return Stack(
             children: [
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: _MasteryVectorGridPainter(isDark: isDark),
+                ),
+              ),
               Positioned.fill(
                 child: InteractiveViewer(
                   minScale: 0.48,
@@ -709,10 +782,10 @@ class _OrbMasteryMapCanvas extends StatelessWidget {
                               ),
                               duration: kMotionSlow,
                               curve: kMotionCurve,
-                              left: position.dx - 56,
-                              top: position.dy - 54,
-                              width: 112,
-                              height: 108,
+                              left: position.dx - 64,
+                              top: position.dy - 42,
+                              width: 128,
+                              height: 126,
                               child: AnimatedSwitcher(
                                 duration: kMotionSlow,
                                 switchInCurve: kMotionCurve,
@@ -975,15 +1048,6 @@ class _OrbMasteryMapPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final dotPaint = Paint()
-      ..color = (isDark ? Colors.white : Colors.black).withAlpha(7)
-      ..style = PaintingStyle.fill;
-    for (var x = 24.0; x < size.width; x += 42) {
-      for (var y = 24.0; y < size.height; y += 42) {
-        canvas.drawCircle(Offset(x, y), 1.05, dotPaint);
-      }
-    }
-
     final selectedSkill = layout.selectedSkill;
     final selectedCenter = selectedSkill == null
         ? null
@@ -1110,6 +1174,89 @@ class _OrbMasteryMapPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _OrbMasteryMapPainter oldDelegate) {
     return oldDelegate.layout != layout || oldDelegate.isDark != isDark;
+  }
+}
+
+class _MasteryVectorGridPainter extends CustomPainter {
+  final bool isDark;
+
+  const _MasteryVectorGridPainter({required this.isDark});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    _drawVectorGrid(canvas, size);
+  }
+
+  void _drawVectorGrid(Canvas canvas, Size size) {
+    const minorCell = 42.0;
+    const majorEvery = 5;
+    const majorCell = minorCell * majorEvery;
+    final gridColor = isDark ? Colors.white : const Color(0xFF182033);
+    final minorPaint = Paint()
+      ..color = gridColor.withAlpha(isDark ? 18 : 14)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.7
+      ..isAntiAlias = true;
+    final majorPaint = Paint()
+      ..color = gridColor.withAlpha(isDark ? 52 : 34)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.15
+      ..isAntiAlias = true;
+    final crossPaint = Paint()
+      ..color = gridColor.withAlpha(isDark ? 150 : 90)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.25
+      ..strokeCap = StrokeCap.round
+      ..isAntiAlias = true;
+    final dotPaint = Paint()
+      ..color = gridColor.withAlpha(isDark ? 115 : 70)
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+
+    for (var x = 0.0; x <= size.width; x += minorCell) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), minorPaint);
+    }
+    for (var y = 0.0; y <= size.height; y += minorCell) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), minorPaint);
+    }
+
+    for (var x = 0.0; x <= size.width; x += majorCell) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), majorPaint);
+    }
+    for (var y = 0.0; y <= size.height; y += majorCell) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), majorPaint);
+    }
+
+    for (var x = 0.0; x <= size.width; x += majorCell) {
+      for (var y = 0.0; y <= size.height; y += majorCell) {
+        _drawGridCross(canvas, Offset(x, y), crossPaint);
+      }
+    }
+
+    for (var x = majorCell / 2; x < size.width; x += majorCell) {
+      for (var y = majorCell / 2; y < size.height; y += majorCell) {
+        canvas.drawCircle(Offset(x, y), 1.1, dotPaint);
+      }
+    }
+  }
+
+  void _drawGridCross(Canvas canvas, Offset center, Paint paint) {
+    const half = 5.0;
+    canvas.drawLine(
+      Offset(center.dx - half, center.dy),
+      Offset(center.dx + half, center.dy),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(center.dx, center.dy - half),
+      Offset(center.dx, center.dy + half),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _MasteryVectorGridPainter oldDelegate) {
+    return oldDelegate.isDark != isDark;
   }
 }
 
@@ -1333,7 +1480,7 @@ class _SelectSkillHint extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Мастерство на карте, квесты — справа.',
+                  'Мастерство на карте, выполнение — в «Действовать».',
                   style: TextStyle(color: subtext(isDark), fontSize: 10.5),
                 ),
               ],
@@ -1547,6 +1694,866 @@ class _MapCanvasAction extends StatelessWidget {
   }
 }
 
+class _MasteryMobileSelectionSummary extends StatelessWidget {
+  final AppState state;
+  final bool isDark;
+  final _MasterySelection? selection;
+  final ValueChanged<Skill> onSelectSkill;
+  final VoidCallback? onOpenDetails;
+
+  const _MasteryMobileSelectionSummary({
+    required this.state,
+    required this.isDark,
+    required this.selection,
+    required this.onSelectSkill,
+    required this.onOpenDetails,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final currentSelection = selection;
+    final skill = currentSelection == null
+        ? null
+        : state.skills
+              .where((candidate) => candidate.id == currentSelection.skillId)
+              .firstOrNull;
+    final node = skill == null || currentSelection?.nodeId == null
+        ? null
+        : skill.treeNodes
+              .where((candidate) => candidate.id == currentSelection!.nodeId)
+              .firstOrNull;
+    final task = currentSelection?.taskId == null
+        ? null
+        : state.tasks
+              .where((candidate) => candidate.id == currentSelection!.taskId)
+              .firstOrNull;
+    final sub = subtext(isDark);
+
+    if (skill == null) {
+      return AppPanel(
+        isDark: isDark,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _InspectorTitle(
+                icon: Icons.touch_app_outlined,
+                color: const Color(0xFF4A9EFF),
+                title: 'Выберите навык',
+                subtitle: 'карта раскроет этапы, детали откроются отдельно',
+                isDark: isDark,
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'На карте виден путь мастерства. Нажмите на сферу навыка, чтобы посмотреть этапы.',
+                style: TextStyle(
+                  color: sub,
+                  fontSize: 12,
+                  height: 1.3,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 7,
+                runSpacing: 7,
+                children: state.skills
+                    .map(
+                      (skill) => _MobileMasterySkillChip(
+                        skill: skill,
+                        isDark: isDark,
+                        onTap: () => onSelectSkill(skill),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final title = switch (currentSelection?.type) {
+      _MasterySelectionType.node when node != null => 'Этап: ${node.title}',
+      _MasterySelectionType.quest when task != null =>
+        'Практика: ${task.title}',
+      _ => 'Путь: ${skill.name}',
+    };
+    final subtitle = switch (currentSelection?.type) {
+      _MasterySelectionType.node when node != null =>
+        '${state.completedTasksForTreeNode(skill.id, node.id)}/${node.questTarget} практики · ${skillTreeNodeStatusLabel[skill.treeNodeStatus(node)]}',
+      _MasterySelectionType.quest when task != null =>
+        task.isDone
+            ? 'засчитано в прогресс пути'
+            : 'выполнять лучше в «Действовать»',
+      _ =>
+        '${skill.masteredTreeNodeCount}/${skill.treeNodes.length} этапов освоено · ${state.tasksForSkill(skill.id).where((task) => !task.isDone).length} активн.',
+    };
+
+    return AppPanel(
+      isDark: isDark,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: skill.color.withAlpha(isDark ? 32 : 22),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                currentSelection?.type == _MasterySelectionType.node
+                    ? Icons.bolt_rounded
+                    : currentSelection?.type == _MasterySelectionType.quest
+                    ? Icons.flag
+                    : skill.icon,
+                color: skill.color,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: textColor(isDark),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: sub,
+                      fontSize: 11.5,
+                      height: 1.25,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (onOpenDetails != null) ...[
+              const SizedBox(width: 8),
+              SmallBtn(
+                label: 'Детали',
+                icon: Icons.expand_less,
+                color: const Color(0xFF4A9EFF),
+                onTap: onOpenDetails!,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MobileMasterySelectionPanel extends StatelessWidget {
+  final AppState state;
+  final bool isDark;
+  final _MasterySelection? selection;
+  final ValueChanged<Skill> onSelectSkill;
+  final void Function(Skill skill, Task task) onSelectQuest;
+  final ValueChanged<Skill> onAddRoot;
+  final void Function(Skill skill, SkillTreeNode node) onAddChild;
+  final void Function(Skill skill, SkillTreeNode? node) onAddQuest;
+  final void Function(Skill skill, Task task) onEditQuest;
+  final ValueChanged<Task> onDeleteQuest;
+  final void Function(Skill skill, SkillTreeNode node) onMasterNode;
+  final void Function(Skill skill, SkillTreeNode node) onDeleteNode;
+
+  const _MobileMasterySelectionPanel({
+    required this.state,
+    required this.isDark,
+    required this.selection,
+    required this.onSelectSkill,
+    required this.onSelectQuest,
+    required this.onAddRoot,
+    required this.onAddChild,
+    required this.onAddQuest,
+    required this.onEditQuest,
+    required this.onDeleteQuest,
+    required this.onMasterNode,
+    required this.onDeleteNode,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final currentSelection = selection;
+    final skill = currentSelection == null
+        ? null
+        : state.skills
+              .where((candidate) => candidate.id == currentSelection.skillId)
+              .firstOrNull;
+    final nodeId = currentSelection?.nodeId;
+    final taskId = currentSelection?.taskId;
+    final node = skill == null || nodeId == null
+        ? null
+        : skill.treeNodes
+              .where((candidate) => candidate.id == nodeId)
+              .firstOrNull;
+    final task = taskId == null
+        ? null
+        : state.tasks.where((candidate) => candidate.id == taskId).firstOrNull;
+
+    return AppPanel(
+      isDark: isDark,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: switch (currentSelection?.type) {
+          _MasterySelectionType.quest when skill != null && task != null =>
+            _MobileQuestMasteryPanel(
+              isDark: isDark,
+              skill: skill,
+              node: node,
+              task: task,
+              onEdit: () => onEditQuest(skill, task),
+              onDelete: () => onDeleteQuest(task),
+            ),
+          _MasterySelectionType.node when skill != null && node != null =>
+            _MobileNodeMasteryPanel(
+              state: state,
+              isDark: isDark,
+              skill: skill,
+              node: node,
+              onAddChild: () => onAddChild(skill, node),
+              onAddQuest: () => onAddQuest(skill, node),
+              onSelectQuest: (task) => onSelectQuest(skill, task),
+              onEditQuest: (task) => onEditQuest(skill, task),
+              onMaster: () => onMasterNode(skill, node),
+              onDelete: () => onDeleteNode(skill, node),
+            ),
+          _MasterySelectionType.skill when skill != null =>
+            _MobileSkillMasteryPanel(
+              state: state,
+              isDark: isDark,
+              skill: skill,
+              onAddRoot: () => onAddRoot(skill),
+              onAddQuest: () => onAddQuest(skill, null),
+              onSelectQuest: (task) => onSelectQuest(skill, task),
+              onEditQuest: (task) => onEditQuest(skill, task),
+            ),
+          _ => _MobileEmptyMasteryPanel(
+            state: state,
+            isDark: isDark,
+            onSelectSkill: onSelectSkill,
+          ),
+        },
+      ),
+    );
+  }
+}
+
+class _MobileEmptyMasteryPanel extends StatelessWidget {
+  final AppState state;
+  final bool isDark;
+  final ValueChanged<Skill> onSelectSkill;
+
+  const _MobileEmptyMasteryPanel({
+    required this.state,
+    required this.isDark,
+    required this.onSelectSkill,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final sub = subtext(isDark);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _InspectorTitle(
+          icon: Icons.touch_app_outlined,
+          color: const Color(0xFF4A9EFF),
+          title: 'Выберите навык',
+          subtitle: 'карта покажет этапы, практика откроется в панели',
+          isDark: isDark,
+        ),
+        const SizedBox(height: 10),
+        Text(
+          'На мобильном карта остаётся обзором пути. Практика этапов живёт в этой панели ниже canvas.',
+          style: TextStyle(
+            color: sub,
+            fontSize: 12,
+            height: 1.3,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 7,
+          runSpacing: 7,
+          children: state.skills
+              .map(
+                (skill) => _MobileMasterySkillChip(
+                  skill: skill,
+                  isDark: isDark,
+                  onTap: () => onSelectSkill(skill),
+                ),
+              )
+              .toList(),
+        ),
+      ],
+    );
+  }
+}
+
+class _MobileMasterySkillChip extends StatelessWidget {
+  final Skill skill;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  const _MobileMasterySkillChip({
+    required this.skill,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return PressFeedback(
+      scale: 0.97,
+      onTap: onTap,
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 170),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: skill.color.withAlpha(isDark ? 15 : 10),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: skill.color.withAlpha(48)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(skill.icon, color: skill.color, size: 15),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                skill.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: textColor(isDark),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              '${skill.masteredTreeNodeCount}/${skill.treeNodes.length}',
+              style: TextStyle(
+                color: skill.color,
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MobileSkillMasteryPanel extends StatelessWidget {
+  final AppState state;
+  final bool isDark;
+  final Skill skill;
+  final VoidCallback onAddRoot;
+  final VoidCallback onAddQuest;
+  final ValueChanged<Task> onSelectQuest;
+  final ValueChanged<Task> onEditQuest;
+
+  const _MobileSkillMasteryPanel({
+    required this.state,
+    required this.isDark,
+    required this.skill,
+    required this.onAddRoot,
+    required this.onAddQuest,
+    required this.onSelectQuest,
+    required this.onEditQuest,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tasks = state.tasksForSkill(skill.id);
+    final activeTasks = _sortedActiveQuests(
+      tasks.where((task) => !task.isDone),
+    );
+    final completedCount = tasks.where((task) => task.isDone).length;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _InspectorTitle(
+          icon: skill.icon,
+          color: skill.color,
+          title: skill.name,
+          subtitle: 'путь навыка',
+          isDark: isDark,
+        ),
+        const SizedBox(height: 12),
+        _MetricCard(
+          isDark: isDark,
+          color: skill.color,
+          title: 'Прогресс навыка',
+          value: '${skill.xp} / ${skill.xpNeeded} XP',
+          progress: skill.progress,
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 7,
+          runSpacing: 7,
+          children: [
+            TaskBadge(
+              label: '${skill.treeNodes.length} этап.',
+              color: skill.color,
+            ),
+            TaskBadge(
+              label: '${skill.masteredTreeNodeCount} освоено',
+              color: const Color(0xFF34C759),
+            ),
+            TaskBadge(
+              label: '${activeTasks.length} активн.',
+              color: const Color(0xFF4A9EFF),
+            ),
+            TaskBadge(
+              label: '$completedCount закрыто',
+              color: const Color(0xFF8E8E93),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _MobileMasteryQuestPreview(
+          title: 'Практика навыка',
+          tasks: activeTasks.take(3).toList(),
+          emptyText: 'Создайте практику или выберите этап на карте.',
+          isDark: isDark,
+          color: skill.color,
+          onSelectQuest: onSelectQuest,
+          onEditQuest: onEditQuest,
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            SmallBtn(
+              label: 'Новый этап',
+              icon: Icons.add,
+              color: skill.color,
+              onTap: onAddRoot,
+            ),
+            SmallBtn(
+              label: 'Квест к этапу',
+              icon: Icons.add_task,
+              color: const Color(0xFF4A9EFF),
+              onTap: onAddQuest,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _MobileNodeMasteryPanel extends StatelessWidget {
+  final AppState state;
+  final bool isDark;
+  final Skill skill;
+  final SkillTreeNode node;
+  final VoidCallback onAddChild;
+  final VoidCallback onAddQuest;
+  final ValueChanged<Task> onSelectQuest;
+  final ValueChanged<Task> onEditQuest;
+  final VoidCallback onMaster;
+  final VoidCallback onDelete;
+
+  const _MobileNodeMasteryPanel({
+    required this.state,
+    required this.isDark,
+    required this.skill,
+    required this.node,
+    required this.onAddChild,
+    required this.onAddQuest,
+    required this.onSelectQuest,
+    required this.onEditQuest,
+    required this.onMaster,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final status = skill.treeNodeStatus(node);
+    final statusColor = status == SkillTreeNodeStatus.active
+        ? skill.color
+        : skillTreeNodeStatusColor[status]!;
+    final completed = state.completedTasksForTreeNode(skill.id, node.id);
+    final target = node.questTarget;
+    final linkedTasks = state.tasksForTreeNode(skill.id, node.id);
+    final activeTasks = _sortedActiveQuests(
+      linkedTasks.where((task) => !task.isDone),
+    );
+    final ready = state.canMasterSkillTreeNode(skill.id, node.id);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _InspectorTitle(
+          icon: switch (status) {
+            SkillTreeNodeStatus.locked => Icons.lock,
+            SkillTreeNodeStatus.active => Icons.bolt_rounded,
+            SkillTreeNodeStatus.mastered => Icons.workspace_premium,
+          },
+          color: statusColor,
+          title: node.title,
+          subtitle: 'этап мастерства · ${skill.name}',
+          isDark: isDark,
+        ),
+        const SizedBox(height: 12),
+        _MetricCard(
+          isDark: isDark,
+          color: statusColor,
+          title: 'Практика для освоения',
+          value: '${math.min(completed, target)} / $target',
+          progress: (completed / target).clamp(0.0, 1.0),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 7,
+          runSpacing: 7,
+          children: [
+            TaskBadge(
+              icon: Icons.auto_awesome,
+              label: '+${node.xpReward} XP',
+              color: const Color(0xFFFFCC00),
+            ),
+            TaskBadge(
+              label: '${activeTasks.length} активн.',
+              color: const Color(0xFF4A9EFF),
+            ),
+            TaskBadge(
+              label: '$completed закрыто',
+              color: const Color(0xFF34C759),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _MobileMasteryQuestPreview(
+          title: 'Практика этапа',
+          tasks: activeTasks.take(3).toList(),
+          emptyText: 'Создайте практику для этого этапа.',
+          isDark: isDark,
+          color: skill.color,
+          onSelectQuest: onSelectQuest,
+          onEditQuest: onEditQuest,
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            SmallBtn(
+              label: 'Квест к этапу',
+              icon: Icons.add_task,
+              color: const Color(0xFF4A9EFF),
+              onTap: onAddQuest,
+            ),
+            SmallBtn(
+              label: 'Дочерний этап',
+              icon: Icons.account_tree,
+              color: skill.color,
+              onTap: onAddChild,
+            ),
+            _MasterNodeAction(
+              enabled: ready,
+              mastered: node.isMastered,
+              color: skill.color,
+              onTap: onMaster,
+            ),
+            PressFeedback(
+              scale: 0.94,
+              tooltip: 'Удалить этап',
+              onTap: onDelete,
+              child: Icon(
+                Icons.delete_outline,
+                color: subtext(isDark),
+                size: 21,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _MobileQuestMasteryPanel extends StatelessWidget {
+  final bool isDark;
+  final Skill skill;
+  final SkillTreeNode? node;
+  final Task task;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  const _MobileQuestMasteryPanel({
+    required this.isDark,
+    required this.skill,
+    required this.node,
+    required this.task,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = task.isDone ? const Color(0xFF34C759) : skill.color;
+    final sub = subtext(isDark);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _InspectorTitle(
+          icon: task.isDone ? Icons.check_circle : Icons.flag,
+          color: color,
+          title: task.title,
+          subtitle: node == null
+              ? 'практика навыка'
+              : 'практика этапа: ${node!.title}',
+          isDark: isDark,
+        ),
+        if (task.hasMinimumAction) ...[
+          const SizedBox(height: 10),
+          Text(
+            'Минимум: ${task.minimumAction}',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: sub,
+              fontSize: 12,
+              height: 1.25,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 7,
+          runSpacing: 7,
+          children: [
+            TaskBadge(
+              icon: Icons.auto_awesome,
+              label: '+${task.xpReward} XP',
+              color: const Color(0xFF4A9EFF),
+            ),
+            TaskBadge(
+              label: typeLabel[task.type]!,
+              color: typeColor[task.type]!,
+            ),
+            if (task.hasMinimumAction)
+              TaskBadge(
+                icon: Icons.bolt,
+                label: 'лёгкий старт',
+                color: const Color(0xFFFF9500),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          task.isDone
+              ? 'Эта практика уже засчитана в прогресс пути.'
+              : 'Карта показывает, что тренирует этот квест. Выполнять его лучше в разделе «Действовать».',
+          style: TextStyle(
+            color: sub,
+            fontSize: 12,
+            height: 1.3,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            SmallBtn(
+              label: 'Редактировать',
+              icon: Icons.edit,
+              color: const Color(0xFF4A9EFF),
+              onTap: onEdit,
+            ),
+            PressFeedback(
+              scale: 0.94,
+              tooltip: 'Удалить квест',
+              onTap: onDelete,
+              child: Icon(Icons.delete_outline, color: sub, size: 21),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _MobileMasteryQuestPreview extends StatelessWidget {
+  final String title;
+  final List<Task> tasks;
+  final String emptyText;
+  final bool isDark;
+  final Color color;
+  final ValueChanged<Task> onSelectQuest;
+  final ValueChanged<Task> onEditQuest;
+
+  const _MobileMasteryQuestPreview({
+    required this.title,
+    required this.tasks,
+    required this.emptyText,
+    required this.isDark,
+    required this.color,
+    required this.onSelectQuest,
+    required this.onEditQuest,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final sub = subtext(isDark);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: TextStyle(
+            color: textColor(isDark),
+            fontSize: 13,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 7),
+        if (tasks.isEmpty)
+          Text(
+            emptyText,
+            style: TextStyle(
+              color: sub,
+              fontSize: 11.8,
+              height: 1.3,
+              fontWeight: FontWeight.w600,
+            ),
+          )
+        else
+          ...tasks.map(
+            (task) => Padding(
+              padding: const EdgeInsets.only(bottom: 7),
+              child: _MobileMasteryQuestRow(
+                task: task,
+                isDark: isDark,
+                color: color,
+                onSelect: () => onSelectQuest(task),
+                onEdit: () => onEditQuest(task),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _MobileMasteryQuestRow extends StatelessWidget {
+  final Task task;
+  final bool isDark;
+  final Color color;
+  final VoidCallback onSelect;
+  final VoidCallback onEdit;
+
+  const _MobileMasteryQuestRow({
+    required this.task,
+    required this.isDark,
+    required this.color,
+    required this.onSelect,
+    required this.onEdit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final sub = subtext(isDark);
+
+    return PressFeedback(
+      scale: 0.985,
+      onTap: onSelect,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF14141C) : const Color(0xFFF4F5FA),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: borderColor(isDark)),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              task.isDone ? Icons.check_circle : Icons.radio_button_unchecked,
+              color: task.isDone ? const Color(0xFF34C759) : color,
+              size: 18,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    task.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: task.isDone ? sub : textColor(isDark),
+                      fontSize: _adaptiveQuestTitleFontSize(task.title),
+                      height: 1.12,
+                      fontWeight: FontWeight.w900,
+                      decoration: task.isDone
+                          ? TextDecoration.lineThrough
+                          : TextDecoration.none,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    task.hasMinimumAction
+                        ? 'Минимум есть · +${task.xpReward} XP'
+                        : '+${task.xpReward} XP',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: sub,
+                      fontSize: 10.8,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            PressFeedback(
+              scale: 0.9,
+              tooltip: 'Редактировать',
+              onTap: onEdit,
+              child: Icon(Icons.edit_outlined, color: sub, size: 17),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _MasteryMapInspector extends StatelessWidget {
   final AppState state;
   final bool isDark;
@@ -1558,7 +2565,6 @@ class _MasteryMapInspector extends StatelessWidget {
   final void Function(Skill skill, SkillTreeNode? node) onAddQuest;
   final void Function(Skill skill, Task task) onEditQuest;
   final ValueChanged<Task> onDeleteQuest;
-  final void Function(String taskId, Offset position) onCompleteQuest;
   final void Function(Skill skill, SkillTreeNode node) onMasterNode;
   final void Function(Skill skill, SkillTreeNode node) onDeleteNode;
 
@@ -1573,7 +2579,6 @@ class _MasteryMapInspector extends StatelessWidget {
     required this.onAddQuest,
     required this.onEditQuest,
     required this.onDeleteQuest,
-    required this.onCompleteQuest,
     required this.onMasterNode,
     required this.onDeleteNode,
   });
@@ -1624,16 +2629,15 @@ class _MasteryMapInspector extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: switch (currentSelection.type) {
-          _MasterySelectionType.quest when task != null => _QuestInspector(
-            state: state,
-            isDark: isDark,
-            skill: skill,
-            task: task,
-            node: node,
-            onEdit: () => onEditQuest(skill, task),
-            onDelete: () => onDeleteQuest(task),
-            onComplete: onCompleteQuest,
-          ),
+          _MasterySelectionType.quest when task != null =>
+            _QuestPracticeInspector(
+              isDark: isDark,
+              skill: skill,
+              task: task,
+              node: node,
+              onEdit: () => onEditQuest(skill, task),
+              onDelete: () => onDeleteQuest(task),
+            ),
           _MasterySelectionType.node when node != null => _NodeInspector(
             state: state,
             isDark: isDark,
@@ -1643,7 +2647,6 @@ class _MasteryMapInspector extends StatelessWidget {
             onAddQuest: () => onAddQuest(skill, node),
             onSelectQuest: (task) => onSelectQuest(skill, task),
             onEditQuest: (task) => onEditQuest(skill, task),
-            onCompleteQuest: onCompleteQuest,
             onMaster: () => onMasterNode(skill, node),
             onDelete: () => onDeleteNode(skill, node),
           ),
@@ -1655,7 +2658,6 @@ class _MasteryMapInspector extends StatelessWidget {
             onAddQuest: () => onAddQuest(skill, null),
             onSelectQuest: (task) => onSelectQuest(skill, task),
             onEditQuest: (task) => onEditQuest(skill, task),
-            onCompleteQuest: onCompleteQuest,
           ),
         },
       ),
@@ -1689,7 +2691,7 @@ class _EmptyMapInspector extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Text(
-          'Карта показывает все навыки как сферы. Нажмите на любую сферу, чтобы увидеть её узлы, связанные квесты и следующий шаг освоения.',
+          'Карта показывает все навыки как сферы. Нажмите на любую сферу, чтобы увидеть этапы, практику и следующий шаг освоения.',
           style: TextStyle(color: sub, fontSize: 12.5, height: 1.35),
         ),
         const SizedBox(height: 16),
@@ -1755,7 +2757,6 @@ class _SkillInspector extends StatelessWidget {
   final VoidCallback onAddQuest;
   final ValueChanged<Task> onSelectQuest;
   final ValueChanged<Task> onEditQuest;
-  final void Function(String taskId, Offset position) onCompleteQuest;
 
   const _SkillInspector({
     required this.state,
@@ -1765,7 +2766,6 @@ class _SkillInspector extends StatelessWidget {
     required this.onAddQuest,
     required this.onSelectQuest,
     required this.onEditQuest,
-    required this.onCompleteQuest,
   });
 
   @override
@@ -1818,7 +2818,7 @@ class _SkillInspector extends StatelessWidget {
           runSpacing: 7,
           children: [
             TaskBadge(
-              label: '${skill.treeNodes.length} узл.',
+              label: '${skill.treeNodes.length} этап.',
               color: skill.color,
             ),
             TaskBadge(
@@ -1830,14 +2830,14 @@ class _SkillInspector extends StatelessWidget {
               color: const Color(0xFF4A9EFF),
             ),
             TaskBadge(
-              label: '$doneTasks выполн.',
+              label: '$doneTasks закрыто',
               color: const Color(0xFF8E8E93),
             ),
           ],
         ),
         const SizedBox(height: 14),
         Text(
-          'Квесты навыка',
+          'Практика навыка',
           style: TextStyle(
             color: txt,
             fontSize: 13,
@@ -1847,30 +2847,28 @@ class _SkillInspector extends StatelessWidget {
         const SizedBox(height: 8),
         Expanded(
           child: _InspectorQuestList(
-            state: state,
             isDark: isDark,
             color: skill.color,
             sections: [
               _QuestListSection(
-                title: 'Активные',
+                title: 'Активная практика',
                 tasks: linkedActiveTasks,
-                emptyText: 'Привязанных активных квестов пока нет.',
+                emptyText: 'Создайте практику для этапа мастерства.',
               ),
               _QuestListSection(
-                title: 'Свободные без узла',
+                title: 'Практика без этапа',
                 tasks: freeActiveTasks,
-                emptyText: 'Все активные квесты уже привязаны к узлам.',
+                emptyText: 'Вся активная практика уже привязана к этапам.',
               ),
               _QuestListSection(
-                title: 'Выполненные',
+                title: 'Засчитанная практика',
                 tasks: completedTasks,
-                emptyText: 'Завершённых квестов пока нет.',
+                emptyText: 'Засчитанной практики пока нет.',
                 muted: true,
               ),
             ],
             onSelectQuest: onSelectQuest,
             onEditQuest: onEditQuest,
-            onCompleteQuest: onCompleteQuest,
           ),
         ),
         const SizedBox(height: 12),
@@ -1885,7 +2883,7 @@ class _SkillInspector extends StatelessWidget {
               onTap: onAddRoot,
             ),
             SmallBtn(
-              label: 'Квест',
+              label: 'Квест к этапу',
               icon: Icons.add_task,
               color: const Color(0xFF4A9EFF),
               onTap: onAddQuest,
@@ -1906,7 +2904,6 @@ class _NodeInspector extends StatelessWidget {
   final VoidCallback onAddQuest;
   final ValueChanged<Task> onSelectQuest;
   final ValueChanged<Task> onEditQuest;
-  final void Function(String taskId, Offset position) onCompleteQuest;
   final VoidCallback onMaster;
   final VoidCallback onDelete;
 
@@ -1919,7 +2916,6 @@ class _NodeInspector extends StatelessWidget {
     required this.onAddQuest,
     required this.onSelectQuest,
     required this.onEditQuest,
-    required this.onCompleteQuest,
     required this.onMaster,
     required this.onDelete,
   });
@@ -1967,7 +2963,7 @@ class _NodeInspector extends StatelessWidget {
         _MetricCard(
           isDark: isDark,
           color: statusColor,
-          title: 'Квесты для освоения',
+          title: 'Практика для освоения',
           value: '${math.min(completed, target)} / $target',
           progress: (completed / target).clamp(0.0, 1.0),
         ),
@@ -1987,14 +2983,14 @@ class _NodeInspector extends StatelessWidget {
               color: const Color(0xFF4A9EFF),
             ),
             TaskBadge(
-              label: '$completed выполн.',
+              label: '$completed закрыто',
               color: const Color(0xFF34C759),
             ),
           ],
         ),
         const SizedBox(height: 14),
         Text(
-          'Квесты узла',
+          'Практика этапа',
           style: TextStyle(
             color: textColor(isDark),
             fontSize: 13,
@@ -2004,25 +3000,23 @@ class _NodeInspector extends StatelessWidget {
         const SizedBox(height: 8),
         Expanded(
           child: _InspectorQuestList(
-            state: state,
             isDark: isDark,
             color: skill.color,
             sections: [
               _QuestListSection(
-                title: 'Активные квесты узла',
+                title: 'Активная практика',
                 tasks: activeNodeTasks,
                 emptyText: 'Создайте практику для этого этапа.',
               ),
               _QuestListSection(
-                title: 'Выполненные квесты узла',
+                title: 'Засчитанная практика',
                 tasks: completedNodeTasks,
-                emptyText: 'Выполненных квестов узла пока нет.',
+                emptyText: 'Засчитанной практики этапа пока нет.',
                 muted: true,
               ),
             ],
             onSelectQuest: onSelectQuest,
             onEditQuest: onEditQuest,
-            onCompleteQuest: onCompleteQuest,
           ),
         ),
         const SizedBox(height: 12),
@@ -2031,13 +3025,13 @@ class _NodeInspector extends StatelessWidget {
           runSpacing: 8,
           children: [
             SmallBtn(
-              label: 'Квест',
+              label: 'Квест к этапу',
               icon: Icons.add_task,
               color: const Color(0xFF4A9EFF),
               onTap: onAddQuest,
             ),
             SmallBtn(
-              label: 'Дочерний узел',
+              label: 'Следующий этап',
               icon: Icons.account_tree,
               color: skill.color,
               onTap: onAddChild,
@@ -2058,7 +3052,7 @@ class _NodeInspector extends StatelessWidget {
             const SizedBox(width: 10),
             PressFeedback(
               scale: 0.94,
-              tooltip: 'Удалить узел',
+              tooltip: 'Удалить этап',
               onTap: onDelete,
               child: Icon(Icons.delete_outline, color: sub, size: 21),
             ),
@@ -2069,152 +3063,38 @@ class _NodeInspector extends StatelessWidget {
   }
 }
 
-class _QuestInspector extends StatefulWidget {
-  final AppState state;
+class _QuestPracticeInspector extends StatelessWidget {
   final bool isDark;
   final Skill skill;
   final Task task;
   final SkillTreeNode? node;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
-  final void Function(String taskId, Offset position) onComplete;
 
-  const _QuestInspector({
-    required this.state,
+  const _QuestPracticeInspector({
     required this.isDark,
     required this.skill,
     required this.task,
     required this.node,
     required this.onEdit,
     required this.onDelete,
-    required this.onComplete,
   });
 
   @override
-  State<_QuestInspector> createState() => _QuestInspectorState();
-}
-
-class _QuestInspectorState extends State<_QuestInspector> {
-  late final TextEditingController _titleCtrl;
-  late final TextEditingController _minimumCtrl;
-  late int _xpReward;
-  late TaskType _type;
-  late Priority _priority;
-  late bool _minimumEnabled;
-  String? _treeNodeId;
-  bool _dirty = false;
-  bool _syncing = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _titleCtrl = TextEditingController();
-    _minimumCtrl = TextEditingController();
-    _syncFromTask();
-    _titleCtrl.addListener(_onTextChanged);
-    _minimumCtrl.addListener(_onTextChanged);
-  }
-
-  @override
-  void didUpdateWidget(covariant _QuestInspector oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.task.id != widget.task.id) {
-      _syncFromTask();
-    }
-  }
-
-  @override
-  void dispose() {
-    _titleCtrl.dispose();
-    _minimumCtrl.dispose();
-    super.dispose();
-  }
-
-  void _syncFromTask() {
-    _syncing = true;
-    final task = widget.task;
-    _titleCtrl.text = task.title;
-    _minimumCtrl.text = task.minimumAction;
-    _xpReward = task.xpReward;
-    _type = task.type;
-    _priority = task.priority;
-    _minimumEnabled = task.hasMinimumAction;
-    _treeNodeId = task.treeNodeId;
-    _dirty = false;
-    _syncing = false;
-  }
-
-  void _onTextChanged() {
-    if (_syncing || _dirty) return;
-    setState(() => _dirty = true);
-  }
-
-  void _markDirty(VoidCallback update) {
-    setState(() {
-      update();
-      _dirty = true;
-    });
-  }
-
-  void _save() {
-    final title = _titleCtrl.text.trim();
-    if (title.isEmpty) return;
-    widget.state.updateTask(
-      widget.task,
-      title: title,
-      xpReward: _xpReward,
-      type: _type,
-      repeatFrequency: widget.task.repeatFrequency,
-      repeatCustomDays: widget.task.repeatCustomDays,
-      priority: _priority,
-      minimumAction: _minimumEnabled ? _minimumCtrl.text.trim() : '',
-      subtasks: List.of(widget.task.subtasks),
-      tags: List.of(widget.task.tags),
-      notificationsEnabled: widget.task.notificationsEnabled,
-      notificationHour: widget.task.notificationHour,
-      notificationMinute: widget.task.notificationMinute,
-      treeNodeId: _treeNodeId,
-    );
-    AppFeedback.selection();
-    if (mounted) {
-      setState(() => _dirty = false);
-    }
-  }
-
-  void _toggleCompletion(BuildContext buttonContext) {
-    if (widget.task.isDone) {
-      AppFeedback.selection();
-      widget.state.uncompleteTask(widget.task.id);
-      return;
-    }
-
-    final box = buttonContext.findRenderObject() as RenderBox?;
-    widget.onComplete(
-      widget.task.id,
-      box?.localToGlobal(Offset.zero) ?? Offset.zero,
-    );
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final isDark = widget.isDark;
-    final skill = widget.skill;
-    final task = widget.task;
-    final node = widget.node;
+    final done = task.isDone;
+    final color = done ? const Color(0xFF34C759) : skill.color;
     final sub = subtext(isDark);
-    final nodes = skill.treeNodes;
-    final selectedNodeExists = nodes.any(
-      (candidate) => candidate.id == _treeNodeId,
-    );
-    final selectedNodeId = selectedNodeExists ? _treeNodeId : null;
 
     return ListView(
       children: [
         _InspectorTitle(
-          icon: task.isDone ? Icons.check_circle : Icons.flag,
-          color: task.isDone ? const Color(0xFF34C759) : skill.color,
+          icon: done ? Icons.check_circle : Icons.flag,
+          color: color,
           title: task.title,
-          subtitle: task.isDone ? 'завершённый квест' : 'квест на ветке',
+          subtitle: node == null
+              ? 'практика навыка'
+              : 'практика этапа: ${node!.title}',
           isDark: isDark,
         ),
         const SizedBox(height: 12),
@@ -2226,97 +3106,78 @@ class _QuestInspectorState extends State<_QuestInspector> {
               label: typeLabel[task.type]!,
               color: typeColor[task.type]!,
             ),
-            TaskBadge(
-              label: priorityLabel[task.priority]!,
-              color: priorityColor[task.priority]!,
-            ),
             TaskBadge(label: '+${task.xpReward} XP', color: skill.color),
+            if (done)
+              const TaskBadge(
+                icon: Icons.check_circle,
+                label: 'засчитано',
+                color: Color(0xFF34C759),
+              ),
           ],
         ),
-        const SizedBox(height: 14),
-        _InspectorTextField(
-          label: 'Название',
-          controller: _titleCtrl,
-          isDark: isDark,
-        ),
-        const SizedBox(height: 12),
-        _XpInlineEditor(
-          isDark: isDark,
-          color: skill.color,
-          xpReward: _xpReward,
-          onChanged: (value) => _markDirty(() => _xpReward = value),
-        ),
-        const SizedBox(height: 14),
-        _InspectorChoiceSection<TaskType>(
-          isDark: isDark,
-          title: 'Тип',
-          values: TaskType.values,
-          value: _type,
-          labelOf: (value) => typeLabel[value]!,
-          colorOf: (value) => typeColor[value]!,
-          onChanged: (value) => _markDirty(() => _type = value),
-        ),
-        const SizedBox(height: 12),
-        _InspectorChoiceSection<Priority>(
-          isDark: isDark,
-          title: 'Приоритет',
-          values: Priority.values,
-          value: _priority,
-          labelOf: (value) => priorityLabel[value]!,
-          colorOf: (value) => priorityColor[value]!,
-          onChanged: (value) => _markDirty(() => _priority = value),
-        ),
-        const SizedBox(height: 14),
-        _MinimumInlineEditor(
-          isDark: isDark,
-          enabled: _minimumEnabled,
-          controller: _minimumCtrl,
-          onEnabledChanged: (value) =>
-              _markDirty(() => _minimumEnabled = value),
-        ),
-        if (nodes.isNotEmpty) ...[
-          const SizedBox(height: 14),
-          _NodeLinkInlineEditor(
-            isDark: isDark,
-            skill: skill,
-            selectedNodeId: selectedNodeId,
-            onChanged: (value) => _markDirty(() => _treeNodeId = value),
+        if (task.hasMinimumAction) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(11),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFF9500).withAlpha(18),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFFF9500).withAlpha(55)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.bolt, color: Color(0xFFFF9500), size: 17),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Минимальный шаг: ${task.minimumAction}',
+                    style: TextStyle(
+                      color: textColor(isDark),
+                      fontSize: 12.5,
+                      height: 1.25,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
         Text(
-          task.isDone
-              ? 'Завершено: ${task.lastCompletedAt == null ? 'дата не сохранена' : formatShortDate(task.lastCompletedAt!)}'
+          done
+              ? 'Эта практика уже засчитана в прогресс этапа. Если нужно изменить квест, откройте редактирование.'
               : node == null
-              ? 'Этот квест находится на свободной ветке навыка.'
-              : 'Этот квест продолжает ветку выбранного узла.',
-          style: TextStyle(color: sub, fontSize: 12.5, height: 1.35),
-        ),
-        const SizedBox(height: 16),
-        Builder(
-          builder: (buttonContext) => SmallBtn(
-            label: task.isDone ? 'Вернуть в активные' : 'Завершить квест',
-            icon: task.isDone ? Icons.undo : Icons.check,
-            color: task.isDone ? sub : const Color(0xFF34C759),
-            onTap: () => _toggleCompletion(buttonContext),
+              ? 'Это свободная практика навыка. Выполнять квест лучше в разделе «Действовать», чтобы сохранить дневной фокус.'
+              : 'Эта практика двигает этап «${node!.title}». Выполнение остаётся в разделе «Действовать», а карта показывает путь.',
+          style: TextStyle(
+            color: sub,
+            fontSize: 12.5,
+            height: 1.35,
+            fontWeight: FontWeight.w600,
           ),
         ),
-        const SizedBox(height: 10),
-        SmallBtn(
-          label: _dirty ? 'Сохранить изменения' : 'Сохранено',
-          icon: _dirty ? Icons.save : Icons.check_circle_outline,
-          color: _dirty ? const Color(0xFF4A9EFF) : sub,
-          onTap: _save,
-        ),
-        const SizedBox(height: 10),
+        if (done && task.lastCompletedAt != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Засчитано: ${formatShortDate(task.lastCompletedAt!)}',
+            style: TextStyle(
+              color: sub,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+        const SizedBox(height: 16),
         Row(
           children: [
             Expanded(
               child: SmallBtn(
-                label: 'Расширенные поля',
-                icon: Icons.tune,
-                color: sub,
-                onTap: widget.onEdit,
+                label: 'Редактировать',
+                icon: Icons.edit,
+                color: const Color(0xFF4A9EFF),
+                onTap: onEdit,
               ),
             ),
             const SizedBox(width: 10),
@@ -2325,365 +3186,10 @@ class _QuestInspectorState extends State<_QuestInspector> {
               tooltip: 'Удалить квест',
               onTap: () {
                 AppFeedback.destructive();
-                widget.onDelete();
+                onDelete();
               },
               child: Icon(Icons.delete_outline, color: sub, size: 22),
             ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _InspectorTextField extends StatelessWidget {
-  final String label;
-  final TextEditingController controller;
-  final bool isDark;
-
-  const _InspectorTextField({
-    required this.label,
-    required this.controller,
-    required this.isDark,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: subtext(isDark),
-            fontSize: 11.5,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Container(
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF13131A) : const Color(0xFFF5F5F7),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: borderColor(isDark)),
-          ),
-          child: TextField(
-            controller: controller,
-            style: TextStyle(
-              color: textColor(isDark),
-              fontSize: 13.5,
-              fontWeight: FontWeight.w700,
-            ),
-            decoration: const InputDecoration(
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.symmetric(horizontal: 11, vertical: 9),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _XpInlineEditor extends StatelessWidget {
-  final bool isDark;
-  final Color color;
-  final int xpReward;
-  final ValueChanged<int> onChanged;
-
-  const _XpInlineEditor({
-    required this.isDark,
-    required this.color,
-    required this.xpReward,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            'XP-награда',
-            style: TextStyle(
-              color: subtext(isDark),
-              fontSize: 11.5,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-        _RoundMiniButton(
-          isDark: isDark,
-          icon: Icons.remove,
-          color: color,
-          onTap: () => onChanged(math.max(5, xpReward - 5)),
-        ),
-        const SizedBox(width: 8),
-        Container(
-          width: 72,
-          alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(vertical: 7),
-          decoration: BoxDecoration(
-            color: color.withAlpha(28),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: color.withAlpha(70)),
-          ),
-          child: Text(
-            '$xpReward XP',
-            style: TextStyle(
-              color: color,
-              fontSize: 12.5,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        _RoundMiniButton(
-          isDark: isDark,
-          icon: Icons.add,
-          color: color,
-          onTap: () => onChanged(math.min(1000, xpReward + 5)),
-        ),
-      ],
-    );
-  }
-}
-
-class _RoundMiniButton extends StatelessWidget {
-  final bool isDark;
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _RoundMiniButton({
-    required this.isDark,
-    required this.icon,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return PressFeedback(
-      scale: 0.92,
-      onTap: onTap,
-      child: Container(
-        width: 30,
-        height: 30,
-        decoration: BoxDecoration(
-          color: surface(isDark),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: color.withAlpha(70)),
-        ),
-        child: Icon(icon, color: color, size: 16),
-      ),
-    );
-  }
-}
-
-class _InspectorChoiceSection<T> extends StatelessWidget {
-  final bool isDark;
-  final String title;
-  final List<T> values;
-  final T value;
-  final String Function(T value) labelOf;
-  final Color Function(T value) colorOf;
-  final ValueChanged<T> onChanged;
-
-  const _InspectorChoiceSection({
-    required this.isDark,
-    required this.title,
-    required this.values,
-    required this.value,
-    required this.labelOf,
-    required this.colorOf,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: TextStyle(
-            color: subtext(isDark),
-            fontSize: 11.5,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 7),
-        Wrap(
-          spacing: 7,
-          runSpacing: 7,
-          children: [
-            for (final item in values)
-              _InspectorChoiceChip(
-                label: labelOf(item),
-                color: colorOf(item),
-                selected: item == value,
-                onTap: () => onChanged(item),
-              ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _InspectorChoiceChip extends StatelessWidget {
-  final String label;
-  final Color color;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _InspectorChoiceChip({
-    required this.label,
-    required this.color,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return PressFeedback(
-      scale: 0.96,
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: kMotionStandard,
-        curve: kMotionCurve,
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-        decoration: BoxDecoration(
-          color: color.withAlpha(selected ? 36 : 16),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: color.withAlpha(selected ? 150 : 45)),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selected ? color : color.withAlpha(185),
-            fontSize: 11.5,
-            fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MinimumInlineEditor extends StatelessWidget {
-  final bool isDark;
-  final bool enabled;
-  final TextEditingController controller;
-  final ValueChanged<bool> onEnabledChanged;
-
-  const _MinimumInlineEditor({
-    required this.isDark,
-    required this.enabled,
-    required this.controller,
-    required this.onEnabledChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const color = Color(0xFFFF9500);
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: surface(isDark).withAlpha(isDark ? 130 : 205),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor(isDark)),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.bolt, color: color, size: 18),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Минимальное действие',
-                  style: TextStyle(
-                    color: textColor(isDark),
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-              Switch(
-                value: enabled,
-                activeThumbColor: color,
-                onChanged: onEnabledChanged,
-              ),
-            ],
-          ),
-          AnimatedCrossFade(
-            firstChild: const SizedBox.shrink(),
-            secondChild: Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: _InspectorTextField(
-                label: 'Лёгкий старт',
-                controller: controller,
-                isDark: isDark,
-              ),
-            ),
-            crossFadeState: enabled
-                ? CrossFadeState.showSecond
-                : CrossFadeState.showFirst,
-            duration: kMotionStandard,
-            sizeCurve: kMotionCurve,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _NodeLinkInlineEditor extends StatelessWidget {
-  final bool isDark;
-  final Skill skill;
-  final String? selectedNodeId;
-  final ValueChanged<String?> onChanged;
-
-  const _NodeLinkInlineEditor({
-    required this.isDark,
-    required this.skill,
-    required this.selectedNodeId,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Ветка карты',
-          style: TextStyle(
-            color: subtext(isDark),
-            fontSize: 11.5,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 7),
-        Wrap(
-          spacing: 7,
-          runSpacing: 7,
-          children: [
-            _InspectorChoiceChip(
-              label: 'Свободная',
-              color: const Color(0xFFFF9500),
-              selected: selectedNodeId == null,
-              onTap: () => onChanged(null),
-            ),
-            for (final node in skill.treeNodes)
-              _InspectorChoiceChip(
-                label: node.title,
-                color: skill.color,
-                selected: selectedNodeId == node.id,
-                onTap: () => onChanged(node.id),
-              ),
           ],
         ),
       ],
@@ -2828,22 +3334,18 @@ class _QuestListSection {
 }
 
 class _InspectorQuestList extends StatelessWidget {
-  final AppState state;
   final bool isDark;
   final Color color;
   final List<_QuestListSection> sections;
   final ValueChanged<Task> onSelectQuest;
   final ValueChanged<Task> onEditQuest;
-  final void Function(String taskId, Offset position) onCompleteQuest;
 
   const _InspectorQuestList({
-    required this.state,
     required this.isDark,
     required this.color,
     required this.sections,
     required this.onSelectQuest,
     required this.onEditQuest,
-    required this.onCompleteQuest,
   });
 
   @override
@@ -2854,7 +3356,7 @@ class _InspectorQuestList extends StatelessWidget {
     if (!hasTasks) {
       return Center(
         child: Text(
-          sections.firstOrNull?.emptyText ?? 'Квестов пока нет.',
+          sections.firstOrNull?.emptyText ?? 'Практики пока нет.',
           textAlign: TextAlign.center,
           style: TextStyle(
             color: sub,
@@ -2902,14 +3404,12 @@ class _InspectorQuestList extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: 7),
               child: _InspectorQuestRow(
-                state: state,
                 task: task,
                 isDark: isDark,
                 color: color,
                 muted: section.muted,
                 onSelect: () => onSelectQuest(task),
                 onEdit: () => onEditQuest(task),
-                onComplete: onCompleteQuest,
               ),
             ),
           const SizedBox(height: 6),
@@ -2920,24 +3420,20 @@ class _InspectorQuestList extends StatelessWidget {
 }
 
 class _InspectorQuestRow extends StatelessWidget {
-  final AppState state;
   final Task task;
   final bool isDark;
   final Color color;
   final bool muted;
   final VoidCallback onSelect;
   final VoidCallback onEdit;
-  final void Function(String taskId, Offset position) onComplete;
 
   const _InspectorQuestRow({
-    required this.state,
     required this.task,
     required this.isDark,
     required this.color,
     required this.muted,
     required this.onSelect,
     required this.onEdit,
-    required this.onComplete,
   });
 
   @override
@@ -2971,28 +3467,10 @@ class _InspectorQuestRow extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Builder(
-              builder: (buttonContext) => PressFeedback(
-                scale: 0.9,
-                tooltip: done ? 'Вернуть в активные' : 'Завершить квест',
-                onTap: () {
-                  if (done) {
-                    AppFeedback.selection();
-                    state.uncompleteTask(task.id);
-                    return;
-                  }
-                  final box = buttonContext.findRenderObject() as RenderBox?;
-                  onComplete(
-                    task.id,
-                    box?.localToGlobal(Offset.zero) ?? Offset.zero,
-                  );
-                },
-                child: Icon(
-                  done ? Icons.check_circle : Icons.radio_button_unchecked,
-                  color: done ? const Color(0xFF34C759) : rowColor,
-                  size: 18,
-                ),
-              ),
+            Icon(
+              done ? Icons.check_circle : Icons.radio_button_unchecked,
+              color: done ? const Color(0xFF34C759) : rowColor,
+              size: 18,
             ),
             const SizedBox(width: 8),
             Expanded(

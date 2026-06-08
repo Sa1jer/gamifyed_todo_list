@@ -173,12 +173,13 @@ class AppState extends ChangeNotifier {
           ),
           SkillTreeNode(
             id: gamificationRewards,
-            title: 'Rewards layer',
-            description: 'Сундуки, баффы и приятное усиление прогресса.',
+            title: 'Трофеи и эффекты',
+            description:
+                'Сундуки, пассивные эффекты и приятное усиление прогресса.',
             xpReward: 55,
             requiredQuestCompletions: 1,
             prerequisiteIds: [gamificationLoop],
-            checklist: ['Сундуки', 'Баффы', 'Уведомления'],
+            checklist: ['Сундуки', 'Эффекты', 'Уведомления'],
           ),
         ],
       ),
@@ -1031,7 +1032,7 @@ class AppState extends ChangeNotifier {
               ? 'Эпический сундук победы'
               : 'Сундук победы',
           description:
-              'Награда за победу над боссом ${boss.title}. Внутри усиление для следующего рывка.',
+              'Трофей за преодоление сопротивления ${boss.title}. Внутри усиление для следующего рывка.',
           rarity: rarity,
           skillId: boss.skillId,
         );
@@ -1053,8 +1054,12 @@ class AppState extends ChangeNotifier {
     for (final boss in bosses.where((boss) => boss.skillId == skillId)) {
       final previous = before[boss.id];
       if (previous == null || previous.isDefeated) continue;
-      if (boss.isDefeated) return 'босс “${boss.title}” побеждён';
-      if (boss.hp < previous.hp) return 'босс “${boss.title}” ослаб';
+      if (boss.isDefeated) {
+        return 'сопротивление “${boss.title}” преодолено';
+      }
+      if (boss.hp < previous.hp) {
+        return 'сопротивление “${boss.title}” ослабло';
+      }
     }
     return null;
   }
@@ -1293,7 +1298,7 @@ class AppState extends ChangeNotifier {
       earned,
       bonusXp: 0,
       bossFeedback: bossFeedback,
-      fallbackLabel: 'Узел освоен',
+      fallbackLabel: 'Этап освоен',
     );
   }
 
@@ -1530,7 +1535,7 @@ class AppState extends ChangeNotifier {
       sourceKey: 'daily5:$dayKey',
       title: 'Сундук дисциплины',
       description:
-          'Пять закрытых квестов за день. Внутри бафф, который усилит следующий рывок.',
+          'Пять закрытых квестов за день. Внутри эффект, который усилит следующий рывок.',
       rarity: RewardRarity.common,
       notify: notify,
     );
@@ -1540,7 +1545,7 @@ class AppState extends ChangeNotifier {
       sourceKey: 'daily10:$dayKey',
       title: 'Редкий сундук продуктивности',
       description:
-          'Десять закрытых квестов за день. Внутри более сильный бафф на серию задач.',
+          'Десять закрытых квестов за день. Внутри более сильный эффект на серию квестов.',
       rarity: RewardRarity.rare,
       notify: notify,
     );
@@ -1560,7 +1565,7 @@ class AppState extends ChangeNotifier {
       sourceKey: 'streak:${task.id}:${task.streak}',
       title: milestone.title,
       description:
-          'Награда за серию ${task.streak} дней по квесту «${task.title}».',
+          'Трофей за серию ${task.streak} дней по квесту «${task.title}».',
       rarity: milestone.rarity,
       skillId: task.skillId,
       notify: notify,
@@ -1601,7 +1606,7 @@ class AppState extends ChangeNotifier {
       type: BuffType.skillFocusXpBoost,
       title: 'Фокус',
       description:
-          'Две задачи одного навыка подряд: следующий квест этого навыка даст +12% XP.',
+          'Два квеста одного навыка подряд: следующий квест этого навыка даст +12% XP.',
       bonusPercent: 12,
       charges: 1,
       skillId: task.skillId,
@@ -1989,16 +1994,16 @@ class AppState extends ChangeNotifier {
         : 'Силен';
 
     final recommendation = urgentRepeatingTasks > 0
-        ? 'Удержи повторяющиеся квесты: босс восстановится, если пропустить день.'
+        ? 'Удержи повторяющиеся квесты: сопротивление восстановится, если пропустить день.'
         : stalledHighPriorityTasks > 0
-        ? 'Закрой важную задачу по навыку, чтобы сбить давление.'
+        ? 'Закрой важный квест по навыку, чтобы сбить давление.'
         : minimumTasks.any(canCompleteMinimumAction)
-        ? 'Сделай лёгкий старт по крупной задаче — это тоже наносит урон.'
+        ? 'Сделай лёгкий старт по крупному квесту — это тоже снижает давление.'
         : totalTreeNodes > 0 && masteredTreeNodes < totalTreeNodes
-        ? 'Освой следующий узел дерева навыка — это сильно ослабит босса.'
+        ? 'Освой следующий этап карты мастерства — это сильно ослабит сопротивление.'
         : checklistTotal > 0 && checklistCompleted < checklistTotal
-        ? 'Продвигай чеклист навыка — он тоже ослабляет босса.'
-        : 'Поддерживай темп по навыку: любой прогресс добивает босса.';
+        ? 'Продвигай критерии навыка — они тоже ослабляют сопротивление.'
+        : 'Поддерживай темп по навыку: любой прогресс снижает сопротивление.';
 
     return BossSnapshot(
       currentStreak: currentStreak,
@@ -2112,7 +2117,7 @@ class AppState extends ChangeNotifier {
       return _characterEvent('Новый уровень', [
         'персонаж стал увереннее: ур. ${profile.level}',
         '+$earned XP',
-        if (bonusXp > 0) 'бафф +$bonusXp XP',
+        if (bonusXp > 0) 'эффект +$bonusXp XP',
         _nextProfileLevelHint(),
         ?bossFeedback,
       ]);
@@ -2121,7 +2126,7 @@ class AppState extends ChangeNotifier {
       return _characterEvent('Навык вырос', [
         '${skill.name} окреп до ур.${skill.level}',
         '+$earned XP',
-        if (bonusXp > 0) 'бафф +$bonusXp XP',
+        if (bonusXp > 0) 'эффект +$bonusXp XP',
         _nextSkillLevelHint(skill),
         ?bossFeedback,
       ]);
@@ -2143,7 +2148,7 @@ class AppState extends ChangeNotifier {
           : fallbackLabel,
       [
         skill == null ? '+$earned XP' : '${skill.name} +$earned XP',
-        if (bonusXp > 0) 'бафф +$bonusXp XP',
+        if (bonusXp > 0) 'эффект +$bonusXp XP',
         _nextSkillLevelHint(skill),
         ?bossFeedback,
       ],
@@ -2195,7 +2200,7 @@ class AppState extends ChangeNotifier {
         _notifications.scheduleRepeatingTask(
           id: notificationId,
           title: 'Напоминание: ${task.title}',
-          body: 'Пора выполнить повторяющуюся задачу.',
+          body: 'Пора выполнить повторяющийся квест.',
           scheduledTime: scheduledTime,
           repeatMode: _repeatNotificationMode(task),
         );
@@ -2203,7 +2208,7 @@ class AppState extends ChangeNotifier {
         _notifications.scheduleTaskReminder(
           id: notificationId,
           title: 'Напоминание: ${task.title}',
-          body: 'Не забудь выполнить задачу.',
+          body: 'Не забудь выполнить квест.',
           scheduledTime: scheduledTime,
         );
       }

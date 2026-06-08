@@ -84,11 +84,11 @@ class SkillsPanel extends StatelessWidget {
               child: Text(
                 state.selectedSkillId == null
                     ? planningMode
-                          ? 'Выберите направление для настройки цели, дерева и квестов'
-                          : 'Выберите навык для просмотра задач'
+                          ? 'Выберите направление для настройки цели, этапов и квестов'
+                          : 'Выберите навык для просмотра квестов'
                     : planningMode
                     ? 'Настройка: ${state.selectedSkill?.name ?? ""}'
-                    : 'Задачи: ${state.selectedSkill?.name ?? ""}',
+                    : 'Квесты: ${state.selectedSkill?.name ?? ""}',
                 style: TextStyle(color: sub, fontSize: 12),
               ),
             ),
@@ -142,16 +142,44 @@ class SkillsPanel extends StatelessWidget {
       final state = AppStateProvider.of(ctx);
       return AddSkillDialog(
         isDark: state.isDark,
-        onSave: (name, goal, checklist, color, icon) => state.addSkill(
-          Skill(
-            id: uid(),
-            name: name,
-            goal: goal,
-            color: color,
-            icon: icon,
-            checklist: checklist,
-          ),
-        ),
+        onSave:
+            (
+              name,
+              goal,
+              checklist,
+              color,
+              icon,
+              initialTreeNodes,
+              initialQuest,
+            ) {
+              final skillId = uid();
+              state.addSkill(
+                Skill(
+                  id: skillId,
+                  name: name,
+                  goal: goal,
+                  color: color,
+                  icon: icon,
+                  checklist: checklist,
+                  treeNodes: initialTreeNodes,
+                ),
+              );
+              state.selectSkill(skillId);
+              if (initialQuest != null) {
+                state.addTask(
+                  Task(
+                    id: uid(),
+                    title: initialQuest.title,
+                    skillId: skillId,
+                    xpReward: 20,
+                    type: TaskType.shortTerm,
+                    priority: Priority.medium,
+                    minimumAction: initialQuest.minimumAction,
+                    treeNodeId: initialQuest.treeNodeId,
+                  ),
+                );
+              }
+            },
       );
     },
   );
@@ -163,7 +191,7 @@ class SkillsPanel extends StatelessWidget {
       return AddSkillDialog(
         isDark: state.isDark,
         existing: sk,
-        onSave: (name, goal, checklist, color, icon) => state.updateSkill(
+        onSave: (name, goal, checklist, color, icon, _, _) => state.updateSkill(
           sk,
           name: name,
           goal: goal,
@@ -219,7 +247,7 @@ class _EmptySkillsState extends StatelessWidget {
             ),
             const SizedBox(height: 5),
             Text(
-              'Навык — это направление прокачки. После него появятся квесты, XP и прогресс.',
+              'Навык — это направление роста. Первый этап и первый квест появятся сразу, чтобы можно было начать сегодня.',
               textAlign: TextAlign.center,
               style: TextStyle(color: sub, fontSize: 12, height: 1.3),
             ),
