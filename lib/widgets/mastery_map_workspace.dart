@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../app_state.dart';
+import '../engines/roadmap_engine.dart';
 import '../feedback_service.dart';
 import '../models.dart';
 import '../utils.dart';
@@ -49,6 +50,18 @@ List<Task> _sortedCompletedQuests(Iterable<Task> tasks) {
 }
 
 DateTime _questSortDate(Task task) => task.lastCompletedAt ?? task.updatedAt;
+
+const _roadmapEngine = RoadmapEngine();
+
+RoadmapSnapshot _roadmapSnapshotFor(AppState state, Skill skill) {
+  return _roadmapEngine.buildSnapshot(
+    skill,
+    completedQuestCountsByNodeId: {
+      for (final node in skill.treeNodes)
+        node.id: state.completedTasksForTreeNode(skill.id, node.id),
+    },
+  );
+}
 
 double _adaptiveSkillLabelFontSize(String text, bool selected) {
   final length = text.trim().length;
@@ -2089,6 +2102,7 @@ class _MobileSkillMasteryPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tasks = state.tasksForSkill(skill.id);
+    final roadmap = _roadmapSnapshotFor(state, skill);
     final activeTasks = _sortedActiveQuests(
       tasks.where((task) => !task.isDone),
     );
@@ -2101,10 +2115,16 @@ class _MobileSkillMasteryPanel extends StatelessWidget {
           icon: skill.icon,
           color: skill.color,
           title: skill.name,
-          subtitle: 'путь навыка',
+          subtitle: 'roadmap навыка',
           isDark: isDark,
         ),
         const SizedBox(height: 12),
+        _RoadmapSummaryCard(
+          isDark: isDark,
+          color: skill.color,
+          snapshot: roadmap,
+        ),
+        const SizedBox(height: 10),
         _MetricCard(
           isDark: isDark,
           color: skill.color,
@@ -2749,6 +2769,176 @@ class _EmptyMapInspector extends StatelessWidget {
   }
 }
 
+class _RoadmapSummaryCard extends StatelessWidget {
+  final bool isDark;
+  final Color color;
+  final RoadmapSnapshot snapshot;
+
+  const _RoadmapSummaryCard({
+    required this.isDark,
+    required this.color,
+    required this.snapshot,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final txt = textColor(isDark);
+    final sub = subtext(isDark);
+    final goal = snapshot.skill.goal.trim();
+    final current = snapshot.currentStage;
+    final next = snapshot.nextStage;
+    final progressLabel = '${(snapshot.overallProgress * 100).round()}%';
+
+    return Container(
+      padding: const EdgeInsets.all(11),
+      decoration: BoxDecoration(
+        color: color.withAlpha(12),
+        borderRadius: BorderRadius.circular(13),
+        border: Border.all(color: color.withAlpha(42)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.route_rounded, color: color, size: 17),
+              const SizedBox(width: 7),
+              Expanded(
+                child: Text(
+                  'Roadmap навыка',
+                  style: TextStyle(
+                    color: txt,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              Text(
+                progressLabel,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          XPBar(
+            progress: snapshot.overallProgress.clamp(0.0, 1.0),
+            color: color,
+            height: 5,
+          ),
+          if (goal.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Цель: $goal',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: sub,
+                fontSize: 11.8,
+                height: 1.25,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+          const SizedBox(height: 9),
+          _RoadmapFocusLine(
+            isDark: isDark,
+            color: color,
+            icon: Icons.bolt_rounded,
+            label: 'Сейчас',
+            value: current == null
+                ? 'Добавьте первый этап'
+                : current.node.title,
+            meta: current == null
+                ? 'roadmap пока пуст'
+                : '${math.min(current.completedLinkedQuests, current.questTarget)} / ${current.questTarget} практики',
+          ),
+          const SizedBox(height: 7),
+          _RoadmapFocusLine(
+            isDark: isDark,
+            color: const Color(0xFF4A9EFF),
+            icon: Icons.trending_flat_rounded,
+            label: 'Дальше',
+            value: next == null ? 'После текущего этапа' : next.node.title,
+            meta: next == null
+                ? 'новый этап появится в плане'
+                : 'следующая ступень',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RoadmapFocusLine extends StatelessWidget {
+  final bool isDark;
+  final Color color;
+  final IconData icon;
+  final String label;
+  final String value;
+  final String meta;
+
+  const _RoadmapFocusLine({
+    required this.isDark,
+    required this.color,
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.meta,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(
+            color: color.withAlpha(18),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: color, size: 14),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '$label · $value',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: textColor(isDark),
+                  fontSize: 12,
+                  height: 1.15,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                meta,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: subtext(isDark),
+                  fontSize: 10.8,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _SkillInspector extends StatelessWidget {
   final AppState state;
   final bool isDark;
@@ -2771,6 +2961,7 @@ class _SkillInspector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tasks = state.tasksForSkill(skill.id);
+    final roadmap = _roadmapSnapshotFor(state, skill);
     final activeTasks = tasks.where((task) => !task.isDone).length;
     final doneTasks = tasks.length - activeTasks;
     final freeTasks = _freeQuestsForSkill(skill, tasks);
@@ -2785,7 +2976,6 @@ class _SkillInspector extends StatelessWidget {
       tasks.where((task) => task.isDone),
     );
     final txt = textColor(isDark);
-    final sub = subtext(isDark);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2794,17 +2984,16 @@ class _SkillInspector extends StatelessWidget {
           icon: skill.icon,
           color: skill.color,
           title: skill.name,
-          subtitle: 'шар навыка',
+          subtitle: 'roadmap навыка',
           isDark: isDark,
         ),
-        if (skill.goal.trim().isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Text(
-            skill.goal,
-            style: TextStyle(color: sub, fontSize: 12.5, height: 1.35),
-          ),
-        ],
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
+        _RoadmapSummaryCard(
+          isDark: isDark,
+          color: skill.color,
+          snapshot: roadmap,
+        ),
+        const SizedBox(height: 10),
         _MetricCard(
           isDark: isDark,
           color: skill.color,
