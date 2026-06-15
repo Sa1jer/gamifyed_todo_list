@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../engines/goal_engine.dart';
 import '../feedback_service.dart';
 import '../models.dart';
 import '../utils.dart';
@@ -798,6 +799,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
   bool _showValidation = false;
   Color _color = const Color(0xFF4A9EFF);
   IconData _icon = Icons.fitness_center;
+  static const _goalEngine = GoalEngine();
 
   // All icons in a single flat list
   static final _allIcons = [...kIconsPrimary, ...kIconsExtra];
@@ -814,6 +816,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
   @override
   void initState() {
     super.initState();
+    _goalCtrl.addListener(_refreshGoalHints);
     if (widget.existing case final ex?) {
       _nameCtrl.text = ex.name;
       _goalCtrl.text = ex.goal;
@@ -826,6 +829,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
 
   @override
   void dispose() {
+    _goalCtrl.removeListener(_refreshGoalHints);
     _nameCtrl.dispose();
     _goalCtrl.dispose();
     _checkCtrl.dispose();
@@ -833,6 +837,10 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
     _firstQuestCtrl.dispose();
     _firstMinimumCtrl.dispose();
     super.dispose();
+  }
+
+  void _refreshGoalHints() {
+    if (mounted) setState(() {});
   }
 
   @override
@@ -896,6 +904,8 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
                 bdr: bdr,
                 min: 2,
               ),
+              const SizedBox(height: 8),
+              _buildSmarterHint(fBg, txt, sub, bdr),
               if (widget.existing == null) ...[
                 const SizedBox(height: 10),
                 DlgField(
@@ -992,6 +1002,81 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSmarterHint(Color fBg, Color txt, Color sub, Color bdr) {
+    final goal = GoalSpec(text: _goalCtrl.text.trim());
+    final readiness = _goalEngine.analyze(goal);
+    final hints = readiness.topHints;
+    final isEmpty = goal.text.isEmpty;
+    final accent = readiness.isStrong ? const Color(0xFF34C759) : _color;
+
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: fBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: bdr),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: accent.withAlpha(22),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: accent.withAlpha(75)),
+            ),
+            child: Text(
+              isEmpty ? 'S' : '${readiness.score}',
+              style: TextStyle(
+                color: accent,
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isEmpty
+                      ? 'SMARTER мягко подскажет, как сделать цель яснее.'
+                      : readiness.isStrong
+                      ? 'Цель звучит достаточно ясно.'
+                      : 'SMARTER: ${readiness.score}/${readiness.total}',
+                  style: TextStyle(
+                    color: txt,
+                    fontSize: 12.5,
+                    height: 1.25,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  isEmpty
+                      ? 'Это не экзамен: подсказки не блокируют создание навыка.'
+                      : hints.isEmpty
+                      ? 'Дальше можно усилить её сроком, метрикой или review.'
+                      : hints.join(' '),
+                  style: TextStyle(
+                    color: sub,
+                    fontSize: 11.2,
+                    height: 1.25,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
