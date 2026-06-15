@@ -231,6 +231,36 @@ void main() {
     });
   });
 
+  group('goal reviews', () {
+    late AppState state;
+
+    setUp(() {
+      state = AppState(storage: _InMemoryStorageService(), seedDefaults: true);
+    });
+
+    tearDown(() {
+      state.dispose();
+    });
+
+    test('adds review entry to skill goal history', () {
+      final skill = state.skills.first;
+      final review = GoalReviewEntry(
+        id: 'review-1',
+        wins: 'Закрыт первый квест',
+        blockers: 'Мало времени',
+        adjustment: 'Упростить следующий шаг',
+        nextFocus: 'Вернуться к этапу Основа',
+        updatedPlan: true,
+      );
+
+      state.addGoalReview(skill.id, review);
+
+      expect(skill.goalSpec.reviews, hasLength(1));
+      expect(skill.goalSpec.reviews.first.id, 'review-1');
+      expect(skill.goalSpec.reviews.first.updatedPlan, isTrue);
+    });
+  });
+
   group('minimum action flow', () {
     late AppState state;
     late Task task;

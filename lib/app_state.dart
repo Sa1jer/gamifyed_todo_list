@@ -1204,6 +1204,15 @@ class AppState extends ChangeNotifier {
     _saveAll();
   }
 
+  void addGoalReview(String skillId, GoalReviewEntry review) {
+    final skill = _skillById(skillId);
+    if (skill == null) return;
+    skill.goalSpec.reviews.insert(0, review);
+    skill.goalSpec.updatedAt = DateTime.now();
+    notifyListeners();
+    _saveAll();
+  }
+
   void addSkillTreeNode(String skillId, SkillTreeNode node) {
     final skill = _skillById(skillId);
     if (skill == null) return;

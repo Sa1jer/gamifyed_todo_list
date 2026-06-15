@@ -3,6 +3,7 @@ import '../app_state.dart';
 import '../models.dart';
 import '../utils.dart';
 import 'shared.dart';
+import 'weekly_review_card.dart';
 
 class ProgressHubDialog extends StatelessWidget {
   final AppState state;
@@ -251,6 +252,10 @@ class ProgressHubContent extends StatelessWidget {
                         ? onOpenWeekly
                         : onOpenCharacterTimeline,
                   ),
+                  if (state.skills.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    WeeklyReviewCard(state: state, isDark: isDark),
+                  ],
                   const SizedBox(height: 14),
                   _ProgressHubSection(
                     isDark: isDark,
