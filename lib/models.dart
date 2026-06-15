@@ -114,9 +114,77 @@ class SkillTreeNode {
 
 // ─── Skill ────────────────────────────────────────────────────────────────────
 
+class GoalReviewEntry {
+  final String id;
+  DateTime createdAt;
+  String wins;
+  String blockers;
+  String adjustment;
+  String nextFocus;
+  bool updatedPlan;
+
+  GoalReviewEntry({
+    required this.id,
+    DateTime? createdAt,
+    this.wins = '',
+    this.blockers = '',
+    this.adjustment = '',
+    this.nextFocus = '',
+    this.updatedPlan = false,
+  }) : createdAt = createdAt ?? DateTime.now();
+}
+
+class GoalSpec {
+  String text;
+  DateTime? deadline;
+  String? metric;
+  double? targetValue;
+  double? currentValue;
+  List<GoalReviewEntry> reviews;
+  DateTime updatedAt;
+
+  GoalSpec({
+    required this.text,
+    this.deadline,
+    this.metric,
+    this.targetValue,
+    this.currentValue,
+    List<GoalReviewEntry>? reviews,
+    DateTime? updatedAt,
+  }) : reviews = reviews ?? [],
+       updatedAt = updatedAt ?? DateTime.now();
+
+  GoalSpec copyWith({
+    String? text,
+    DateTime? deadline,
+    String? metric,
+    double? targetValue,
+    double? currentValue,
+    List<GoalReviewEntry>? reviews,
+    DateTime? updatedAt,
+    bool clearDeadline = false,
+    bool clearMetric = false,
+    bool clearTargetValue = false,
+    bool clearCurrentValue = false,
+  }) {
+    return GoalSpec(
+      text: text ?? this.text,
+      deadline: clearDeadline ? null : deadline ?? this.deadline,
+      metric: clearMetric ? null : metric ?? this.metric,
+      targetValue: clearTargetValue ? null : targetValue ?? this.targetValue,
+      currentValue: clearCurrentValue
+          ? null
+          : currentValue ?? this.currentValue,
+      reviews: reviews ?? this.reviews,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+}
+
 class Skill with XPOwner {
   final String id;
-  String name, goal;
+  String name;
+  GoalSpec goalSpec;
   List<String> checklist;
   List<bool> checklistDone;
   List<SkillTreeNode> treeNodes;
@@ -128,7 +196,8 @@ class Skill with XPOwner {
   Skill({
     required this.id,
     required this.name,
-    required this.goal,
+    required String goal,
+    GoalSpec? goalSpec,
     required this.color,
     required this.icon,
     List<String>? checklist,
@@ -136,10 +205,17 @@ class Skill with XPOwner {
     List<SkillTreeNode>? treeNodes,
     this.level = 1,
     this.xp = 0,
-  }) : checklist = checklist ?? [],
+  }) : goalSpec = goalSpec ?? GoalSpec(text: goal),
+       checklist = checklist ?? [],
        treeNodes = treeNodes ?? [],
        checklistDone =
            checklistDone ?? List.filled((checklist ?? []).length, false);
+
+  String get goal => goalSpec.text;
+
+  set goal(String value) {
+    goalSpec = goalSpec.copyWith(text: value, updatedAt: DateTime.now());
+  }
 
   String get initial => name.isNotEmpty ? name[0] : '?';
 

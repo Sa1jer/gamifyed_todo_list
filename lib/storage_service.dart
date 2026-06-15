@@ -24,6 +24,9 @@ class StorageService {
   static const String _isDarkKey = 'isDark';
   static const String _sfxEnabledKey = 'sfxEnabled';
   static const String _bestStreakKey = 'bestStreak';
+  static const String _schemaVersionKey = 'schemaVersion';
+  static const int _legacySchemaVersion = 1;
+  static const int _currentSchemaVersion = 2;
 
   late Box<String> _skills;
   late Box<String> _tasks;
@@ -56,7 +59,26 @@ class StorageService {
     _weeklyGoals = await _openBox<String>(_weeklyGoalsBox);
     _meta = await _openBox<String>(_metaBox);
 
+    await _migrateIfNeeded();
+
     _initialized = true;
+  }
+
+  Future<void> _migrateIfNeeded() async {
+    final storedVersion = _storedSchemaVersion();
+    if (storedVersion < _currentSchemaVersion) {
+      await _meta.put(_schemaVersionKey, _currentSchemaVersion.toString());
+    }
+  }
+
+  int _storedSchemaVersion() {
+    return _readNullableIntValue(_meta.get(_schemaVersionKey)) ??
+        _legacySchemaVersion;
+  }
+
+  int _versionAfterMigration(Object? raw) {
+    final version = _readNullableIntValue(raw) ?? _legacySchemaVersion;
+    return version < _currentSchemaVersion ? _currentSchemaVersion : version;
   }
 
   Future<Box<T>> _openBox<T>(String name) async {
@@ -125,6 +147,13 @@ class StorageService {
     if (value is int) return value;
     if (value is num) return value.toInt();
     if (value is String) return int.tryParse(value);
+    return null;
+  }
+
+  double? _readNullableDouble(Map<String, dynamic> data, String key) {
+    final value = data[key];
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value);
     return null;
   }
 
@@ -238,7 +267,19 @@ class StorageService {
   Task debugDecodeTask(String json) => _decodeTask(json);
 
   @visibleForTesting
+  String debugEncodeSkill(Skill skill) => _encodeSkill(skill);
+
+  @visibleForTesting
+  Skill debugDecodeSkill(String json) => _decodeSkill(json);
+
+  @visibleForTesting
   Achievement debugDecodeAchievement(String json) => _decodeAchievement(json);
+
+  @visibleForTesting
+  int get debugCurrentSchemaVersion => _currentSchemaVersion;
+
+  @visibleForTesting
+  int debugVersionAfterMigration(Object? raw) => _versionAfterMigration(raw);
 
   Future<int?> loadBestStreak() async {
     _ensureInit();
@@ -497,6 +538,7 @@ class StorageService {
     'id': s.id,
     'name': s.name,
     'goal': s.goal,
+    'goalSpec': _encodeGoalSpec(s.goalSpec),
     'checklist': s.checklist,
     'checklistDone': s.checklistDone,
     'treeNodes': s.treeNodes.map(_encodeSkillTreeNode).toList(),
@@ -518,10 +560,13 @@ class StorageService {
   Skill _decodeSkill(String json) {
     final d = _decodeMap(json);
     final iconName = _readString(d, 'iconName', _readString(d, 'icon', ''));
+    final legacyGoal = _readString(d, 'goal');
+    final goalSpec = _decodeGoalSpec(d['goalSpec'], legacyGoal);
     return Skill(
       id: _readString(d, 'id', uid()),
       name: _readString(d, 'name', 'Навык'),
-      goal: _readString(d, 'goal'),
+      goal: legacyGoal,
+      goalSpec: goalSpec,
       checklist: _readStringList(d, 'checklist'),
       checklistDone: _readBoolList(d, 'checklistDone'),
       treeNodes:
@@ -536,6 +581,70 @@ class StorageService {
       icon: _getIconFromCodePoint(iconName),
       level: _readInt(d, 'level', 1),
       xp: _readInt(d, 'xp'),
+    );
+  }
+
+  Map<String, dynamic> _encodeGoalSpec(GoalSpec goal) => {
+    'text': goal.text,
+    'deadline': goal.deadline?.toIso8601String(),
+    'metric': goal.metric,
+    'targetValue': goal.targetValue,
+    'currentValue': goal.currentValue,
+    'reviews': goal.reviews.map(_encodeGoalReviewEntry).toList(),
+    'updatedAt': goal.updatedAt.toIso8601String(),
+  };
+
+  GoalSpec _decodeGoalSpec(Object? raw, String legacyGoal) {
+    final data = switch (raw) {
+      final Map map => Map<String, dynamic>.from(map),
+      final String value when value.isNotEmpty => _decodeOrNull(
+        value,
+        _decodeMap,
+      ),
+      _ => null,
+    };
+
+    if (data == null) {
+      return GoalSpec(text: legacyGoal);
+    }
+
+    final rawText = data['text'];
+    final text = rawText is String && rawText.isNotEmpty ? rawText : legacyGoal;
+    final rawReviews = data['reviews'];
+
+    return GoalSpec(
+      text: text,
+      deadline: _readDate(data, 'deadline'),
+      metric: _readNullableString(data, 'metric'),
+      targetValue: _readNullableDouble(data, 'targetValue'),
+      currentValue: _readNullableDouble(data, 'currentValue'),
+      reviews: rawReviews is List
+          ? rawReviews.whereType<Map>().map(_decodeGoalReviewEntry).toList()
+          : [],
+      updatedAt: _readDate(data, 'updatedAt') ?? DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> _encodeGoalReviewEntry(GoalReviewEntry review) => {
+    'id': review.id,
+    'createdAt': review.createdAt.toIso8601String(),
+    'wins': review.wins,
+    'blockers': review.blockers,
+    'adjustment': review.adjustment,
+    'nextFocus': review.nextFocus,
+    'updatedPlan': review.updatedPlan,
+  };
+
+  GoalReviewEntry _decodeGoalReviewEntry(Map<dynamic, dynamic> raw) {
+    final data = Map<String, dynamic>.from(raw);
+    return GoalReviewEntry(
+      id: _readString(data, 'id', uid()),
+      createdAt: _readDate(data, 'createdAt') ?? DateTime.now(),
+      wins: _readString(data, 'wins'),
+      blockers: _readString(data, 'blockers'),
+      adjustment: _readString(data, 'adjustment'),
+      nextFocus: _readString(data, 'nextFocus'),
+      updatedPlan: _readBool(data, 'updatedPlan'),
     );
   }
 
