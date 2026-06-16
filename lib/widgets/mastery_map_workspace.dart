@@ -841,6 +841,9 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas> {
             Size(constraints.maxWidth, constraints.maxHeight),
           );
           final selectedSkill = layout.selectedSkill;
+          final templatePanelCollapsed =
+              _templatePanelHidden ||
+              selection?.type != _MasterySelectionType.skill;
 
           return Stack(
             children: [
@@ -987,8 +990,7 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas> {
                     onTap: widget.onCollapse,
                   ),
                 ),
-              if (selectedSkill != null &&
-                  selection?.type == _MasterySelectionType.skill)
+              if (selectedSkill != null)
                 Positioned(
                   left: 14,
                   top: constraints.maxWidth < 760 ? null : 14,
@@ -1000,7 +1002,21 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas> {
                     duration: kMotionSlow,
                     switchInCurve: kMotionCurve,
                     switchOutCurve: kMotionExitCurve,
-                    child: _templatePanelHidden
+                    transitionBuilder: (child, animation) {
+                      final scale = Tween<double>(
+                        begin: 0.96,
+                        end: 1,
+                      ).animate(animation);
+                      return FadeTransition(
+                        opacity: animation,
+                        child: ScaleTransition(
+                          scale: scale,
+                          alignment: Alignment.topLeft,
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: templatePanelCollapsed
                         ? Align(
                             key: const ValueKey('roadmap-template-show'),
                             alignment: Alignment.centerLeft,
@@ -1008,8 +1024,14 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas> {
                               isDark: isDark,
                               label: 'Шаблоны',
                               icon: Icons.route,
-                              onTap: () =>
-                                  setState(() => _templatePanelHidden = false),
+                              color: selectedSkill.color,
+                              onTap: () {
+                                setState(() => _templatePanelHidden = false);
+                                if (selection?.type !=
+                                    _MasterySelectionType.skill) {
+                                  widget.onSelectSkill(selectedSkill);
+                                }
+                              },
                             ),
                           )
                         : _RoadmapTemplatePanel(
@@ -2265,17 +2287,18 @@ class _MapCanvasAction extends StatelessWidget {
   final String label;
   final IconData icon;
   final VoidCallback onTap;
+  final Color color;
 
   const _MapCanvasAction({
     required this.isDark,
     required this.label,
     required this.icon,
     required this.onTap,
+    this.color = const Color(0xFF4A9EFF),
   });
 
   @override
   Widget build(BuildContext context) {
-    const color = Color(0xFF4A9EFF);
     return PressFeedback(
       scale: 0.96,
       tooltip: label,
@@ -2297,7 +2320,7 @@ class _MapCanvasAction extends StatelessWidget {
             const SizedBox(width: 6),
             Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 color: color,
                 fontSize: 11.5,
                 fontWeight: FontWeight.w900,
