@@ -9,11 +9,15 @@ import 'shared.dart';
 class WeeklyReviewCard extends StatefulWidget {
   final AppState state;
   final bool isDark;
+  final Skill? skill;
+  final bool initiallyExpanded;
 
   const WeeklyReviewCard({
     super.key,
     required this.state,
     required this.isDark,
+    this.skill,
+    this.initiallyExpanded = false,
   });
 
   @override
@@ -34,6 +38,12 @@ class _WeeklyReviewCardState extends State<WeeklyReviewCard> {
   int? _syncedReviewCount;
 
   @override
+  void initState() {
+    super.initState();
+    _expanded = widget.initiallyExpanded;
+  }
+
+  @override
   void dispose() {
     _winsCtrl.dispose();
     _blockersCtrl.dispose();
@@ -46,10 +56,9 @@ class _WeeklyReviewCardState extends State<WeeklyReviewCard> {
   Widget build(BuildContext context) {
     if (_dismissed) return const SizedBox.shrink();
 
-    final suggestion = _engine.suggestPrimary(
-      widget.state.skills,
-      widget.state.history,
-    );
+    final suggestion = widget.skill == null
+        ? _engine.suggestPrimary(widget.state.skills, widget.state.history)
+        : _engine.suggest(widget.skill!, widget.state.history);
     if (suggestion == null) return const SizedBox.shrink();
 
     _syncControllers(suggestion);
