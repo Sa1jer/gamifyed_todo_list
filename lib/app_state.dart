@@ -1248,6 +1248,41 @@ class AppState extends ChangeNotifier {
     _saveAll();
   }
 
+  SkillTreeNode? extendRoadmapPath(
+    String skillId,
+    String pathNodeId, {
+    String title = 'Новый этап',
+    String description = '',
+    int xpReward = 30,
+    int requiredQuestCompletions = 3,
+  }) {
+    final skill = _skillById(skillId);
+    if (skill == null) return null;
+    final terminalNode =
+        const RoadmapEngine().terminalStageForNode(skill, pathNodeId) ??
+        skill.treeNodes
+            .where((candidate) => candidate.id == pathNodeId)
+            .firstOrNull;
+    if (terminalNode == null) return null;
+
+    final safeTitle = title.trim().isEmpty ? 'Новый этап' : title.trim();
+    final node = SkillTreeNode(
+      id: uid(),
+      title: safeTitle,
+      description: description,
+      xpReward: xpReward,
+      requiredQuestCompletions: math.max(1, requiredQuestCompletions),
+      prerequisiteIds: [terminalNode.id],
+    )..syncChecklistDone();
+
+    skill.treeNodes.add(node);
+    skill.syncTreeNodes();
+    _syncBossesForSkill(skillId);
+    notifyListeners();
+    _saveAll();
+    return node;
+  }
+
   void removeSkillTreeNode(String skillId, String nodeId) {
     final skill = _skillById(skillId);
     if (skill == null) return;

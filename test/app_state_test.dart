@@ -320,6 +320,39 @@ void main() {
         expect(linkedQuest.treeNodeId, existingStage.id);
       },
     );
+
+    test('extends a roadmap path after its terminal stage', () {
+      final skill = state.skills.first;
+      final root = SkillTreeNode(id: 'root-stage', title: 'Основа');
+      final terminal = SkillTreeNode(
+        id: 'terminal-stage',
+        title: 'Практика',
+        prerequisiteIds: [root.id],
+      );
+      state.addSkillTreeNode(skill.id, root);
+      state.addSkillTreeNode(skill.id, terminal);
+      final linkedQuest = Task(
+        id: 'terminal-quest',
+        title: 'Сделать практику',
+        skillId: skill.id,
+        xpReward: 20,
+        type: TaskType.shortTerm,
+        treeNodeId: terminal.id,
+      );
+      state.addTask(linkedQuest);
+
+      final created = state.extendRoadmapPath(
+        skill.id,
+        root.id,
+        title: 'Новый рубеж',
+      );
+
+      expect(created, isNotNull);
+      expect(created!.title, 'Новый рубеж');
+      expect(created.prerequisiteIds, [terminal.id]);
+      expect(skill.treeNodes, contains(created));
+      expect(linkedQuest.treeNodeId, terminal.id);
+    });
   });
 
   group('minimum action flow', () {

@@ -157,6 +157,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
             onAddRoot: (skill) => _addNode(context, skill),
             onAddChild: (skill, node) =>
                 _addNode(context, skill, parentNode: node),
+            onExtendPath: (skill, node) => _extendPath(context, skill, node),
             onAddQuest: (skill, node) => _addQuest(context, skill, node: node),
             onAddRoadmapTemplate: (skill, config) {
               state.addRoadmapTemplate(skill.id, config);
@@ -240,6 +241,39 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
             ),
           );
           final nextSelection = _MasterySelection.node(skill.id, nodeId);
+          setState(() => _selection = nextSelection);
+          onCreated?.call(nextSelection);
+        },
+      ),
+    );
+  }
+
+  void _extendPath(
+    BuildContext context,
+    Skill skill,
+    SkillTreeNode node, {
+    ValueChanged<_MasterySelection>? onCreated,
+  }) {
+    final state = AppStateProvider.of(context);
+    final terminalNode =
+        _roadmapEngine.terminalStageForNode(skill, node.id) ?? node;
+    showDialog(
+      context: context,
+      builder: (_) => AddSkillTreeNodeDialog(
+        isDark: state.isDark,
+        skill: skill,
+        parentNode: terminalNode,
+        onSave: (title, description, xpReward, requiredQuestCompletions) {
+          final created = state.extendRoadmapPath(
+            skill.id,
+            terminalNode.id,
+            title: title,
+            description: description,
+            xpReward: xpReward,
+            requiredQuestCompletions: requiredQuestCompletions,
+          );
+          if (created == null) return;
+          final nextSelection = _MasterySelection.node(skill.id, created.id);
           setState(() => _selection = nextSelection);
           onCreated?.call(nextSelection);
         },
@@ -435,6 +469,12 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
                                 parentNode: node,
                                 onCreated: updateSelection,
                               ),
+                              onExtendPath: (skill, node) => _extendPath(
+                                dialogContext,
+                                skill,
+                                node,
+                                onCreated: updateSelection,
+                              ),
                               onAddQuest: (skill, node) => _addQuest(
                                 dialogContext,
                                 skill,
@@ -555,6 +595,7 @@ class _MasteryMapBody extends StatelessWidget {
   final ValueChanged<_MasterySelection?> onSelectionChanged;
   final ValueChanged<Skill> onAddRoot;
   final void Function(Skill skill, SkillTreeNode node) onAddChild;
+  final void Function(Skill skill, SkillTreeNode node) onExtendPath;
   final void Function(Skill skill, SkillTreeNode? node) onAddQuest;
   final void Function(Skill skill, RoadmapTemplateConfig config)
   onAddRoadmapTemplate;
@@ -570,6 +611,7 @@ class _MasteryMapBody extends StatelessWidget {
     required this.onSelectionChanged,
     required this.onAddRoot,
     required this.onAddChild,
+    required this.onExtendPath,
     required this.onAddQuest,
     required this.onAddRoadmapTemplate,
     required this.onEditQuest,
@@ -598,6 +640,7 @@ class _MasteryMapBody extends StatelessWidget {
           },
           onCollapse: () => onSelectionChanged(null),
           onAddRoadmapTemplate: onAddRoadmapTemplate,
+          onExtendPath: onExtendPath,
           onSelectNode: (skill, node) {
             if (selection?.type == _MasterySelectionType.node &&
                 selection?.skillId == skill.id &&
@@ -649,6 +692,8 @@ class _MasteryMapBody extends StatelessWidget {
                       onAddRoot: (skill) => closeThen(() => onAddRoot(skill)),
                       onAddChild: (skill, node) =>
                           closeThen(() => onAddChild(skill, node)),
+                      onExtendPath: (skill, node) =>
+                          closeThen(() => onExtendPath(skill, node)),
                       onAddQuest: (skill, node) =>
                           closeThen(() => onAddQuest(skill, node)),
                       onEditQuest: (skill, task) =>
@@ -695,6 +740,7 @@ class _MasteryMapBody extends StatelessWidget {
           ),
           onAddRoot: onAddRoot,
           onAddChild: onAddChild,
+          onExtendPath: onExtendPath,
           onAddQuest: onAddQuest,
           onEditQuest: onEditQuest,
           onDeleteQuest: onDeleteQuest,
@@ -723,6 +769,7 @@ class _OrbMasteryMapCanvas extends StatelessWidget {
   final VoidCallback onCollapse;
   final void Function(Skill skill, RoadmapTemplateConfig config)
   onAddRoadmapTemplate;
+  final void Function(Skill skill, SkillTreeNode node) onExtendPath;
   final void Function(Skill skill, SkillTreeNode node) onSelectNode;
 
   const _OrbMasteryMapCanvas({
@@ -732,6 +779,7 @@ class _OrbMasteryMapCanvas extends StatelessWidget {
     required this.onSelectSkill,
     required this.onCollapse,
     required this.onAddRoadmapTemplate,
+    required this.onExtendPath,
     required this.onSelectNode,
   });
 
@@ -787,19 +835,22 @@ class _OrbMasteryMapCanvas extends StatelessWidget {
                           final roadFocus =
                               selectedSkill != null &&
                               selectedSkill.id == skill.id;
+                          final hiddenInFocus =
+                              selectedSkill != null && !roadFocus;
                           return AnimatedPositioned(
                             key: ValueKey('map-skill-orb-${skill.id}'),
                             duration: kMotionSlow,
                             curve: kMotionCurve,
-                            left: position.dx - (roadFocus ? 125 : 90),
-                            top: position.dy - (roadFocus ? 112 : 70),
-                            width: roadFocus ? 250 : 180,
-                            height: roadFocus ? 224 : 156,
+                            left: position.dx - (roadFocus ? 110 : 90),
+                            top: position.dy - (roadFocus ? 92 : 70),
+                            width: roadFocus ? 220 : 180,
+                            height: roadFocus ? 184 : 156,
                             child: _SkillOrbButton(
                               skill: skill,
                               isDark: isDark,
                               selected: selected,
                               roadFocus: roadFocus,
+                              hiddenInFocus: hiddenInFocus,
                               dimmed: selectedSkill != null && !selected,
                               onTap: () => onSelectSkill(skill),
                             ),
@@ -840,6 +891,33 @@ class _OrbMasteryMapCanvas extends StatelessWidget {
                                   onTap: () =>
                                       onSelectNode(selectedSkill, node),
                                 ),
+                              ),
+                            );
+                          }),
+                        if (selectedSkill != null)
+                          ...layout.pathExtensionPositions.entries.map((entry) {
+                            final terminalNode = selectedSkill.treeNodes
+                                .where((node) => node.id == entry.key)
+                                .firstOrNull;
+                            if (terminalNode == null) {
+                              return const SizedBox.shrink();
+                            }
+                            final position = entry.value;
+                            return AnimatedPositioned(
+                              key: ValueKey(
+                                'roadmap-extend-${selectedSkill.id}-${terminalNode.id}',
+                              ),
+                              duration: kMotionSlow,
+                              curve: kMotionCurve,
+                              left: position.dx - 16,
+                              top: position.dy - 16,
+                              width: 32,
+                              height: 32,
+                              child: _RoadmapExtendPathButton(
+                                isDark: isDark,
+                                color: selectedSkill.color,
+                                onTap: () =>
+                                    onExtendPath(selectedSkill, terminalNode),
                               ),
                             );
                           }),
@@ -899,12 +977,16 @@ class _OrbMasteryMapCanvas extends StatelessWidget {
         : _roadmapEngine.buildPathLayout(selectedSkill);
     final pathCount = math.max(1, pathLayout.paths.length);
     final maxStagesInPath = math.max(1, pathLayout.maxStagesInPath);
-    final roadWidth = 430.0 + maxStagesInPath * 178.0 + 340.0;
-    final roadHeight = 260.0 + pathCount * 136.0;
+    const stageStep = 170.0;
+    const terminalGap = 208.0;
+    final focusLeftSafe = minSize.width < 760 ? 88.0 : 338.0;
+    final visualSpan = terminalGap + (maxStagesInPath - 1) * stageStep;
+    final roadWidth = focusLeftSafe + visualSpan + 360.0;
+    final roadHeight = 250.0 + pathCount * 132.0;
     final double width = math
         .max(
           minSize.width,
-          selectedSkill == null ? 720 : math.max(1120.0, roadWidth),
+          selectedSkill == null ? 720 : math.max(1060.0, roadWidth),
         )
         .toDouble();
     final double height = math
@@ -916,25 +998,30 @@ class _OrbMasteryMapCanvas extends StatelessWidget {
     final center = Offset(width / 2, height / 2);
     final selectedCenter = selectedSkill == null
         ? null
-        : Offset(width - 250.0, height * 0.52);
+        : _roadmapSkillCenter(Size(width, height), focusLeftSafe, visualSpan);
     final skillPositions = <Skill, Offset>{};
 
-    if (selectedSkill == null) {
-      for (var index = 0; index < state.skills.length; index++) {
-        final skill = state.skills[index];
-        skillPositions[skill] = _clusterSkillOrbPosition(
-          center,
-          index,
-          state.skills.length,
-        );
-      }
-    } else if (selectedCenter != null) {
-      skillPositions[selectedSkill] = selectedCenter;
+    for (var index = 0; index < state.skills.length; index++) {
+      final skill = state.skills[index];
+      skillPositions[skill] =
+          selectedSkill != null &&
+              selectedCenter != null &&
+              skill.id == selectedSkill.id
+          ? selectedCenter
+          : _clusterSkillOrbPosition(center, index, state.skills.length);
     }
 
     final nodePositions = selectedSkill == null || selectedCenter == null
         ? <String, Offset>{}
         : _placeRoadmapNodes(pathLayout, selectedCenter);
+    final pathExtensionPositions =
+        selectedSkill == null || selectedCenter == null
+        ? <String, Offset>{}
+        : _placeRoadmapExtensionActions(
+            pathLayout,
+            selectedCenter,
+            nodePositions,
+          );
 
     return _OrbCanvasLayout(
       size: Size(width, height),
@@ -943,7 +1030,22 @@ class _OrbMasteryMapCanvas extends StatelessWidget {
       pathLayout: pathLayout,
       skillPositions: skillPositions,
       nodePositions: nodePositions,
+      pathExtensionPositions: pathExtensionPositions,
     );
+  }
+
+  Offset _roadmapSkillCenter(
+    Size size,
+    double focusLeftSafe,
+    double visualSpan,
+  ) {
+    final workRight = size.width - 188.0;
+    final workCenter = Offset((focusLeftSafe + workRight) / 2, size.height / 2);
+    final skillX = (workCenter.dx + visualSpan / 2).clamp(
+      focusLeftSafe + visualSpan + 112.0,
+      workRight,
+    );
+    return Offset(skillX.toDouble(), workCenter.dy);
   }
 
   Offset _clusterSkillOrbPosition(Offset center, int index, int count) {
@@ -971,9 +1073,9 @@ class _OrbMasteryMapCanvas extends StatelessWidget {
     if (pathLayout.paths.isEmpty) return {};
     final positions = <String, Offset>{};
     final pathCount = pathLayout.paths.length;
-    const terminalGap = 225.0;
+    const terminalGap = 208.0;
     const stageStep = 170.0;
-    const pathStep = 136.0;
+    const pathStep = 132.0;
     for (var pathIndex = 0; pathIndex < pathLayout.paths.length; pathIndex++) {
       final path = pathLayout.paths[pathIndex];
       final y = skillCenter.dy + (pathIndex - (pathCount - 1) / 2) * pathStep;
@@ -988,6 +1090,25 @@ class _OrbMasteryMapCanvas extends StatelessWidget {
     }
     return positions;
   }
+
+  Map<String, Offset> _placeRoadmapExtensionActions(
+    RoadmapPathLayout pathLayout,
+    Offset skillCenter,
+    Map<String, Offset> nodePositions,
+  ) {
+    final positions = <String, Offset>{};
+    for (final path in pathLayout.paths) {
+      final terminal = path.terminalStage;
+      if (terminal == null) continue;
+      final terminalPosition = nodePositions[terminal.id];
+      if (terminalPosition == null) continue;
+      positions.putIfAbsent(
+        terminal.id,
+        () => Offset.lerp(terminalPosition, skillCenter, 0.48)!,
+      );
+    }
+    return positions;
+  }
 }
 
 class _OrbCanvasLayout {
@@ -997,6 +1118,7 @@ class _OrbCanvasLayout {
   final RoadmapPathLayout pathLayout;
   final Map<Skill, Offset> skillPositions;
   final Map<String, Offset> nodePositions;
+  final Map<String, Offset> pathExtensionPositions;
 
   const _OrbCanvasLayout({
     required this.size,
@@ -1005,6 +1127,7 @@ class _OrbCanvasLayout {
     required this.pathLayout,
     required this.skillPositions,
     required this.nodePositions,
+    required this.pathExtensionPositions,
   });
 }
 
@@ -1065,7 +1188,7 @@ class _OrbMasteryMapPainter extends CustomPainter {
     }
   }
 
-  double get _skillOrbRadius => 86;
+  double get _skillOrbRadius => 70;
 
   double _nodeOrbRadius(SkillTreeNode node) {
     final target = node.questTarget;
@@ -1230,6 +1353,7 @@ class _SkillOrbButton extends StatelessWidget {
   final bool isDark;
   final bool selected;
   final bool roadFocus;
+  final bool hiddenInFocus;
   final bool dimmed;
   final VoidCallback onTap;
 
@@ -1238,132 +1362,149 @@ class _SkillOrbButton extends StatelessWidget {
     required this.isDark,
     required this.selected,
     this.roadFocus = false,
+    this.hiddenInFocus = false,
     required this.dimmed,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedOpacity(
-      duration: kMotionStandard,
-      curve: kMotionCurve,
-      opacity: dimmed ? 0.48 : 1,
-      child: PressFeedback(
-        scale: 0.95,
-        tooltip: 'Открыть ветку навыка “${skill.name}”',
-        onTap: onTap,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: skill.progress),
-              duration: kMotionProgress,
-              curve: kMotionCurve,
-              builder: (context, progress, child) {
-                return CustomPaint(
-                  painter: _SkillOrbProgressPainter(
-                    color: skill.color,
-                    progress: progress,
-                    isDark: isDark,
-                  ),
-                  child: child,
-                );
-              },
-              child: AnimatedContainer(
-                duration: kMotionSlow,
-                curve: kMotionCurve,
-                width: roadFocus
-                    ? 154
-                    : selected
-                    ? 82
-                    : 74,
-                height: roadFocus
-                    ? 154
-                    : selected
-                    ? 82
-                    : 74,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: skill.color.withAlpha(isDark ? 36 : 28),
-                  border: Border.all(
-                    color: selected ? Colors.white : skill.color,
+    return IgnorePointer(
+      ignoring: hiddenInFocus,
+      child: AnimatedOpacity(
+        duration: kMotionSlow,
+        curve: kMotionCurve,
+        opacity: hiddenInFocus
+            ? 0
+            : dimmed
+            ? 0.48
+            : 1,
+        child: AnimatedScale(
+          duration: kMotionSlow,
+          curve: kMotionCurve,
+          scale: hiddenInFocus ? 0.82 : 1,
+          child: PressFeedback(
+            scale: 0.95,
+            tooltip: 'Открыть ветку навыка “${skill.name}”',
+            onTap: onTap,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0, end: skill.progress),
+                  duration: kMotionProgress,
+                  curve: kMotionCurve,
+                  builder: (context, progress, child) {
+                    return CustomPaint(
+                      painter: _SkillOrbProgressPainter(
+                        color: skill.color,
+                        progress: progress,
+                        isDark: isDark,
+                      ),
+                      child: child,
+                    );
+                  },
+                  child: AnimatedContainer(
+                    duration: kMotionSlow,
+                    curve: kMotionCurve,
                     width: roadFocus
-                        ? 4
+                        ? 124
                         : selected
-                        ? 3
-                        : 2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: skill.color.withAlpha(
-                        roadFocus
-                            ? 120
+                        ? 82
+                        : 74,
+                    height: roadFocus
+                        ? 124
+                        : selected
+                        ? 82
+                        : 74,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: skill.color.withAlpha(isDark ? 36 : 28),
+                      border: Border.all(
+                        color: selected ? Colors.white : skill.color,
+                        width: roadFocus
+                            ? 3.4
                             : selected
-                            ? 105
-                            : 48,
+                            ? 3
+                            : 2,
                       ),
-                      blurRadius: roadFocus
-                          ? 44
-                          : selected
-                          ? 30
-                          : 18,
-                      spreadRadius: roadFocus
-                          ? 2
-                          : selected
-                          ? 1
-                          : 0,
-                    ),
-                  ],
-                ),
-                child: Stack(
-                  alignment: Alignment.center,
-                  clipBehavior: Clip.none,
-                  children: [
-                    Transform.translate(
-                      offset: Offset(0, roadFocus ? -9 : -5),
-                      child: Icon(
-                        skill.icon,
-                        color: skill.color.withAlpha(selected ? 245 : 220),
-                        size: roadFocus
-                            ? 54
-                            : selected
-                            ? 31
-                            : 27,
-                      ),
-                    ),
-                    Positioned(
-                      bottom: roadFocus ? 23 : 7,
-                      child: Text(
-                        '${skill.level}',
-                        style: TextStyle(
-                          color: skill.color.withAlpha(selected ? 255 : 255),
-                          fontSize: roadFocus
-                              ? 34
+                      boxShadow: [
+                        BoxShadow(
+                          color: skill.color.withAlpha(
+                            roadFocus
+                                ? 92
+                                : selected
+                                ? 105
+                                : 48,
+                          ),
+                          blurRadius: roadFocus
+                              ? 32
                               : selected
-                              ? 18
-                              : 16,
-                          height: 1,
-                          fontWeight: FontWeight.w900,
-                          shadows: [
-                            Shadow(
-                              color: Colors.black.withAlpha(isDark ? 200 : 80),
-                              blurRadius: 8,
-                            ),
-                          ],
+                              ? 30
+                              : 18,
+                          spreadRadius: roadFocus
+                              ? 1
+                              : selected
+                              ? 1
+                              : 0,
                         ),
-                      ),
+                      ],
                     ),
-                  ],
+                    child: Stack(
+                      alignment: Alignment.center,
+                      clipBehavior: Clip.none,
+                      children: [
+                        Transform.translate(
+                          offset: Offset(0, roadFocus ? -8 : -5),
+                          child: Icon(
+                            skill.icon,
+                            color: skill.color.withAlpha(selected ? 245 : 220),
+                            size: roadFocus
+                                ? 43
+                                : selected
+                                ? 31
+                                : 27,
+                          ),
+                        ),
+                        Positioned(
+                          bottom: roadFocus ? 18 : 7,
+                          child: Text(
+                            '${skill.level}',
+                            style: TextStyle(
+                              color: skill.color.withAlpha(
+                                selected ? 255 : 255,
+                              ),
+                              fontSize: roadFocus
+                                  ? 27
+                                  : selected
+                                  ? 18
+                                  : 16,
+                              height: 1,
+                              fontWeight: FontWeight.w900,
+                              shadows: [
+                                Shadow(
+                                  color: Colors.black.withAlpha(
+                                    isDark ? 200 : 80,
+                                  ),
+                                  blurRadius: 8,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(height: 9),
+                _AdaptiveOrbLabel(
+                  text: skill.name,
+                  isDark: isDark,
+                  selected: selected || roadFocus,
+                ),
+              ],
             ),
-            const SizedBox(height: 9),
-            _AdaptiveOrbLabel(
-              text: skill.name,
-              isDark: isDark,
-              selected: selected || roadFocus,
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -1628,6 +1769,38 @@ class _AdaptiveNodeLabel extends StatelessWidget {
           height: 1.05,
           fontWeight: FontWeight.w600,
         ),
+      ),
+    );
+  }
+}
+
+class _RoadmapExtendPathButton extends StatelessWidget {
+  final bool isDark;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _RoadmapExtendPathButton({
+    required this.isDark,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return PressFeedback(
+      scale: 0.9,
+      tooltip: 'Продлить путь',
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: isDark ? const Color(0xFF111119) : Colors.white,
+          border: Border.all(color: color.withAlpha(190), width: 1.5),
+          boxShadow: [
+            BoxShadow(color: color.withAlpha(isDark ? 42 : 32), blurRadius: 14),
+          ],
+        ),
+        child: Icon(Icons.add, color: color, size: 18),
       ),
     );
   }
@@ -2223,6 +2396,7 @@ class _MobileMasterySelectionPanel extends StatelessWidget {
   final void Function(Skill skill, Task task) onSelectQuest;
   final ValueChanged<Skill> onAddRoot;
   final void Function(Skill skill, SkillTreeNode node) onAddChild;
+  final void Function(Skill skill, SkillTreeNode node) onExtendPath;
   final void Function(Skill skill, SkillTreeNode? node) onAddQuest;
   final void Function(Skill skill, Task task) onEditQuest;
   final ValueChanged<Task> onDeleteQuest;
@@ -2237,6 +2411,7 @@ class _MobileMasterySelectionPanel extends StatelessWidget {
     required this.onSelectQuest,
     required this.onAddRoot,
     required this.onAddChild,
+    required this.onExtendPath,
     required this.onAddQuest,
     required this.onEditQuest,
     required this.onDeleteQuest,
@@ -2284,6 +2459,7 @@ class _MobileMasterySelectionPanel extends StatelessWidget {
               skill: skill,
               node: node,
               onAddChild: () => onAddChild(skill, node),
+              onExtendPath: () => onExtendPath(skill, node),
               onAddQuest: () => onAddQuest(skill, node),
               onSelectQuest: (task) => onSelectQuest(skill, task),
               onEditQuest: (task) => onEditQuest(skill, task),
@@ -2537,6 +2713,7 @@ class _MobileNodeMasteryPanel extends StatelessWidget {
   final Skill skill;
   final SkillTreeNode node;
   final VoidCallback onAddChild;
+  final VoidCallback onExtendPath;
   final VoidCallback onAddQuest;
   final ValueChanged<Task> onSelectQuest;
   final ValueChanged<Task> onEditQuest;
@@ -2549,6 +2726,7 @@ class _MobileNodeMasteryPanel extends StatelessWidget {
     required this.skill,
     required this.node,
     required this.onAddChild,
+    required this.onExtendPath,
     required this.onAddQuest,
     required this.onSelectQuest,
     required this.onEditQuest,
@@ -2634,9 +2812,15 @@ class _MobileNodeMasteryPanel extends StatelessWidget {
               onTap: onAddQuest,
             ),
             SmallBtn(
+              label: 'Продлить путь',
+              icon: Icons.add_road,
+              color: skill.color,
+              onTap: onExtendPath,
+            ),
+            SmallBtn(
               label: 'Дочерний этап',
               icon: Icons.account_tree,
-              color: skill.color,
+              color: subtext(isDark),
               onTap: onAddChild,
             ),
             _MasterNodeAction(
@@ -2924,6 +3108,7 @@ class _MasteryMapInspector extends StatelessWidget {
   final void Function(Skill skill, Task task) onSelectQuest;
   final ValueChanged<Skill> onAddRoot;
   final void Function(Skill skill, SkillTreeNode node) onAddChild;
+  final void Function(Skill skill, SkillTreeNode node) onExtendPath;
   final void Function(Skill skill, SkillTreeNode? node) onAddQuest;
   final void Function(Skill skill, Task task) onEditQuest;
   final ValueChanged<Task> onDeleteQuest;
@@ -2938,6 +3123,7 @@ class _MasteryMapInspector extends StatelessWidget {
     required this.onSelectQuest,
     required this.onAddRoot,
     required this.onAddChild,
+    required this.onExtendPath,
     required this.onAddQuest,
     required this.onEditQuest,
     required this.onDeleteQuest,
@@ -3006,6 +3192,7 @@ class _MasteryMapInspector extends StatelessWidget {
             skill: skill,
             node: node,
             onAddChild: () => onAddChild(skill, node),
+            onExtendPath: () => onExtendPath(skill, node),
             onAddQuest: () => onAddQuest(skill, node),
             onSelectQuest: (task) => onSelectQuest(skill, task),
             onEditQuest: (task) => onEditQuest(skill, task),
@@ -3423,6 +3610,7 @@ class _NodeInspector extends StatelessWidget {
   final Skill skill;
   final SkillTreeNode node;
   final VoidCallback onAddChild;
+  final VoidCallback onExtendPath;
   final VoidCallback onAddQuest;
   final ValueChanged<Task> onSelectQuest;
   final ValueChanged<Task> onEditQuest;
@@ -3435,6 +3623,7 @@ class _NodeInspector extends StatelessWidget {
     required this.skill,
     required this.node,
     required this.onAddChild,
+    required this.onExtendPath,
     required this.onAddQuest,
     required this.onSelectQuest,
     required this.onEditQuest,
@@ -3553,9 +3742,15 @@ class _NodeInspector extends StatelessWidget {
               onTap: onAddQuest,
             ),
             SmallBtn(
-              label: 'Следующий этап',
-              icon: Icons.account_tree,
+              label: 'Продлить путь',
+              icon: Icons.add_road,
               color: skill.color,
+              onTap: onExtendPath,
+            ),
+            SmallBtn(
+              label: 'Дочерний этап',
+              icon: Icons.account_tree,
+              color: sub,
               onTap: onAddChild,
             ),
           ],

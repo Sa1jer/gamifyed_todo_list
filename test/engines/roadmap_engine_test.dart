@@ -160,5 +160,24 @@ void main() {
       expect(pathIds, contains('root>next'));
       expect(pathIds, contains('other'));
     });
+
+    test('path layout resolves terminal stage for any stage on the road', () {
+      final root = stage('root', 'Основа');
+      final middle = stage('middle', 'Практика', prerequisites: ['root']);
+      final terminal = stage(
+        'terminal',
+        'Результат',
+        prerequisites: ['middle'],
+      );
+      final skill = skillWithNodes([middle, terminal, root]);
+
+      final layout = engine.buildPathLayout(skill);
+
+      expect(layout.terminalStageFor('root')?.id, 'terminal');
+      expect(layout.terminalStageFor('middle')?.id, 'terminal');
+      expect(layout.terminalStageFor('terminal')?.id, 'terminal');
+      expect(engine.terminalStageForNode(skill, 'root')?.id, 'terminal');
+      expect(engine.terminalStageForNode(skill, 'missing'), isNull);
+    });
   });
 }

@@ -52,6 +52,17 @@ class RoadmapPathLayout {
   );
 
   bool get isEmpty => paths.every((path) => path.nodes.isEmpty);
+
+  RoadmapPath? pathContaining(String nodeId) {
+    for (final path in paths) {
+      if (path.nodes.any((node) => node.id == nodeId)) return path;
+    }
+    return null;
+  }
+
+  SkillTreeNode? terminalStageFor(String nodeId) {
+    return pathContaining(nodeId)?.terminalStage;
+  }
 }
 
 class RoadmapStageInfo {
@@ -206,6 +217,10 @@ class RoadmapEngine {
     }
 
     return RoadmapPathLayout(paths: paths);
+  }
+
+  SkillTreeNode? terminalStageForNode(Skill skill, String nodeId) {
+    return buildPathLayout(skill).terminalStageFor(nodeId);
   }
 
   List<SkillTreeNode> _orderedNodes(Skill skill) {
