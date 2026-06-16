@@ -785,7 +785,8 @@ class _OrbMasteryMapCanvas extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = isDark ? const Color(0xFF0D0D12) : const Color(0xFFF7F8FC);
+    final baseBg = isDark ? const Color(0xFF0D0D12) : const Color(0xFFF7F8FC);
+    final bg = Color.lerp(baseBg, Colors.black, 0.5)!;
     return Container(
       decoration: BoxDecoration(
         color: bg,
@@ -842,7 +843,7 @@ class _OrbMasteryMapCanvas extends StatelessWidget {
                             duration: kMotionSlow,
                             curve: kMotionCurve,
                             left: position.dx - (roadFocus ? 110 : 90),
-                            top: position.dy - (roadFocus ? 92 : 70),
+                            top: position.dy - (roadFocus ? 62 : 70),
                             width: roadFocus ? 220 : 180,
                             height: roadFocus ? 184 : 156,
                             child: _SkillOrbButton(
@@ -1385,7 +1386,6 @@ class _SkillOrbButton extends StatelessWidget {
           scale: hiddenInFocus ? 0.82 : 1,
           child: PressFeedback(
             scale: 0.95,
-            tooltip: 'Открыть ветку навыка “${skill.name}”',
             onTap: onTap,
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1789,7 +1789,6 @@ class _RoadmapExtendPathButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return PressFeedback(
       scale: 0.9,
-      tooltip: 'Продлить путь',
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
