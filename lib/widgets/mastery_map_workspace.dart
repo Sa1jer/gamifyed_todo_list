@@ -54,6 +54,13 @@ DateTime _questSortDate(Task task) => task.lastCompletedAt ?? task.updatedAt;
 
 const _roadmapEngine = RoadmapEngine();
 
+Offset _feedbackOriginFor(BuildContext context) {
+  final box = context.findRenderObject() as RenderBox?;
+  if (box == null) return Offset.zero;
+  final topLeft = box.localToGlobal(Offset.zero);
+  return Offset(topLeft.dx + box.size.width / 2, topLeft.dy + box.size.height);
+}
+
 RoadmapSnapshot _roadmapSnapshotFor(AppState state, Skill skill) {
   return _roadmapEngine.buildSnapshot(
     skill,
@@ -163,6 +170,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
               state.applyRoadmapTemplate(skill.id, config);
               setState(() => _selection = _MasterySelection.skill(skill.id));
             },
+            onToggleQuest: _toggleQuestFromMap,
             onEditQuest: (skill, task) => _editQuest(context, skill, task),
             onDeleteQuest: (task) {
               state.removeTask(task.id);
@@ -213,6 +221,15 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
 
   Skill? _skillById(AppState state, String id) =>
       state.skills.where((skill) => skill.id == id).firstOrNull;
+
+  void _toggleQuestFromMap(Task task, Offset position) {
+    if (task.isDone) {
+      AppFeedback.selection();
+      AppStateProvider.of(context).uncompleteTask(task.id);
+      return;
+    }
+    widget.onCompleteTask(task.id, position);
+  }
 
   void _addNode(
     BuildContext context,
@@ -487,6 +504,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
                                   _MasterySelection.skill(skill.id),
                                 );
                               },
+                              onToggleQuest: _toggleQuestFromMap,
                               onEditQuest: (skill, task) => _editQuest(
                                 dialogContext,
                                 skill,
@@ -599,6 +617,7 @@ class _MasteryMapBody extends StatelessWidget {
   final void Function(Skill skill, SkillTreeNode? node) onAddQuest;
   final void Function(Skill skill, RoadmapTemplateConfig config)
   onApplyRoadmapTemplate;
+  final void Function(Task task, Offset position) onToggleQuest;
   final void Function(Skill skill, Task task) onEditQuest;
   final ValueChanged<Task> onDeleteQuest;
   final void Function(Skill skill, SkillTreeNode node) onMasterNode;
@@ -614,6 +633,7 @@ class _MasteryMapBody extends StatelessWidget {
     required this.onExtendPath,
     required this.onAddQuest,
     required this.onApplyRoadmapTemplate,
+    required this.onToggleQuest,
     required this.onEditQuest,
     required this.onDeleteQuest,
     required this.onMasterNode,
@@ -696,6 +716,7 @@ class _MasteryMapBody extends StatelessWidget {
                           closeThen(() => onExtendPath(skill, node)),
                       onAddQuest: (skill, node) =>
                           closeThen(() => onAddQuest(skill, node)),
+                      onToggleQuest: onToggleQuest,
                       onEditQuest: (skill, task) =>
                           closeThen(() => onEditQuest(skill, task)),
                       onDeleteQuest: (task) =>
@@ -742,6 +763,7 @@ class _MasteryMapBody extends StatelessWidget {
           onAddChild: onAddChild,
           onExtendPath: onExtendPath,
           onAddQuest: onAddQuest,
+          onToggleQuest: onToggleQuest,
           onEditQuest: onEditQuest,
           onDeleteQuest: onDeleteQuest,
           onMasterNode: onMasterNode,
@@ -761,7 +783,7 @@ class _MasteryMapBody extends StatelessWidget {
   }
 }
 
-class _OrbMasteryMapCanvas extends StatelessWidget {
+class _OrbMasteryMapCanvas extends StatefulWidget {
   final AppState state;
   final bool isDark;
   final _MasterySelection? selection;
@@ -784,9 +806,27 @@ class _OrbMasteryMapCanvas extends StatelessWidget {
   });
 
   @override
+  State<_OrbMasteryMapCanvas> createState() => _OrbMasteryMapCanvasState();
+}
+
+class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas> {
+  bool _templatePanelHidden = false;
+
+  @override
+  void didUpdateWidget(covariant _OrbMasteryMapCanvas oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.selection?.skillId != oldWidget.selection?.skillId) {
+      _templatePanelHidden = false;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final state = widget.state;
+    final isDark = widget.isDark;
+    final selection = widget.selection;
     final baseBg = isDark ? const Color(0xFF0D0D12) : const Color(0xFFF7F8FC);
-    final bg = Color.lerp(baseBg, Colors.black, 0.5)!;
+    final bg = Color.lerp(baseBg, Colors.black, 0.75)!;
     return Container(
       decoration: BoxDecoration(
         color: bg,
@@ -853,7 +893,7 @@ class _OrbMasteryMapCanvas extends StatelessWidget {
                               roadFocus: roadFocus,
                               hiddenInFocus: hiddenInFocus,
                               dimmed: selectedSkill != null && !selected,
-                              onTap: () => onSelectSkill(skill),
+                              onTap: () => widget.onSelectSkill(skill),
                             ),
                           );
                         }),
@@ -890,7 +930,7 @@ class _OrbMasteryMapCanvas extends StatelessWidget {
                                       selection?.type !=
                                           _MasterySelectionType.skill,
                                   onTap: () =>
-                                      onSelectNode(selectedSkill, node),
+                                      widget.onSelectNode(selectedSkill, node),
                                 ),
                               ),
                             );
@@ -917,8 +957,10 @@ class _OrbMasteryMapCanvas extends StatelessWidget {
                               child: _RoadmapExtendPathButton(
                                 isDark: isDark,
                                 color: selectedSkill.color,
-                                onTap: () =>
-                                    onExtendPath(selectedSkill, terminalNode),
+                                onTap: () => widget.onExtendPath(
+                                  selectedSkill,
+                                  terminalNode,
+                                ),
                               ),
                             );
                           }),
@@ -942,10 +984,11 @@ class _OrbMasteryMapCanvas extends StatelessWidget {
                     isDark: isDark,
                     label: 'Назад к навыкам',
                     icon: Icons.keyboard_return,
-                    onTap: onCollapse,
+                    onTap: widget.onCollapse,
                   ),
                 ),
-              if (selectedSkill != null)
+              if (selectedSkill != null &&
+                  selection?.type == _MasterySelectionType.skill)
                 Positioned(
                   left: 14,
                   top: constraints.maxWidth < 760 ? null : 14,
@@ -953,11 +996,33 @@ class _OrbMasteryMapCanvas extends StatelessWidget {
                   width: constraints.maxWidth < 760
                       ? constraints.maxWidth - 28
                       : 272,
-                  child: _RoadmapTemplatePanel(
-                    skill: selectedSkill,
-                    isDark: isDark,
-                    onApply: (config) =>
-                        onApplyRoadmapTemplate(selectedSkill, config),
+                  child: AnimatedSwitcher(
+                    duration: kMotionSlow,
+                    switchInCurve: kMotionCurve,
+                    switchOutCurve: kMotionExitCurve,
+                    child: _templatePanelHidden
+                        ? Align(
+                            key: const ValueKey('roadmap-template-show'),
+                            alignment: Alignment.centerLeft,
+                            child: _MapCanvasAction(
+                              isDark: isDark,
+                              label: 'Шаблоны',
+                              icon: Icons.route,
+                              onTap: () =>
+                                  setState(() => _templatePanelHidden = false),
+                            ),
+                          )
+                        : _RoadmapTemplatePanel(
+                            key: const ValueKey('roadmap-template-panel'),
+                            skill: selectedSkill,
+                            isDark: isDark,
+                            onHide: () =>
+                                setState(() => _templatePanelHidden = true),
+                            onApply: (config) => widget.onApplyRoadmapTemplate(
+                              selectedSkill,
+                              config,
+                            ),
+                          ),
                   ),
                 ),
             ],
@@ -968,10 +1033,10 @@ class _OrbMasteryMapCanvas extends StatelessWidget {
   }
 
   _OrbCanvasLayout _buildOrbLayout(AppState state, Size minSize) {
-    final selectedSkill = selection == null
+    final selectedSkill = widget.selection == null
         ? null
         : state.skills
-              .where((skill) => skill.id == selection!.skillId)
+              .where((skill) => skill.id == widget.selection!.skillId)
               .firstOrNull;
     final pathLayout = selectedSkill == null
         ? const RoadmapPathLayout(paths: [])
@@ -1809,11 +1874,14 @@ class _RoadmapTemplatePanel extends StatefulWidget {
   final Skill skill;
   final bool isDark;
   final ValueChanged<RoadmapTemplateConfig> onApply;
+  final VoidCallback onHide;
 
   const _RoadmapTemplatePanel({
     required this.skill,
     required this.isDark,
     required this.onApply,
+    required this.onHide,
+    super.key,
   });
 
   @override
@@ -1966,11 +2034,32 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
               _RoadmapTemplateWarning(isDark: isDark),
             ],
             const SizedBox(height: 10),
-            SmallBtn(
-              label: 'Применить шаблон',
-              icon: Icons.add_road,
-              color: color,
-              onTap: () => widget.onApply(config),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                SmallBtn(
+                  label: 'Применить шаблон',
+                  icon: Icons.add_road,
+                  color: color,
+                  onTap: () => widget.onApply(config),
+                ),
+                const Spacer(),
+                PressFeedback(
+                  scale: 0.94,
+                  onTap: widget.onHide,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(10, 8, 0, 2),
+                    child: Text(
+                      'Скрыть',
+                      style: TextStyle(
+                        color: subtext(isDark),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -2397,6 +2486,7 @@ class _MobileMasterySelectionPanel extends StatelessWidget {
   final void Function(Skill skill, SkillTreeNode node) onAddChild;
   final void Function(Skill skill, SkillTreeNode node) onExtendPath;
   final void Function(Skill skill, SkillTreeNode? node) onAddQuest;
+  final void Function(Task task, Offset position) onToggleQuest;
   final void Function(Skill skill, Task task) onEditQuest;
   final ValueChanged<Task> onDeleteQuest;
   final void Function(Skill skill, SkillTreeNode node) onMasterNode;
@@ -2412,6 +2502,7 @@ class _MobileMasterySelectionPanel extends StatelessWidget {
     required this.onAddChild,
     required this.onExtendPath,
     required this.onAddQuest,
+    required this.onToggleQuest,
     required this.onEditQuest,
     required this.onDeleteQuest,
     required this.onMasterNode,
@@ -2461,6 +2552,7 @@ class _MobileMasterySelectionPanel extends StatelessWidget {
               onExtendPath: () => onExtendPath(skill, node),
               onAddQuest: () => onAddQuest(skill, node),
               onSelectQuest: (task) => onSelectQuest(skill, task),
+              onToggleQuest: onToggleQuest,
               onEditQuest: (task) => onEditQuest(skill, task),
               onMaster: () => onMasterNode(skill, node),
               onDelete: () => onDeleteNode(skill, node),
@@ -2473,6 +2565,7 @@ class _MobileMasterySelectionPanel extends StatelessWidget {
               onAddRoot: () => onAddRoot(skill),
               onAddQuest: () => onAddQuest(skill, null),
               onSelectQuest: (task) => onSelectQuest(skill, task),
+              onToggleQuest: onToggleQuest,
               onEditQuest: (task) => onEditQuest(skill, task),
             ),
           _ => _MobileEmptyMasteryPanel(
@@ -2604,6 +2697,7 @@ class _MobileSkillMasteryPanel extends StatelessWidget {
   final VoidCallback onAddRoot;
   final VoidCallback onAddQuest;
   final ValueChanged<Task> onSelectQuest;
+  final void Function(Task task, Offset position) onToggleQuest;
   final ValueChanged<Task> onEditQuest;
 
   const _MobileSkillMasteryPanel({
@@ -2613,6 +2707,7 @@ class _MobileSkillMasteryPanel extends StatelessWidget {
     required this.onAddRoot,
     required this.onAddQuest,
     required this.onSelectQuest,
+    required this.onToggleQuest,
     required this.onEditQuest,
   });
 
@@ -2680,6 +2775,7 @@ class _MobileSkillMasteryPanel extends StatelessWidget {
           isDark: isDark,
           color: skill.color,
           onSelectQuest: onSelectQuest,
+          onToggleQuest: onToggleQuest,
           onEditQuest: onEditQuest,
         ),
         const SizedBox(height: 12),
@@ -2715,6 +2811,7 @@ class _MobileNodeMasteryPanel extends StatelessWidget {
   final VoidCallback onExtendPath;
   final VoidCallback onAddQuest;
   final ValueChanged<Task> onSelectQuest;
+  final void Function(Task task, Offset position) onToggleQuest;
   final ValueChanged<Task> onEditQuest;
   final VoidCallback onMaster;
   final VoidCallback onDelete;
@@ -2728,6 +2825,7 @@ class _MobileNodeMasteryPanel extends StatelessWidget {
     required this.onExtendPath,
     required this.onAddQuest,
     required this.onSelectQuest,
+    required this.onToggleQuest,
     required this.onEditQuest,
     required this.onMaster,
     required this.onDelete,
@@ -2797,6 +2895,7 @@ class _MobileNodeMasteryPanel extends StatelessWidget {
           isDark: isDark,
           color: skill.color,
           onSelectQuest: onSelectQuest,
+          onToggleQuest: onToggleQuest,
           onEditQuest: onEditQuest,
         ),
         const SizedBox(height: 12),
@@ -2958,6 +3057,7 @@ class _MobileMasteryQuestPreview extends StatelessWidget {
   final bool isDark;
   final Color color;
   final ValueChanged<Task> onSelectQuest;
+  final void Function(Task task, Offset position) onToggleQuest;
   final ValueChanged<Task> onEditQuest;
 
   const _MobileMasteryQuestPreview({
@@ -2967,6 +3067,7 @@ class _MobileMasteryQuestPreview extends StatelessWidget {
     required this.isDark,
     required this.color,
     required this.onSelectQuest,
+    required this.onToggleQuest,
     required this.onEditQuest,
   });
 
@@ -3005,6 +3106,7 @@ class _MobileMasteryQuestPreview extends StatelessWidget {
                 isDark: isDark,
                 color: color,
                 onSelect: () => onSelectQuest(task),
+                onToggle: (position) => onToggleQuest(task, position),
                 onEdit: () => onEditQuest(task),
               ),
             ),
@@ -3019,6 +3121,7 @@ class _MobileMasteryQuestRow extends StatelessWidget {
   final bool isDark;
   final Color color;
   final VoidCallback onSelect;
+  final ValueChanged<Offset> onToggle;
   final VoidCallback onEdit;
 
   const _MobileMasteryQuestRow({
@@ -3026,6 +3129,7 @@ class _MobileMasteryQuestRow extends StatelessWidget {
     required this.isDark,
     required this.color,
     required this.onSelect,
+    required this.onToggle,
     required this.onEdit,
   });
 
@@ -3045,10 +3149,17 @@ class _MobileMasteryQuestRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(
-              task.isDone ? Icons.check_circle : Icons.radio_button_unchecked,
-              color: task.isDone ? const Color(0xFF34C759) : color,
-              size: 18,
+            Builder(
+              builder: (iconContext) => PressFeedback(
+                scale: 0.9,
+                onTap: () => onToggle(_feedbackOriginFor(iconContext)),
+                child: _QuestToggleCircle(
+                  done: task.isDone,
+                  color: color,
+                  isDark: isDark,
+                  size: 18,
+                ),
+              ),
             ),
             const SizedBox(width: 8),
             Expanded(
@@ -3109,6 +3220,7 @@ class _MasteryMapInspector extends StatelessWidget {
   final void Function(Skill skill, SkillTreeNode node) onAddChild;
   final void Function(Skill skill, SkillTreeNode node) onExtendPath;
   final void Function(Skill skill, SkillTreeNode? node) onAddQuest;
+  final void Function(Task task, Offset position) onToggleQuest;
   final void Function(Skill skill, Task task) onEditQuest;
   final ValueChanged<Task> onDeleteQuest;
   final void Function(Skill skill, SkillTreeNode node) onMasterNode;
@@ -3124,6 +3236,7 @@ class _MasteryMapInspector extends StatelessWidget {
     required this.onAddChild,
     required this.onExtendPath,
     required this.onAddQuest,
+    required this.onToggleQuest,
     required this.onEditQuest,
     required this.onDeleteQuest,
     required this.onMasterNode,
@@ -3194,6 +3307,7 @@ class _MasteryMapInspector extends StatelessWidget {
             onExtendPath: () => onExtendPath(skill, node),
             onAddQuest: () => onAddQuest(skill, node),
             onSelectQuest: (task) => onSelectQuest(skill, task),
+            onToggleQuest: onToggleQuest,
             onEditQuest: (task) => onEditQuest(skill, task),
             onMaster: () => onMasterNode(skill, node),
             onDelete: () => onDeleteNode(skill, node),
@@ -3205,6 +3319,7 @@ class _MasteryMapInspector extends StatelessWidget {
             onAddRoot: () => onAddRoot(skill),
             onAddQuest: () => onAddQuest(skill, null),
             onSelectQuest: (task) => onSelectQuest(skill, task),
+            onToggleQuest: onToggleQuest,
             onEditQuest: (task) => onEditQuest(skill, task),
           ),
         },
@@ -3465,6 +3580,7 @@ class _SkillInspector extends StatelessWidget {
   final VoidCallback onAddRoot;
   final VoidCallback onAddQuest;
   final ValueChanged<Task> onSelectQuest;
+  final void Function(Task task, Offset position) onToggleQuest;
   final ValueChanged<Task> onEditQuest;
 
   const _SkillInspector({
@@ -3474,6 +3590,7 @@ class _SkillInspector extends StatelessWidget {
     required this.onAddRoot,
     required this.onAddQuest,
     required this.onSelectQuest,
+    required this.onToggleQuest,
     required this.onEditQuest,
   });
 
@@ -3576,6 +3693,7 @@ class _SkillInspector extends StatelessWidget {
               ),
             ],
             onSelectQuest: onSelectQuest,
+            onToggleQuest: onToggleQuest,
             onEditQuest: onEditQuest,
           ),
         ),
@@ -3612,6 +3730,7 @@ class _NodeInspector extends StatelessWidget {
   final VoidCallback onExtendPath;
   final VoidCallback onAddQuest;
   final ValueChanged<Task> onSelectQuest;
+  final void Function(Task task, Offset position) onToggleQuest;
   final ValueChanged<Task> onEditQuest;
   final VoidCallback onMaster;
   final VoidCallback onDelete;
@@ -3625,6 +3744,7 @@ class _NodeInspector extends StatelessWidget {
     required this.onExtendPath,
     required this.onAddQuest,
     required this.onSelectQuest,
+    required this.onToggleQuest,
     required this.onEditQuest,
     required this.onMaster,
     required this.onDelete,
@@ -3726,6 +3846,7 @@ class _NodeInspector extends StatelessWidget {
               ),
             ],
             onSelectQuest: onSelectQuest,
+            onToggleQuest: onToggleQuest,
             onEditQuest: onEditQuest,
           ),
         ),
@@ -4054,6 +4175,7 @@ class _InspectorQuestList extends StatelessWidget {
   final Color color;
   final List<_QuestListSection> sections;
   final ValueChanged<Task> onSelectQuest;
+  final void Function(Task task, Offset position) onToggleQuest;
   final ValueChanged<Task> onEditQuest;
 
   const _InspectorQuestList({
@@ -4061,6 +4183,7 @@ class _InspectorQuestList extends StatelessWidget {
     required this.color,
     required this.sections,
     required this.onSelectQuest,
+    required this.onToggleQuest,
     required this.onEditQuest,
   });
 
@@ -4125,6 +4248,7 @@ class _InspectorQuestList extends StatelessWidget {
                 color: color,
                 muted: section.muted,
                 onSelect: () => onSelectQuest(task),
+                onToggle: (position) => onToggleQuest(task, position),
                 onEdit: () => onEditQuest(task),
               ),
             ),
@@ -4141,6 +4265,7 @@ class _InspectorQuestRow extends StatelessWidget {
   final Color color;
   final bool muted;
   final VoidCallback onSelect;
+  final ValueChanged<Offset> onToggle;
   final VoidCallback onEdit;
 
   const _InspectorQuestRow({
@@ -4149,6 +4274,7 @@ class _InspectorQuestRow extends StatelessWidget {
     required this.color,
     required this.muted,
     required this.onSelect,
+    required this.onToggle,
     required this.onEdit,
   });
 
@@ -4183,10 +4309,17 @@ class _InspectorQuestRow extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              done ? Icons.check_circle : Icons.radio_button_unchecked,
-              color: done ? const Color(0xFF34C759) : rowColor,
-              size: 18,
+            Builder(
+              builder: (iconContext) => PressFeedback(
+                scale: 0.9,
+                onTap: () => onToggle(_feedbackOriginFor(iconContext)),
+                child: _QuestToggleCircle(
+                  done: done,
+                  color: rowColor,
+                  isDark: isDark,
+                  size: 18,
+                ),
+              ),
             ),
             const SizedBox(width: 8),
             Expanded(
@@ -4246,6 +4379,57 @@ class _InspectorQuestRow extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _QuestToggleCircle extends StatelessWidget {
+  final bool done;
+  final Color color;
+  final bool isDark;
+  final double size;
+
+  const _QuestToggleCircle({
+    required this.done,
+    required this.color,
+    required this.isDark,
+    required this.size,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final activeColor = done ? const Color(0xFF34C759) : color;
+    return AnimatedContainer(
+      duration: kMotionStandard,
+      curve: kMotionCurve,
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: done ? activeColor : Colors.transparent,
+        border: Border.all(color: activeColor, width: 2),
+        boxShadow: done
+            ? [
+                BoxShadow(
+                  color: activeColor.withAlpha(isDark ? 80 : 52),
+                  blurRadius: 10,
+                ),
+              ]
+            : null,
+      ),
+      child: AnimatedSwitcher(
+        duration: kMotionStandard,
+        switchInCurve: kMotionCurve,
+        switchOutCurve: kMotionExitCurve,
+        child: done
+            ? Icon(
+                Icons.check,
+                key: const ValueKey('done'),
+                size: size * 0.58,
+                color: Colors.white,
+              )
+            : const SizedBox(key: ValueKey('active')),
       ),
     );
   }
