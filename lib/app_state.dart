@@ -8,6 +8,7 @@ import 'storage_service.dart';
 import 'notification_service.dart';
 import 'sfx_service.dart';
 import 'engines/boss_engine.dart';
+import 'engines/roadmap_engine.dart';
 
 class AppState extends ChangeNotifier {
   static const double _minimumActionRatio = 0.3;
@@ -582,14 +583,15 @@ class AppState extends ChangeNotifier {
     // completion/undo. Используем индекс в исходном списке как вторичный ключ:
     // больший index в `history` = добавлено раньше = должно идти раньше
     // в orderedHistory.
-    final indexedHistory = List<MapEntry<int, HistoryEntry>>.generate(
-      history.length,
-      (i) => MapEntry(i, history[i]),
-    )..sort((a, b) {
-        final byTime = a.value.at.compareTo(b.value.at);
-        if (byTime != 0) return byTime;
-        return b.key.compareTo(a.key);
-      });
+    final indexedHistory =
+        List<MapEntry<int, HistoryEntry>>.generate(
+          history.length,
+          (i) => MapEntry(i, history[i]),
+        )..sort((a, b) {
+          final byTime = a.value.at.compareTo(b.value.at);
+          if (byTime != 0) return byTime;
+          return b.key.compareTo(a.key);
+        });
     final orderedHistory = indexedHistory.map((e) => e.value);
     final effectiveCompletionsByTask = <String, List<HistoryEntry>>{};
 
@@ -1221,6 +1223,25 @@ class AppState extends ChangeNotifier {
     }
     node.syncChecklistDone();
     skill.treeNodes.add(node);
+    skill.syncTreeNodes();
+    _syncBossesForSkill(skillId);
+    notifyListeners();
+    _saveAll();
+  }
+
+  void addRoadmapTemplate(String skillId, RoadmapTemplateConfig config) {
+    final skill = _skillById(skillId);
+    if (skill == null) return;
+    final nodes = const RoadmapEngine().buildTemplate(config);
+    if (nodes.isEmpty) return;
+
+    for (final node in nodes) {
+      if (node.requiredQuestCompletions < 1) {
+        node.requiredQuestCompletions = 1;
+      }
+      node.syncChecklistDone();
+    }
+    skill.treeNodes.addAll(nodes);
     skill.syncTreeNodes();
     _syncBossesForSkill(skillId);
     notifyListeners();

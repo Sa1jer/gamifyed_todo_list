@@ -84,21 +84,81 @@ void main() {
       expect(snapshot.currentStage?.progress, 0.4);
     });
 
-    test('templates create deterministic roadmap structures', () {
-      final linear = engine.buildTemplate(RoadmapTemplate.linear);
-      final branching = engine.buildTemplate(RoadmapTemplate.branching);
+    test('simple template creates one road with editable stage count', () {
+      final paths = engine.buildTemplatePaths(
+        const RoadmapTemplateConfig(
+          template: RoadmapTemplate.simple,
+          stagesPerPath: 4,
+        ),
+      );
 
-      expect(linear, hasLength(5));
-      expect(linear.first.prerequisiteIds, isEmpty);
-      expect(linear[1].prerequisiteIds, [linear.first.id]);
-
-      expect(branching, hasLength(4));
-      expect(branching[1].prerequisiteIds, [branching.first.id]);
-      expect(branching[2].prerequisiteIds, [branching.first.id]);
-      expect(branching.last.prerequisiteIds, [
-        branching[1].id,
-        branching[2].id,
+      expect(paths, hasLength(1));
+      expect(paths.single.nodes, hasLength(4));
+      expect(paths.single.nodes.first.prerequisiteIds, isEmpty);
+      expect(paths.single.nodes[1].prerequisiteIds, [
+        paths.single.nodes.first.id,
       ]);
+      expect(paths.single.terminalStage, paths.single.nodes.last);
+    });
+
+    test('normal template creates two equal roads', () {
+      final paths = engine.buildTemplatePaths(
+        const RoadmapTemplateConfig(
+          template: RoadmapTemplate.normal,
+          stagesPerPath: 3,
+        ),
+      );
+
+      expect(paths, hasLength(2));
+      for (final path in paths) {
+        expect(path.nodes, hasLength(3));
+        expect(path.nodes.first.prerequisiteIds, isEmpty);
+        expect(path.nodes[1].prerequisiteIds, [path.nodes.first.id]);
+        expect(path.nodes.last.prerequisiteIds, [path.nodes[1].id]);
+      }
+    });
+
+    test('hard template creates three equal roads', () {
+      final nodes = engine.buildTemplate(
+        const RoadmapTemplateConfig(
+          template: RoadmapTemplate.hard,
+          stagesPerPath: 3,
+        ),
+      );
+
+      expect(nodes, hasLength(9));
+      expect(nodes.where((node) => node.prerequisiteIds.isEmpty), hasLength(3));
+    });
+
+    test('custom template supports path count and stages per path', () {
+      final config = const RoadmapTemplateConfig(
+        template: RoadmapTemplate.custom,
+        customPathCount: 4,
+        stagesPerPath: 2,
+      );
+      final paths = engine.buildTemplatePaths(config);
+
+      expect(config.pathCount, 4);
+      expect(config.safeStagesPerPath, 2);
+      expect(paths, hasLength(4));
+      expect(paths.expand((path) => path.nodes), hasLength(8));
+    });
+
+    test('path layout turns existing chains into roads', () {
+      final root = stage('root', 'Основа');
+      final next = stage('next', 'Практика', prerequisites: ['root']);
+      final secondRoot = stage('other', 'Дыхание');
+      final skill = skillWithNodes([next, secondRoot, root]);
+
+      final layout = engine.buildPathLayout(skill);
+      final pathIds = layout.paths
+          .map((path) => path.nodes.map((node) => node.id).join('>'))
+          .toList();
+
+      expect(layout.paths, hasLength(2));
+      expect(layout.maxStagesInPath, 2);
+      expect(pathIds, contains('root>next'));
+      expect(pathIds, contains('other'));
     });
   });
 }

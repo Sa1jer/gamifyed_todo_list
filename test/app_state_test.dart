@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:todo_list_app/app_state.dart';
+import 'package:todo_list_app/engines/roadmap_engine.dart';
 import 'package:todo_list_app/models.dart';
 import 'package:todo_list_app/storage_service.dart';
 import 'package:todo_list_app/utils.dart';
@@ -259,6 +260,66 @@ void main() {
       expect(skill.goalSpec.reviews.first.id, 'review-1');
       expect(skill.goalSpec.reviews.first.updatedPlan, isTrue);
     });
+  });
+
+  group('roadmap templates', () {
+    late AppState state;
+
+    setUp(() {
+      state = AppState(storage: _InMemoryStorageService(), seedDefaults: true);
+    });
+
+    tearDown(() {
+      state.dispose();
+    });
+
+    test(
+      'adds roadmap roads without deleting existing stages or quest links',
+      () {
+        final skill = state.skills.first;
+        final existingStage = SkillTreeNode(
+          id: 'existing-stage',
+          title: 'Существующий этап',
+          requiredQuestCompletions: 2,
+        );
+        state.addSkillTreeNode(skill.id, existingStage);
+        final linkedQuest = Task(
+          id: 'linked-quest',
+          title: 'Сделать практику этапа',
+          skillId: skill.id,
+          xpReward: 20,
+          type: TaskType.shortTerm,
+          treeNodeId: existingStage.id,
+        );
+        state.addTask(linkedQuest);
+
+        final beforeCount = skill.treeNodes.length;
+        final beforeIds = skill.treeNodes.map((node) => node.id).toSet();
+
+        state.addRoadmapTemplate(
+          skill.id,
+          const RoadmapTemplateConfig(
+            template: RoadmapTemplate.normal,
+            stagesPerPath: 3,
+          ),
+        );
+
+        expect(skill.treeNodes, hasLength(beforeCount + 6));
+        final addedStages = skill.treeNodes
+            .where((node) => !beforeIds.contains(node.id))
+            .toList();
+        expect(addedStages, hasLength(6));
+        expect(
+          addedStages.where((node) => node.prerequisiteIds.isEmpty),
+          hasLength(2),
+        );
+        expect(
+          skill.treeNodes.any((node) => node.id == existingStage.id),
+          isTrue,
+        );
+        expect(linkedQuest.treeNodeId, existingStage.id);
+      },
+    );
   });
 
   group('minimum action flow', () {

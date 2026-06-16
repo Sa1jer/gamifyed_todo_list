@@ -3,7 +3,56 @@ import '../utils.dart';
 
 enum RoadmapStageRole { completed, current, next, locked }
 
-enum RoadmapTemplate { linear, branching, extended, custom }
+enum RoadmapTemplate { simple, normal, hard, custom }
+
+class RoadmapTemplateConfig {
+  final RoadmapTemplate template;
+  final int stagesPerPath;
+  final int? customPathCount;
+
+  const RoadmapTemplateConfig({
+    required this.template,
+    this.stagesPerPath = 3,
+    this.customPathCount,
+  });
+
+  int get pathCount {
+    final count = switch (template) {
+      RoadmapTemplate.simple => 1,
+      RoadmapTemplate.normal => 2,
+      RoadmapTemplate.hard => 3,
+      RoadmapTemplate.custom => customPathCount ?? 1,
+    };
+    return count.clamp(1, 99).toInt();
+  }
+
+  int get safeStagesPerPath => stagesPerPath.clamp(1, 30).toInt();
+
+  bool get canOverloadFocus => pathCount > 5;
+}
+
+class RoadmapPath {
+  final int index;
+  final List<SkillTreeNode> nodes;
+
+  const RoadmapPath({required this.index, required this.nodes});
+
+  SkillTreeNode? get terminalStage => nodes.isEmpty ? null : nodes.last;
+}
+
+class RoadmapPathLayout {
+  final List<RoadmapPath> paths;
+
+  const RoadmapPathLayout({required this.paths});
+
+  int get maxStagesInPath => paths.fold(
+    0,
+    (maxStages, path) =>
+        path.nodes.length > maxStages ? path.nodes.length : maxStages,
+  );
+
+  bool get isEmpty => paths.every((path) => path.nodes.isEmpty);
+}
 
 class RoadmapStageInfo {
   final SkillTreeNode node;
@@ -93,38 +142,70 @@ class RoadmapEngine {
     );
   }
 
-  List<SkillTreeNode> buildTemplate(RoadmapTemplate template) {
-    switch (template) {
-      case RoadmapTemplate.linear:
-        return _linearTemplate([
-          'Основа',
-          'Первый результат',
-          'Уверенная практика',
-          'Сильный уровень',
-          'Цель достигнута',
-        ]);
-      case RoadmapTemplate.branching:
-        final root = _stage('Основа');
-        final practice = _stage('Практика', prerequisites: [root.id]);
-        final technique = _stage('Техника', prerequisites: [root.id]);
-        final result = _stage(
-          'Сборка результата',
-          prerequisites: [practice.id, technique.id],
+  List<SkillTreeNode> buildTemplate(RoadmapTemplateConfig config) {
+    return buildTemplatePaths(
+      config,
+    ).expand((path) => path.nodes).toList(growable: false);
+  }
+
+  List<RoadmapPath> buildTemplatePaths(RoadmapTemplateConfig config) {
+    final pathCount = config.pathCount;
+    final stageCount = config.safeStagesPerPath;
+    return List.generate(pathCount, (pathIndex) {
+      final nodes = <SkillTreeNode>[];
+      String? previousId;
+      for (var stageIndex = 0; stageIndex < stageCount; stageIndex++) {
+        final node = _stage(
+          _templateStageTitle(pathIndex, stageIndex, pathCount),
+          prerequisites: previousId == null ? const [] : [previousId],
         );
-        return [root, practice, technique, result];
-      case RoadmapTemplate.extended:
-        return _linearTemplate([
-          'Основа',
-          'Первый ритм',
-          'Практика',
-          'Стабильность',
-          'Сложный навык',
-          'Сильный результат',
-          'Мастерство',
-        ]);
-      case RoadmapTemplate.custom:
-        return [];
+        nodes.add(node);
+        previousId = node.id;
+      }
+      return RoadmapPath(index: pathIndex, nodes: nodes);
+    });
+  }
+
+  RoadmapPathLayout buildPathLayout(Skill skill) {
+    final nodes = skill.treeNodes;
+    if (nodes.isEmpty) return const RoadmapPathLayout(paths: []);
+
+    final validIds = nodes.map((node) => node.id).toSet();
+    final childrenByParent = {
+      for (final node in nodes) node.id: <SkillTreeNode>[],
+    };
+    final roots = <SkillTreeNode>[];
+
+    for (final node in nodes) {
+      final parentId = node.prerequisiteIds
+          .where((id) => validIds.contains(id))
+          .firstOrNull;
+      if (parentId == null) {
+        roots.add(node);
+      } else {
+        childrenByParent[parentId]?.add(node);
+      }
     }
+
+    final paths = <RoadmapPath>[];
+
+    void walk(SkillTreeNode node, List<SkillTreeNode> prefix) {
+      final nextPrefix = [...prefix, node];
+      final children = childrenByParent[node.id] ?? const <SkillTreeNode>[];
+      if (children.isEmpty) {
+        paths.add(RoadmapPath(index: paths.length, nodes: nextPrefix));
+        return;
+      }
+      for (final child in children) {
+        walk(child, nextPrefix);
+      }
+    }
+
+    for (final root in roots) {
+      walk(root, const []);
+    }
+
+    return RoadmapPathLayout(paths: paths);
   }
 
   List<SkillTreeNode> _orderedNodes(Skill skill) {
@@ -200,27 +281,29 @@ class RoadmapEngine {
     return depth;
   }
 
-  List<SkillTreeNode> _linearTemplate(List<String> titles) {
-    final nodes = <SkillTreeNode>[];
-    String? previousId;
-    for (final title in titles) {
-      final node = _stage(
-        title,
-        prerequisites: previousId == null ? const [] : [previousId],
-      );
-      nodes.add(node);
-      previousId = node.id;
-    }
-    return nodes;
-  }
-
   SkillTreeNode _stage(String title, {List<String> prerequisites = const []}) {
     return SkillTreeNode(
       id: uid(),
       title: title,
       xpReward: 30,
       requiredQuestCompletions: 3,
-      prerequisiteIds: prerequisites,
+      prerequisiteIds: List<String>.from(prerequisites),
     );
+  }
+
+  String _templateStageTitle(int pathIndex, int stageIndex, int pathCount) {
+    const baseTitles = [
+      'Основа',
+      'Практика',
+      'Результат',
+      'Усиление',
+      'Стабильность',
+      'Мастерство',
+    ];
+    final title = stageIndex < baseTitles.length
+        ? baseTitles[stageIndex]
+        : 'Этап ${stageIndex + 1}';
+    if (pathCount == 1) return title;
+    return 'Путь ${pathIndex + 1} · $title';
   }
 }
