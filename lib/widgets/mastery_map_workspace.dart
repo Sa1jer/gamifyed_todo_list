@@ -10,6 +10,7 @@ import '../feedback_service.dart';
 import '../models.dart';
 import '../utils.dart';
 import 'dialogs.dart';
+import 'goal_header.dart';
 import 'shared.dart';
 
 enum _MasterySelectionType { skill, node, quest }
@@ -2783,8 +2784,6 @@ class _RoadmapSummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final txt = textColor(isDark);
-    final sub = subtext(isDark);
-    final goal = snapshot.skill.goal.trim();
     final current = snapshot.currentStage;
     final next = snapshot.nextStage;
     final progressLabel = '${(snapshot.overallProgress * 100).round()}%';
@@ -2829,20 +2828,13 @@ class _RoadmapSummaryCard extends StatelessWidget {
             color: color,
             height: 5,
           ),
-          if (goal.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              'Цель: $goal',
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: sub,
-                fontSize: 11.8,
-                height: 1.25,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
+          const SizedBox(height: 8),
+          GoalHeader(
+            skill: snapshot.skill,
+            isDark: isDark,
+            maxLines: 2,
+            emptyText: 'Roadmap пока без цели',
+          ),
           const SizedBox(height: 9),
           _RoadmapFocusLine(
             isDark: isDark,

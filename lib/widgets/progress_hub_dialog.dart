@@ -3,6 +3,7 @@ import '../app_state.dart';
 import '../engines/progress_engine.dart';
 import '../models.dart';
 import '../utils.dart';
+import 'goal_header.dart';
 import 'shared.dart';
 import 'weekly_review_card.dart';
 
@@ -521,7 +522,6 @@ class _GoalProgressCard extends StatelessWidget {
     final skill = snapshot.skill;
     final txt = textColor(isDark);
     final sub = subtext(isDark);
-    final goal = skill.goal.trim();
     final stage = snapshot.currentStage;
 
     return Container(
@@ -565,15 +565,11 @@ class _GoalProgressCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 2),
-                    Text(
-                      goal.isEmpty ? snapshot.basisLabel : goal,
+                    GoalHeader(
+                      skill: skill,
+                      isDark: isDark,
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: sub,
-                        fontSize: 11.2,
-                        fontWeight: FontWeight.w700,
-                      ),
+                      emptyText: snapshot.basisLabel,
                     ),
                   ],
                 ),

@@ -2951,6 +2951,21 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
         .firstOrNull;
   }
 
+  SkillTreeNode? get _suggestedStage {
+    if (widget.existing != null ||
+        widget.initialTreeNodeId != null ||
+        _treeNodeId != null) {
+      return null;
+    }
+    final skill = widget.skill;
+    if (skill == null) return null;
+    return skill.treeNodes
+        .where(
+          (node) => skill.treeNodeStatus(node) == SkillTreeNodeStatus.active,
+        )
+        .firstOrNull;
+  }
+
   bool get _looksBigTask =>
       _type == TaskType.midTerm ||
       _type == TaskType.longTerm ||
@@ -3067,6 +3082,9 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
               if (_initialStage case final stage?) ...[
                 _buildStageContextCard(stage, txt, sub, bdr, c, isDark),
                 const SizedBox(height: 14),
+              ] else if (_suggestedStage case final stage?) ...[
+                _buildStageSuggestionCard(stage, txt, sub, bdr, c, isDark),
+                const SizedBox(height: 14),
               ],
               DlgField(
                 label: 'Что сделать?',
@@ -3147,6 +3165,70 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStageSuggestionCard(
+    SkillTreeNode stage,
+    Color txt,
+    Color sub,
+    Color bdr,
+    Color color,
+    bool isDark,
+  ) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(11),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF181820) : const Color(0xFFFFFFFF),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: bdr.withAlpha(180)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.route_rounded, color: color, size: 18),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Есть активный этап: ${stage.title}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: txt,
+                    fontSize: 12.8,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Можно связать квест с текущей ступенью roadmap.',
+                  style: TextStyle(
+                    color: sub,
+                    fontSize: 11.3,
+                    height: 1.25,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          SmallBtn(
+            label: 'Привязать',
+            icon: Icons.add_link,
+            color: color,
+            onTap: () {
+              setState(() {
+                _treeNodeId = stage.id;
+                _advancedExpanded = true;
+              });
+            },
           ),
         ],
       ),
@@ -3384,6 +3466,11 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                 }),
               );
             }).toList(),
+          ),
+          const SizedBox(height: 7),
+          Text(
+            'Лёгкий tie-breaker: в “Сейчас” важнее риск привычки, минимальный шаг и активный этап.',
+            style: TextStyle(color: sub, fontSize: 11.2, height: 1.25),
           ),
         ],
       ),

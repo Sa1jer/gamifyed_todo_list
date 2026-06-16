@@ -4,6 +4,7 @@ import '../app_state.dart';
 import '../models.dart';
 import '../utils.dart';
 import 'dialogs.dart';
+import 'goal_header.dart';
 import 'shared.dart';
 
 enum _PlanningIssueKind {
@@ -1285,7 +1286,6 @@ class _MobileSkillPassportHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final txt = textColor(isDark);
-    final sub = subtext(isDark);
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -1319,17 +1319,7 @@ class _MobileSkillPassportHeader extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 3),
-                    Text(
-                      skill.goal.isEmpty ? 'Цель пока не описана' : skill.goal,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: sub,
-                        fontSize: 12,
-                        height: 1.2,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    GoalHeader(skill: skill, isDark: isDark, maxLines: 2),
                   ],
                 ),
               ),

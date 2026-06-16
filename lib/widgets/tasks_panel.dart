@@ -6,6 +6,7 @@ import '../app_state.dart';
 import '../utils.dart';
 import 'shared.dart';
 import 'dialogs.dart';
+import 'goal_header.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TASKS PANEL
@@ -121,13 +122,7 @@ class _TasksPanelState extends State<TasksPanel> {
                           color: txt,
                         ),
                       ),
-                      if (skill.goal.isNotEmpty)
-                        Text(
-                          skill.goal,
-                          style: TextStyle(color: sub, fontSize: 12),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                      GoalHeader(skill: skill, isDark: isDark),
                     ],
                   ),
                 ),
