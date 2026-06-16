@@ -159,8 +159,8 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
                 _addNode(context, skill, parentNode: node),
             onExtendPath: (skill, node) => _extendPath(context, skill, node),
             onAddQuest: (skill, node) => _addQuest(context, skill, node: node),
-            onAddRoadmapTemplate: (skill, config) {
-              state.addRoadmapTemplate(skill.id, config);
+            onApplyRoadmapTemplate: (skill, config) {
+              state.applyRoadmapTemplate(skill.id, config);
               setState(() => _selection = _MasterySelection.skill(skill.id));
             },
             onEditQuest: (skill, task) => _editQuest(context, skill, task),
@@ -481,8 +481,8 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
                                 node: node,
                                 onCreated: updateSelection,
                               ),
-                              onAddRoadmapTemplate: (skill, config) {
-                                state.addRoadmapTemplate(skill.id, config);
+                              onApplyRoadmapTemplate: (skill, config) {
+                                state.applyRoadmapTemplate(skill.id, config);
                                 updateSelection(
                                   _MasterySelection.skill(skill.id),
                                 );
@@ -598,7 +598,7 @@ class _MasteryMapBody extends StatelessWidget {
   final void Function(Skill skill, SkillTreeNode node) onExtendPath;
   final void Function(Skill skill, SkillTreeNode? node) onAddQuest;
   final void Function(Skill skill, RoadmapTemplateConfig config)
-  onAddRoadmapTemplate;
+  onApplyRoadmapTemplate;
   final void Function(Skill skill, Task task) onEditQuest;
   final ValueChanged<Task> onDeleteQuest;
   final void Function(Skill skill, SkillTreeNode node) onMasterNode;
@@ -613,7 +613,7 @@ class _MasteryMapBody extends StatelessWidget {
     required this.onAddChild,
     required this.onExtendPath,
     required this.onAddQuest,
-    required this.onAddRoadmapTemplate,
+    required this.onApplyRoadmapTemplate,
     required this.onEditQuest,
     required this.onDeleteQuest,
     required this.onMasterNode,
@@ -639,7 +639,7 @@ class _MasteryMapBody extends StatelessWidget {
             onSelectionChanged(_MasterySelection.skill(skill.id));
           },
           onCollapse: () => onSelectionChanged(null),
-          onAddRoadmapTemplate: onAddRoadmapTemplate,
+          onApplyRoadmapTemplate: onApplyRoadmapTemplate,
           onExtendPath: onExtendPath,
           onSelectNode: (skill, node) {
             if (selection?.type == _MasterySelectionType.node &&
@@ -768,7 +768,7 @@ class _OrbMasteryMapCanvas extends StatelessWidget {
   final ValueChanged<Skill> onSelectSkill;
   final VoidCallback onCollapse;
   final void Function(Skill skill, RoadmapTemplateConfig config)
-  onAddRoadmapTemplate;
+  onApplyRoadmapTemplate;
   final void Function(Skill skill, SkillTreeNode node) onExtendPath;
   final void Function(Skill skill, SkillTreeNode node) onSelectNode;
 
@@ -778,7 +778,7 @@ class _OrbMasteryMapCanvas extends StatelessWidget {
     required this.selection,
     required this.onSelectSkill,
     required this.onCollapse,
-    required this.onAddRoadmapTemplate,
+    required this.onApplyRoadmapTemplate,
     required this.onExtendPath,
     required this.onSelectNode,
   });
@@ -957,7 +957,7 @@ class _OrbMasteryMapCanvas extends StatelessWidget {
                     skill: selectedSkill,
                     isDark: isDark,
                     onApply: (config) =>
-                        onAddRoadmapTemplate(selectedSkill, config),
+                        onApplyRoadmapTemplate(selectedSkill, config),
                   ),
                 ),
             ],
@@ -1876,7 +1876,7 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Добавляет дороги этапов к навыку.',
+                        'Выберите одну структуру пути для навыка.',
                         style: TextStyle(
                           color: subtext(isDark),
                           fontSize: 10.8,
@@ -1967,7 +1967,7 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
             ],
             const SizedBox(height: 10),
             SmallBtn(
-              label: 'Добавить RoadMap',
+              label: 'Применить шаблон',
               icon: Icons.add_road,
               color: color,
               onTap: () => widget.onApply(config),

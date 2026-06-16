@@ -161,6 +161,20 @@ void main() {
       expect(pathIds, contains('other'));
     });
 
+    test('ordered unique stages does not duplicate shared roots', () {
+      final root = stage('root', 'Основа');
+      final left = stage('left', 'Левая практика', prerequisites: ['root']);
+      final right = stage('right', 'Правая практика', prerequisites: ['root']);
+      final skill = skillWithNodes([left, right, root]);
+
+      final orderedIds = engine
+          .orderedUniqueStages(skill)
+          .map((node) => node.id)
+          .toList();
+
+      expect(orderedIds, ['root', 'left', 'right']);
+    });
+
     test('path layout resolves terminal stage for any stage on the road', () {
       final root = stage('root', 'Основа');
       final middle = stage('middle', 'Практика', prerequisites: ['root']);

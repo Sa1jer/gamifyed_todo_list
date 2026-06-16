@@ -223,6 +223,24 @@ class RoadmapEngine {
     return buildPathLayout(skill).terminalStageFor(nodeId);
   }
 
+  List<SkillTreeNode> orderedUniqueStages(Skill skill) {
+    final ordered = <SkillTreeNode>[];
+    final seen = <String>{};
+    final layout = buildPathLayout(skill);
+
+    for (final path in layout.paths) {
+      for (final node in path.nodes) {
+        if (seen.add(node.id)) ordered.add(node);
+      }
+    }
+
+    for (final node in skill.treeNodes) {
+      if (seen.add(node.id)) ordered.add(node);
+    }
+
+    return ordered;
+  }
+
   List<SkillTreeNode> _orderedNodes(Skill skill) {
     final nodes = [...skill.treeNodes];
     nodes.sort((a, b) {

@@ -1230,22 +1230,70 @@ class AppState extends ChangeNotifier {
   }
 
   void addRoadmapTemplate(String skillId, RoadmapTemplateConfig config) {
+    applyRoadmapTemplate(skillId, config);
+  }
+
+  void applyRoadmapTemplate(String skillId, RoadmapTemplateConfig config) {
     final skill = _skillById(skillId);
     if (skill == null) return;
-    final nodes = const RoadmapEngine().buildTemplate(config);
-    if (nodes.isEmpty) return;
+    final engine = const RoadmapEngine();
+    final templatePaths = engine.buildTemplatePaths(config);
+    if (templatePaths.isEmpty) return;
 
-    for (final node in nodes) {
-      if (node.requiredQuestCompletions < 1) {
-        node.requiredQuestCompletions = 1;
+    final linkedNodeIds = tasks
+        .where((task) => task.skillId == skill.id && task.treeNodeId != null)
+        .map((task) => task.treeNodeId!)
+        .toSet();
+    final orderedExisting = engine.orderedUniqueStages(skill);
+    final selectedNodes = <SkillTreeNode>[];
+    final selectedIds = <String>{};
+    var cursor = 0;
+
+    for (final path in templatePaths) {
+      String? previousId;
+      for (final templateNode in path.nodes) {
+        final node = cursor < orderedExisting.length
+            ? orderedExisting[cursor++]
+            : templateNode;
+        if (selectedIds.add(node.id)) {
+          selectedNodes.add(node);
+        }
+        node.prerequisiteIds = previousId == null ? [] : [previousId];
+        if (node.requiredQuestCompletions < 1) {
+          node.requiredQuestCompletions = 1;
+        }
+        node.syncChecklistDone();
+        previousId = node.id;
       }
-      node.syncChecklistDone();
     }
-    skill.treeNodes.addAll(nodes);
+
+    final preservedExtraNodes = orderedExisting
+        .skip(cursor)
+        .where(
+          (node) =>
+              !selectedIds.contains(node.id) &&
+              _shouldPreserveRoadmapStage(node, linkedNodeIds),
+        )
+        .toList(growable: false);
+    skill.treeNodes
+      ..clear()
+      ..addAll(selectedNodes)
+      ..addAll(preservedExtraNodes);
     skill.syncTreeNodes();
     _syncBossesForSkill(skillId);
     notifyListeners();
     _saveAll();
+  }
+
+  bool _shouldPreserveRoadmapStage(
+    SkillTreeNode node,
+    Set<String> linkedNodeIds,
+  ) {
+    return linkedNodeIds.contains(node.id) ||
+        node.isMastered ||
+        node.masteredAt != null ||
+        node.description.trim().isNotEmpty ||
+        node.checklist.isNotEmpty;
   }
 
   SkillTreeNode? extendRoadmapPath(

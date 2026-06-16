@@ -273,53 +273,86 @@ void main() {
       state.dispose();
     });
 
-    test(
-      'adds roadmap roads without deleting existing stages or quest links',
-      () {
-        final skill = state.skills.first;
-        final existingStage = SkillTreeNode(
-          id: 'existing-stage',
-          title: 'Существующий этап',
-          requiredQuestCompletions: 2,
-        );
-        state.addSkillTreeNode(skill.id, existingStage);
-        final linkedQuest = Task(
-          id: 'linked-quest',
-          title: 'Сделать практику этапа',
-          skillId: skill.id,
-          xpReward: 20,
-          type: TaskType.shortTerm,
-          treeNodeId: existingStage.id,
-        );
-        state.addTask(linkedQuest);
+    test('applies roadmap templates without duplicating roads', () {
+      final skill = Skill(
+        id: 'roadmap-skill',
+        name: 'RoadMap навык',
+        goal: 'Проверить шаблоны',
+        color: const Color(0xFFFF9500),
+        icon: Icons.route,
+      );
+      state.addSkill(skill);
 
-        final beforeCount = skill.treeNodes.length;
-        final beforeIds = skill.treeNodes.map((node) => node.id).toSet();
+      state.applyRoadmapTemplate(
+        skill.id,
+        const RoadmapTemplateConfig(
+          template: RoadmapTemplate.normal,
+          stagesPerPath: 3,
+        ),
+      );
+      expect(skill.treeNodes, hasLength(6));
 
-        state.addRoadmapTemplate(
-          skill.id,
-          const RoadmapTemplateConfig(
-            template: RoadmapTemplate.normal,
-            stagesPerPath: 3,
+      state.applyRoadmapTemplate(
+        skill.id,
+        const RoadmapTemplateConfig(
+          template: RoadmapTemplate.normal,
+          stagesPerPath: 3,
+        ),
+      );
+      expect(skill.treeNodes, hasLength(6));
+
+      state.applyRoadmapTemplate(
+        skill.id,
+        const RoadmapTemplateConfig(
+          template: RoadmapTemplate.simple,
+          stagesPerPath: 3,
+        ),
+      );
+      expect(skill.treeNodes, hasLength(3));
+      expect(
+        skill.treeNodes.map((node) => node.prerequisiteIds.length).toList(),
+        [0, 1, 1],
+      );
+    });
+
+    test('preserves linked stages when applying a smaller template', () {
+      final skill = Skill(
+        id: 'linked-roadmap-skill',
+        name: 'Связанный RoadMap',
+        goal: 'Не потерять квесты',
+        color: const Color(0xFFFF9500),
+        icon: Icons.route,
+        treeNodes: [
+          SkillTreeNode(id: 'root-stage', title: 'Основа'),
+          SkillTreeNode(
+            id: 'linked-stage',
+            title: 'Практика',
+            prerequisiteIds: ['root-stage'],
           ),
-        );
+        ],
+      );
+      state.addSkill(skill);
+      final linkedQuest = Task(
+        id: 'linked-quest',
+        title: 'Сделать практику этапа',
+        skillId: skill.id,
+        xpReward: 20,
+        type: TaskType.shortTerm,
+        treeNodeId: 'linked-stage',
+      );
+      state.addTask(linkedQuest);
 
-        expect(skill.treeNodes, hasLength(beforeCount + 6));
-        final addedStages = skill.treeNodes
-            .where((node) => !beforeIds.contains(node.id))
-            .toList();
-        expect(addedStages, hasLength(6));
-        expect(
-          addedStages.where((node) => node.prerequisiteIds.isEmpty),
-          hasLength(2),
-        );
-        expect(
-          skill.treeNodes.any((node) => node.id == existingStage.id),
-          isTrue,
-        );
-        expect(linkedQuest.treeNodeId, existingStage.id);
-      },
-    );
+      state.applyRoadmapTemplate(
+        skill.id,
+        const RoadmapTemplateConfig(
+          template: RoadmapTemplate.simple,
+          stagesPerPath: 1,
+        ),
+      );
+
+      expect(skill.treeNodes.map((node) => node.id), contains('linked-stage'));
+      expect(linkedQuest.treeNodeId, 'linked-stage');
+    });
 
     test('extends a roadmap path after its terminal stage', () {
       final skill = state.skills.first;
