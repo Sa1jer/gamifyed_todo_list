@@ -1002,6 +1002,13 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas> {
                     duration: kMotionSlow,
                     switchInCurve: kMotionCurve,
                     switchOutCurve: kMotionExitCurve,
+                    layoutBuilder: (currentChild, previousChildren) {
+                      return Stack(
+                        alignment: Alignment.topLeft,
+                        clipBehavior: Clip.none,
+                        children: [...previousChildren, ?currentChild],
+                      );
+                    },
                     transitionBuilder: (child, animation) {
                       final scale = Tween<double>(
                         begin: 0.96,
