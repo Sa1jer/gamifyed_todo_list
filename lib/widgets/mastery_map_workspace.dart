@@ -53,6 +53,7 @@ List<Task> _sortedCompletedQuests(Iterable<Task> tasks) {
 DateTime _questSortDate(Task task) => task.lastCompletedAt ?? task.updatedAt;
 
 const _roadmapEngine = RoadmapEngine();
+const _showRoadmapSummaryInInspector = false;
 
 Offset _feedbackOriginFor(BuildContext context) {
   final box = context.findRenderObject() as RenderBox?;
@@ -69,6 +70,243 @@ RoadmapSnapshot _roadmapSnapshotFor(AppState state, Skill skill) {
         node.id: state.completedTasksForTreeNode(skill.id, node.id),
     },
   );
+}
+
+double _roadmapGoalAnchorWidth(String text) {
+  final width = 170.0 + text.trim().length * 5.8;
+  return width.clamp(220.0, 390.0).toDouble();
+}
+
+void _showStagePracticeTargetDialog(
+  BuildContext context, {
+  required AppState state,
+  required Skill skill,
+  required SkillTreeNode node,
+}) {
+  var target = node.questTarget;
+  var xpReward = node.xpReward;
+  final isDark = state.isDark;
+  final bg = surface(isDark);
+  final txt = textColor(isDark);
+  final sub = subtext(isDark);
+  final color = skill.color;
+
+  showDialog<void>(
+    context: context,
+    builder: (dialogContext) {
+      return StatefulBuilder(
+        builder: (context, setDialogState) {
+          void setTarget(int value) {
+            setDialogState(() => target = value.clamp(1, 30).toInt());
+          }
+
+          Widget chip(String label, int value) {
+            final selected = target == value;
+            return PressFeedback(
+              scale: 0.96,
+              onTap: () => setTarget(value),
+              child: AnimatedContainer(
+                duration: kMotionStandard,
+                curve: kMotionCurve,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: selected ? color.withAlpha(34) : surface(isDark),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: selected ? color : borderColor(isDark),
+                    width: selected ? 1.3 : 1,
+                  ),
+                ),
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: selected ? color : sub,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            );
+          }
+
+          return Dialog(
+            backgroundColor: bg,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: SizedBox(
+              width: 390,
+              child: Padding(
+                padding: const EdgeInsets.all(22),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    DlgHeader(title: 'Практики и XP', txtColor: txt),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Практика — это закрытый квест, привязанный к этапу. Когда набирается нужное количество практик, этап можно освоить.',
+                      style: TextStyle(
+                        color: sub,
+                        fontSize: 12.5,
+                        height: 1.35,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: color.withAlpha(isDark ? 18 : 12),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: color.withAlpha(42)),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Нужно практик',
+                              style: TextStyle(
+                                color: txt,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                          _PracticeTargetStepButton(
+                            isDark: isDark,
+                            color: color,
+                            icon: Icons.remove,
+                            enabled: target > 1,
+                            onTap: () => setTarget(target - 1),
+                          ),
+                          SizedBox(
+                            width: 48,
+                            child: Text(
+                              '$target',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: color,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                          _PracticeTargetStepButton(
+                            isDark: isDark,
+                            color: color,
+                            icon: Icons.add,
+                            enabled: target < 30,
+                            onTap: () => setTarget(target + 1),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        chip('Лёгкий · 1', 1),
+                        chip('Обычный · 3', 3),
+                        chip('Глубокий · 5', 5),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'XP за освоение',
+                            style: TextStyle(
+                              color: txt,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                        TaskBadge(
+                          icon: Icons.auto_awesome,
+                          label: '+$xpReward XP',
+                          color: const Color(0xFFFFCC00),
+                        ),
+                      ],
+                    ),
+                    Slider(
+                      value: xpReward.toDouble(),
+                      min: 10,
+                      max: 200,
+                      divisions: 19,
+                      activeColor: color,
+                      inactiveColor: color.withAlpha(42),
+                      onChanged: (value) =>
+                          setDialogState(() => xpReward = value.round()),
+                    ),
+                    const SizedBox(height: 18),
+                    DlgActions(
+                      onCancel: () => Navigator.pop(dialogContext),
+                      onSave: () {
+                        state.updateSkillTreeNodePracticeTarget(
+                          skill.id,
+                          node.id,
+                          target,
+                          xpReward: xpReward,
+                        );
+                        Navigator.pop(dialogContext);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
+class _PracticeTargetStepButton extends StatelessWidget {
+  final bool isDark;
+  final Color color;
+  final IconData icon;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  const _PracticeTargetStepButton({
+    required this.isDark,
+    required this.color,
+    required this.icon,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final button = AnimatedContainer(
+      duration: kMotionStandard,
+      curve: kMotionCurve,
+      width: 32,
+      height: 32,
+      decoration: BoxDecoration(
+        color: enabled ? color.withAlpha(26) : surface(isDark),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: enabled ? color.withAlpha(135) : borderColor(isDark),
+        ),
+      ),
+      child: Icon(
+        icon,
+        color: enabled ? color : subtext(isDark).withAlpha(110),
+        size: 17,
+      ),
+    );
+    if (!enabled) return button;
+    return PressFeedback(scale: 0.92, onTap: onTap, child: button);
+  }
 }
 
 double _adaptiveSkillLabelFontSize(String text, bool selected) {
@@ -100,16 +338,6 @@ double _adaptiveNodeLabelFontSize(String text) {
   if (length <= 18) return 11.2;
   if (length <= 26) return 10.5;
   return 10.0;
-}
-
-List<Task> _freeQuestsForSkill(Skill skill, Iterable<Task> tasks) {
-  final validNodeIds = skill.treeNodes.map((node) => node.id).toSet();
-  return tasks
-      .where(
-        (task) =>
-            task.treeNodeId == null || !validNodeIds.contains(task.treeNodeId),
-      )
-      .toList();
 }
 
 class MasteryMapWorkspace extends StatefulWidget {
@@ -350,7 +578,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
               );
               final nextSelection = treeNodeId == null
                   ? _MasterySelection.skill(skill.id)
-                  : _MasterySelection.quest(skill.id, treeNodeId, taskId);
+                  : _MasterySelection.node(skill.id, treeNodeId);
               setState(() => _selection = nextSelection);
               onCreated?.call(nextSelection);
             },
@@ -968,11 +1196,12 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
     if (selectedCenter != null) {
       include(Rect.fromCenter(center: selectedCenter, width: 236, height: 220));
       if (selectedSkill.goal.trim().isNotEmpty) {
+        final goalWidth = _roadmapGoalAnchorWidth(selectedSkill.goal);
         include(
           Rect.fromCenter(
-            center: selectedCenter + const Offset(0, 176),
-            width: 286,
-            height: 82,
+            center: selectedCenter + const Offset(0, -158),
+            width: goalWidth,
+            height: 96,
           ),
         );
       }
@@ -1142,20 +1371,24 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
                           }),
                         if (selectedSkill != null &&
                             selectedSkill.goal.trim().isNotEmpty)
-                          Positioned(
-                            left:
-                                (layout.skillPositions[selectedSkill]?.dx ??
-                                    0) -
-                                132,
-                            top:
-                                (layout.skillPositions[selectedSkill]?.dy ??
-                                    0) +
-                                136,
-                            width: 264,
-                            child: _RoadmapGoalAnchor(
-                              skill: selectedSkill,
-                              isDark: isDark,
-                            ),
+                          Builder(
+                            builder: (_) {
+                              final center =
+                                  layout.skillPositions[selectedSkill] ??
+                                  Offset.zero;
+                              final width = _roadmapGoalAnchorWidth(
+                                selectedSkill.goal,
+                              );
+                              return Positioned(
+                                left: center.dx - width / 2,
+                                top: center.dy - 198,
+                                width: width,
+                                child: _RoadmapGoalAnchor(
+                                  skill: selectedSkill,
+                                  isDark: isDark,
+                                ),
+                              );
+                            },
                           ),
                       ],
                     ),
@@ -2114,12 +2347,14 @@ class _RoadmapGoalAnchor extends StatelessWidget {
           ],
         ),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 11),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.flag_rounded, color: skill.color, size: 13),
                   const SizedBox(width: 6),
@@ -2134,16 +2369,17 @@ class _RoadmapGoalAnchor extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 5),
+              const SizedBox(height: 7),
               Text(
                 goal,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   color: textColor(isDark),
-                  fontSize: 12,
+                  fontSize: goal.length > 32 ? 12.6 : 13.6,
                   height: 1.15,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
             ],
@@ -3002,7 +3238,6 @@ class _MobileSkillMasteryPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tasks = state.tasksForSkill(skill.id);
-    final roadmap = _roadmapSnapshotFor(state, skill);
     final activeTasks = _sortedActiveQuests(
       tasks.where((task) => !task.isDone),
     );
@@ -3019,12 +3254,14 @@ class _MobileSkillMasteryPanel extends StatelessWidget {
           isDark: isDark,
         ),
         const SizedBox(height: 12),
-        _RoadmapSummaryCard(
-          isDark: isDark,
-          color: skill.color,
-          snapshot: roadmap,
-        ),
-        const SizedBox(height: 10),
+        if (_showRoadmapSummaryInInspector) ...[
+          _RoadmapSummaryCard(
+            isDark: isDark,
+            color: skill.color,
+            snapshot: _roadmapSnapshotFor(state, skill),
+          ),
+          const SizedBox(height: 10),
+        ],
         _MetricCard(
           isDark: isDark,
           color: skill.color,
@@ -3131,6 +3368,9 @@ class _MobileNodeMasteryPanel extends StatelessWidget {
     final activeTasks = _sortedActiveQuests(
       linkedTasks.where((task) => !task.isDone),
     );
+    final completedTasks = _sortedCompletedQuests(
+      linkedTasks.where((task) => task.isDone),
+    );
     final ready = state.canMasterSkillTreeNode(skill.id, node.id);
 
     return Column(
@@ -3146,6 +3386,11 @@ class _MobileNodeMasteryPanel extends StatelessWidget {
           title: node.title,
           subtitle: 'этап мастерства · ${skill.name}',
           isDark: isDark,
+          trailing: TaskBadge(
+            icon: Icons.auto_awesome,
+            label: '+${node.xpReward} XP',
+            color: const Color(0xFFFFCC00),
+          ),
         ),
         const SizedBox(height: 12),
         _MetricCard(
@@ -3154,31 +3399,20 @@ class _MobileNodeMasteryPanel extends StatelessWidget {
           title: 'Практика для освоения',
           value: '${math.min(completed, target)} / $target',
           progress: (completed / target).clamp(0.0, 1.0),
-        ),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 7,
-          runSpacing: 7,
-          children: [
-            TaskBadge(
-              icon: Icons.auto_awesome,
-              label: '+${node.xpReward} XP',
-              color: const Color(0xFFFFCC00),
-            ),
-            TaskBadge(
-              label: '${activeTasks.length} активн.',
-              color: const Color(0xFF4A9EFF),
-            ),
-            TaskBadge(
-              label: '$completed закрыто',
-              color: const Color(0xFF34C759),
-            ),
-          ],
+          helperText:
+              'Практика — закрытый квест этого этапа. Наберите нужное количество, чтобы освоить этап.',
+          onEdit: () => _showStagePracticeTargetDialog(
+            context,
+            state: state,
+            skill: skill,
+            node: node,
+          ),
         ),
         const SizedBox(height: 12),
-        _MobileMasteryQuestPreview(
+        _MobileStagePracticeList(
           title: 'Практика этапа',
-          tasks: activeTasks.take(3).toList(),
+          activeTasks: activeTasks,
+          completedTasks: completedTasks,
           emptyText: 'Создайте практику для этого этапа.',
           isDark: isDark,
           color: skill.color,
@@ -3399,6 +3633,89 @@ class _MobileMasteryQuestPreview extends StatelessWidget {
               ),
             ),
           ),
+      ],
+    );
+  }
+}
+
+class _MobileStagePracticeList extends StatelessWidget {
+  final String title;
+  final List<Task> activeTasks;
+  final List<Task> completedTasks;
+  final String emptyText;
+  final bool isDark;
+  final Color color;
+  final ValueChanged<Task> onSelectQuest;
+  final void Function(Task task, Offset position) onToggleQuest;
+  final ValueChanged<Task> onEditQuest;
+
+  const _MobileStagePracticeList({
+    required this.title,
+    required this.activeTasks,
+    required this.completedTasks,
+    required this.emptyText,
+    required this.isDark,
+    required this.color,
+    required this.onSelectQuest,
+    required this.onToggleQuest,
+    required this.onEditQuest,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final sub = subtext(isDark);
+    final hasTasks = activeTasks.isNotEmpty || completedTasks.isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: TextStyle(
+            color: textColor(isDark),
+            fontSize: 13,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 7),
+        if (!hasTasks)
+          Text(
+            emptyText,
+            style: TextStyle(
+              color: sub,
+              fontSize: 11.8,
+              height: 1.3,
+              fontWeight: FontWeight.w600,
+            ),
+          )
+        else ...[
+          for (final task in activeTasks)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 7),
+              child: _MobileMasteryQuestRow(
+                task: task,
+                isDark: isDark,
+                color: color,
+                onSelect: () => onSelectQuest(task),
+                onToggle: (position) => onToggleQuest(task, position),
+                onEdit: () => onEditQuest(task),
+              ),
+            ),
+          if (activeTasks.isNotEmpty && completedTasks.isNotEmpty)
+            const SizedBox(height: 7),
+          for (final task in completedTasks)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 7),
+              child: _MobileMasteryQuestRow(
+                task: task,
+                isDark: isDark,
+                color: color,
+                onSelect: () => onSelectQuest(task),
+                onToggle: (position) => onToggleQuest(task, position),
+                onEdit: () => onEditQuest(task),
+              ),
+            ),
+        ],
       ],
     );
   }
@@ -3885,20 +4202,14 @@ class _SkillInspector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tasks = state.tasksForSkill(skill.id);
-    final roadmap = _roadmapSnapshotFor(state, skill);
-    final activeTasks = tasks.where((task) => !task.isDone).length;
-    final doneTasks = tasks.length - activeTasks;
-    final freeTasks = _freeQuestsForSkill(skill, tasks);
-    final freeTaskIds = freeTasks.map((task) => task.id).toSet();
-    final linkedActiveTasks = _sortedActiveQuests(
-      tasks.where((task) => !task.isDone && !freeTaskIds.contains(task.id)),
+    final activeSkillTasks = _sortedActiveQuests(
+      tasks.where((task) => !task.isDone),
     );
-    final freeActiveTasks = _sortedActiveQuests(
-      freeTasks.where((task) => !task.isDone),
-    );
-    final completedTasks = _sortedCompletedQuests(
+    final completedSkillTasks = _sortedCompletedQuests(
       tasks.where((task) => task.isDone),
     );
+    final activeTasks = activeSkillTasks.length;
+    final doneTasks = completedSkillTasks.length;
     final txt = textColor(isDark);
 
     return Column(
@@ -3912,12 +4223,14 @@ class _SkillInspector extends StatelessWidget {
           isDark: isDark,
         ),
         const SizedBox(height: 12),
-        _RoadmapSummaryCard(
-          isDark: isDark,
-          color: skill.color,
-          snapshot: roadmap,
-        ),
-        const SizedBox(height: 10),
+        if (_showRoadmapSummaryInInspector) ...[
+          _RoadmapSummaryCard(
+            isDark: isDark,
+            color: skill.color,
+            snapshot: _roadmapSnapshotFor(state, skill),
+          ),
+          const SizedBox(height: 10),
+        ],
         _MetricCard(
           isDark: isDark,
           color: skill.color,
@@ -3959,27 +4272,12 @@ class _SkillInspector extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Expanded(
-          child: _InspectorQuestList(
+          child: _StagePracticeQuestList(
             isDark: isDark,
             color: skill.color,
-            sections: [
-              _QuestListSection(
-                title: 'Активная практика',
-                tasks: linkedActiveTasks,
-                emptyText: 'Создайте практику для этапа мастерства.',
-              ),
-              _QuestListSection(
-                title: 'Практика без этапа',
-                tasks: freeActiveTasks,
-                emptyText: 'Вся активная практика уже привязана к этапам.',
-              ),
-              _QuestListSection(
-                title: 'Засчитанная практика',
-                tasks: completedTasks,
-                emptyText: 'Засчитанной практики пока нет.',
-                muted: true,
-              ),
-            ],
+            activeTasks: activeSkillTasks,
+            completedTasks: completedSkillTasks,
+            emptyText: 'Создайте практику для навыка.',
             onSelectQuest: onSelectQuest,
             onToggleQuest: onToggleQuest,
             onEditQuest: onEditQuest,
@@ -4069,6 +4367,11 @@ class _NodeInspector extends StatelessWidget {
           title: node.title,
           subtitle: skillTreeNodeStatusLabel[status]!,
           isDark: isDark,
+          trailing: TaskBadge(
+            icon: Icons.auto_awesome,
+            label: '+${node.xpReward} XP',
+            color: const Color(0xFFFFCC00),
+          ),
         ),
         if (node.description.trim().isNotEmpty) ...[
           const SizedBox(height: 12),
@@ -4084,27 +4387,14 @@ class _NodeInspector extends StatelessWidget {
           title: 'Практика для освоения',
           value: '${math.min(completed, target)} / $target',
           progress: (completed / target).clamp(0.0, 1.0),
-        ),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 7,
-          runSpacing: 7,
-          children: [
-            TaskBadge(
-              icon: Icons.auto_awesome,
-              label: '+${node.xpReward} XP',
-              color: const Color(0xFFFFCC00),
-            ),
-            TaskBadge(
-              label:
-                  '${linkedTasks.where((task) => !task.isDone).length} активн.',
-              color: const Color(0xFF4A9EFF),
-            ),
-            TaskBadge(
-              label: '$completed закрыто',
-              color: const Color(0xFF34C759),
-            ),
-          ],
+          helperText:
+              'Практика — закрытый квест этого этапа. Наберите нужное количество, чтобы освоить этап.',
+          onEdit: () => _showStagePracticeTargetDialog(
+            context,
+            state: state,
+            skill: skill,
+            node: node,
+          ),
         ),
         const SizedBox(height: 14),
         Text(
@@ -4117,22 +4407,12 @@ class _NodeInspector extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Expanded(
-          child: _InspectorQuestList(
+          child: _StagePracticeQuestList(
             isDark: isDark,
             color: skill.color,
-            sections: [
-              _QuestListSection(
-                title: 'Активная практика',
-                tasks: activeNodeTasks,
-                emptyText: 'Создайте практику для этого этапа.',
-              ),
-              _QuestListSection(
-                title: 'Засчитанная практика',
-                tasks: completedNodeTasks,
-                emptyText: 'Засчитанной практики этапа пока нет.',
-                muted: true,
-              ),
-            ],
+            activeTasks: activeNodeTasks,
+            completedTasks: completedNodeTasks,
+            emptyText: 'Создайте практику для этого этапа.',
             onSelectQuest: onSelectQuest,
             onToggleQuest: onToggleQuest,
             onEditQuest: onEditQuest,
@@ -4328,6 +4608,7 @@ class _InspectorTitle extends StatelessWidget {
   final String title;
   final String subtitle;
   final bool isDark;
+  final Widget? trailing;
 
   const _InspectorTitle({
     required this.icon,
@@ -4335,6 +4616,7 @@ class _InspectorTitle extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.isDark,
+    this.trailing,
   });
 
   @override
@@ -4383,6 +4665,7 @@ class _InspectorTitle extends StatelessWidget {
             ],
           ),
         ),
+        if (trailing != null) ...[const SizedBox(width: 10), trailing!],
       ],
     );
   }
@@ -4394,6 +4677,8 @@ class _MetricCard extends StatelessWidget {
   final String title;
   final String value;
   final double progress;
+  final String? helperText;
+  final VoidCallback? onEdit;
 
   const _MetricCard({
     required this.isDark,
@@ -4401,6 +4686,8 @@ class _MetricCard extends StatelessWidget {
     required this.title,
     required this.value,
     required this.progress,
+    this.helperText,
+    this.onEdit,
   });
 
   @override
@@ -4426,6 +4713,15 @@ class _MetricCard extends StatelessWidget {
                   ),
                 ),
               ),
+              if (onEdit != null) ...[
+                const SizedBox(width: 6),
+                PressFeedback(
+                  scale: 0.9,
+                  onTap: onEdit!,
+                  child: Icon(Icons.edit, color: color, size: 16),
+                ),
+              ],
+              const SizedBox(width: 5),
               Text(
                 value,
                 style: TextStyle(
@@ -4438,38 +4734,43 @@ class _MetricCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           XPBar(progress: progress.clamp(0.0, 1.0), color: color, height: 6),
+          if (helperText != null) ...[
+            const SizedBox(height: 7),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                helperText!,
+                style: TextStyle(
+                  color: subtext(isDark),
+                  fontSize: 11,
+                  height: 1.25,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 }
 
-class _QuestListSection {
-  final String title;
-  final List<Task> tasks;
-  final String emptyText;
-  final bool muted;
-
-  const _QuestListSection({
-    required this.title,
-    required this.tasks,
-    required this.emptyText,
-    this.muted = false,
-  });
-}
-
-class _InspectorQuestList extends StatelessWidget {
+class _StagePracticeQuestList extends StatelessWidget {
   final bool isDark;
   final Color color;
-  final List<_QuestListSection> sections;
+  final List<Task> activeTasks;
+  final List<Task> completedTasks;
+  final String emptyText;
   final ValueChanged<Task> onSelectQuest;
   final void Function(Task task, Offset position) onToggleQuest;
   final ValueChanged<Task> onEditQuest;
 
-  const _InspectorQuestList({
+  const _StagePracticeQuestList({
     required this.isDark,
     required this.color,
-    required this.sections,
+    required this.activeTasks,
+    required this.completedTasks,
+    required this.emptyText,
     required this.onSelectQuest,
     required this.onToggleQuest,
     required this.onEditQuest,
@@ -4478,12 +4779,12 @@ class _InspectorQuestList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sub = subtext(isDark);
-    final hasTasks = sections.any((section) => section.tasks.isNotEmpty);
+    final hasTasks = activeTasks.isNotEmpty || completedTasks.isNotEmpty;
 
     if (!hasTasks) {
       return Center(
         child: Text(
-          sections.firstOrNull?.emptyText ?? 'Практики пока нет.',
+          emptyText,
           textAlign: TextAlign.center,
           style: TextStyle(
             color: sub,
@@ -4497,51 +4798,34 @@ class _InspectorQuestList extends StatelessWidget {
 
     return ListView(
       children: [
-        for (final section in sections) ...[
+        for (final task in activeTasks)
           Padding(
             padding: const EdgeInsets.only(bottom: 7),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    '${section.title} (${section.tasks.length})',
-                    style: TextStyle(
-                      color: section.muted ? sub : textColor(isDark),
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
-              ],
+            child: _InspectorQuestRow(
+              task: task,
+              isDark: isDark,
+              color: color,
+              muted: false,
+              onSelect: () => onSelectQuest(task),
+              onToggle: (position) => onToggleQuest(task, position),
+              onEdit: () => onEditQuest(task),
             ),
           ),
-          if (section.tasks.isEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Text(
-                section.emptyText,
-                style: TextStyle(
-                  color: sub,
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+        if (activeTasks.isNotEmpty && completedTasks.isNotEmpty)
+          const SizedBox(height: 7),
+        for (final task in completedTasks)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 7),
+            child: _InspectorQuestRow(
+              task: task,
+              isDark: isDark,
+              color: color,
+              muted: true,
+              onSelect: () => onSelectQuest(task),
+              onToggle: (position) => onToggleQuest(task, position),
+              onEdit: () => onEditQuest(task),
             ),
-          for (final task in section.tasks)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 7),
-              child: _InspectorQuestRow(
-                task: task,
-                isDark: isDark,
-                color: color,
-                muted: section.muted,
-                onSelect: () => onSelectQuest(task),
-                onToggle: (position) => onToggleQuest(task, position),
-                onEdit: () => onEditQuest(task),
-              ),
-            ),
-          const SizedBox(height: 6),
-        ],
+          ),
       ],
     );
   }

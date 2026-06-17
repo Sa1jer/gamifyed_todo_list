@@ -1331,6 +1331,27 @@ class AppState extends ChangeNotifier {
     return node;
   }
 
+  void updateSkillTreeNodePracticeTarget(
+    String skillId,
+    String nodeId,
+    int requiredQuestCompletions, {
+    int? xpReward,
+  }) {
+    final skill = _skillById(skillId);
+    final node = skill?.treeNodes
+        .where((candidate) => candidate.id == nodeId)
+        .firstOrNull;
+    if (skill == null || node == null) return;
+    node.requiredQuestCompletions = math.max(1, requiredQuestCompletions);
+    if (xpReward != null) {
+      node.xpReward = math.max(0, xpReward);
+    }
+    skill.syncTreeNodes();
+    _syncBossesForSkill(skillId);
+    notifyListeners();
+    _saveAll();
+  }
+
   void removeSkillTreeNode(String skillId, String nodeId) {
     final skill = _skillById(skillId);
     if (skill == null) return;

@@ -386,6 +386,39 @@ void main() {
       expect(skill.treeNodes, contains(created));
       expect(linkedQuest.treeNodeId, terminal.id);
     });
+
+    test('updates roadmap stage practice target without relinking quests', () {
+      final skill = state.skills.first;
+      final node = SkillTreeNode(
+        id: 'practice-target-stage',
+        title: 'Практика',
+        requiredQuestCompletions: 3,
+      );
+      state.addSkillTreeNode(skill.id, node);
+      final linkedQuest = Task(
+        id: 'practice-target-quest',
+        title: 'Закрыть практику',
+        skillId: skill.id,
+        xpReward: 20,
+        type: TaskType.shortTerm,
+        treeNodeId: node.id,
+      );
+      state.addTask(linkedQuest);
+
+      state.updateSkillTreeNodePracticeTarget(
+        skill.id,
+        node.id,
+        5,
+        xpReward: 80,
+      );
+      expect(node.questTarget, 5);
+      expect(node.xpReward, 80);
+      expect(linkedQuest.treeNodeId, node.id);
+
+      state.updateSkillTreeNodePracticeTarget(skill.id, node.id, 0);
+      expect(node.questTarget, 1);
+      expect(linkedQuest.treeNodeId, node.id);
+    });
   });
 
   group('minimum action flow', () {
