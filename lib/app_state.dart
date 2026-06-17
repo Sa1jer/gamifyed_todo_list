@@ -1331,6 +1331,49 @@ class AppState extends ChangeNotifier {
     return node;
   }
 
+  SkillTreeNode? insertRoadmapStageAfter(
+    String skillId,
+    String leftNodeId, {
+    required String beforeNodeId,
+    String title = 'Новый этап',
+    String description = '',
+    int xpReward = 30,
+    int requiredQuestCompletions = 3,
+  }) {
+    final skill = _skillById(skillId);
+    if (skill == null) return null;
+    final leftNodeIndex = skill.treeNodes.indexWhere(
+      (candidate) => candidate.id == leftNodeId,
+    );
+    final rightNodeIndex = skill.treeNodes.indexWhere(
+      (candidate) => candidate.id == beforeNodeId,
+    );
+    if (leftNodeIndex == -1 || rightNodeIndex == -1) return null;
+
+    final rightNode = skill.treeNodes[rightNodeIndex];
+    if (!rightNode.prerequisiteIds.contains(leftNodeId)) return null;
+
+    final safeTitle = title.trim().isEmpty ? 'Новый этап' : title.trim();
+    final node = SkillTreeNode(
+      id: uid(),
+      title: safeTitle,
+      description: description,
+      xpReward: xpReward,
+      requiredQuestCompletions: math.max(1, requiredQuestCompletions),
+      prerequisiteIds: [leftNodeId],
+    )..syncChecklistDone();
+
+    rightNode.prerequisiteIds = rightNode.prerequisiteIds
+        .map((id) => id == leftNodeId ? node.id : id)
+        .toList(growable: true);
+    skill.treeNodes.insert(rightNodeIndex, node);
+    skill.syncTreeNodes();
+    _syncBossesForSkill(skillId);
+    notifyListeners();
+    _saveAll();
+    return node;
+  }
+
   void updateSkillTreeNodePracticeTarget(
     String skillId,
     String nodeId,

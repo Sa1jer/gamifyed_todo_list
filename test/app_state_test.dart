@@ -387,6 +387,44 @@ void main() {
       expect(linkedQuest.treeNodeId, terminal.id);
     });
 
+    test('inserts a roadmap stage between existing stages safely', () {
+      final skill = state.skills.first;
+      final root = SkillTreeNode(id: 'insert-root-stage', title: 'Основа');
+      final next = SkillTreeNode(
+        id: 'insert-next-stage',
+        title: 'Практика',
+        prerequisiteIds: [root.id],
+      );
+      state.addSkillTreeNode(skill.id, root);
+      state.addSkillTreeNode(skill.id, next);
+      final linkedQuest = Task(
+        id: 'insert-linked-quest',
+        title: 'Закрыть практику',
+        skillId: skill.id,
+        xpReward: 20,
+        type: TaskType.shortTerm,
+        treeNodeId: next.id,
+      );
+      state.addTask(linkedQuest);
+
+      final created = state.insertRoadmapStageAfter(
+        skill.id,
+        root.id,
+        beforeNodeId: next.id,
+        title: 'Средний этап',
+      );
+
+      expect(created, isNotNull);
+      expect(created!.title, 'Средний этап');
+      expect(created.prerequisiteIds, [root.id]);
+      expect(next.prerequisiteIds, [created.id]);
+      expect(
+        skill.treeNodes.indexOf(created),
+        lessThan(skill.treeNodes.indexOf(next)),
+      );
+      expect(linkedQuest.treeNodeId, next.id);
+    });
+
     test('updates roadmap stage practice target without relinking quests', () {
       final skill = state.skills.first;
       final node = SkillTreeNode(

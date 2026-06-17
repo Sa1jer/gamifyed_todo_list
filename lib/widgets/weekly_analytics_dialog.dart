@@ -1899,16 +1899,13 @@ class _WeeklyStreakRisks extends StatelessWidget {
     final risks = summary.riskTasks;
     final txt = textColor(isDark);
     final sub = subtext(isDark);
-    final protectionCharges = summary.state.profile.streakProtectionCharges;
 
     return _WeeklySection(
       isDark: isDark,
       icon: Icons.local_fire_department,
       color: const Color(0xFFFF9500),
       title: 'Риски серии',
-      subtitle: protectionCharges > 0
-          ? 'Есть амулет защиты: спасёт один пропуск серии'
-          : 'Амулет недели уже потрачен — эти квесты лучше закрыть',
+      subtitle: 'Повторяющиеся квесты, которые лучше мягко поддержать.',
       child: risks.isEmpty
           ? _WeeklyEmptyState(
               icon: Icons.shield,

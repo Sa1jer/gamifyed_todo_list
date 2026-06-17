@@ -210,7 +210,7 @@ _PlanningDiagnostics _buildPlanningDiagnostics(
         color: const Color(0xFFFF9500),
         title: 'Этап без практики',
         subtitle: node.title,
-        actionLabel: 'Квест к этапу',
+        actionLabel: 'Создать квест',
         node: node,
       ),
     );
@@ -3013,7 +3013,7 @@ class _MasteryMapPlanningCard extends StatelessWidget {
                 ),
               if (onAddQuestToNode != null)
                 _OutlineActionButton(
-                  label: 'Квест к этапу',
+                  label: 'Создать квест',
                   icon: Icons.add_task,
                   color: const Color(0xFFFF9500),
                   isDark: isDark,

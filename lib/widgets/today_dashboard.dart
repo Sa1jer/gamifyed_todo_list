@@ -144,7 +144,7 @@ class _TodayDashboardState extends State<TodayDashboard> {
     final nextTask = TodayDashboard._pickNextTask(state, activeTasks);
     final riskyTasks = TodayDashboard._riskTasks(dailyTasks);
     final stats = state.todayStats;
-    final statusLabels = _todayStatusLabels(state: state);
+    final statusLabels = _todayStatusLabels();
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -316,21 +316,7 @@ class _TodayDashboardState extends State<TodayDashboard> {
     );
   }
 
-  List<_TodayStatusLabelData> _todayStatusLabels({required AppState state}) {
-    return [
-      _TodayStatusLabelData(
-        label: 'до ур. ${state.profile.level + 1}',
-        value: '${state.profile.xpNeeded - state.profile.xp} XP',
-        color: const Color(0xFF4A9EFF),
-      ),
-      if (state.profile.streakProtectionCharges > 0)
-        _TodayStatusLabelData(
-          label: 'защита',
-          value: '${state.profile.streakProtectionCharges} амулет',
-          color: const Color(0xFF4A9EFF),
-        ),
-    ];
-  }
+  List<_TodayStatusLabelData> _todayStatusLabels() => const [];
 }
 
 class _DashboardContent extends StatelessWidget {
