@@ -809,8 +809,27 @@ class _OrbMasteryMapCanvas extends StatefulWidget {
   State<_OrbMasteryMapCanvas> createState() => _OrbMasteryMapCanvasState();
 }
 
-class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas> {
+class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
+    with SingleTickerProviderStateMixin {
+  static const _roadmapCameraMinScale = 0.04;
+
   bool _templatePanelHidden = false;
+  final TransformationController _roadmapCameraController =
+      TransformationController();
+  late final AnimationController _roadmapCameraAnimationController =
+      AnimationController(vsync: this, duration: kMotionSlow)
+        ..addListener(_handleRoadmapCameraTick);
+  Matrix4Tween? _roadmapCameraTween;
+  String? _lastRoadmapCameraSignature;
+
+  @override
+  void dispose() {
+    _roadmapCameraAnimationController
+      ..removeListener(_handleRoadmapCameraTick)
+      ..dispose();
+    _roadmapCameraController.dispose();
+    super.dispose();
+  }
 
   @override
   void didUpdateWidget(covariant _OrbMasteryMapCanvas oldWidget) {
@@ -818,6 +837,154 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas> {
     if (widget.selection?.skillId != oldWidget.selection?.skillId) {
       _templatePanelHidden = false;
     }
+  }
+
+  void _handleRoadmapCameraTick() {
+    final tween = _roadmapCameraTween;
+    if (tween == null) return;
+    final value = kMotionCurve.transform(
+      _roadmapCameraAnimationController.value,
+    );
+    _roadmapCameraController.value = tween.transform(value);
+  }
+
+  void _scheduleRoadmapCameraFit(
+    _OrbCanvasLayout layout,
+    Size viewport,
+    bool templatePanelCollapsed,
+  ) {
+    final signature = _roadmapCameraSignature(
+      layout,
+      viewport,
+      templatePanelCollapsed,
+    );
+    if (signature == _lastRoadmapCameraSignature) return;
+    _lastRoadmapCameraSignature = signature;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final target = layout.selectedSkill == null
+          ? Matrix4.identity()
+          : _roadmapFitMatrix(layout, viewport, templatePanelCollapsed);
+      _animateRoadmapCameraTo(target);
+    });
+  }
+
+  String _roadmapCameraSignature(
+    _OrbCanvasLayout layout,
+    Size viewport,
+    bool templatePanelCollapsed,
+  ) {
+    final selectedSkill = layout.selectedSkill;
+    if (selectedSkill == null) {
+      return 'overview:${viewport.width.round()}x${viewport.height.round()}';
+    }
+    final pathShape = layout.pathLayout.paths
+        .map((path) => path.nodes.map((node) => node.id).join(','))
+        .join('|');
+    return [
+      selectedSkill.id,
+      viewport.width.round(),
+      viewport.height.round(),
+      layout.size.width.round(),
+      layout.size.height.round(),
+      templatePanelCollapsed ? 'panel-collapsed' : 'panel-open',
+      selectedSkill.goal.trim().isEmpty ? 'no-goal' : 'goal',
+      pathShape,
+      layout.pathExtensionPositions.length,
+    ].join(':');
+  }
+
+  void _animateRoadmapCameraTo(Matrix4 target) {
+    final current = _roadmapCameraController.value;
+    if (_matrixCloseTo(current, target)) {
+      _roadmapCameraAnimationController.stop();
+      _roadmapCameraController.value = target;
+      return;
+    }
+    _roadmapCameraTween = Matrix4Tween(
+      begin: Matrix4.copy(current),
+      end: target,
+    );
+    _roadmapCameraAnimationController
+      ..stop()
+      ..reset()
+      ..forward();
+  }
+
+  bool _matrixCloseTo(Matrix4 a, Matrix4 b) {
+    for (var index = 0; index < 16; index++) {
+      if ((a.storage[index] - b.storage[index]).abs() > 0.35) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  Matrix4 _roadmapFitMatrix(
+    _OrbCanvasLayout layout,
+    Size viewport,
+    bool templatePanelCollapsed,
+  ) {
+    final bounds = _roadmapContentBounds(layout);
+    final target = _roadmapTargetViewport(viewport, templatePanelCollapsed);
+    final scaleX = target.width / bounds.width;
+    final scaleY = target.height / bounds.height;
+    final scale = math
+        .min(1.0, math.min(scaleX, scaleY))
+        .clamp(_roadmapCameraMinScale, 1.0)
+        .toDouble();
+    final dx = target.right - bounds.right * scale;
+    final dy = target.center.dy - bounds.center.dy * scale;
+    return Matrix4.identity()
+      ..translateByDouble(dx, dy, 0, 1)
+      ..scaleByDouble(scale, scale, scale, 1);
+  }
+
+  Rect _roadmapTargetViewport(Size viewport, bool templatePanelCollapsed) {
+    final isNarrow = viewport.width < 760;
+    final left = !isNarrow && !templatePanelCollapsed ? 284.0 : 28.0;
+    final top = 86.0;
+    final right = math.max(left + 160, viewport.width - 44);
+    final bottomPadding = isNarrow && !templatePanelCollapsed ? 238.0 : 48.0;
+    final bottom = math.max(top + 160, viewport.height - bottomPadding);
+    return Rect.fromLTRB(left, top, right, bottom);
+  }
+
+  Rect _roadmapContentBounds(_OrbCanvasLayout layout) {
+    final selectedSkill = layout.selectedSkill;
+    if (selectedSkill == null) {
+      return Offset.zero & layout.size;
+    }
+    final selectedCenter = layout.skillPositions[selectedSkill];
+    var bounds = Rect.zero;
+    var hasBounds = false;
+
+    void include(Rect rect) {
+      bounds = hasBounds ? bounds.expandToInclude(rect) : rect;
+      hasBounds = true;
+    }
+
+    if (selectedCenter != null) {
+      include(Rect.fromCenter(center: selectedCenter, width: 236, height: 220));
+      if (selectedSkill.goal.trim().isNotEmpty) {
+        include(
+          Rect.fromCenter(
+            center: selectedCenter + const Offset(0, 176),
+            width: 286,
+            height: 82,
+          ),
+        );
+      }
+    }
+    for (final position in layout.nodePositions.values) {
+      include(Rect.fromCenter(center: position, width: 168, height: 152));
+    }
+    for (final position in layout.pathExtensionPositions.values) {
+      include(Rect.fromCircle(center: position, radius: 30));
+    }
+
+    return (hasBounds ? bounds : (Offset.zero & layout.size)).inflate(38);
   }
 
   @override
@@ -844,6 +1011,11 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas> {
           final templatePanelCollapsed =
               _templatePanelHidden ||
               selection?.type != _MasterySelectionType.skill;
+          _scheduleRoadmapCameraFit(
+            layout,
+            Size(constraints.maxWidth, constraints.maxHeight),
+            templatePanelCollapsed,
+          );
 
           return Stack(
             children: [
@@ -854,9 +1026,10 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas> {
               ),
               Positioned.fill(
                 child: InteractiveViewer(
-                  minScale: 0.48,
+                  transformationController: _roadmapCameraController,
+                  minScale: _roadmapCameraMinScale,
                   maxScale: 1.85,
-                  boundaryMargin: const EdgeInsets.all(220),
+                  boundaryMargin: const EdgeInsets.all(3000),
                   constrained: false,
                   child: SizedBox(
                     width: layout.size.width,
@@ -967,6 +1140,23 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas> {
                               ),
                             );
                           }),
+                        if (selectedSkill != null &&
+                            selectedSkill.goal.trim().isNotEmpty)
+                          Positioned(
+                            left:
+                                (layout.skillPositions[selectedSkill]?.dx ??
+                                    0) -
+                                132,
+                            top:
+                                (layout.skillPositions[selectedSkill]?.dy ??
+                                    0) +
+                                136,
+                            width: 264,
+                            child: _RoadmapGoalAnchor(
+                              skill: selectedSkill,
+                              isDark: isDark,
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -996,8 +1186,8 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas> {
                   top: constraints.maxWidth < 760 ? null : 14,
                   bottom: constraints.maxWidth < 760 ? 14 : null,
                   width: constraints.maxWidth < 760
-                      ? math.min(constraints.maxWidth - 28, 240)
-                      : 204,
+                      ? math.min(constraints.maxWidth - 28, 276)
+                      : 235,
                   child: AnimatedSwitcher(
                     duration: kMotionSlow,
                     switchInCurve: kMotionCurve,
@@ -1376,23 +1566,23 @@ class _MasteryVectorGridPainter extends CustomPainter {
     const majorCell = minorCell * majorEvery;
     final gridColor = isDark ? Colors.white : const Color(0xFF182033);
     final minorPaint = Paint()
-      ..color = gridColor.withAlpha(isDark ? 18 : 14)
+      ..color = gridColor.withAlpha(isDark ? 13 : 10)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 0.7
       ..isAntiAlias = true;
     final majorPaint = Paint()
-      ..color = gridColor.withAlpha(isDark ? 52 : 34)
+      ..color = gridColor.withAlpha(isDark ? 39 : 26)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.15
       ..isAntiAlias = true;
     final crossPaint = Paint()
-      ..color = gridColor.withAlpha(isDark ? 150 : 90)
+      ..color = gridColor.withAlpha(isDark ? 112 : 68)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.25
       ..strokeCap = StrokeCap.round
       ..isAntiAlias = true;
     final dotPaint = Paint()
-      ..color = gridColor.withAlpha(isDark ? 115 : 70)
+      ..color = gridColor.withAlpha(isDark ? 86 : 52)
       ..style = PaintingStyle.fill
       ..isAntiAlias = true;
 
@@ -1899,6 +2089,71 @@ class _RoadmapExtendPathButton extends StatelessWidget {
   }
 }
 
+class _RoadmapGoalAnchor extends StatelessWidget {
+  final Skill skill;
+  final bool isDark;
+
+  const _RoadmapGoalAnchor({required this.skill, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    final goal = skill.goal.trim();
+    if (goal.isEmpty) return const SizedBox.shrink();
+    return IgnorePointer(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: surface(isDark).withAlpha(isDark ? 210 : 238),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: skill.color.withAlpha(isDark ? 70 : 54)),
+          boxShadow: [
+            BoxShadow(
+              color: skill.color.withAlpha(isDark ? 22 : 16),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 11),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.flag_rounded, color: skill.color, size: 13),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Цель пути',
+                    style: TextStyle(
+                      color: skill.color,
+                      fontSize: 10.8,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 5),
+              Text(
+                goal,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: textColor(isDark),
+                  fontSize: 12,
+                  height: 1.15,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _RoadmapTemplatePanel extends StatefulWidget {
   final Skill skill;
   final bool isDark;
@@ -1941,7 +2196,7 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
     return AppPanel(
       isDark: isDark,
       child: Padding(
-        padding: const EdgeInsets.all(9),
+        padding: const EdgeInsets.all(10.5),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1949,15 +2204,15 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
             Row(
               children: [
                 Container(
-                  width: 24,
-                  height: 24,
+                  width: 28,
+                  height: 28,
                   decoration: BoxDecoration(
                     color: color.withAlpha(28),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(Icons.route, color: color, size: 14),
+                  child: Icon(Icons.route, color: color, size: 16),
                 ),
-                const SizedBox(width: 7),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1967,7 +2222,7 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
                         'Шаблон RoadMap',
                         style: TextStyle(
                           color: textColor(isDark),
-                          fontSize: 11.8,
+                          fontSize: 13.0,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
@@ -1976,7 +2231,7 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
                         'Выберите одну структуру пути для навыка.',
                         style: TextStyle(
                           color: subtext(isDark),
-                          fontSize: 9.8,
+                          fontSize: 10.8,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -1985,10 +2240,10 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 9),
             Wrap(
-              spacing: 5,
-              runSpacing: 5,
+              spacing: 6,
+              runSpacing: 6,
               children: [
                 _RoadmapTemplateChip(
                   label: 'Простой',
@@ -2030,7 +2285,7 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 9),
             _RoadmapCounterControl(
               isDark: isDark,
               color: color,
@@ -2050,7 +2305,7 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
               child: _template == RoadmapTemplate.custom
                   ? Padding(
                       key: const ValueKey('custom-path-count'),
-                      padding: const EdgeInsets.only(top: 6),
+                      padding: const EdgeInsets.only(top: 7),
                       child: _RoadmapCounterControl(
                         isDark: isDark,
                         color: color,
@@ -2067,10 +2322,10 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
                   : const SizedBox(key: ValueKey('fixed-path-count')),
             ),
             if (config.canOverloadFocus) ...[
-              const SizedBox(height: 6),
+              const SizedBox(height: 7),
               _RoadmapTemplateWarning(isDark: isDark),
             ],
-            const SizedBox(height: 8),
+            const SizedBox(height: 9),
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
@@ -2085,12 +2340,12 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
                   scale: 0.94,
                   onTap: widget.onHide,
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(8, 6, 0, 2),
+                    padding: const EdgeInsets.fromLTRB(9, 7, 0, 2),
                     child: Text(
                       'Скрыть',
                       style: TextStyle(
                         color: subtext(isDark),
-                        fontSize: 10.2,
+                        fontSize: 11.2,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -2128,20 +2383,20 @@ class _RoadmapTemplateChip extends StatelessWidget {
       child: AnimatedContainer(
         duration: kMotionStandard,
         curve: kMotionCurve,
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(
           color: selected ? color.withAlpha(34) : surface(isDark),
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
             color: selected ? color : borderColor(isDark),
-            width: selected ? 1.2 : 1,
+            width: selected ? 1.3 : 1,
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
             color: selected ? color : subtext(isDark),
-            fontSize: 10,
+            fontSize: 11,
             fontWeight: FontWeight.w900,
           ),
         ),
@@ -2170,10 +2425,10 @@ class _RoadmapCounterControl extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
       decoration: BoxDecoration(
         color: surface(isDark).withAlpha(isDark ? 170 : 235),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(11),
         border: Border.all(color: borderColor(isDark)),
       ),
       child: Row(
@@ -2183,7 +2438,7 @@ class _RoadmapCounterControl extends StatelessWidget {
               label,
               style: TextStyle(
                 color: textColor(isDark),
-                fontSize: 10.2,
+                fontSize: 11.2,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -2195,13 +2450,13 @@ class _RoadmapCounterControl extends StatelessWidget {
             onTap: onDecrease,
           ),
           SizedBox(
-            width: 28,
+            width: 32,
             child: Text(
               '$value',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: color,
-                fontSize: 12.5,
+                fontSize: 14,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -2235,11 +2490,11 @@ class _RoadmapCounterButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final active = onTap != null;
     final button = Container(
-      width: 22,
-      height: 22,
+      width: 25,
+      height: 25,
       decoration: BoxDecoration(
         color: active ? color.withAlpha(28) : surface(isDark),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(9),
         border: Border.all(
           color: active ? color.withAlpha(150) : borderColor(isDark),
         ),
@@ -2247,7 +2502,7 @@ class _RoadmapCounterButton extends StatelessWidget {
       child: Icon(
         icon,
         color: active ? color : subtext(isDark).withAlpha(120),
-        size: 13,
+        size: 15,
       ),
     );
     if (!active) return button;
@@ -2264,7 +2519,7 @@ class _RoadmapTemplateWarning extends StatelessWidget {
   Widget build(BuildContext context) {
     const color = Color(0xFFFFC247);
     return Container(
-      padding: const EdgeInsets.all(7),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: color.withAlpha(isDark ? 24 : 34),
         borderRadius: BorderRadius.circular(12),
@@ -2280,7 +2535,7 @@ class _RoadmapTemplateWarning extends StatelessWidget {
               'Больше 5 дорог может перегрузить систему квестами и вниманием.',
               style: TextStyle(
                 color: textColor(isDark),
-                fontSize: 9.7,
+                fontSize: 10.6,
                 fontWeight: FontWeight.w700,
                 height: 1.15,
               ),
