@@ -7,4 +7,11 @@ import 'dialogs.dart';
 import 'goal_header.dart';
 import 'shared.dart';
 
-part 'planning/planning_body.dart';
+part 'planning/diagnostics.dart';
+part 'planning/workspace_shell.dart';
+part 'planning/desktop_shell.dart';
+part 'planning/mobile_flow.dart';
+part 'planning/blueprint_panel.dart';
+part 'planning/task_rows.dart';
+part 'planning/inspector.dart';
+part 'planning/shared_widgets.dart';
