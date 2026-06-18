@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -104,6 +105,14 @@ class _InMemoryStorageService extends StorageService {
   Future<void> saveWeeklyGoals(List<WeeklyGoal> goals) async {}
 }
 
+Uint8List _validPngBytes() =>
+    Uint8List.fromList([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00]);
+
+Uint8List _validJpegBytes() =>
+    Uint8List.fromList([0xFF, 0xD8, 0xFF, 0xE0, 0x00]);
+
+Uint8List _invalidImageBytes() => Uint8List.fromList([1, 2, 3, 4]);
+
 void main() {
   group('xp owner safety', () {
     test('removeXP rejects negative values', () {
@@ -111,6 +120,46 @@ void main() {
 
       expect(() => profile.removeXP(-5), throwsA(isA<ArgumentError>()));
       expect(profile.xp, 20);
+    });
+  });
+
+  group('profile image hardening', () {
+    late AppState state;
+
+    setUp(() {
+      state = AppState(storage: _InMemoryStorageService(), seedDefaults: false);
+    });
+
+    tearDown(() {
+      state.dispose();
+    });
+
+    test('invalid avatar/banner bytes do not overwrite valid images', () {
+      final avatar = _validPngBytes();
+      final banner = _validJpegBytes();
+
+      state.updateProfileAvatar(avatar);
+      state.updateProfileBanner(banner);
+
+      expect(state.profile.avatarBytes, orderedEquals(avatar));
+      expect(state.profile.bannerBytes, orderedEquals(banner));
+
+      state.updateProfileAvatar(_invalidImageBytes());
+      state.updateProfileBanner(_invalidImageBytes());
+
+      expect(state.profile.avatarBytes, orderedEquals(avatar));
+      expect(state.profile.bannerBytes, orderedEquals(banner));
+    });
+
+    test('null avatar/banner still clears existing images', () {
+      state.updateProfileAvatar(_validPngBytes());
+      state.updateProfileBanner(_validJpegBytes());
+
+      state.updateProfileAvatar(null);
+      state.updateProfileBanner(null);
+
+      expect(state.profile.avatarBytes, isNull);
+      expect(state.profile.bannerBytes, isNull);
     });
   });
 

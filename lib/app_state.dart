@@ -80,6 +80,7 @@ class AppState extends ChangeNotifier {
   }
 
   void resumeBackgroundWork() {
+    _notifications.invalidatePermissionCache();
     _startResetTimer();
     checkResets();
   }
@@ -1184,12 +1185,14 @@ class AppState extends ChangeNotifier {
   }
 
   void updateProfileAvatar(Uint8List? bytes) {
+    if (bytes != null && !hasSupportedImageMagicBytes(bytes)) return;
     profile.avatarBytes = bytes;
     notifyListeners();
     _saveAll();
   }
 
   void updateProfileBanner(Uint8List? bytes) {
+    if (bytes != null && !hasSupportedImageMagicBytes(bytes)) return;
     profile.bannerBytes = bytes;
     notifyListeners();
     _saveAll();

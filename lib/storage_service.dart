@@ -27,6 +27,7 @@ class StorageService {
   static const String _schemaVersionKey = 'schemaVersion';
   static const int _legacySchemaVersion = 1;
   static const int _currentSchemaVersion = 2;
+  static const int _maxJsonDecodeDepth = 64;
 
   late Box<String> _skills;
   late Box<String> _tasks;
@@ -134,9 +135,31 @@ class StorageService {
 
   Map<String, dynamic> _decodeMap(String raw) {
     final decoded = jsonDecode(raw);
+    if (!_jsonDepthWithinLimit(decoded)) {
+      throw const FormatException('Storage JSON payload is too deeply nested.');
+    }
     if (decoded is Map<String, dynamic>) return decoded;
     if (decoded is Map) return Map<String, dynamic>.from(decoded);
-    return <String, dynamic>{};
+    throw const FormatException('Storage JSON payload must be an object.');
+  }
+
+  bool _jsonDepthWithinLimit(Object? root) {
+    final stack = <({Object? value, int depth})>[(value: root, depth: 1)];
+    while (stack.isNotEmpty) {
+      final item = stack.removeLast();
+      if (item.depth > _maxJsonDecodeDepth) return false;
+      switch (item.value) {
+        case final Map map:
+          for (final value in map.values) {
+            stack.add((value: value, depth: item.depth + 1));
+          }
+        case final List list:
+          for (final value in list) {
+            stack.add((value: value, depth: item.depth + 1));
+          }
+      }
+    }
+    return true;
   }
 
   String _readString(
@@ -224,7 +247,8 @@ class StorageService {
     final value = data[key];
     if (value is! String || value.isEmpty) return null;
     try {
-      return base64Decode(value);
+      final bytes = base64Decode(value);
+      return hasSupportedImageMagicBytes(bytes) ? bytes : null;
     } catch (_) {
       return null;
     }
@@ -297,6 +321,16 @@ class StorageService {
   Achievement debugDecodeAchievement(String json) => _decodeAchievement(json);
 
   @visibleForTesting
+  String debugEncodeProfile(UserProfile profile) => _encodeProfile(profile);
+
+  @visibleForTesting
+  UserProfile debugDecodeProfile(String json) => _decodeProfile(json);
+
+  @visibleForTesting
+  Map<String, dynamic>? debugDecodeMapOrNull(String json) =>
+      _decodeOrNull(json, _decodeMap);
+
+  @visibleForTesting
   int get debugCurrentSchemaVersion => _currentSchemaVersion;
 
   @visibleForTesting
@@ -362,6 +396,10 @@ class StorageService {
 
   Future<void> saveProfile(UserProfile profile) async {
     _ensureInit();
+    await _profile.put('profile', _encodeProfile(profile));
+  }
+
+  String _encodeProfile(UserProfile profile) {
     final data = {
       'name': profile.name,
       'level': profile.level,
@@ -382,7 +420,7 @@ class StorageService {
           ?.toIso8601String(),
       'lastStreakProtectionTaskTitle': profile.lastStreakProtectionTaskTitle,
     };
-    await _profile.put('profile', jsonEncode(data));
+    return jsonEncode(data);
   }
 
   Future<UserProfile> loadProfile() async {
@@ -392,6 +430,10 @@ class StorageService {
       return UserProfile(name: 'Your Name');
     }
 
+    return _decodeProfile(raw);
+  }
+
+  UserProfile _decodeProfile(String raw) {
     final data = _decodeOrNull(raw, _decodeMap);
     if (data == null) {
       return UserProfile(name: 'Your Name');

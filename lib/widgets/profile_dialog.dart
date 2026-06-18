@@ -60,7 +60,9 @@ class _ProfileDialogState extends State<ProfileDialog> {
       allowMultiple: false,
       withData: true,
     );
-    return result?.files.single.bytes;
+    final bytes = result?.files.single.bytes;
+    if (bytes == null) return null;
+    return hasSupportedImageMagicBytes(bytes) ? bytes : null;
   }
 
   // ── Build ─────────────────────────────────────────────────────────────────

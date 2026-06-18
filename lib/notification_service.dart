@@ -20,6 +20,7 @@ class NotificationService {
   bool _initialized = false;
   bool? _permissionsGranted;
   Future<bool>? _permissionRequestInFlight;
+  int _permissionRequestGeneration = 0;
 
   Future<void> init() async {
     if (_initialized) return;
@@ -76,14 +77,25 @@ class NotificationService {
     if (inFlight != null) return inFlight;
 
     final request = _requestPermissionsUnlocked();
+    final generation = _permissionRequestGeneration;
     _permissionRequestInFlight = request;
     try {
       final granted = await request;
-      _permissionsGranted = granted;
+      if (generation == _permissionRequestGeneration) {
+        _permissionsGranted = granted;
+      }
       return granted;
     } finally {
-      _permissionRequestInFlight = null;
+      if (identical(_permissionRequestInFlight, request)) {
+        _permissionRequestInFlight = null;
+      }
     }
+  }
+
+  void invalidatePermissionCache() {
+    _permissionRequestGeneration++;
+    _permissionsGranted = null;
+    _permissionRequestInFlight = null;
   }
 
   Future<bool> _requestPermissionsUnlocked() async {
@@ -138,6 +150,14 @@ class NotificationService {
     }
 
     return granted;
+  }
+
+  @visibleForTesting
+  bool? get debugCachedPermissions => _permissionsGranted;
+
+  @visibleForTesting
+  void debugSetPermissionCache(bool? granted) {
+    _permissionsGranted = granted;
   }
 
   Future<void> scheduleRepeatingTask({

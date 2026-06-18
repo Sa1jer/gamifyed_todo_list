@@ -1,10 +1,19 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:todo_list_app/models.dart';
 import 'package:todo_list_app/storage_service.dart';
 import 'package:todo_list_app/utils.dart';
+
+Uint8List _validPngBytes() =>
+    Uint8List.fromList([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00]);
+
+Uint8List _validJpegBytes() =>
+    Uint8List.fromList([0xFF, 0xD8, 0xFF, 0xE0, 0x00]);
+
+Uint8List _invalidImageBytes() => Uint8List.fromList([1, 2, 3, 4]);
 
 void main() {
   group('StorageService enum compatibility', () {
@@ -91,6 +100,55 @@ void main() {
       expect(achievement.id, 'removed_future_achievement');
       expect(achievement.def, isNull);
       expect(achievement.unlockedAt, isNotNull);
+    });
+  });
+
+  group('StorageService profile image hardening', () {
+    test('valid PNG/JPEG avatar and banner bytes roundtrip', () {
+      final storage = StorageService();
+      final avatar = _validPngBytes();
+      final banner = _validJpegBytes();
+      final profile = UserProfile(
+        name: 'Tester',
+        avatarBytes: avatar,
+        bannerBytes: banner,
+      );
+
+      final decoded = storage.debugDecodeProfile(
+        storage.debugEncodeProfile(profile),
+      );
+
+      expect(decoded.avatarBytes, orderedEquals(avatar));
+      expect(decoded.bannerBytes, orderedEquals(banner));
+    });
+
+    test('invalid legacy avatar and banner bytes decode as null', () {
+      final storage = StorageService();
+      final decoded = storage.debugDecodeProfile(
+        jsonEncode({
+          'name': 'Tester',
+          'avatarBytes': base64Encode(_invalidImageBytes()),
+          'bannerBytes': base64Encode(_invalidImageBytes()),
+        }),
+      );
+
+      expect(decoded.avatarBytes, isNull);
+      expect(decoded.bannerBytes, isNull);
+    });
+  });
+
+  group('StorageService JSON decode hardening', () {
+    test('deeply nested JSON payloads are skipped safely', () {
+      final storage = StorageService();
+      Object? value = 'leaf';
+      for (var i = 0; i < 70; i++) {
+        value = {'child': value};
+      }
+
+      expect(storage.debugDecodeMapOrNull(jsonEncode(value)), isNull);
+      expect(storage.debugDecodeMapOrNull(jsonEncode({'safe': true})), {
+        'safe': true,
+      });
     });
   });
 
