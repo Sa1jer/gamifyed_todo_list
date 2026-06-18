@@ -13,4 +13,12 @@ import 'dialogs.dart';
 import 'goal_header.dart';
 import 'shared.dart';
 
-part 'mastery_map/mastery_map_body.dart';
+part 'mastery_map/selection_models.dart';
+part 'mastery_map/workspace_shell.dart';
+part 'mastery_map/body_shell.dart';
+part 'mastery_map/canvas.dart';
+part 'mastery_map/painters.dart';
+part 'mastery_map/orbs.dart';
+part 'mastery_map/template_panel.dart';
+part 'mastery_map/mobile_panels.dart';
+part 'mastery_map/inspector.dart';
