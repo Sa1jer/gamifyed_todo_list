@@ -10,6 +10,8 @@ import 'sfx_service.dart';
 import 'engines/boss_engine.dart';
 import 'engines/roadmap_engine.dart';
 
+part 'app_state/provider.dart';
+
 class AppState extends ChangeNotifier {
   static const double _minimumActionRatio = 0.3;
   static const Duration _resetCheckInterval = Duration(minutes: 15);
@@ -2364,30 +2366,4 @@ class AppState extends ChangeNotifier {
       RepeatFrequency.custom => ReminderRepeatMode.none,
     };
   }
-}
-
-class _BossMoment {
-  final int hp;
-  final bool isDefeated;
-
-  const _BossMoment({required this.hp, required this.isDefeated});
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// APP STATE PROVIDER
-// ═══════════════════════════════════════════════════════════════════════════════
-
-class AppStateProvider extends InheritedWidget {
-  final AppState state;
-  const AppStateProvider({
-    super.key,
-    required this.state,
-    required super.child,
-  });
-
-  static AppState of(BuildContext ctx) =>
-      ctx.dependOnInheritedWidgetOfExactType<AppStateProvider>()!.state;
-
-  @override
-  bool updateShouldNotify(AppStateProvider old) => true;
 }
