@@ -11,4 +11,10 @@ import '../utils.dart';
 import 'reward_animations.dart';
 import 'shared.dart';
 
-part 'dialogs/dialogs_body.dart';
+part 'dialogs/achievements_history.dart';
+part 'dialogs/shared_controls.dart';
+part 'dialogs/skill_dialogs.dart';
+part 'dialogs/skill_tree_dialogs.dart';
+part 'dialogs/task_dialog.dart';
+part 'dialogs/stats_calendar_dialogs.dart';
+part 'dialogs/rewards_bosses_dialogs.dart';

@@ -1,0 +1,317 @@
+part of '../dialogs.dart';
+
+class _DialogChoiceChip extends StatefulWidget {
+  final String label;
+  final Color color;
+  final bool selected;
+  final Color backgroundColor;
+  final Color borderColor;
+  final Color inactiveTextColor;
+  final VoidCallback onTap;
+  final EdgeInsetsGeometry padding;
+  final double radius;
+  final FontWeight selectedWeight;
+
+  const _DialogChoiceChip({
+    required this.label,
+    required this.color,
+    required this.selected,
+    required this.backgroundColor,
+    required this.borderColor,
+    required this.inactiveTextColor,
+    required this.onTap,
+    this.padding = const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+    this.radius = 8,
+    this.selectedWeight = FontWeight.w700,
+  });
+
+  @override
+  State<_DialogChoiceChip> createState() => _DialogChoiceChipState();
+}
+
+class _DialogChoiceChipState extends State<_DialogChoiceChip> {
+  bool _hovered = false;
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = widget.selected;
+    final fillColor = selected
+        ? widget.color.withAlpha(38)
+        : (_hovered ? widget.color.withAlpha(16) : widget.backgroundColor);
+    final outlineColor = selected
+        ? widget.color.withAlpha(150)
+        : (_hovered ? widget.color.withAlpha(70) : widget.borderColor);
+    final labelColor = selected
+        ? widget.color
+        : (_hovered ? widget.color.withAlpha(220) : widget.inactiveTextColor);
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() {
+        _hovered = false;
+        _pressed = false;
+      }),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onTap,
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapCancel: () => setState(() => _pressed = false),
+        onTapUp: (_) => setState(() => _pressed = false),
+        child: AnimatedScale(
+          scale: _pressed ? 0.97 : 1,
+          duration: kMotionFast,
+          curve: kMotionCurve,
+          child: AnimatedContainer(
+            duration: kMotionStandard,
+            curve: kMotionCurve,
+            padding: widget.padding,
+            decoration: BoxDecoration(
+              color: fillColor,
+              borderRadius: BorderRadius.circular(widget.radius),
+              border: Border.all(color: outlineColor),
+            ),
+            child: Text(
+              widget.label,
+              style: TextStyle(
+                color: labelColor,
+                fontSize: 12,
+                fontWeight: selected ? widget.selectedWeight : FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _IconChoiceButton extends StatefulWidget {
+  final IconData icon;
+  final bool selected;
+  final Color color;
+  final Color inactiveColor;
+  final VoidCallback onTap;
+
+  const _IconChoiceButton({
+    required this.icon,
+    required this.selected,
+    required this.color,
+    required this.inactiveColor,
+    required this.onTap,
+  });
+
+  @override
+  State<_IconChoiceButton> createState() => _IconChoiceButtonState();
+}
+
+class _IconChoiceButtonState extends State<_IconChoiceButton> {
+  bool _hovered = false;
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = widget.selected;
+    final fillColor = selected
+        ? widget.color.withAlpha(46)
+        : (_hovered ? widget.color.withAlpha(14) : Colors.transparent);
+    final outlineColor = selected
+        ? widget.color.withAlpha(165)
+        : (_hovered ? widget.color.withAlpha(60) : Colors.transparent);
+    final iconColor = selected
+        ? widget.color
+        : (_hovered ? widget.color.withAlpha(220) : widget.inactiveColor);
+
+    return Tooltip(
+      message: 'Выбрать иконку',
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() {
+          _hovered = false;
+          _pressed = false;
+        }),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onTap,
+          onTapDown: (_) => setState(() => _pressed = true),
+          onTapCancel: () => setState(() => _pressed = false),
+          onTapUp: (_) => setState(() => _pressed = false),
+          child: AnimatedScale(
+            scale: _pressed ? 0.92 : 1,
+            duration: kMotionFast,
+            curve: kMotionCurve,
+            child: AnimatedContainer(
+              duration: kMotionStandard,
+              curve: kMotionCurve,
+              decoration: BoxDecoration(
+                color: fillColor,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: outlineColor, width: 1.4),
+              ),
+              child: Icon(widget.icon, size: 18, color: iconColor),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ColorChoiceButton extends StatefulWidget {
+  final Color color;
+  final bool selected;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  const _ColorChoiceButton({
+    required this.color,
+    required this.selected,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  @override
+  State<_ColorChoiceButton> createState() => _ColorChoiceButtonState();
+}
+
+class _ColorChoiceButtonState extends State<_ColorChoiceButton> {
+  bool _hovered = false;
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final ringColor = widget.selected
+        ? (widget.isDark ? Colors.white : const Color(0xFF202033))
+        : (_hovered ? widget.color.withAlpha(120) : Colors.transparent);
+    final shadowAlpha = widget.selected ? 90 : (_hovered ? 45 : 0);
+
+    return Tooltip(
+      message: 'Выбрать цвет',
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() {
+          _hovered = false;
+          _pressed = false;
+        }),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onTap,
+          onTapDown: (_) => setState(() => _pressed = true),
+          onTapCancel: () => setState(() => _pressed = false),
+          onTapUp: (_) => setState(() => _pressed = false),
+          child: AnimatedScale(
+            scale: _pressed ? 0.9 : 1,
+            duration: kMotionFast,
+            curve: kMotionCurve,
+            child: AnimatedContainer(
+              duration: kMotionStandard,
+              curve: kMotionCurve,
+              width: 28,
+              height: 28,
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: ringColor,
+                  width: widget.selected ? 2 : 1,
+                ),
+                boxShadow: shadowAlpha == 0
+                    ? null
+                    : [
+                        BoxShadow(
+                          color: widget.color.withAlpha(shadowAlpha),
+                          blurRadius: widget.selected ? 10 : 7,
+                        ),
+                      ],
+              ),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: widget.color,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ADD SKILL DIALOG
+// FIX 1.0.7: Replaced "Ещё иконки" toggle with a single scrollable grid
+//            showing all icons at once (2 rows visible, scrollable vertically).
+// ═══════════════════════════════════════════════════════════════════════════════
+
+typedef SkillSaveCallback =
+    void Function(
+      String name,
+      String goal,
+      List<String> checklist,
+      Color color,
+      IconData icon,
+      List<SkillTreeNode> initialTreeNodes,
+      InitialSkillQuestDraft? initialQuest,
+    );
+
+class InitialSkillQuestDraft {
+  final String title;
+  final String minimumAction;
+  final String? treeNodeId;
+
+  const InitialSkillQuestDraft({
+    required this.title,
+    required this.minimumAction,
+    required this.treeNodeId,
+  });
+}
+
+class _FirstRunPathStep extends StatelessWidget {
+  final String number;
+  final String label;
+  final Color color;
+
+  const _FirstRunPathStep({
+    required this.number,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withAlpha(24),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withAlpha(95)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '$number.',
+            style: TextStyle(
+              color: color,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
