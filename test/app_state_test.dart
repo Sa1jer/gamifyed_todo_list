@@ -105,6 +105,15 @@ class _InMemoryStorageService extends StorageService {
 }
 
 void main() {
+  group('xp owner safety', () {
+    test('removeXP rejects negative values', () {
+      final profile = UserProfile(name: 'Tester')..xp = 20;
+
+      expect(() => profile.removeXP(-5), throwsA(isA<ArgumentError>()));
+      expect(profile.xp, 20);
+    });
+  });
+
   group('streak protection', () {
     late AppState state;
     late Task task;
@@ -354,6 +363,62 @@ void main() {
       expect(linkedQuest.treeNodeId, 'linked-stage');
     });
 
+    test('merges valid existing roadmap prerequisites when reusing stages', () {
+      final skill = Skill(
+        id: 'dag-roadmap-skill',
+        name: 'DAG RoadMap',
+        goal: 'Сохранить связи',
+        color: const Color(0xFFFF9500),
+        icon: Icons.route,
+        treeNodes: [
+          SkillTreeNode(id: 'root-stage', title: 'Основа'),
+          SkillTreeNode(
+            id: 'middle-stage',
+            title: 'Практика',
+            prerequisiteIds: ['root-stage'],
+          ),
+          SkillTreeNode(
+            id: 'terminal-stage',
+            title: 'Результат',
+            prerequisiteIds: ['middle-stage', 'side-stage'],
+          ),
+          SkillTreeNode(
+            id: 'side-stage',
+            title: 'Боковая практика',
+            description: 'Сохранить как валидную зависимость',
+          ),
+        ],
+      );
+      state.addSkill(skill);
+      final linkedQuest = Task(
+        id: 'dag-linked-quest',
+        title: 'Сделать результат',
+        skillId: skill.id,
+        xpReward: 20,
+        type: TaskType.shortTerm,
+        treeNodeId: 'terminal-stage',
+      );
+      state.addTask(linkedQuest);
+
+      state.applyRoadmapTemplate(
+        skill.id,
+        const RoadmapTemplateConfig(
+          template: RoadmapTemplate.simple,
+          stagesPerPath: 3,
+        ),
+      );
+
+      final terminal = skill.treeNodes.firstWhere(
+        (node) => node.id == 'terminal-stage',
+      );
+      expect(
+        terminal.prerequisiteIds,
+        containsAll(['middle-stage', 'side-stage']),
+      );
+      expect(terminal.prerequisiteIds, hasLength(2));
+      expect(linkedQuest.treeNodeId, 'terminal-stage');
+    });
+
     test('extends a roadmap path after its terminal stage', () {
       final skill = state.skills.first;
       final root = SkillTreeNode(id: 'root-stage', title: 'Основа');
@@ -514,6 +579,38 @@ void main() {
       expect(state.previewEarnedXP(task), 42);
       expect(state.todayStats?.tasksCompleted, 0);
       expect(state.todayStats?.xpEarned, 18);
+    });
+  });
+
+  group('history cache safety', () {
+    late AppState state;
+
+    setUp(() {
+      state = AppState(storage: _InMemoryStorageService(), seedDefaults: true);
+    });
+
+    tearDown(() {
+      state.dispose();
+    });
+
+    test('completion history caches recalculate after completion and undo', () {
+      final task = state.tasks.firstWhere(
+        (candidate) =>
+            !candidate.isDone && candidate.type != TaskType.repeating,
+      );
+
+      expect(state.totalTasksCompleted, 0);
+      expect(state.completionHistoryForDate(DateTime.now()), isEmpty);
+
+      state.completeTask(task.id);
+
+      expect(state.totalTasksCompleted, 1);
+      expect(state.completionHistoryForDate(DateTime.now()), hasLength(1));
+
+      state.uncompleteTask(task.id);
+
+      expect(state.totalTasksCompleted, 0);
+      expect(state.completionHistoryForDate(DateTime.now()), isEmpty);
     });
   });
 

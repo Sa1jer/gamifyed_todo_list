@@ -51,6 +51,7 @@ class AppState extends ChangeNotifier {
   int _bestStreak = 0;
   Map<DateTime, List<HistoryEntry>>? _completionHistoryByDateCache;
   int? _totalTasksCompletedCache;
+  int? _historyCacheFingerprint;
 
   AppState({
     required StorageService storage,
@@ -569,6 +570,7 @@ class AppState extends ChangeNotifier {
       tasks.where((t) => t.skillId == skillId && !t.isDone).length;
 
   Map<DateTime, List<HistoryEntry>> get completionHistoryByDate {
+    assert(_historyCachesAreFreshForDebug());
     final cached = _completionHistoryByDateCache;
     if (cached != null) return cached;
 
@@ -633,6 +635,7 @@ class AppState extends ChangeNotifier {
 
     _completionHistoryByDateCache = Map.unmodifiable(stableCompletionsByDate);
     _totalTasksCompletedCache = totalCompletions;
+    _historyCacheFingerprint = _historyFingerprint();
     return _completionHistoryByDateCache!;
   }
 
@@ -650,6 +653,30 @@ class AppState extends ChangeNotifier {
   void _invalidateHistoryCaches() {
     _completionHistoryByDateCache = null;
     _totalTasksCompletedCache = null;
+    _historyCacheFingerprint = null;
+  }
+
+  bool _historyCachesAreFreshForDebug() {
+    if (_completionHistoryByDateCache == null &&
+        _totalTasksCompletedCache == null) {
+      return true;
+    }
+    return _historyCacheFingerprint == _historyFingerprint();
+  }
+
+  int _historyFingerprint() {
+    return Object.hashAll(
+      history.map(
+        (entry) => Object.hash(
+          entry.id,
+          entry.taskId,
+          entry.skillId,
+          entry.xp,
+          entry.isCompletion,
+          entry.at.millisecondsSinceEpoch,
+        ),
+      ),
+    );
   }
 
   List<Boss> get activeBosses =>
@@ -1245,20 +1272,28 @@ class AppState extends ChangeNotifier {
         .map((task) => task.treeNodeId!)
         .toSet();
     final orderedExisting = engine.orderedUniqueStages(skill);
+    final originalPrerequisitesByNodeId = <String, List<String>>{
+      for (final node in orderedExisting)
+        node.id: List<String>.from(node.prerequisiteIds),
+    };
     final selectedNodes = <SkillTreeNode>[];
     final selectedIds = <String>{};
+    final reusedNodeIds = <String>{};
+    final requiredPrerequisiteByNodeId = <String, String?>{};
     var cursor = 0;
 
     for (final path in templatePaths) {
       String? previousId;
       for (final templateNode in path.nodes) {
-        final node = cursor < orderedExisting.length
-            ? orderedExisting[cursor++]
-            : templateNode;
+        final reused = cursor < orderedExisting.length;
+        final node = reused ? orderedExisting[cursor++] : templateNode;
+        if (reused) {
+          reusedNodeIds.add(node.id);
+        }
         if (selectedIds.add(node.id)) {
           selectedNodes.add(node);
         }
-        node.prerequisiteIds = previousId == null ? [] : [previousId];
+        requiredPrerequisiteByNodeId[node.id] = previousId;
         if (node.requiredQuestCompletions < 1) {
           node.requiredQuestCompletions = 1;
         }
@@ -1275,14 +1310,86 @@ class AppState extends ChangeNotifier {
               _shouldPreserveRoadmapStage(node, linkedNodeIds),
         )
         .toList(growable: false);
+    final finalNodes = [...selectedNodes, ...preservedExtraNodes];
+    final finalNodeIds = finalNodes.map((node) => node.id).toSet();
+    final prerequisitesByNodeId = <String, List<String>>{
+      for (final node in finalNodes)
+        node.id: List<String>.from(node.prerequisiteIds),
+    };
+
+    for (final node in finalNodes) {
+      final requiredPrerequisite = requiredPrerequisiteByNodeId[node.id];
+      final existingPrerequisites =
+          reusedNodeIds.contains(node.id) ||
+              preservedExtraNodes.any((extra) => extra.id == node.id)
+          ? originalPrerequisitesByNodeId[node.id] ?? const <String>[]
+          : const <String>[];
+      final mergedPrerequisites = _mergeRoadmapPrerequisites(
+        nodeId: node.id,
+        requiredPrerequisiteId: requiredPrerequisite,
+        existingPrerequisiteIds: existingPrerequisites,
+        finalNodeIds: finalNodeIds,
+        prerequisitesByNodeId: prerequisitesByNodeId,
+      );
+      node.prerequisiteIds = mergedPrerequisites;
+      prerequisitesByNodeId[node.id] = mergedPrerequisites;
+    }
+
     skill.treeNodes
       ..clear()
-      ..addAll(selectedNodes)
-      ..addAll(preservedExtraNodes);
+      ..addAll(finalNodes);
     skill.syncTreeNodes();
     _syncBossesForSkill(skillId);
     notifyListeners();
     _saveAll();
+  }
+
+  List<String> _mergeRoadmapPrerequisites({
+    required String nodeId,
+    required String? requiredPrerequisiteId,
+    required Iterable<String> existingPrerequisiteIds,
+    required Set<String> finalNodeIds,
+    required Map<String, List<String>> prerequisitesByNodeId,
+  }) {
+    final merged = <String>[];
+
+    void tryAdd(String? prerequisiteId) {
+      if (prerequisiteId == null) return;
+      if (prerequisiteId == nodeId) return;
+      if (!finalNodeIds.contains(prerequisiteId)) return;
+      if (merged.contains(prerequisiteId)) return;
+      final candidateMap = <String, List<String>>{
+        for (final entry in prerequisitesByNodeId.entries)
+          entry.key: List<String>.from(entry.value),
+      };
+      candidateMap[nodeId] = [...merged, prerequisiteId];
+      if (_roadmapPrerequisitesCreateCycle(nodeId, candidateMap)) return;
+      merged.add(prerequisiteId);
+    }
+
+    tryAdd(requiredPrerequisiteId);
+    for (final prerequisiteId in existingPrerequisiteIds) {
+      tryAdd(prerequisiteId);
+    }
+    return merged;
+  }
+
+  bool _roadmapPrerequisitesCreateCycle(
+    String nodeId,
+    Map<String, List<String>> prerequisitesByNodeId,
+  ) {
+    bool visit(String currentId, Set<String> seen) {
+      final prerequisites = prerequisitesByNodeId[currentId];
+      if (prerequisites == null) return false;
+      for (final prerequisiteId in prerequisites) {
+        if (prerequisiteId == nodeId) return true;
+        if (!seen.add(prerequisiteId)) continue;
+        if (visit(prerequisiteId, seen)) return true;
+      }
+      return false;
+    }
+
+    return visit(nodeId, <String>{});
   }
 
   bool _shouldPreserveRoadmapStage(
@@ -1618,6 +1725,7 @@ class AppState extends ChangeNotifier {
   // ── Statistics helpers ───────────────────────────────────────────────────────
 
   int get totalTasksCompleted {
+    assert(_historyCachesAreFreshForDebug());
     final cached = _totalTasksCompletedCache;
     if (cached != null) return cached;
 

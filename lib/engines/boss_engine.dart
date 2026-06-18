@@ -34,16 +34,18 @@ class BossEngine {
     final ts = now ?? DateTime.now();
     final targetStreak = boss.targetStreak < 1 ? 1 : boss.targetStreak;
 
-    final skillTasks =
-        tasks.where((task) => task.skillId == boss.skillId).toList();
+    final skillTasks = tasks
+        .where((task) => task.skillId == boss.skillId)
+        .toList();
     final repeatingTasks = skillTasks
         .where((task) => task.type == TaskType.repeating)
         .toList();
     final highPriorityTasks = skillTasks
         .where((task) => task.priority == Priority.high)
         .toList();
-    final minimumTasks =
-        skillTasks.where((task) => task.hasMinimumAction).toList();
+    final minimumTasks = skillTasks
+        .where((task) => task.hasMinimumAction)
+        .toList();
 
     final currentStreak = repeatingTasks.fold<int>(
       0,
@@ -77,8 +79,10 @@ class BossEngine {
         (value: (currentStreak / targetStreak).clamp(0.0, 1.0), weight: 0.32),
       if (highPriorityTasks.isNotEmpty)
         (
-          value: (relievedHighPriorityTasks / highPriorityTasks.length)
-              .clamp(0.0, 1.0),
+          value: (relievedHighPriorityTasks / highPriorityTasks.length).clamp(
+            0.0,
+            1.0,
+          ),
           weight: 0.26,
         ),
       if (minimumTasks.isNotEmpty)
@@ -103,8 +107,10 @@ class BossEngine {
         ),
     ];
 
-    final totalWeight =
-        contributions.fold<double>(0, (sum, item) => sum + item.weight);
+    final totalWeight = contributions.fold<double>(
+      0,
+      (sum, item) => sum + item.weight,
+    );
     final weightedScore = contributions.fold<double>(
       0,
       (sum, item) => sum + item.value * item.weight,
@@ -118,8 +124,10 @@ class BossEngine {
         : (currentStreak / targetStreak).clamp(0.0, 1.0);
     final priorityProgress = highPriorityTasks.isEmpty
         ? 0.0
-        : (relievedHighPriorityTasks / highPriorityTasks.length)
-            .clamp(0.0, 1.0);
+        : (relievedHighPriorityTasks / highPriorityTasks.length).clamp(
+            0.0,
+            1.0,
+          );
     final startProgress = minimumTasks.isEmpty
         ? 0.0
         : (startedTasks / minimumTasks.length).clamp(0.0, 1.0);
@@ -139,26 +147,26 @@ class BossEngine {
     final phaseLabel = boss.isDefeated
         ? 'Побеждён'
         : impactProgress >= 0.85
-            ? 'При смерти'
-            : impactProgress >= 0.6
-                ? 'Ослабевает'
-                : isUnderAttack
-                    ? 'Атакует'
-                    : impactProgress >= 0.3
-                        ? 'Выжидает'
-                        : 'Силен';
+        ? 'При смерти'
+        : impactProgress >= 0.6
+        ? 'Ослабевает'
+        : isUnderAttack
+        ? 'Атакует'
+        : impactProgress >= 0.3
+        ? 'Выжидает'
+        : 'Силен';
 
     final recommendation = urgentRepeatingTasks > 0
         ? 'Удержи повторяющиеся квесты: сопротивление восстановится, если пропустить день.'
         : stalledHighPriorityTasks > 0
-            ? 'Закрой важный квест по навыку, чтобы сбить давление.'
-            : minimumTasks.any(canStartMinimumAction)
-                ? 'Сделай лёгкий старт по крупному квесту — это тоже снижает давление.'
-                : totalTreeNodes > 0 && masteredTreeNodes < totalTreeNodes
-                    ? 'Освой следующий этап карты мастерства — это сильно ослабит сопротивление.'
-                    : checklistTotal > 0 && checklistCompleted < checklistTotal
-                        ? 'Продвигай критерии навыка — они тоже ослабляют сопротивление.'
-                        : 'Поддерживай темп по навыку: любой прогресс снижает сопротивление.';
+        ? 'Закрой важный квест по навыку, чтобы сбить давление.'
+        : minimumTasks.any(canStartMinimumAction)
+        ? 'Сделай лёгкий старт по крупному квесту — это тоже снижает давление.'
+        : totalTreeNodes > 0 && masteredTreeNodes < totalTreeNodes
+        ? 'Освой следующий этап карты мастерства — это сильно ослабит сопротивление.'
+        : checklistTotal > 0 && checklistCompleted < checklistTotal
+        ? 'Продвигай критерии навыка — они тоже ослабляют сопротивление.'
+        : 'Поддерживай темп по навыку: любой прогресс снижает сопротивление.';
 
     return BossSnapshot(
       currentStreak: currentStreak,
@@ -207,16 +215,18 @@ class BossEngine {
     for (final boss in bosses) {
       if (boss.skillId != skillId) continue;
 
-      final snapshot =
-          buildSnapshot(boss: boss, tasks: tasks, skill: skill, now: ts);
+      final snapshot = buildSnapshot(
+        boss: boss,
+        tasks: tasks,
+        skill: skill,
+        now: ts,
+      );
       boss.currentStreak = snapshot.currentStreak;
-      final nextHp =
-          ((1 - snapshot.impactProgress) * boss.maxHp).round().clamp(
-                0,
-                boss.maxHp,
-              );
-      final shouldBeDefeated =
-          nextHp <= 0 || snapshot.impactProgress >= 0.999;
+      final nextHp = ((1 - snapshot.impactProgress) * boss.maxHp).round().clamp(
+        0,
+        boss.maxHp,
+      );
+      final shouldBeDefeated = nextHp <= 0 || snapshot.impactProgress >= 0.999;
 
       if (!shouldBeDefeated) {
         boss.isDefeated = false;
@@ -237,4 +247,3 @@ class BossEngine {
     return newlyDefeated;
   }
 }
-

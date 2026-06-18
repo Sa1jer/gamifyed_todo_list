@@ -116,6 +116,38 @@ void main() {
       expect(decoded.xp, 15);
     });
 
+    test('v1 skill migration rewrites legacy goal into goalSpec', () {
+      final storage = StorageService();
+      final migrated = storage.debugMigrateSkillPayloadV1ToV2(
+        jsonEncode({
+          'id': 'legacy-migrate-skill',
+          'name': 'Pull-ups',
+          'goal': 'Подтягиваться 20 раз',
+          'color': const Color(0xFF4A9EFF).toARGB32(),
+          'iconName': Icons.fitness_center.codePoint.toString(),
+          'level': 2,
+          'xp': 15,
+        }),
+      );
+
+      expect(migrated, isNotNull);
+      final encoded = jsonDecode(migrated!) as Map;
+      expect(encoded['goal'], 'Подтягиваться 20 раз');
+      expect(encoded['goalSpec'], isA<Map>());
+      expect((encoded['goalSpec'] as Map)['text'], 'Подтягиваться 20 раз');
+
+      final decoded = storage.debugDecodeSkill(migrated);
+      expect(decoded.goal, 'Подтягиваться 20 раз');
+      expect(decoded.goalSpec.text, 'Подтягиваться 20 раз');
+    });
+
+    test('v1 skill migration skips corrupted payloads safely', () {
+      final storage = StorageService();
+
+      expect(storage.debugMigrateSkillPayloadV1ToV2('not-json'), isNull);
+      expect(storage.debugMigrateSkillPayloadV1ToV2('[]'), isNull);
+    });
+
     test('new skill payload with goalSpec decodes all goal fields', () {
       final storage = StorageService();
       final deadline = DateTime(2026, 12, 1);

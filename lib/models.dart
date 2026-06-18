@@ -36,6 +36,9 @@ mixin XPOwner {
   }
 
   void removeXP(int amount) {
+    if (amount < 0) {
+      throw ArgumentError.value(amount, 'amount', 'Use addXP');
+    }
     xp -= amount;
     while (xp < 0 && level > 1) {
       level--;

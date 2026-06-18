@@ -116,11 +116,7 @@ void main() {
     test('targetStreak < 1 is clamped to 1 in the snapshot', () {
       // Guards against a divide-by-zero / negative-progress regression if a
       // misconfigured boss slips in with targetStreak <= 0.
-      final repeating = makeTask(
-        id: 't1',
-        type: TaskType.repeating,
-        streak: 5,
-      );
+      final repeating = makeTask(id: 't1', type: TaskType.repeating, streak: 5);
 
       final snapshot = engine.buildSnapshot(
         boss: makeBoss(targetStreak: 0),
@@ -176,8 +172,7 @@ void main() {
       expect(snapshot.completionProgress, 1.0);
     });
 
-    test('high-priority "relief" counts both done and minimum-action done',
-        () {
+    test('high-priority "relief" counts both done and minimum-action done', () {
       final tasks = [
         makeTask(id: 'h1', priority: Priority.high, isDone: true),
         makeTask(
@@ -204,48 +199,45 @@ void main() {
       expect(snapshot.stalledHighPriorityTasks, 1);
     });
 
-    test(
-      'urgent repeating window is exactly 24h relative to injected now',
-      () {
-        // Reset boundary chosen to straddle the 24h cutoff: one task inside,
-        // one task exactly at the edge (inclusive), one task outside.
-        final tasks = [
-          makeTask(
-            id: 'inside',
-            type: TaskType.repeating,
-            nextResetAt: fixedNow.add(const Duration(hours: 5)),
-          ),
-          makeTask(
-            id: 'edge',
-            type: TaskType.repeating,
-            // Exactly 24h -> still considered urgent (<=).
-            nextResetAt: fixedNow.add(const Duration(hours: 24)),
-          ),
-          makeTask(
-            id: 'outside',
-            type: TaskType.repeating,
-            nextResetAt: fixedNow.add(const Duration(hours: 25)),
-          ),
-          // A done repeating task is never urgent, even if reset is soon.
-          makeTask(
-            id: 'done',
-            type: TaskType.repeating,
-            isDone: true,
-            nextResetAt: fixedNow.add(const Duration(hours: 1)),
-          ),
-        ];
+    test('urgent repeating window is exactly 24h relative to injected now', () {
+      // Reset boundary chosen to straddle the 24h cutoff: one task inside,
+      // one task exactly at the edge (inclusive), one task outside.
+      final tasks = [
+        makeTask(
+          id: 'inside',
+          type: TaskType.repeating,
+          nextResetAt: fixedNow.add(const Duration(hours: 5)),
+        ),
+        makeTask(
+          id: 'edge',
+          type: TaskType.repeating,
+          // Exactly 24h -> still considered urgent (<=).
+          nextResetAt: fixedNow.add(const Duration(hours: 24)),
+        ),
+        makeTask(
+          id: 'outside',
+          type: TaskType.repeating,
+          nextResetAt: fixedNow.add(const Duration(hours: 25)),
+        ),
+        // A done repeating task is never urgent, even if reset is soon.
+        makeTask(
+          id: 'done',
+          type: TaskType.repeating,
+          isDone: true,
+          nextResetAt: fixedNow.add(const Duration(hours: 1)),
+        ),
+      ];
 
-        final snapshot = engine.buildSnapshot(
-          boss: makeBoss(),
-          tasks: tasks,
-          skill: makeSkill(),
-          now: fixedNow,
-        );
+      final snapshot = engine.buildSnapshot(
+        boss: makeBoss(),
+        tasks: tasks,
+        skill: makeSkill(),
+        now: fixedNow,
+      );
 
-        expect(snapshot.urgentRepeatingTasks, 2);
-        expect(snapshot.isUnderAttack, isTrue);
-      },
-    );
+      expect(snapshot.urgentRepeatingTasks, 2);
+      expect(snapshot.isUnderAttack, isTrue);
+    });
 
     test('phaseLabel "Побеждён" wins over impact-based labels', () {
       // Even when there are no contributions (impact == 0), an already
@@ -262,23 +254,25 @@ void main() {
       expect(snapshot.phaseLabel, 'Побеждён');
     });
 
-    test('impactProgress is the weighted average of present dimensions only',
-        () {
-      // Single fully completed dimension (one shortTerm task done) -> 100%
-      // of the only present weight. Locks in that missing dimensions are
-      // dropped from BOTH numerator and denominator (not treated as 0).
-      final tasks = [makeTask(id: 't1', isDone: true)];
+    test(
+      'impactProgress is the weighted average of present dimensions only',
+      () {
+        // Single fully completed dimension (one shortTerm task done) -> 100%
+        // of the only present weight. Locks in that missing dimensions are
+        // dropped from BOTH numerator and denominator (not treated as 0).
+        final tasks = [makeTask(id: 't1', isDone: true)];
 
-      final snapshot = engine.buildSnapshot(
-        boss: makeBoss(),
-        tasks: tasks,
-        skill: makeSkill(), // no checklist, no tree nodes
-        now: fixedNow,
-      );
+        final snapshot = engine.buildSnapshot(
+          boss: makeBoss(),
+          tasks: tasks,
+          skill: makeSkill(), // no checklist, no tree nodes
+          now: fixedNow,
+        );
 
-      expect(snapshot.impactProgress, 1.0);
-      expect(snapshot.completionProgress, 1.0);
-    });
+        expect(snapshot.impactProgress, 1.0);
+        expect(snapshot.completionProgress, 1.0);
+      },
+    );
   });
 
   // ---------- syncForSkill ----------------------------------------------
@@ -374,33 +368,30 @@ void main() {
       expect(callbackCount, 0);
     });
 
-    test(
-      'already-defeated boss whose impact falls back is fully revived',
-      () {
-        // The engine must be symmetric: if a previously defeated boss no
-        // longer meets the defeat criterion (e.g. tasks were uncompleted,
-        // a streak was lost), it has to be revived — otherwise undo flows
-        // in AppState would leave ghost-defeated bosses on screen.
-        final boss = makeBoss(maxHp: 100, hp: 0, isDefeated: true)
-          ..defeatedAt = fixedNow.subtract(const Duration(days: 1));
+    test('already-defeated boss whose impact falls back is fully revived', () {
+      // The engine must be symmetric: if a previously defeated boss no
+      // longer meets the defeat criterion (e.g. tasks were uncompleted,
+      // a streak was lost), it has to be revived — otherwise undo flows
+      // in AppState would leave ghost-defeated bosses on screen.
+      final boss = makeBoss(maxHp: 100, hp: 0, isDefeated: true)
+        ..defeatedAt = fixedNow.subtract(const Duration(days: 1));
 
-        // No tasks, no skill metadata -> impact 0.0 -> nextHp 100.
-        final newlyDefeated = engine.syncForSkill(
-          skillId: 'skill-1',
-          bosses: [boss],
-          tasks: const [],
-          skill: null,
-          onBossDefeated: (_, _) =>
-              fail('onBossDefeated must not fire on revival'),
-          now: fixedNow,
-        );
+      // No tasks, no skill metadata -> impact 0.0 -> nextHp 100.
+      final newlyDefeated = engine.syncForSkill(
+        skillId: 'skill-1',
+        bosses: [boss],
+        tasks: const [],
+        skill: null,
+        onBossDefeated: (_, _) =>
+            fail('onBossDefeated must not fire on revival'),
+        now: fixedNow,
+      );
 
-        expect(boss.hp, 100);
-        expect(boss.isDefeated, isFalse);
-        expect(boss.defeatedAt, isNull);
-        expect(newlyDefeated, isEmpty);
-      },
-    );
+      expect(boss.hp, 100);
+      expect(boss.isDefeated, isFalse);
+      expect(boss.defeatedAt, isNull);
+      expect(newlyDefeated, isEmpty);
+    });
 
     test('already-defeated boss that stays defeated does not re-trigger', () {
       // If a boss is already marked defeated AND still satisfies the

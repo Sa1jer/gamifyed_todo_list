@@ -67,8 +67,29 @@ class StorageService {
   Future<void> _migrateIfNeeded() async {
     final storedVersion = _storedSchemaVersion();
     if (storedVersion < _currentSchemaVersion) {
+      if (storedVersion < 2) {
+        await _migrateV1ToV2();
+      }
       await _meta.put(_schemaVersionKey, _currentSchemaVersion.toString());
     }
+  }
+
+  Future<void> _migrateV1ToV2() async {
+    for (final key in _skills.keys.toList(growable: false)) {
+      final raw = _skills.get(key);
+      if (raw == null) continue;
+      final migrated = _migrateSkillPayloadV1ToV2(raw);
+      if (migrated == null) continue;
+      await _skills.put(key, migrated);
+    }
+  }
+
+  String? _migrateSkillPayloadV1ToV2(String raw) {
+    final data = _decodeOrNull(raw, _decodeMap);
+    if (data == null || data.isEmpty) return null;
+    final skill = _decodeOrNull(raw, _decodeSkill);
+    if (skill == null) return null;
+    return _encodeSkill(skill);
   }
 
   int _storedSchemaVersion() {
@@ -280,6 +301,10 @@ class StorageService {
 
   @visibleForTesting
   int debugVersionAfterMigration(Object? raw) => _versionAfterMigration(raw);
+
+  @visibleForTesting
+  String? debugMigrateSkillPayloadV1ToV2(String raw) =>
+      _migrateSkillPayloadV1ToV2(raw);
 
   Future<int?> loadBestStreak() async {
     _ensureInit();
