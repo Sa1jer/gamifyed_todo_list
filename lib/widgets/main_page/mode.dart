@@ -2,11 +2,7 @@ part of '../main_page.dart';
 
 enum WorkspaceMode { act, plan, mastery, stats }
 
-const _primaryWorkspaceModes = [
-  WorkspaceMode.act,
-  WorkspaceMode.plan,
-  WorkspaceMode.mastery,
-];
+const _primaryWorkspaceModes = [WorkspaceMode.act, WorkspaceMode.mastery];
 
 extension _WorkspaceModeMeta on WorkspaceMode {
   String get label => switch (this) {

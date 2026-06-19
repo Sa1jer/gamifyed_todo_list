@@ -33,7 +33,7 @@ Secondary top-bar entries:
 Design implication:
 `Статистика` should be useful but should not compete with `Сейчас / Карта`.
 
-Planned `1.3.32` navigation experiment:
+Current `1.3.32` navigation experiment:
 
 - `План` stops being a primary mode.
 - Planning becomes `Настройка навыка`, opened from selected skill/RoadMap context.
@@ -73,7 +73,7 @@ Current design tension:
 - It can help users repair their system.
 - It can also become an admin dashboard with too many diagnostics.
 
-Planned `1.3.32` decision:
+Current `1.3.32` decision:
 
 - Move Planning out of primary navigation experimentally.
 - Reframe it as skill settings with the job `Структура навыка`.

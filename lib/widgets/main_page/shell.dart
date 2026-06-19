@@ -168,6 +168,106 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
+  void _openSkillSettings(BuildContext context, Skill skill) {
+    final state = AppStateProvider.of(context);
+    state.selectSkill(skill.id);
+    AppFeedback.selection();
+
+    final size = MediaQuery.sizeOf(context);
+    final isMobile = size.width < 760;
+
+    void openMasteryMapFromSettings(BuildContext settingsContext) {
+      Navigator.of(settingsContext).maybePop();
+      if (!mounted) return;
+      setState(() => _mode = WorkspaceMode.mastery);
+    }
+
+    Widget settingsContent(BuildContext settingsContext) {
+      return AppStateProvider(
+        state: state,
+        child: PlanningWorkspace(
+          isDark: state.isDark,
+          embedded: true,
+          onOpenMasteryMap: () => openMasteryMapFromSettings(settingsContext),
+        ),
+      );
+    }
+
+    if (isMobile) {
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (sheetContext) => SafeArea(
+          top: false,
+          child: FractionallySizedBox(
+            heightFactor: 0.9,
+            child: AppPanel(
+              isDark: state.isDark,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: settingsContent(sheetContext),
+              ),
+            ),
+          ),
+        ),
+      );
+      return;
+    }
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        final dialogWidth = (size.width * 0.86).clamp(760.0, 1180.0);
+        final dialogHeight = (size.height * 0.82).clamp(560.0, 780.0);
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(22),
+          child: SizedBox(
+            width: dialogWidth,
+            height: dialogHeight,
+            child: AppPanel(
+              isDark: state.isDark,
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Icon(skill.icon, color: skill.color, size: 20),
+                        const SizedBox(width: 9),
+                        Expanded(
+                          child: Text(
+                            'Настройка навыка: ${skill.name}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: textColor(state.isDark),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                        HoverIconBtn(
+                          icon: Icons.close,
+                          color: subtext(state.isDark),
+                          tooltip: 'Закрыть настройки',
+                          onTap: () => Navigator.pop(dialogContext),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Expanded(child: settingsContent(dialogContext)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildStatisticsWorkspace(AppState state, bool isDark) {
     return _ProgressWorkspace(
       key: const ValueKey('stats-workspace'),
@@ -307,6 +407,8 @@ class _MainPageState extends State<MainPage> {
                             onComplete: _onComplete,
                             onMinimumAction: _onMinimumAction,
                             onCreateFirstSkill: () => _addSkill(context),
+                            onOpenSkillSettings: (skill) =>
+                                _openSkillSettings(context, skill),
                           ),
                           WorkspaceMode.plan => _PlanWorkspace(
                             key: const ValueKey('plan-workspace'),
@@ -318,6 +420,8 @@ class _MainPageState extends State<MainPage> {
                             key: const ValueKey('mastery-workspace'),
                             isDark: isDark,
                             onComplete: _onComplete,
+                            onOpenSkillSettings: (skill) =>
+                                _openSkillSettings(context, skill),
                           ),
                           WorkspaceMode.stats => _buildStatisticsWorkspace(
                             s,

@@ -3,11 +3,13 @@ part of '../planning_workspace.dart';
 class PlanningWorkspace extends StatefulWidget {
   final bool isDark;
   final VoidCallback? onOpenMasteryMap;
+  final bool embedded;
 
   const PlanningWorkspace({
     super.key,
     required this.isDark,
     this.onOpenMasteryMap,
+    this.embedded = false,
   });
 
   @override
@@ -22,6 +24,30 @@ class _PlanningWorkspaceState extends State<PlanningWorkspace> {
     final state = AppStateProvider.of(context);
     final skill = state.selectedSkill;
     final isDark = widget.isDark;
+
+    if (widget.embedded) {
+      return _PlanningEmbeddedSettings(
+        state: state,
+        skill: skill,
+        isDark: isDark,
+        archiveExpanded: _archiveExpanded,
+        onArchiveToggle: () =>
+            setState(() => _archiveExpanded = !_archiveExpanded),
+        onAddSkill: () => _addSkill(context),
+        onEditSkill: skill == null ? null : () => _editSkill(context, skill),
+        onAddTask: skill == null ? null : () => _addTask(context, skill),
+        onEditTask: skill == null
+            ? null
+            : (task) => _editTask(context, skill, task),
+        onDeleteTask: (task) => state.removeTask(task.id),
+        onAddNode: skill == null ? null : () => _addNode(context, skill),
+        onAddQuestToNode: skill == null
+            ? null
+            : (node) => _addTaskForNode(context, skill, treeNodeId: node.id),
+        onOpenMasteryMap: widget.onOpenMasteryMap,
+        onDeleteSkill: skill == null ? null : () => state.removeSkill(skill.id),
+      );
+    }
 
     return Column(
       children: [
@@ -331,6 +357,104 @@ class _PlanningWorkspaceState extends State<PlanningWorkspace> {
               treeNodeId: treeNodeId,
             ),
       ),
+    );
+  }
+}
+
+class _PlanningEmbeddedSettings extends StatelessWidget {
+  final AppState state;
+  final Skill? skill;
+  final bool isDark;
+  final bool archiveExpanded;
+  final VoidCallback onArchiveToggle;
+  final VoidCallback onAddSkill;
+  final VoidCallback? onEditSkill;
+  final VoidCallback? onAddTask;
+  final ValueChanged<Task>? onEditTask;
+  final ValueChanged<Task> onDeleteTask;
+  final VoidCallback? onAddNode;
+  final ValueChanged<SkillTreeNode>? onAddQuestToNode;
+  final VoidCallback? onOpenMasteryMap;
+  final VoidCallback? onDeleteSkill;
+
+  const _PlanningEmbeddedSettings({
+    required this.state,
+    required this.skill,
+    required this.isDark,
+    required this.archiveExpanded,
+    required this.onArchiveToggle,
+    required this.onAddSkill,
+    required this.onEditSkill,
+    required this.onAddTask,
+    required this.onEditTask,
+    required this.onDeleteTask,
+    required this.onAddNode,
+    required this.onAddQuestToNode,
+    required this.onOpenMasteryMap,
+    required this.onDeleteSkill,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 820) {
+          return _MobilePlanningFlow(
+            state: state,
+            skill: skill,
+            isDark: isDark,
+            archiveExpanded: archiveExpanded,
+            onArchiveToggle: onArchiveToggle,
+            onAddSkill: onAddSkill,
+            onEditSkill: onEditSkill,
+            onAddTask: onAddTask,
+            onEditTask: onEditTask,
+            onDeleteTask: onDeleteTask,
+            onAddNode: onAddNode,
+            onAddQuestToNode: onAddQuestToNode,
+            onOpenMasteryMap: onOpenMasteryMap,
+            onDeleteSkill: onDeleteSkill,
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: _SkillBlueprintPanel(
+                state: state,
+                skill: skill,
+                isDark: isDark,
+                archiveExpanded: false,
+                internalScroll: true,
+                showArchive: false,
+                onArchiveToggle: onArchiveToggle,
+                onEditSkill: onEditSkill,
+                onAddTask: onAddTask,
+                onEditTask: onEditTask ?? (_) {},
+                onDeleteTask: onDeleteTask,
+                onAddQuestToNode: onAddQuestToNode,
+              ),
+            ),
+            const SizedBox(width: 10),
+            SizedBox(
+              width: constraints.maxWidth < 980 ? 292 : 320,
+              child: _PlanningInspector(
+                state: state,
+                skill: skill,
+                isDark: isDark,
+                onAddTask: onAddTask,
+                onEditSkill: onEditSkill,
+                onEditTask: onEditTask,
+                onAddNode: onAddNode,
+                onAddQuestToNode: onAddQuestToNode,
+                onOpenMasteryMap: onOpenMasteryMap,
+                onDeleteSkill: onDeleteSkill,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

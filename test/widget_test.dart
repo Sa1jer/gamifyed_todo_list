@@ -3,9 +3,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:todo_list_app/main.dart';
 import 'package:todo_list_app/models.dart';
 import 'package:todo_list_app/storage_service.dart';
+import 'package:todo_list_app/utils.dart';
 import 'package:todo_list_app/widgets/dialogs.dart';
 
 class InMemoryStorageService extends StorageService {
+  List<Skill> skills = [];
+  List<Task> tasks = [];
   bool? _theme;
   bool? _tooltipsEnabled;
   int? _bestStreak;
@@ -14,10 +17,10 @@ class InMemoryStorageService extends StorageService {
   Future<void> init() async {}
 
   @override
-  Future<bool> hasSavedSkills() async => false;
+  Future<bool> hasSavedSkills() async => skills.isNotEmpty;
 
   @override
-  Future<bool> hasSavedTasks() async => false;
+  Future<bool> hasSavedTasks() async => tasks.isNotEmpty;
 
   @override
   Future<bool?> loadTheme() async => _theme;
@@ -42,16 +45,20 @@ class InMemoryStorageService extends StorageService {
   }
 
   @override
-  Future<List<Skill>> loadSkills() async => [];
+  Future<List<Skill>> loadSkills() async => List.of(skills);
 
   @override
-  Future<void> saveSkills(List<Skill> skills) async {}
+  Future<void> saveSkills(List<Skill> skills) async {
+    this.skills = List.of(skills);
+  }
 
   @override
-  Future<List<Task>> loadTasks() async => [];
+  Future<List<Task>> loadTasks() async => List.of(tasks);
 
   @override
-  Future<void> saveTasks(List<Task> tasks) async {}
+  Future<void> saveTasks(List<Task> tasks) async {
+    this.tasks = List.of(tasks);
+  }
 
   @override
   Future<UserProfile> loadProfile() async => UserProfile(name: 'Your Name');
@@ -128,6 +135,8 @@ void main() {
     expect(find.text('1. Навык → 2. Этап → 3. Квест'), findsOneWidget);
     expect(find.text('Создать первый навык'), findsWidgets);
     expect(find.text('Карта'), findsOneWidget);
+    expect(find.text('План'), findsNothing);
+    expect(find.byIcon(Icons.edit_note), findsNothing);
 
     await tester.tap(find.byIcon(Icons.query_stats).first);
     await tester.pump();
@@ -136,11 +145,6 @@ void main() {
 
     await tester.tap(find.byIcon(Icons.close).last);
     await tester.pump();
-
-    await tester.tap(find.byIcon(Icons.edit_note).first);
-    await tester.pump();
-
-    expect(find.text('Планировать систему'), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.account_tree).first);
     await tester.pump();
@@ -175,6 +179,54 @@ void main() {
       find.byType(TooltipVisibility).first,
     );
     expect(visibility.visible, isFalse);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+
+  testWidgets('Skill settings opens from selected skill in Act', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final stage = SkillTreeNode(id: 'stage-1', title: 'Основа');
+    final storage = InMemoryStorageService()
+      ..skills = [
+        Skill(
+          id: 'skill-1',
+          name: 'Python',
+          goal: 'Собрать первый проект',
+          color: const Color(0xFF4A9EFF),
+          icon: Icons.code,
+          treeNodes: [stage],
+        ),
+      ]
+      ..tasks = [
+        Task(
+          id: 'task-1',
+          title: 'Написать функцию',
+          skillId: 'skill-1',
+          xpReward: 20,
+          type: TaskType.shortTerm,
+          treeNodeId: stage.id,
+        ),
+      ];
+    await storage.init();
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    await tester.tap(find.text('Python').first);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Настроить').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Настройка навыка: Python'), findsOneWidget);
+    expect(find.text('Написать функцию'), findsWidgets);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();

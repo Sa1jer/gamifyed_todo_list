@@ -6,6 +6,7 @@ class _SkillBlueprintPanel extends StatelessWidget {
   final bool isDark;
   final bool archiveExpanded;
   final bool internalScroll;
+  final bool showArchive;
   final VoidCallback onArchiveToggle;
   final VoidCallback? onEditSkill;
   final VoidCallback? onAddTask;
@@ -19,6 +20,7 @@ class _SkillBlueprintPanel extends StatelessWidget {
     required this.isDark,
     required this.archiveExpanded,
     required this.internalScroll,
+    this.showArchive = true,
     required this.onArchiveToggle,
     required this.onEditSkill,
     required this.onAddTask,
@@ -76,6 +78,7 @@ class _SkillBlueprintPanel extends StatelessWidget {
         diagnostics: diagnostics,
         isDark: isDark,
         archiveExpanded: archiveExpanded,
+        showArchive: showArchive,
         onArchiveToggle: onArchiveToggle,
         onEditTask: onEditTask,
         onDeleteTask: onDeleteTask,

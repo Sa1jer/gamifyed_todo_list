@@ -26,10 +26,10 @@ This file tracks technical details, completed work, open tasks, and remaining wo
 - `1.3.30`: empty `План` and `Карта` copy now gently points new users back to `Сейчас` instead of acting like separate setup flows.
 - `1.3.30`: post-1.3.29 polish replaced stale `Прогресс` wording in Today Dashboard with secondary `Статистика` language.
 - `1.3.31`: reduced navigation tooltip noise: signed top-bar/bottom-nav buttons no longer repeat their own labels, while compact icon-only states keep hints.
+- `1.3.32`: moved `План` out of primary navigation experimentally and exposed it as `Настройка навыка` from Act/RoadMap.
 
 ## Next Planned Batches
 
-- `1.3.32` — Planning -> Skill Settings Experiment: remove `План` from primary navigation experimentally, keep rollback path, open skill settings from Act/RoadMap.
 - `1.3.33` — Animated First-Run Tutorial: spotlight real controls, show once, replay from profile.
 - `1.3.34` — RoadMap + Goal Polish: make RoadMap visually and textually lead toward the skill goal, with quiet SMARTER hints.
 - `1.3.35` — Release QA / Public Build Hardening: full regression, manual QA, copy audit, width checks and known non-blockers.
@@ -114,17 +114,17 @@ Acceptance:
 
 ## P2 - Product Structure Decisions
 
-### Planning: Move To Skill Settings - Planned For 1.3.32
+### Planning: Move To Skill Settings - Implemented In 1.3.32
 
 Problem:
 `План` still risks feeling visually and functionally overloaded. It is not fully obvious what the user should do there or why it exists separately from `Сейчас` and `Карта`.
 
 Current decision:
-Planning is frozen until `1.3.32`. The chosen experiment is to remove `План` from primary navigation and turn it into skill settings.
+`План` is removed from primary navigation experimentally and turned into skill settings.
 
 Implementation direction:
 
-- Keep `WorkspaceMode.plan` and `PlanningWorkspace` in code at first, so the experiment has a safe rollback path.
+- `WorkspaceMode.plan` and `PlanningWorkspace` stay in code at first, so the experiment has a safe rollback path.
 - Desktop opens skill settings as a large dialog.
 - Mobile opens skill settings as a bottom sheet.
 - Entry points: selected skill in Act/skill workspace and selected skill/stage in RoadMap.
