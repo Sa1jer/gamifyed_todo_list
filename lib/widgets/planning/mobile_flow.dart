@@ -216,7 +216,7 @@ class _MobilePlanningSkillSelector extends StatelessWidget {
                     ? Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          'Создайте навык — он сразу получит этап и первый квест.',
+                          'Лучший старт — через “Сейчас”: навык сразу получит этап и первый квест.',
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(

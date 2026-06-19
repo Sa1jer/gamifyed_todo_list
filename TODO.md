@@ -22,6 +22,9 @@ This file tracks technical details, completed work, open tasks, and remaining wo
 - `1.3.29`: XP values next to sliders can be edited by typing a number.
 - `1.3.29`: RoadMap overview gets a quiet `Отцентровать` camera button.
 - `1.3.29`: `План` is explicitly frozen until keep/rework/remove decision.
+- `1.3.30`: first empty `Сейчас` screen now shows a light core-loop primer: `1. Навык -> 2. Этап -> 3. Квест`.
+- `1.3.30`: empty `План` and `Карта` copy now gently points new users back to `Сейчас` instead of acting like separate setup flows.
+- `1.3.30`: post-1.3.29 polish replaced stale `Прогресс` wording in Today Dashboard with secondary `Статистика` language.
 
 ## P0 - Release / Data Safety
 
@@ -133,6 +136,13 @@ Acceptance if kept:
 
 Problem:
 Fresh install should be empty, but later the app should teach the first core loop through a polished guided experience.
+
+Current light flow:
+
+- Empty `Сейчас` explains `1. Навык -> 2. Этап -> 3. Квест`.
+- CTA remains `Создать первый навык`.
+- Existing creation flow still creates the first stage and first quest.
+- `План` and `Карта` empty states point back to `Сейчас` instead of adding new setup branches.
 
 Do not implement yet. Future direction:
 

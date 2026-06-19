@@ -132,7 +132,8 @@ class _PlanningSkillRail extends StatelessWidget {
                     isDark: isDark,
                     icon: Icons.bolt,
                     title: 'Навыков пока нет',
-                    subtitle: 'Создайте первый навык для планирования.',
+                    subtitle:
+                        'Сначала создай первый навык в “Сейчас”: здесь позже появится одна ближайшая настройка.',
                   )
                 : ListView.separated(
                     padding: const EdgeInsets.all(12),

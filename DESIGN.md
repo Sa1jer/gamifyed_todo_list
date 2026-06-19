@@ -100,7 +100,9 @@ Current first-run state:
 - No quests.
 - No history.
 - No trophies/effects/resistance events.
+- Empty `Сейчас` shows a light primer: `1. Навык -> 2. Этап -> 3. Квест`.
 - Clear CTA to create the first skill.
+- Empty `План` and `Карта` should gently point back to `Сейчас`, not become separate onboarding surfaces.
 
 Future onboarding:
 

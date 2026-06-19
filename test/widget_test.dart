@@ -125,6 +125,7 @@ void main() {
 
     expect(find.text('RPG To-Do List'), findsOneWidget);
     expect(find.text('Действовать сегодня'), findsOneWidget);
+    expect(find.text('1. Навык → 2. Этап → 3. Квест'), findsOneWidget);
     expect(find.text('Создать первый навык'), findsWidgets);
     expect(find.text('Карта'), findsOneWidget);
 
@@ -145,6 +146,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('Карта мастерства пока пустая'), findsWidgets);
+    expect(find.textContaining('Сначала создай первый навык'), findsWidgets);
 
     await tester.tap(find.byIcon(Icons.help_outline));
     await tester.pump();

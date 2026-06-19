@@ -185,7 +185,7 @@ class _TodayDashboardState extends State<TodayDashboard> {
                           Text(
                             compactDashboard
                                 ? 'Следующий шаг — без настройки системы.'
-                                : 'Сначала следующий квест. Аналитика и трофеи живут в “Прогрессе”.',
+                                : 'Сначала следующий квест. Статистика и трофеи живут отдельно.',
                             style: TextStyle(color: sub, fontSize: 11),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -461,28 +461,66 @@ class _NextActionCard extends StatelessWidget {
 
     if (task == null) {
       final hasSkills = state.skills.isNotEmpty;
+      final isFreshStart = !hasSkills && state.tasks.isEmpty;
       return _SoftCard(
         isDark: isDark,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.check_circle, color: accent, size: 26),
-            const SizedBox(height: 10),
-            Text(
-              hasSkills ? 'На сегодня всё чисто' : 'Начните с первого навыка',
-              style: TextStyle(
-                color: txt,
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
+            if (isFreshStart)
+              Row(
+                children: [
+                  Icon(Icons.check_circle, color: accent, size: 22),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Начните с первого навыка',
+                      style: TextStyle(
+                        color: txt,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              )
+            else ...[
+              Icon(Icons.check_circle, color: accent, size: 26),
+              const SizedBox(height: 10),
+              Text(
+                hasSkills ? 'На сегодня всё чисто' : 'Начните с первого навыка',
+                style: TextStyle(
+                  color: txt,
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
+            ],
             const SizedBox(height: 4),
+            if (isFreshStart) ...[
+              Text(
+                '1. Навык → 2. Этап → 3. Квест',
+                style: TextStyle(
+                  color: accent,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w800,
+                  height: 1.2,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 5),
+            ],
             Text(
               hasSkills
                   ? 'Добавьте один маленький квест или минимальный шаг.'
-                  : 'Создайте навык: первый этап и первый квест появятся сразу.',
+                  : 'Создайте навык: первый этап и первый квест с минимумом появятся сразу.',
               style: TextStyle(color: sub, fontSize: 12, height: 1.25),
+              maxLines: isFreshStart ? 2 : 1,
+              overflow: TextOverflow.ellipsis,
             ),
             if (!hasSkills && onCreateFirstSkill != null) ...[
               const SizedBox(height: 12),

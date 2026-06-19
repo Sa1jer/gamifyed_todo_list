@@ -31,7 +31,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
           icon: Icons.account_tree_outlined,
           title: 'Карта мастерства пока пустая',
           subtitle:
-              'Создайте навык: карта покажет этапы, а квесты останутся в панели деталей.',
+              'Сначала создай первый навык в “Сейчас”: карта покажет этапы, когда появится путь.',
         ),
       );
     }

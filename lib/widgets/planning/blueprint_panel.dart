@@ -40,7 +40,7 @@ class _SkillBlueprintPanel extends StatelessWidget {
             icon: Icons.keyboard_backspace,
             title: 'Выберите навык',
             subtitle:
-                'Мастерская покажет активные квесты и одно ближайшее улучшение.',
+                'Если навыков ещё нет, начни в “Сейчас”: первый этап и квест появятся сразу.',
           ),
         ),
       );
