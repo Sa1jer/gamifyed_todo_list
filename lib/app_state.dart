@@ -23,6 +23,7 @@ class AppState extends ChangeNotifier {
 
   bool _isDark = true;
   bool _sfxEnabled = true;
+  bool _tooltipsEnabled = true;
   String? selectedSkillId;
   final StorageService _storage;
   final NotificationService _notifications;
@@ -35,6 +36,7 @@ class AppState extends ChangeNotifier {
 
   bool get isDark => _isDark;
   bool get sfxEnabled => _sfxEnabled;
+  bool get tooltipsEnabled => _tooltipsEnabled;
 
   UserProfile profile = UserProfile(name: 'Your Name');
   final List<HistoryEntry> history = [];
@@ -273,6 +275,7 @@ class AppState extends ChangeNotifier {
     final hasSavedTasks = await _storage.hasSavedTasks();
     final savedTheme = await _storage.loadTheme();
     final savedSfxEnabled = await _storage.loadSfxEnabled();
+    final savedTooltipsEnabled = await _storage.loadTooltipsEnabled();
 
     if (savedTheme != null) {
       _isDark = savedTheme;
@@ -280,7 +283,10 @@ class AppState extends ChangeNotifier {
     if (savedSfxEnabled != null) {
       _sfxEnabled = savedSfxEnabled;
     }
-    SfxService.instance.enabled = _sfxEnabled;
+    if (savedTooltipsEnabled != null) {
+      _tooltipsEnabled = savedTooltipsEnabled;
+    }
+    _applySfxEnabled();
 
     if (hasSavedSkills || loadedSkills.isNotEmpty) {
       skills.clear();
@@ -290,15 +296,6 @@ class AppState extends ChangeNotifier {
     if (hasSavedTasks || loadedTasks.isNotEmpty) {
       tasks.clear();
       tasks.addAll(loadedTasks);
-    }
-
-    if (!hasSavedSkills &&
-        !hasSavedTasks &&
-        loadedSkills.isEmpty &&
-        loadedTasks.isEmpty &&
-        skills.isEmpty &&
-        tasks.isEmpty) {
-      _initDefaults();
     }
 
     for (final s in skills) {
@@ -419,6 +416,7 @@ class AppState extends ChangeNotifier {
   Future<void> _writeAllUnlocked() async {
     await _storage.saveTheme(_isDark);
     await _storage.saveSfxEnabled(_sfxEnabled);
+    await _storage.saveTooltipsEnabled(_tooltipsEnabled);
     await _storage.saveSkills(skills);
     await _storage.saveTasks(tasks);
     await _storage.saveProfile(profile);
@@ -442,9 +440,23 @@ class AppState extends ChangeNotifier {
 
   void toggleSfxEnabled() {
     _sfxEnabled = !_sfxEnabled;
-    SfxService.instance.enabled = _sfxEnabled;
+    _applySfxEnabled();
     notifyListeners();
     _storage.saveSfxEnabled(_sfxEnabled);
+  }
+
+  void _applySfxEnabled() {
+    try {
+      SfxService.instance.enabled = _sfxEnabled;
+    } catch (_) {
+      // Unit tests and unsupported platforms may not have the audio plugin.
+    }
+  }
+
+  void toggleTooltipsEnabled() {
+    _tooltipsEnabled = !_tooltipsEnabled;
+    notifyListeners();
+    _storage.saveTooltipsEnabled(_tooltipsEnabled);
   }
 
   // ── Resets ───────────────────────────────────────────────────────────────────

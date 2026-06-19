@@ -3,9 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:todo_list_app/main.dart';
 import 'package:todo_list_app/models.dart';
 import 'package:todo_list_app/storage_service.dart';
+import 'package:todo_list_app/widgets/dialogs.dart';
 
 class InMemoryStorageService extends StorageService {
   bool? _theme;
+  bool? _tooltipsEnabled;
   int? _bestStreak;
 
   @override
@@ -30,6 +32,14 @@ class InMemoryStorageService extends StorageService {
 
   @override
   Future<void> saveSfxEnabled(bool enabled) async {}
+
+  @override
+  Future<bool?> loadTooltipsEnabled() async => _tooltipsEnabled;
+
+  @override
+  Future<void> saveTooltipsEnabled(bool enabled) async {
+    _tooltipsEnabled = enabled;
+  }
 
   @override
   Future<List<Skill>> loadSkills() async => [];
@@ -115,6 +125,7 @@ void main() {
 
     expect(find.text('RPG To-Do List'), findsOneWidget);
     expect(find.text('Действовать сегодня'), findsOneWidget);
+    expect(find.text('Создать первый навык'), findsWidgets);
     expect(find.text('Карта'), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.query_stats).first);
@@ -133,7 +144,7 @@ void main() {
     await tester.tap(find.byIcon(Icons.account_tree).first);
     await tester.pump();
 
-    expect(find.text('Карта мастерства'), findsWidgets);
+    expect(find.text('Карта мастерства пока пустая'), findsWidgets);
 
     await tester.tap(find.byIcon(Icons.help_outline));
     await tester.pump();
@@ -142,5 +153,79 @@ void main() {
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
+  });
+
+  testWidgets('Tooltip visibility follows saved setting', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = InMemoryStorageService().._tooltipsEnabled = false;
+    await storage.init();
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    final visibility = tester.widget<TooltipVisibility>(
+      find.byType(TooltipVisibility).first,
+    );
+    expect(visibility.visible, isFalse);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+
+  testWidgets('AddTaskDialog allows editing XP by typing the number', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(900, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AddTaskDialog(
+            isDark: true,
+            skillColor: const Color(0xFF4A9EFF),
+            onSave:
+                (
+                  title,
+                  xp,
+                  type,
+                  freq,
+                  customDays,
+                  priority,
+                  minimumAction,
+                  subtasks,
+                  tags,
+                  notificationsEnabled,
+                  notificationHour,
+                  notificationMinute,
+                  treeNodeId,
+                ) {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Настройки квеста'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('20 XP').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('20 XP').first);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).last, '75');
+    await tester.tap(find.text('Сохранить').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('75 XP'), findsOneWidget);
   });
 }

@@ -1026,29 +1026,45 @@ class _StatTile extends StatelessWidget {
     return _SoftCard(
       isDark: isDark,
       accent: muted ? null : color,
-      padding: const EdgeInsets.all(8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      child: Stack(
+        fit: StackFit.expand,
         children: [
-          Icon(icon, color: color.withAlpha(muted ? 185 : 255), size: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: TextStyle(
-                  color: txt,
-                  fontSize: 17,
-                  fontWeight: muted ? FontWeight.w800 : FontWeight.bold,
-                ),
+          Positioned.fill(
+            right: 38,
+            child: Align(
+              alignment: Alignment.bottomLeft,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    value,
+                    style: TextStyle(
+                      color: txt,
+                      fontSize: 17,
+                      fontWeight: muted ? FontWeight.w800 : FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    label,
+                    style: TextStyle(color: sub, fontSize: 10.5),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
-              Text(
-                label,
-                style: TextStyle(color: sub, fontSize: 10.5),
-                overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: Icon(
+                icon,
+                color: color.withAlpha(muted ? 210 : 255),
+                size: 28,
               ),
-            ],
+            ),
           ),
         ],
       ),

@@ -11,6 +11,7 @@ import 'package:todo_list_app/utils.dart';
 
 class _InMemoryStorageService extends StorageService {
   bool? _theme;
+  bool? _tooltipsEnabled;
   int? _bestStreak;
 
   @override
@@ -35,6 +36,14 @@ class _InMemoryStorageService extends StorageService {
 
   @override
   Future<void> saveSfxEnabled(bool enabled) async {}
+
+  @override
+  Future<bool?> loadTooltipsEnabled() async => _tooltipsEnabled;
+
+  @override
+  Future<void> saveTooltipsEnabled(bool enabled) async {
+    _tooltipsEnabled = enabled;
+  }
 
   @override
   Future<int?> loadBestStreak() async => _bestStreak;
@@ -114,6 +123,8 @@ Uint8List _validJpegBytes() =>
 Uint8List _invalidImageBytes() => Uint8List.fromList([1, 2, 3, 4]);
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('xp owner safety', () {
     test('removeXP rejects negative values', () {
       final profile = UserProfile(name: 'Tester')..xp = 20;
@@ -160,6 +171,26 @@ void main() {
 
       expect(state.profile.avatarBytes, isNull);
       expect(state.profile.bannerBytes, isNull);
+    });
+  });
+
+  group('fresh install safety', () {
+    test('empty storage does not seed demo skills or quests', () async {
+      final storage = _InMemoryStorageService();
+      final state = AppState(storage: storage, seedDefaults: false);
+
+      await state.loadSavedData();
+
+      expect(state.skills, isEmpty);
+      expect(state.tasks, isEmpty);
+      expect(state.history, isEmpty);
+      expect(state.rewardChests, isEmpty);
+      expect(state.buffs, isEmpty);
+      expect(state.bosses, isEmpty);
+      expect(state.profile.name, 'Your Name');
+      expect(state.achievements, isNotEmpty);
+
+      state.dispose();
     });
   });
 

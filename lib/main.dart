@@ -196,14 +196,17 @@ class _RPGAppState extends State<RPGApp>
       theme: _buildTheme(_state.isDark),
       home: AppStateProvider(
         state: _state,
-        child: Stack(
-          children: [
-            RepaintBoundary(
-              key: _repaintKey,
-              child: MainPage(onToggleTheme: _handleThemeToggle),
-            ),
-            if (_overlayImage != null) _buildRevealOverlay(),
-          ],
+        child: TooltipVisibility(
+          visible: _state.tooltipsEnabled,
+          child: Stack(
+            children: [
+              RepaintBoundary(
+                key: _repaintKey,
+                child: MainPage(onToggleTheme: _handleThemeToggle),
+              ),
+              if (_overlayImage != null) _buildRevealOverlay(),
+            ],
+          ),
         ),
       ),
     );

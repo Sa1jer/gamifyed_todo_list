@@ -23,6 +23,7 @@ class StorageService {
   static const String _tasksSavedKey = 'tasksSaved';
   static const String _isDarkKey = 'isDark';
   static const String _sfxEnabledKey = 'sfxEnabled';
+  static const String _tooltipsEnabledKey = 'tooltipsEnabled';
   static const String _bestStreakKey = 'bestStreak';
   static const String _schemaVersionKey = 'schemaVersion';
   static const int _legacySchemaVersion = 1;
@@ -303,6 +304,18 @@ class StorageService {
   Future<void> saveSfxEnabled(bool enabled) async {
     _ensureInit();
     await _meta.put(_sfxEnabledKey, enabled ? 'true' : 'false');
+  }
+
+  Future<bool?> loadTooltipsEnabled() async {
+    _ensureInit();
+    final raw = _meta.get(_tooltipsEnabledKey);
+    if (raw == null) return null;
+    return raw == 'true';
+  }
+
+  Future<void> saveTooltipsEnabled(bool enabled) async {
+    _ensureInit();
+    await _meta.put(_tooltipsEnabledKey, enabled ? 'true' : 'false');
   }
 
   @visibleForTesting

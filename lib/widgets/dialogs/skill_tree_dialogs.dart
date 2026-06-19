@@ -1330,10 +1330,29 @@ class _AddSkillTreeNodeDialogState extends State<AddSkillTreeNodeDialog> {
                 children: [
                   SubLbl('XP за освоение', sub),
                   const Spacer(),
-                  TaskBadge(
-                    icon: Icons.auto_awesome,
-                    label: '$_xpReward XP',
-                    color: color,
+                  PressFeedback(
+                    scale: 0.96,
+                    tooltip: 'Ввести XP числом',
+                    onTap: () async {
+                      final value = await showIntegerEditDialog(
+                        context,
+                        title: 'XP за освоение',
+                        initialValue: _xpReward,
+                        min: 10,
+                        max: 200,
+                        color: color,
+                        isDark: isDark,
+                        suffix: 'XP',
+                      );
+                      if (value != null && mounted) {
+                        setState(() => _xpReward = value);
+                      }
+                    },
+                    child: TaskBadge(
+                      icon: Icons.auto_awesome,
+                      label: '$_xpReward XP',
+                      color: color,
+                    ),
                   ),
                 ],
               ),

@@ -292,7 +292,6 @@ class _MainPageState extends State<MainPage> {
                     mode: displayedMode,
                     onModeChanged: changeMode,
                     onStatsTap: openStatistics,
-                    statsSelected: mobileShell && _mode == WorkspaceMode.stats,
                     rewardsKey: _rewardsButtonKey,
                     onRewardsTap: () => _openRewardsDialog(s),
                     showModeSwitch: !mobileShell,

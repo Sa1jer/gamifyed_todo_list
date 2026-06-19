@@ -9,7 +9,6 @@ class TopBar extends StatelessWidget {
   final GlobalKey? rewardsKey;
   final VoidCallback? onRewardsTap;
   final VoidCallback onStatsTap;
-  final bool statsSelected;
   final bool showModeSwitch;
   const TopBar({
     super.key,
@@ -21,7 +20,6 @@ class TopBar extends StatelessWidget {
     required this.onStatsTap,
     this.rewardsKey,
     this.onRewardsTap,
-    this.statsSelected = false,
     this.showModeSwitch = true,
   });
 
@@ -101,14 +99,12 @@ class TopBar extends StatelessWidget {
                     ),
               ),
               const SizedBox(width: 8),
-              _TopBarSecondaryButton(
+              _TopBarPillButton(
                 icon: WorkspaceMode.stats.icon,
                 label: WorkspaceMode.stats.label,
                 tooltip: 'Открыть статистику роста',
                 color: WorkspaceMode.stats.color,
-                isDark: isDark,
-                selected: statsSelected,
-                compact: veryCompact,
+                compact: compact,
                 onTap: onStatsTap,
               ),
               const SizedBox(width: 8),
@@ -370,108 +366,6 @@ class _MobileWorkspaceNav extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-class _TopBarSecondaryButton extends StatefulWidget {
-  final IconData icon;
-  final String label;
-  final String tooltip;
-  final Color color;
-  final bool isDark;
-  final bool selected;
-  final bool compact;
-  final VoidCallback onTap;
-
-  const _TopBarSecondaryButton({
-    required this.icon,
-    required this.label,
-    required this.tooltip,
-    required this.color,
-    required this.isDark,
-    required this.onTap,
-    this.selected = false,
-    this.compact = false,
-  });
-
-  @override
-  State<_TopBarSecondaryButton> createState() => _TopBarSecondaryButtonState();
-}
-
-class _TopBarSecondaryButtonState extends State<_TopBarSecondaryButton> {
-  bool _hovered = false;
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final sub = subtext(widget.isDark);
-    final active = widget.selected || _hovered;
-
-    final button = MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() {
-        _hovered = false;
-        _pressed = false;
-      }),
-      child: GestureDetector(
-        onTapDown: (_) => setState(() => _pressed = true),
-        onTapCancel: () => setState(() => _pressed = false),
-        onTapUp: (_) {
-          setState(() => _pressed = false);
-          widget.onTap();
-        },
-        child: AnimatedScale(
-          scale: _pressed ? 0.96 : 1,
-          duration: kMotionFast,
-          curve: kMotionCurve,
-          child: AnimatedContainer(
-            duration: kMotionStandard,
-            curve: kMotionCurve,
-            padding: EdgeInsets.symmetric(
-              horizontal: widget.compact ? 8 : 10,
-              vertical: 8,
-            ),
-            decoration: BoxDecoration(
-              color: widget.selected
-                  ? widget.color.withAlpha(24)
-                  : active
-                  ? widget.color.withAlpha(14)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(
-                color: widget.selected
-                    ? widget.color.withAlpha(72)
-                    : widget.color.withAlpha(active ? 46 : 30),
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  widget.icon,
-                  color: widget.selected || _hovered ? widget.color : sub,
-                  size: 16,
-                ),
-                if (!widget.compact) ...[
-                  const SizedBox(width: 6),
-                  Text(
-                    widget.label,
-                    style: TextStyle(
-                      color: widget.selected || _hovered ? widget.color : sub,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-
-    return Tooltip(message: widget.tooltip, child: button);
   }
 }
 

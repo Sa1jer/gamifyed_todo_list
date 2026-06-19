@@ -1091,6 +1091,109 @@ class DlgActions extends StatelessWidget {
   );
 }
 
+Future<int?> showIntegerEditDialog(
+  BuildContext context, {
+  required String title,
+  required int initialValue,
+  required int min,
+  required int max,
+  required Color color,
+  required bool isDark,
+  String suffix = '',
+}) async {
+  final controller = TextEditingController(text: '$initialValue');
+  String? errorText;
+
+  try {
+    return await showDialog<int>(
+      context: context,
+      builder: (dialogContext) {
+        final txt = textColor(isDark);
+        final sub = subtext(isDark);
+        final bdr = borderColor(isDark);
+        final bg = surface(isDark);
+        final fBg = isDark ? const Color(0xFF181820) : const Color(0xFFFFFFFF);
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            void save() {
+              final parsed = int.tryParse(controller.text.trim());
+              if (parsed == null) {
+                setDialogState(() => errorText = 'Введите число');
+                return;
+              }
+              Navigator.pop(dialogContext, parsed.clamp(min, max).toInt());
+            }
+
+            return Dialog(
+              backgroundColor: bg,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: SizedBox(
+                width: 360,
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      DlgHeader(title: title, txtColor: txt),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: controller,
+                        autofocus: true,
+                        keyboardType: TextInputType.number,
+                        style: TextStyle(
+                          color: txt,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                        ),
+                        decoration: InputDecoration(
+                          suffixText: suffix,
+                          suffixStyle: TextStyle(
+                            color: color,
+                            fontWeight: FontWeight.w900,
+                          ),
+                          errorText: errorText,
+                          helperText: 'Диапазон: $min-$max',
+                          helperStyle: TextStyle(color: sub, fontSize: 11),
+                          filled: true,
+                          fillColor: fBg,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: bdr),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: color, width: 1.4),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
+                        ),
+                        onSubmitted: (_) => save(),
+                      ),
+                      const SizedBox(height: 16),
+                      DlgActions(
+                        onCancel: () => Navigator.pop(dialogContext),
+                        onSave: save,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  } finally {
+    unawaited(Future<void>.delayed(kMotionSlow, controller.dispose));
+  }
+}
+
 class SubLbl extends StatelessWidget {
   final String text;
   final Color color;

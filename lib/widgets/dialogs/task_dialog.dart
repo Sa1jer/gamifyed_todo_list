@@ -479,6 +479,22 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   }
 
   Widget _buildXpSection(Color sub, Color bdr, Color color, bool isDark) {
+    Future<void> editXp() async {
+      final value = await showIntegerEditDialog(
+        context,
+        title: 'XP за квест',
+        initialValue: _xp,
+        min: 5,
+        max: 1000,
+        color: color,
+        isDark: isDark,
+        suffix: 'XP',
+      );
+      if (value != null && mounted) {
+        setState(() => _xp = value);
+      }
+    }
+
     return _advancedCard(
       isDark: isDark,
       bdr: bdr,
@@ -489,21 +505,27 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
             children: [
               SubLbl('XP за квест', sub),
               const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 3,
-                ),
-                decoration: BoxDecoration(
-                  color: color.withAlpha(30),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  '$_xp XP',
-                  style: TextStyle(
-                    color: color,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
+              PressFeedback(
+                scale: 0.96,
+                tooltip: 'Ввести XP числом',
+                onTap: editXp,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: color.withAlpha(30),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: color.withAlpha(48)),
+                  ),
+                  child: Text(
+                    '$_xp XP',
+                    style: TextStyle(
+                      color: color,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
               ),

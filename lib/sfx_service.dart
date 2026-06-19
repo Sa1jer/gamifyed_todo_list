@@ -7,7 +7,7 @@ class SfxService {
 
   static final SfxService instance = SfxService._();
 
-  final List<AudioPlayer> _players = List.generate(3, (_) => AudioPlayer());
+  List<AudioPlayer>? _players;
   int _nextPlayer = 0;
   DateTime _lastPlayedAt = DateTime.fromMillisecondsSinceEpoch(0);
 
@@ -35,7 +35,8 @@ class SfxService {
     final asset = _assets[cue];
     if (asset == null) return;
 
-    final player = _players[_nextPlayer++ % _players.length];
+    final players = _players ??= List.generate(3, (_) => AudioPlayer());
+    final player = players[_nextPlayer++ % players.length];
     try {
       await player.stop();
       await player.play(

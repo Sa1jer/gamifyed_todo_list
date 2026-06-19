@@ -134,6 +134,11 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
       ..forward();
   }
 
+  void _centerRoadmapOverviewCamera() {
+    _lastRoadmapCameraSignature = null;
+    _animateRoadmapCameraTo(Matrix4.identity());
+  }
+
   bool _matrixCloseTo(Matrix4 a, Matrix4 b) {
     for (var index = 0; index < 16; index++) {
       if ((a.storage[index] - b.storage[index]).abs() > 0.35) {
@@ -405,6 +410,17 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
                   top: 14,
                   width: 214,
                   child: _SelectSkillHint(isDark: isDark),
+                ),
+              if (selectedSkill == null)
+                Positioned(
+                  right: 14,
+                  top: 14,
+                  child: _MapCanvasAction(
+                    isDark: isDark,
+                    label: 'Отцентровать',
+                    icon: Icons.center_focus_strong,
+                    onTap: _centerRoadmapOverviewCamera,
+                  ),
                 ),
               if (selectedSkill != null)
                 Positioned(

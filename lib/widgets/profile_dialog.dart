@@ -144,6 +144,10 @@ class _ProfileDialogState extends State<ProfileDialog> {
                           const SizedBox(height: 18),
                           Container(height: 1, color: bdr),
                           const SizedBox(height: 14),
+                          _buildInterfaceSettings(s, isDark, txt, sub, bdr),
+                          const SizedBox(height: 18),
+                          Container(height: 1, color: bdr),
+                          const SizedBox(height: 14),
                           _buildSkillsSection(context, s, isDark, txt, sub),
                         ],
                       ),
@@ -603,6 +607,71 @@ class _ProfileDialogState extends State<ProfileDialog> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildInterfaceSettings(
+    AppState state,
+    bool isDark,
+    Color txt,
+    Color sub,
+    Color bdr,
+  ) {
+    final fBg = isDark ? const Color(0xFF13131A) : const Color(0xFFF5F5F7);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SubLbl('Интерфейс', sub),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: fBg,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: bdr),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.info_outline_rounded,
+                color: state.tooltipsEnabled
+                    ? const Color(0xFF4A9EFF)
+                    : sub.withAlpha(150),
+                size: 17,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Подсказки при наведении',
+                      style: TextStyle(
+                        color: txt,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      state.tooltipsEnabled
+                          ? 'Включены для кнопок и действий.'
+                          : 'Скрыты, интерфейс спокойнее.',
+                      style: TextStyle(color: sub, fontSize: 11.5),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: state.tooltipsEnabled,
+                activeThumbColor: const Color(0xFF4A9EFF),
+                onChanged: (_) => state.toggleTooltipsEnabled(),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

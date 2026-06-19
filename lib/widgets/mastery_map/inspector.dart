@@ -151,10 +151,29 @@ void _showStagePracticeTargetDialog(
                             ),
                           ),
                         ),
-                        TaskBadge(
-                          icon: Icons.auto_awesome,
-                          label: '+$xpReward XP',
-                          color: const Color(0xFFFFCC00),
+                        PressFeedback(
+                          scale: 0.96,
+                          tooltip: 'Ввести XP числом',
+                          onTap: () async {
+                            final value = await showIntegerEditDialog(
+                              context,
+                              title: 'XP за освоение',
+                              initialValue: xpReward,
+                              min: 10,
+                              max: 200,
+                              color: color,
+                              isDark: isDark,
+                              suffix: 'XP',
+                            );
+                            if (value != null && dialogContext.mounted) {
+                              setDialogState(() => xpReward = value);
+                            }
+                          },
+                          child: TaskBadge(
+                            icon: Icons.auto_awesome,
+                            label: '+$xpReward XP',
+                            color: const Color(0xFFFFCC00),
+                          ),
                         ),
                       ],
                     ),
