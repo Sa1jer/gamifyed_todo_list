@@ -117,10 +117,13 @@ void main() {
     expect(find.text('Действовать сегодня'), findsOneWidget);
     expect(find.text('Карта'), findsOneWidget);
 
-    await tester.tap(find.byIcon(Icons.dashboard_customize).first);
+    await tester.tap(find.byIcon(Icons.query_stats).first);
     await tester.pump();
 
     expect(find.text('История роста'), findsWidgets);
+
+    await tester.tap(find.byIcon(Icons.close).last);
+    await tester.pump();
 
     await tester.tap(find.byIcon(Icons.edit_note).first);
     await tester.pump();

@@ -88,6 +88,103 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
+  void _openDailyVictoriesDialog(AppState state) {
+    showDialog(
+      context: context,
+      builder: (_) => DailyVictoriesDialog(state: state),
+    );
+  }
+
+  void _openCharacterTimelineDialog(AppState state) {
+    showDialog(
+      context: context,
+      builder: (_) => CharacterTimelineDialog(state: state),
+    );
+  }
+
+  void _openWeeklyDialog(AppState state) {
+    showDialog(
+      context: context,
+      builder: (_) => WeeklyAnalyticsDialog(state: state),
+    );
+  }
+
+  void _openGrowthSliceDialog(AppState state) {
+    showDialog(
+      context: context,
+      builder: (_) => StatsDialog(state: state),
+    );
+  }
+
+  void _openCalendarDialog(AppState state) {
+    showDialog(
+      context: context,
+      builder: (_) => CalendarDialog(state: state),
+    );
+  }
+
+  void _openBossesDialog(AppState state) {
+    showDialog(
+      context: context,
+      builder: (_) => BossesDialog(state: state),
+    );
+  }
+
+  void _openAchievementsDialog(AppState state) {
+    showDialog(
+      context: context,
+      builder: (_) => AchievementsDialog(
+        achievements: state.achievements,
+        isDark: state.isDark,
+      ),
+    );
+  }
+
+  void _openHistoryDialog(AppState state) {
+    showDialog(
+      context: context,
+      builder: (_) =>
+          HistoryDialog(history: state.history, isDark: state.isDark),
+    );
+  }
+
+  void _openStatisticsDialog(AppState state) {
+    AppFeedback.selection();
+    showDialog(
+      context: context,
+      builder: (_) => ProgressHubDialog(
+        state: state,
+        isDark: state.isDark,
+        onOpenDailyVictories: () => _openDailyVictoriesDialog(state),
+        onOpenCharacterTimeline: () => _openCharacterTimelineDialog(state),
+        onOpenWeekly: () => _openWeeklyDialog(state),
+        onOpenStats: () => _openGrowthSliceDialog(state),
+        onOpenCalendar: () => _openCalendarDialog(state),
+        onOpenBosses: () => _openBossesDialog(state),
+        onOpenAchievements: () => _openAchievementsDialog(state),
+        onOpenHistory: () => _openHistoryDialog(state),
+        onOpenRewards: () => _openRewardsDialog(state),
+      ),
+    );
+  }
+
+  Widget _buildStatisticsWorkspace(AppState state, bool isDark) {
+    return _ProgressWorkspace(
+      key: const ValueKey('stats-workspace'),
+      state: state,
+      isDark: isDark,
+      onOpenDailyVictories: () => _openDailyVictoriesDialog(state),
+      onOpenCharacterTimeline: () => _openCharacterTimelineDialog(state),
+      onOpenWeekly: () => _openWeeklyDialog(state),
+      onOpenStats: () => _openGrowthSliceDialog(state),
+      onOpenCalendar: () => _openCalendarDialog(state),
+      onOpenBosses: () => _openBossesDialog(state),
+      onOpenAchievements: () => _openAchievementsDialog(state),
+      onOpenHistory: () => _openHistoryDialog(state),
+      onOpenRewards: () => _openRewardsDialog(state),
+    );
+  }
+
   void _onComplete(String taskId, Offset pos) {
     final s = AppStateProvider.of(context);
     final msg = s.completeTask(taskId);
@@ -162,10 +259,21 @@ class _MainPageState extends State<MainPage> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final mobileShell = constraints.maxWidth < 760;
+        final displayedMode = !mobileShell && _mode == WorkspaceMode.stats
+            ? WorkspaceMode.act
+            : _mode;
 
         void changeMode(WorkspaceMode mode) {
           if (_mode == mode) return;
           setState(() => _mode = mode);
+        }
+
+        void openStatistics() {
+          if (mobileShell) {
+            changeMode(WorkspaceMode.stats);
+          } else {
+            _openStatisticsDialog(s);
+          }
         }
 
         return Scaffold(
@@ -181,8 +289,10 @@ class _MainPageState extends State<MainPage> {
                     isDark: isDark,
                     onToggle: widget.onToggleTheme,
                     state: s,
-                    mode: _mode,
+                    mode: displayedMode,
                     onModeChanged: changeMode,
+                    onStatsTap: openStatistics,
+                    statsSelected: mobileShell && _mode == WorkspaceMode.stats,
                     rewardsKey: _rewardsButtonKey,
                     onRewardsTap: () => _openRewardsDialog(s),
                     showModeSwitch: !mobileShell,
@@ -192,7 +302,7 @@ class _MainPageState extends State<MainPage> {
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
                       child: MotionFadeSlideSwitcher(
-                        child: switch (_mode) {
+                        child: switch (displayedMode) {
                           WorkspaceMode.act => _ActWorkspace(
                             key: const ValueKey('act-workspace'),
                             onComplete: _onComplete,
@@ -210,49 +320,9 @@ class _MainPageState extends State<MainPage> {
                             isDark: isDark,
                             onComplete: _onComplete,
                           ),
-                          WorkspaceMode.progress => _ProgressWorkspace(
-                            key: const ValueKey('progress-workspace'),
-                            state: s,
-                            isDark: isDark,
-                            onOpenDailyVictories: () => showDialog(
-                              context: context,
-                              builder: (_) => DailyVictoriesDialog(state: s),
-                            ),
-                            onOpenCharacterTimeline: () => showDialog(
-                              context: context,
-                              builder: (_) => CharacterTimelineDialog(state: s),
-                            ),
-                            onOpenWeekly: () => showDialog(
-                              context: context,
-                              builder: (_) => WeeklyAnalyticsDialog(state: s),
-                            ),
-                            onOpenStats: () => showDialog(
-                              context: context,
-                              builder: (_) => StatsDialog(state: s),
-                            ),
-                            onOpenCalendar: () => showDialog(
-                              context: context,
-                              builder: (_) => CalendarDialog(state: s),
-                            ),
-                            onOpenBosses: () => showDialog(
-                              context: context,
-                              builder: (_) => BossesDialog(state: s),
-                            ),
-                            onOpenAchievements: () => showDialog(
-                              context: context,
-                              builder: (_) => AchievementsDialog(
-                                achievements: s.achievements,
-                                isDark: isDark,
-                              ),
-                            ),
-                            onOpenHistory: () => showDialog(
-                              context: context,
-                              builder: (_) => HistoryDialog(
-                                history: s.history,
-                                isDark: isDark,
-                              ),
-                            ),
-                            onOpenRewards: () => _openRewardsDialog(s),
+                          WorkspaceMode.stats => _buildStatisticsWorkspace(
+                            s,
+                            isDark,
                           ),
                         },
                       ),
@@ -260,7 +330,7 @@ class _MainPageState extends State<MainPage> {
                   ),
                   if (mobileShell)
                     _MobileWorkspaceNav(
-                      mode: _mode,
+                      mode: displayedMode,
                       isDark: isDark,
                       onChanged: changeMode,
                     ),
