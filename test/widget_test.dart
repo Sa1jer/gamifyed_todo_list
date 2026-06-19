@@ -224,7 +224,7 @@ void main() {
     await tester.pump();
   });
 
-  testWidgets('Skill settings opens from selected skill in Act', (
+  testWidgets('Selected skill does not expose Planning settings in Act', (
     WidgetTester tester,
   ) async {
     tester.view.physicalSize = const Size(1400, 900);
@@ -262,10 +262,9 @@ void main() {
     await tester.tap(find.text('Python').first);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Настроить').first);
-    await tester.pumpAndSettle();
-
-    expect(find.text('Настройка навыка: Python'), findsOneWidget);
+    expect(find.text('Настроить'), findsNothing);
+    expect(find.text('Настройка навыка: Python'), findsNothing);
+    expect(find.text('Новый квест'), findsOneWidget);
     expect(find.text('Написать функцию'), findsWidgets);
 
     await tester.pumpWidget(const SizedBox.shrink());

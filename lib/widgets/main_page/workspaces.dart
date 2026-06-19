@@ -4,7 +4,6 @@ class _ActWorkspace extends StatelessWidget {
   final void Function(String taskId, Offset position) onComplete;
   final void Function(String taskId, Offset position) onMinimumAction;
   final VoidCallback onCreateFirstSkill;
-  final ValueChanged<Skill> onOpenSkillSettings;
   final Key? createFirstSkillButtonKey;
 
   const _ActWorkspace({
@@ -12,7 +11,6 @@ class _ActWorkspace extends StatelessWidget {
     required this.onComplete,
     required this.onMinimumAction,
     required this.onCreateFirstSkill,
-    required this.onOpenSkillSettings,
     this.createFirstSkillButtonKey,
   });
 
@@ -31,7 +29,6 @@ class _ActWorkspace extends StatelessWidget {
           child: _SkillTaskWorkspace(
             onComplete: onComplete,
             onMinimumAction: onMinimumAction,
-            onOpenSkillSettings: onOpenSkillSettings,
           ),
         ),
       ],
@@ -39,44 +36,19 @@ class _ActWorkspace extends StatelessWidget {
   }
 }
 
-class _PlanWorkspace extends StatelessWidget {
-  final bool isDark;
-  final VoidCallback onOpenMasteryMap;
-
-  const _PlanWorkspace({
-    super.key,
-    required this.isDark,
-    required this.onOpenMasteryMap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return PlanningWorkspace(
-      isDark: isDark,
-      onOpenMasteryMap: onOpenMasteryMap,
-    );
-  }
-}
-
 class _MasteryWorkspace extends StatelessWidget {
   final bool isDark;
   final Function(String taskId, Offset pos) onComplete;
-  final ValueChanged<Skill> onOpenSkillSettings;
 
   const _MasteryWorkspace({
     super.key,
     required this.isDark,
     required this.onComplete,
-    required this.onOpenSkillSettings,
   });
 
   @override
   Widget build(BuildContext context) {
-    return MasteryMapWorkspace(
-      isDark: isDark,
-      onCompleteTask: onComplete,
-      onOpenSkillSettings: onOpenSkillSettings,
-    );
+    return MasteryMapWorkspace(isDark: isDark, onCompleteTask: onComplete);
   }
 }
 
@@ -132,12 +104,10 @@ class _ProgressWorkspace extends StatelessWidget {
 class _SkillTaskWorkspace extends StatelessWidget {
   final void Function(String taskId, Offset position) onComplete;
   final void Function(String taskId, Offset position) onMinimumAction;
-  final ValueChanged<Skill> onOpenSkillSettings;
 
   const _SkillTaskWorkspace({
     required this.onComplete,
     required this.onMinimumAction,
-    required this.onOpenSkillSettings,
   });
 
   @override
@@ -153,7 +123,6 @@ class _SkillTaskWorkspace extends StatelessWidget {
                 child: TasksPanel(
                   onComplete: onComplete,
                   onMinimumAction: onMinimumAction,
-                  onOpenSkillSettings: onOpenSkillSettings,
                 ),
               ),
             ],
@@ -171,7 +140,6 @@ class _SkillTaskWorkspace extends StatelessWidget {
               child: TasksPanel(
                 onComplete: onComplete,
                 onMinimumAction: onMinimumAction,
-                onOpenSkillSettings: onOpenSkillSettings,
               ),
             ),
           ],

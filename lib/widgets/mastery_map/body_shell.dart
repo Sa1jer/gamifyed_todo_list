@@ -88,7 +88,6 @@ class _MasteryMapBody extends StatelessWidget {
   final ValueChanged<Task> onDeleteQuest;
   final void Function(Skill skill, SkillTreeNode node) onMasterNode;
   final void Function(Skill skill, SkillTreeNode node) onDeleteNode;
-  final ValueChanged<Skill>? onOpenSkillSettings;
 
   const _MasteryMapBody({
     required this.state,
@@ -105,7 +104,6 @@ class _MasteryMapBody extends StatelessWidget {
     required this.onDeleteQuest,
     required this.onMasterNode,
     required this.onDeleteNode,
-    required this.onOpenSkillSettings,
     this.fullscreen = false,
   });
 
@@ -191,10 +189,6 @@ class _MasteryMapBody extends StatelessWidget {
                           closeThen(() => onMasterNode(skill, node)),
                       onDeleteNode: (skill, node) =>
                           closeThen(() => onDeleteNode(skill, node)),
-                      onOpenSkillSettings: onOpenSkillSettings == null
-                          ? null
-                          : (skill) =>
-                                closeThen(() => onOpenSkillSettings!(skill)),
                     ),
                   ),
                 );
@@ -237,7 +231,6 @@ class _MasteryMapBody extends StatelessWidget {
           onDeleteQuest: onDeleteQuest,
           onMasterNode: onMasterNode,
           onDeleteNode: onDeleteNode,
-          onOpenSkillSettings: onOpenSkillSettings,
         );
 
         return Row(

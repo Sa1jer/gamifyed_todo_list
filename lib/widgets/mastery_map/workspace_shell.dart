@@ -3,13 +3,11 @@ part of '../mastery_map_workspace.dart';
 class MasteryMapWorkspace extends StatefulWidget {
   final bool isDark;
   final void Function(String taskId, Offset position) onCompleteTask;
-  final ValueChanged<Skill>? onOpenSkillSettings;
 
   const MasteryMapWorkspace({
     super.key,
     required this.isDark,
     required this.onCompleteTask,
-    this.onOpenSkillSettings,
   });
 
   @override
@@ -72,7 +70,6 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
               state.removeSkillTreeNode(skill.id, node.id);
               setState(() => _selection = _MasterySelection.skill(skill.id));
             },
-            onOpenSkillSettings: widget.onOpenSkillSettings,
           ),
         ),
       ],
@@ -450,7 +447,6 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
                                   _MasterySelection.skill(skill.id),
                                 );
                               },
-                              onOpenSkillSettings: widget.onOpenSkillSettings,
                             ),
                           ),
                         ],

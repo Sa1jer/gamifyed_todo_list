@@ -265,7 +265,6 @@ class _MasteryMapInspector extends StatelessWidget {
   final ValueChanged<Task> onDeleteQuest;
   final void Function(Skill skill, SkillTreeNode node) onMasterNode;
   final void Function(Skill skill, SkillTreeNode node) onDeleteNode;
-  final ValueChanged<Skill>? onOpenSkillSettings;
 
   const _MasteryMapInspector({
     required this.state,
@@ -281,7 +280,6 @@ class _MasteryMapInspector extends StatelessWidget {
     required this.onDeleteQuest,
     required this.onMasterNode,
     required this.onDeleteNode,
-    required this.onOpenSkillSettings,
   });
 
   @override
@@ -351,9 +349,6 @@ class _MasteryMapInspector extends StatelessWidget {
             onEditQuest: (task) => onEditQuest(skill, task),
             onMaster: () => onMasterNode(skill, node),
             onDelete: () => onDeleteNode(skill, node),
-            onOpenSkillSettings: onOpenSkillSettings == null
-                ? null
-                : () => onOpenSkillSettings!(skill),
           ),
           _ => _SkillInspector(
             state: state,
@@ -362,9 +357,6 @@ class _MasteryMapInspector extends StatelessWidget {
             onSelectQuest: (task) => onSelectQuest(skill, task),
             onToggleQuest: onToggleQuest,
             onEditQuest: (task) => onEditQuest(skill, task),
-            onOpenSkillSettings: onOpenSkillSettings == null
-                ? null
-                : () => onOpenSkillSettings!(skill),
           ),
         },
       ),
@@ -624,7 +616,6 @@ class _SkillInspector extends StatelessWidget {
   final ValueChanged<Task> onSelectQuest;
   final void Function(Task task, Offset position) onToggleQuest;
   final ValueChanged<Task> onEditQuest;
-  final VoidCallback? onOpenSkillSettings;
 
   const _SkillInspector({
     required this.state,
@@ -633,7 +624,6 @@ class _SkillInspector extends StatelessWidget {
     required this.onSelectQuest,
     required this.onToggleQuest,
     required this.onEditQuest,
-    required this.onOpenSkillSettings,
   });
 
   @override
@@ -680,13 +670,6 @@ class _SkillInspector extends StatelessWidget {
           spacing: 7,
           runSpacing: 7,
           children: [
-            if (onOpenSkillSettings != null)
-              SmallBtn(
-                label: 'Настроить',
-                icon: Icons.tune,
-                color: skill.color,
-                onTap: onOpenSkillSettings!,
-              ),
             TaskBadge(
               label: '${skill.treeNodes.length} этап.',
               color: skill.color,
@@ -744,7 +727,6 @@ class _NodeInspector extends StatelessWidget {
   final ValueChanged<Task> onEditQuest;
   final VoidCallback onMaster;
   final VoidCallback onDelete;
-  final VoidCallback? onOpenSkillSettings;
 
   const _NodeInspector({
     required this.state,
@@ -758,7 +740,6 @@ class _NodeInspector extends StatelessWidget {
     required this.onEditQuest,
     required this.onMaster,
     required this.onDelete,
-    required this.onOpenSkillSettings,
   });
 
   @override
@@ -860,13 +841,6 @@ class _NodeInspector extends StatelessWidget {
               color: const Color(0xFF4A9EFF),
               onTap: onExtendPath,
             ),
-            if (onOpenSkillSettings != null)
-              SmallBtn(
-                label: 'Настроить',
-                icon: Icons.tune,
-                color: skill.color,
-                onTap: onOpenSkillSettings!,
-              ),
           ],
         ),
         const SizedBox(height: 8),

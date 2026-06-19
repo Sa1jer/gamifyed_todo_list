@@ -16,13 +16,11 @@ class TasksPanel extends StatefulWidget {
   final Function(String id, Offset pos) onComplete;
   final Function(String id, Offset pos) onMinimumAction;
   final bool planningMode;
-  final ValueChanged<Skill>? onOpenSkillSettings;
   const TasksPanel({
     super.key,
     required this.onComplete,
     required this.onMinimumAction,
     this.planningMode = false,
-    this.onOpenSkillSettings,
   });
   @override
   State<TasksPanel> createState() => _TasksPanelState();
@@ -147,18 +145,6 @@ class _TasksPanelState extends State<TasksPanel> {
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                ],
-                if (widget.onOpenSkillSettings != null) ...[
-                  HoverScale(
-                    child: SmallBtn(
-                      label: 'Настроить',
-                      icon: Icons.tune,
-                      color: const Color(0xFF4A9EFF),
-                      tooltip: 'Открыть структуру навыка',
-                      onTap: () => widget.onOpenSkillSettings!(skill),
                     ),
                   ),
                   const SizedBox(width: 8),

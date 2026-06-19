@@ -33,13 +33,13 @@ Secondary top-bar entries:
 Design implication:
 `Статистика` should be useful but should not compete with `Сейчас / Карта`.
 
-Current `1.3.32` navigation experiment:
+Current `1.3.34` Planning decision:
 
-- `План` stops being a primary mode.
-- Planning becomes `Настройка навыка`, opened from selected skill/RoadMap context.
-- Desktop surface: dialog.
-- Mobile surface: bottom sheet.
-- Keep internal `WorkspaceMode.plan` / `PlanningWorkspace` code path until the experiment is validated, so rollback stays cheap.
+- `План` is frozen and removed from the app shell.
+- Planning is not a primary mode and not a skill settings surface.
+- Act and RoadMap no longer expose `Настроить` routes into Planning.
+- `PlanningWorkspace` remains in the repository as dormant reference code only.
+- If Planning returns, it should be redesigned from first principles instead of restoring the overloaded dashboard.
 
 ## Visual Decisions
 
@@ -73,14 +73,12 @@ Current design tension:
 - It can help users repair their system.
 - It can also become an admin dashboard with too many diagnostics.
 
-Current `1.3.32` decision:
+Current `1.3.34` decision:
 
-- Move Planning out of primary navigation experimentally.
-- Reframe it as skill settings with the job `Структура навыка`.
-- Show goal, RoadMap/stages, active quests and one main setup suggestion.
-- Hide archive/full audit by default.
-- Do not add new visible diagnostics.
-- Preserve rollback path until the experiment is validated.
+- Freeze Planning and remove user-facing entry points.
+- Do not add new Planning diagnostics or settings.
+- Keep setup pressure in existing lighter surfaces: creation flow, RoadMap stage actions, task edit dialogs and profile/settings.
+- Do not let Planning return as a dashboard/audit center.
 
 ## Tooltip / Hint Direction
 
@@ -113,7 +111,7 @@ Current first-run state:
 - No trophies/effects/resistance events.
 - Empty `Сейчас` shows a light primer: `1. Навык -> 2. Этап -> 3. Квест`.
 - Clear CTA to create the first skill.
-- Empty `План` and `Карта` should gently point back to `Сейчас`, not become separate onboarding surfaces.
+- Empty `Карта` should gently point back to `Сейчас`, not become a separate onboarding surface.
 
 Future onboarding:
 

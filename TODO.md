@@ -28,11 +28,12 @@ This file tracks technical details, completed work, open tasks, and remaining wo
 - `1.3.31`: reduced navigation tooltip noise: signed top-bar/bottom-nav buttons no longer repeat their own labels, while compact icon-only states keep hints.
 - `1.3.32`: moved `План` out of primary navigation experimentally and exposed it as `Настройка навыка` from Act/RoadMap.
 - `1.3.33`: added a show-once animated first-run spotlight over the real `Создать первый навык` CTA, with replay from profile settings.
+- `1.3.34`: froze Planning and removed its user-facing entry points from Act/RoadMap/app shell; Planning code remains dormant for reference only.
 
 ## Next Planned Batches
 
-- `1.3.34` — RoadMap + Goal Polish: make RoadMap visually and textually lead toward the skill goal, with quiet SMARTER hints.
-- `1.3.35` — Release QA / Public Build Hardening: full regression, manual QA, copy audit, width checks and known non-blockers.
+- `1.3.35` — RoadMap + Goal Polish: make RoadMap visually and textually lead toward the skill goal, with quiet SMARTER hints.
+- `1.3.36` — Release QA / Public Build Hardening: full regression, manual QA, copy audit, width checks and known non-blockers.
 
 ## P0 - Release / Data Safety
 
@@ -114,29 +115,28 @@ Acceptance:
 
 ## P2 - Product Structure Decisions
 
-### Planning: Move To Skill Settings - Implemented In 1.3.32
+### Planning: Frozen And Removed From App Flow - Implemented In 1.3.34
 
 Problem:
 `План` still risks feeling visually and functionally overloaded. It is not fully obvious what the user should do there or why it exists separately from `Сейчас` and `Карта`.
 
 Current decision:
-`План` is removed from primary navigation experimentally and turned into skill settings.
+`План` is frozen. It is not a primary mode, not a skill settings surface, and not linked from Act or RoadMap.
 
-Implementation direction:
+Implemented:
 
-- `WorkspaceMode.plan` and `PlanningWorkspace` stay in code at first, so the experiment has a safe rollback path.
-- Desktop opens skill settings as a large dialog.
-- Mobile opens skill settings as a bottom sheet.
-- Entry points: selected skill in Act/skill workspace and selected skill/stage in RoadMap.
-- Job: `Структура навыка`, not dashboard/audit.
+- Removed `WorkspaceMode.plan` from the app shell.
+- Removed `Настроить` entry points from Act skill workspace.
+- Removed RoadMap skill/stage entry points into Planning.
+- Stopped importing `PlanningWorkspace` from `MainPage`.
+- Kept `PlanningWorkspace` files in the repository as frozen reference/rollback material only.
 
 Content rules:
 
-- Show goal, stages/RoadMap summary, active quests, and one main setup suggestion.
-- Archive/full audit stays hidden by default.
-- Do not add new diagnostics.
-- Do not let skill settings compete with `Сейчас`.
-- If the experiment feels worse, restore `План` as a primary mode using the preserved code path.
+- Do not add new Planning features.
+- Do not reintroduce Planning buttons in Act/RoadMap without an explicit product decision.
+- If the feature returns, redesign it from first principles instead of restoring the overloaded dashboard.
+- Core setup should happen through creation flow, RoadMap stage actions, and lightweight edit dialogs.
 
 ### First-Run Guided Onboarding - Implemented In 1.3.33
 
@@ -148,7 +148,7 @@ Current light flow:
 - Empty `Сейчас` explains `1. Навык -> 2. Этап -> 3. Квест`.
 - CTA remains `Создать первый навык`.
 - Existing creation flow still creates the first stage and first quest.
-- `План` and `Карта` empty states point back to `Сейчас` instead of adding new setup branches.
+- `Карта` empty state points back to `Сейчас` instead of adding a separate setup branch.
 
 Implemented:
 
@@ -178,16 +178,16 @@ Acceptance:
 - Confirm stat-card icon placement on desktop and mobile after the recent right-side icon change.
 - Watch for truncation in Russian labels at narrow widths.
 
-### RoadMap + Goal Polish - Planned For 1.3.34
+### RoadMap + Goal Polish - Planned For 1.3.35
 
 - Make the RoadMap path feel like it leads to the skill goal, not just to a large skill bubble.
 - Keep SMARTER hints quiet: show only 1-2 helpful hints, not a score dashboard.
 - Use existing `GoalSpec`, `GoalEngine`, `GoalHeader` and skill edit flow.
 - Do not add more RoadMap templates, drag-and-drop or a new goal model in this batch.
 
-### Release QA / Public Build Hardening - Planned For 1.3.35
+### Release QA / Public Build Hardening - Planned For 1.3.36
 
-- Manual QA: fresh state, populated state, first-run tutorial, skill settings, RoadMap focus, stats/trophies.
+- Manual QA: fresh state, populated state, first-run tutorial, RoadMap focus, stats/trophies.
 - Width checks: `360`, `393`, `430`, `760`, `980+`.
 - Copy audit: no user-facing regressions to `задачи`, `узлы`, `баффы`, `боссы`, `Прогресс`.
 - Regression: `dart format lib test`, `flutter analyze`, `flutter test -r expanded --timeout 30s`.
@@ -202,6 +202,6 @@ Acceptance:
 
 - Do not implement new gamification systems.
 - Do not add RoadMap drag-and-drop.
-- Do not re-expand Planning before the skill-settings experiment is validated.
+- Do not re-expand Planning without a new product decision.
 - Do not seed demo data into production builds.
 - Do not add a heavy onboarding wizard until the first-run design is clear.
