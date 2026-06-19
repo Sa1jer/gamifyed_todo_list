@@ -25,6 +25,7 @@ This file tracks technical details, completed work, open tasks, and remaining wo
 - `1.3.30`: first empty `Сейчас` screen now shows a light core-loop primer: `1. Навык -> 2. Этап -> 3. Квест`.
 - `1.3.30`: empty `План` and `Карта` copy now gently points new users back to `Сейчас` instead of acting like separate setup flows.
 - `1.3.30`: post-1.3.29 polish replaced stale `Прогресс` wording in Today Dashboard with secondary `Статистика` language.
+- `1.3.31`: reduced navigation tooltip noise: signed top-bar/bottom-nav buttons no longer repeat their own labels, while compact icon-only states keep hints.
 
 ## P0 - Release / Data Safety
 
@@ -162,7 +163,8 @@ Acceptance:
 ### Tooltip And Hint Audit
 
 - Global toggle exists; next pass can still identify hints that repeat obvious labels.
-- Remove or shorten noisy tooltips.
+- Navigation pass done in `1.3.31`: signed primary/bottom-nav and secondary top-bar buttons no longer show duplicate hover labels.
+- Continue removing or shortening noisy tooltips only when the visible UI already explains the action.
 - Keep deeper explanations in FAQ/onboarding/settings, not on every hover.
 
 ### Today Dashboard Visual Polish

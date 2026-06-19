@@ -284,7 +284,10 @@ class _WorkspaceModeButtonState extends State<_WorkspaceModeButton> {
       ),
     );
 
-    return Tooltip(message: widget.mode.label, child: button);
+    final iconOnly = widget.compact && !widget.showCompactLabel;
+    return iconOnly
+        ? Tooltip(message: widget.mode.label, child: button)
+        : button;
   }
 }
 
@@ -318,7 +321,6 @@ class _MobileWorkspaceNav extends StatelessWidget {
               Expanded(
                 child: PressFeedback(
                   scale: 0.96,
-                  tooltip: item.label,
                   onTap: () => onChanged(item),
                   child: AnimatedContainer(
                     duration: kMotionStandard,
@@ -513,6 +515,8 @@ class _TopBarPillButtonState extends State<_TopBarPillButton> {
       ),
     );
 
-    return Tooltip(message: widget.tooltip, child: button);
+    return widget.compact
+        ? Tooltip(message: widget.tooltip, child: button)
+        : button;
   }
 }

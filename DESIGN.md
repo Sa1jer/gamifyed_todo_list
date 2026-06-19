@@ -83,6 +83,7 @@ Current direction:
 - Keep accessibility semantics separate from hover-tooltip visibility.
 - Avoid explaining obvious buttons repeatedly.
 - Use FAQ/onboarding for deeper concepts.
+- Signed navigation buttons should not repeat themselves on hover; keep tooltips for compact icon-only states and risky/unclear actions.
 
 Potential taxonomy:
 
