@@ -11,6 +11,7 @@ class InMemoryStorageService extends StorageService {
   List<Task> tasks = [];
   bool? _theme;
   bool? _tooltipsEnabled;
+  bool? _onboardingSeen;
   int? _bestStreak;
 
   @override
@@ -42,6 +43,14 @@ class InMemoryStorageService extends StorageService {
   @override
   Future<void> saveTooltipsEnabled(bool enabled) async {
     _tooltipsEnabled = enabled;
+  }
+
+  @override
+  Future<bool?> loadOnboardingSeen() async => _onboardingSeen;
+
+  @override
+  Future<void> saveOnboardingSeen(bool seen) async {
+    _onboardingSeen = seen;
   }
 
   @override
@@ -132,6 +141,10 @@ void main() {
 
     expect(find.text('RPG To-Do List'), findsOneWidget);
     expect(find.text('Действовать сегодня'), findsOneWidget);
+    expect(find.text('Первый запуск'), findsOneWidget);
+    await tester.tap(find.text('Понятно'));
+    await tester.pumpAndSettle();
+
     expect(find.text('1. Навык → 2. Этап → 3. Квест'), findsOneWidget);
     expect(find.text('Создать первый навык'), findsWidgets);
     expect(find.text('Карта'), findsOneWidget);
@@ -156,6 +169,33 @@ void main() {
     await tester.pump();
 
     expect(find.text('Гид по RPG To-Do List'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+
+  testWidgets('First-run tutorial dismisses once and persists', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = InMemoryStorageService();
+    await storage.init();
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.text('Первый запуск'), findsOneWidget);
+    expect(storage._onboardingSeen, isFalse);
+
+    await tester.tap(find.text('Понятно'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Первый запуск'), findsNothing);
+    expect(storage._onboardingSeen, isTrue);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();

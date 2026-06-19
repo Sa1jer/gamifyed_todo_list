@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import '../app_state.dart';
@@ -27,3 +28,4 @@ part 'main_page/shell.dart';
 part 'main_page/workspaces.dart';
 part 'main_page/compact_skill_selector.dart';
 part 'main_page/reward_notice.dart';
+part 'main_page/first_run_tutorial.dart';

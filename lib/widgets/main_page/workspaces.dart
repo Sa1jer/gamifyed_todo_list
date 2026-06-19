@@ -5,6 +5,7 @@ class _ActWorkspace extends StatelessWidget {
   final void Function(String taskId, Offset position) onMinimumAction;
   final VoidCallback onCreateFirstSkill;
   final ValueChanged<Skill> onOpenSkillSettings;
+  final Key? createFirstSkillButtonKey;
 
   const _ActWorkspace({
     super.key,
@@ -12,6 +13,7 @@ class _ActWorkspace extends StatelessWidget {
     required this.onMinimumAction,
     required this.onCreateFirstSkill,
     required this.onOpenSkillSettings,
+    this.createFirstSkillButtonKey,
   });
 
   @override
@@ -22,6 +24,7 @@ class _ActWorkspace extends StatelessWidget {
           onComplete: onComplete,
           onMinimumAction: onMinimumAction,
           onCreateFirstSkill: onCreateFirstSkill,
+          createFirstSkillButtonKey: createFirstSkillButtonKey,
         ),
         const SizedBox(height: 8),
         Expanded(

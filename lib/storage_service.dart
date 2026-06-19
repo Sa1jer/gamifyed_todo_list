@@ -24,6 +24,7 @@ class StorageService {
   static const String _isDarkKey = 'isDark';
   static const String _sfxEnabledKey = 'sfxEnabled';
   static const String _tooltipsEnabledKey = 'tooltipsEnabled';
+  static const String _onboardingSeenKey = 'onboardingSeen';
   static const String _bestStreakKey = 'bestStreak';
   static const String _schemaVersionKey = 'schemaVersion';
   static const int _legacySchemaVersion = 1;
@@ -316,6 +317,18 @@ class StorageService {
   Future<void> saveTooltipsEnabled(bool enabled) async {
     _ensureInit();
     await _meta.put(_tooltipsEnabledKey, enabled ? 'true' : 'false');
+  }
+
+  Future<bool?> loadOnboardingSeen() async {
+    _ensureInit();
+    final raw = _meta.get(_onboardingSeenKey);
+    if (raw == null) return null;
+    return raw == 'true';
+  }
+
+  Future<void> saveOnboardingSeen(bool seen) async {
+    _ensureInit();
+    await _meta.put(_onboardingSeenKey, seen ? 'true' : 'false');
   }
 
   @visibleForTesting

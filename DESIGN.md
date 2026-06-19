@@ -117,12 +117,19 @@ Current first-run state:
 
 Future onboarding:
 
-- Animated spotlight over real UI controls.
-- Show once on fresh empty state and save `onboardingSeen`.
-- Replay from profile/settings.
+Current `1.3.33` onboarding:
+
+- Animated spotlight over the real `Создать первый навык` CTA.
+- Shows once on fresh empty state and saves `onboardingSeen`.
+- Can be replayed from profile/settings.
 - Skippable and non-blocking.
-- Should teach the core loop by highlighting real controls.
-- Should not rely on fake/demo content in production builds.
+- Teaches the core loop by highlighting real controls.
+- Does not rely on fake/demo content in production builds.
+
+Future tutorial polish:
+
+- Consider multi-step spotlight only after the current one-step primer is validated.
+- Keep replay optional and quiet; do not turn onboarding into a mandatory wizard.
 
 ## Release QA Rules
 

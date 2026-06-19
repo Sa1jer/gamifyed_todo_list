@@ -24,6 +24,9 @@ class AppState extends ChangeNotifier {
   bool _isDark = true;
   bool _sfxEnabled = true;
   bool _tooltipsEnabled = true;
+  bool _onboardingSeen = false;
+  bool _onboardingReplayRequested = false;
+  bool _hasLoadedSavedData = false;
   String? selectedSkillId;
   final StorageService _storage;
   final NotificationService _notifications;
@@ -37,6 +40,12 @@ class AppState extends ChangeNotifier {
   bool get isDark => _isDark;
   bool get sfxEnabled => _sfxEnabled;
   bool get tooltipsEnabled => _tooltipsEnabled;
+  bool get onboardingSeen => _onboardingSeen;
+  bool get hasLoadedSavedData => _hasLoadedSavedData;
+  bool get shouldShowFirstRunTutorial =>
+      _hasLoadedSavedData &&
+      (_onboardingReplayRequested ||
+          (!_onboardingSeen && skills.isEmpty && tasks.isEmpty));
 
   UserProfile profile = UserProfile(name: 'Your Name');
   final List<HistoryEntry> history = [];
@@ -276,6 +285,7 @@ class AppState extends ChangeNotifier {
     final savedTheme = await _storage.loadTheme();
     final savedSfxEnabled = await _storage.loadSfxEnabled();
     final savedTooltipsEnabled = await _storage.loadTooltipsEnabled();
+    final savedOnboardingSeen = await _storage.loadOnboardingSeen();
 
     if (savedTheme != null) {
       _isDark = savedTheme;
@@ -285,6 +295,9 @@ class AppState extends ChangeNotifier {
     }
     if (savedTooltipsEnabled != null) {
       _tooltipsEnabled = savedTooltipsEnabled;
+    }
+    if (savedOnboardingSeen != null) {
+      _onboardingSeen = savedOnboardingSeen;
     }
     _applySfxEnabled();
 
@@ -355,6 +368,7 @@ class AppState extends ChangeNotifier {
 
     _syncAllTaskNotifications();
 
+    _hasLoadedSavedData = true;
     notifyListeners();
   }
 
@@ -417,6 +431,7 @@ class AppState extends ChangeNotifier {
     await _storage.saveTheme(_isDark);
     await _storage.saveSfxEnabled(_sfxEnabled);
     await _storage.saveTooltipsEnabled(_tooltipsEnabled);
+    await _storage.saveOnboardingSeen(_onboardingSeen);
     await _storage.saveSkills(skills);
     await _storage.saveTasks(tasks);
     await _storage.saveProfile(profile);
@@ -457,6 +472,20 @@ class AppState extends ChangeNotifier {
     _tooltipsEnabled = !_tooltipsEnabled;
     notifyListeners();
     _storage.saveTooltipsEnabled(_tooltipsEnabled);
+  }
+
+  void dismissFirstRunTutorial() {
+    _onboardingReplayRequested = false;
+    if (!_onboardingSeen) {
+      _onboardingSeen = true;
+      _storage.saveOnboardingSeen(true);
+    }
+    notifyListeners();
+  }
+
+  void replayFirstRunTutorial() {
+    _onboardingReplayRequested = true;
+    notifyListeners();
   }
 
   // ── Resets ───────────────────────────────────────────────────────────────────

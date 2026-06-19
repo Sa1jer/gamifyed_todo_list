@@ -671,6 +671,52 @@ class _ProfileDialogState extends State<ProfileDialog> {
             ],
           ),
         ),
+        const SizedBox(height: 8),
+        GestureDetector(
+          onTap: () {
+            state.replayFirstRunTutorial();
+            Navigator.pop(context);
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: fBg,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: bdr),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.auto_awesome,
+                  color: Color(0xFFFF9500),
+                  size: 17,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Повторить первый путь',
+                        style: TextStyle(
+                          color: txt,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Короткая подсказка: навык → этап → квест → минимум.',
+                        style: TextStyle(color: sub, fontSize: 11.5),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.play_arrow_rounded, color: sub, size: 20),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }

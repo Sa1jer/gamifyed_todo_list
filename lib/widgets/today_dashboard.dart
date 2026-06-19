@@ -8,12 +8,14 @@ class TodayDashboard extends StatefulWidget {
   final Function(String id, Offset pos) onComplete;
   final Function(String id, Offset pos) onMinimumAction;
   final VoidCallback? onCreateFirstSkill;
+  final Key? createFirstSkillButtonKey;
 
   const TodayDashboard({
     super.key,
     required this.onComplete,
     required this.onMinimumAction,
     this.onCreateFirstSkill,
+    this.createFirstSkillButtonKey,
   });
 
   static Skill? _skillFor(AppState state, Task task) {
@@ -273,6 +275,8 @@ class _TodayDashboardState extends State<TodayDashboard> {
                                       onMinimumAction: widget.onMinimumAction,
                                       onCreateFirstSkill:
                                           widget.onCreateFirstSkill,
+                                      createFirstSkillButtonKey:
+                                          widget.createFirstSkillButtonKey,
                                     );
 
                                     if (constraints.maxWidth < 720) {
@@ -284,6 +288,8 @@ class _TodayDashboardState extends State<TodayDashboard> {
                                         onMinimumAction: widget.onMinimumAction,
                                         onCreateFirstSkill:
                                             widget.onCreateFirstSkill,
+                                        createFirstSkillButtonKey:
+                                            widget.createFirstSkillButtonKey,
                                       );
                                     }
 
@@ -331,6 +337,7 @@ class _DashboardContent extends StatelessWidget {
   final Function(String id, Offset pos) onComplete;
   final Function(String id, Offset pos) onMinimumAction;
   final VoidCallback? onCreateFirstSkill;
+  final Key? createFirstSkillButtonKey;
 
   const _DashboardContent({
     required this.state,
@@ -344,6 +351,7 @@ class _DashboardContent extends StatelessWidget {
     required this.onComplete,
     required this.onMinimumAction,
     required this.onCreateFirstSkill,
+    required this.createFirstSkillButtonKey,
   });
 
   @override
@@ -363,6 +371,7 @@ class _DashboardContent extends StatelessWidget {
             onComplete: onComplete,
             onMinimumAction: onMinimumAction,
             onCreateFirstSkill: onCreateFirstSkill,
+            createFirstSkillButtonKey: createFirstSkillButtonKey,
           ),
         ),
         const SizedBox(width: 10),
@@ -408,6 +417,7 @@ class _CompactDashboardContent extends StatelessWidget {
   final Function(String id, Offset pos) onComplete;
   final Function(String id, Offset pos) onMinimumAction;
   final VoidCallback? onCreateFirstSkill;
+  final Key? createFirstSkillButtonKey;
 
   const _CompactDashboardContent({
     required this.state,
@@ -416,6 +426,7 @@ class _CompactDashboardContent extends StatelessWidget {
     required this.onComplete,
     required this.onMinimumAction,
     required this.onCreateFirstSkill,
+    required this.createFirstSkillButtonKey,
   });
 
   @override
@@ -430,6 +441,7 @@ class _CompactDashboardContent extends StatelessWidget {
       onComplete: onComplete,
       onMinimumAction: onMinimumAction,
       onCreateFirstSkill: onCreateFirstSkill,
+      createFirstSkillButtonKey: createFirstSkillButtonKey,
     );
   }
 }
@@ -442,6 +454,7 @@ class _NextActionCard extends StatelessWidget {
   final Function(String id, Offset pos) onComplete;
   final Function(String id, Offset pos) onMinimumAction;
   final VoidCallback? onCreateFirstSkill;
+  final Key? createFirstSkillButtonKey;
 
   const _NextActionCard({
     required this.state,
@@ -451,6 +464,7 @@ class _NextActionCard extends StatelessWidget {
     required this.onComplete,
     required this.onMinimumAction,
     required this.onCreateFirstSkill,
+    required this.createFirstSkillButtonKey,
   });
 
   @override
@@ -525,6 +539,7 @@ class _NextActionCard extends StatelessWidget {
             if (!hasSkills && onCreateFirstSkill != null) ...[
               const SizedBox(height: 12),
               SmallBtn(
+                key: createFirstSkillButtonKey,
                 label: 'Создать первый навык',
                 icon: Icons.add,
                 color: accent,

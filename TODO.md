@@ -27,10 +27,10 @@ This file tracks technical details, completed work, open tasks, and remaining wo
 - `1.3.30`: post-1.3.29 polish replaced stale `Прогресс` wording in Today Dashboard with secondary `Статистика` language.
 - `1.3.31`: reduced navigation tooltip noise: signed top-bar/bottom-nav buttons no longer repeat their own labels, while compact icon-only states keep hints.
 - `1.3.32`: moved `План` out of primary navigation experimentally and exposed it as `Настройка навыка` from Act/RoadMap.
+- `1.3.33`: added a show-once animated first-run spotlight over the real `Создать первый навык` CTA, with replay from profile settings.
 
 ## Next Planned Batches
 
-- `1.3.33` — Animated First-Run Tutorial: spotlight real controls, show once, replay from profile.
 - `1.3.34` — RoadMap + Goal Polish: make RoadMap visually and textually lead toward the skill goal, with quiet SMARTER hints.
 - `1.3.35` — Release QA / Public Build Hardening: full regression, manual QA, copy audit, width checks and known non-blockers.
 
@@ -138,7 +138,7 @@ Content rules:
 - Do not let skill settings compete with `Сейчас`.
 - If the experiment feels worse, restore `План` as a primary mode using the preserved code path.
 
-### First-Run Guided Onboarding
+### First-Run Guided Onboarding - Implemented In 1.3.33
 
 Problem:
 Fresh install should be empty, but later the app should teach the first core loop through a polished guided experience.
@@ -150,13 +150,13 @@ Current light flow:
 - Existing creation flow still creates the first stage and first quest.
 - `План` and `Карта` empty states point back to `Сейчас` instead of adding new setup branches.
 
-Do not implement yet. Future direction:
+Implemented:
 
-- Design an animated first-run tutorial with spotlight/highlight on real controls.
-- Teach: create skill -> first stage -> first quest -> minimum step -> XP/growth.
-- Persist `onboardingSeen` once the spotlight tutorial is implemented.
-- Let users replay onboarding from profile/settings.
-- Keep tutorial skippable and non-blocking.
+- Added animated spotlight/highlight over the real `Создать первый навык` control.
+- Tutorial teaches: create skill -> first stage -> first quest -> minimum step -> XP/growth.
+- Persisted `onboardingSeen` in storage meta.
+- Added replay entry in profile interface settings.
+- Kept tutorial skippable and non-blocking.
 
 Acceptance:
 

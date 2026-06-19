@@ -12,6 +12,7 @@ import 'package:todo_list_app/utils.dart';
 class _InMemoryStorageService extends StorageService {
   bool? _theme;
   bool? _tooltipsEnabled;
+  bool? _onboardingSeen;
   int? _bestStreak;
 
   @override
@@ -43,6 +44,14 @@ class _InMemoryStorageService extends StorageService {
   @override
   Future<void> saveTooltipsEnabled(bool enabled) async {
     _tooltipsEnabled = enabled;
+  }
+
+  @override
+  Future<bool?> loadOnboardingSeen() async => _onboardingSeen;
+
+  @override
+  Future<void> saveOnboardingSeen(bool seen) async {
+    _onboardingSeen = seen;
   }
 
   @override
@@ -189,6 +198,24 @@ void main() {
       expect(state.bosses, isEmpty);
       expect(state.profile.name, 'Your Name');
       expect(state.achievements, isNotEmpty);
+
+      state.dispose();
+    });
+
+    test('first-run tutorial state loads and persists', () async {
+      final storage = _InMemoryStorageService();
+      final state = AppState(storage: storage, seedDefaults: false);
+
+      await state.loadSavedData();
+
+      expect(state.shouldShowFirstRunTutorial, isTrue);
+      expect(state.onboardingSeen, isFalse);
+
+      state.dismissFirstRunTutorial();
+
+      expect(state.shouldShowFirstRunTutorial, isFalse);
+      expect(state.onboardingSeen, isTrue);
+      expect(storage._onboardingSeen, isTrue);
 
       state.dispose();
     });

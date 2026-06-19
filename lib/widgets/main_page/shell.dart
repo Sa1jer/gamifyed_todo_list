@@ -15,6 +15,7 @@ class _MainPageState extends State<MainPage> {
   final List<XPBubble> _bubbles = [];
   final GlobalKey _pageStackKey = GlobalKey();
   final GlobalKey _rewardsButtonKey = GlobalKey();
+  final GlobalKey _firstSkillCtaKey = GlobalKey();
   WorkspaceMode _mode = WorkspaceMode.act;
   _RewardNotice? _rewardNotice;
   Offset? _rewardNoticeAnchor;
@@ -409,6 +410,7 @@ class _MainPageState extends State<MainPage> {
                             onCreateFirstSkill: () => _addSkill(context),
                             onOpenSkillSettings: (skill) =>
                                 _openSkillSettings(context, skill),
+                            createFirstSkillButtonKey: _firstSkillCtaKey,
                           ),
                           WorkspaceMode.plan => _PlanWorkspace(
                             key: const ValueKey('plan-workspace'),
@@ -446,6 +448,16 @@ class _MainPageState extends State<MainPage> {
                   isDark: isDark,
                   onShow: () => _openRewardsDialog(s),
                   onHide: () => setState(() => _rewardNotice = null),
+                ),
+              if (s.shouldShowFirstRunTutorial)
+                _FirstRunTutorialOverlay(
+                  targetKey: _firstSkillCtaKey,
+                  isDark: isDark,
+                  onDismiss: s.dismissFirstRunTutorial,
+                  onCreateFirstSkill: () {
+                    s.dismissFirstRunTutorial();
+                    _addSkill(context);
+                  },
                 ),
               ..._bubbles,
             ],
