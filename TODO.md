@@ -21,11 +21,18 @@ This file tracks technical details, completed work, open tasks, and remaining wo
 - `1.3.29`: added persistent `tooltipsEnabled` setting and profile switch for hover hints.
 - `1.3.29`: XP values next to sliders can be edited by typing a number.
 - `1.3.29`: RoadMap overview gets a quiet `Отцентровать` camera button.
-- `1.3.29`: `План` is explicitly frozen until keep/rework/remove decision.
+- `1.3.29`: `План` was frozen pending a product decision; this is superseded by the planned `1.3.32` skill-settings experiment.
 - `1.3.30`: first empty `Сейчас` screen now shows a light core-loop primer: `1. Навык -> 2. Этап -> 3. Квест`.
 - `1.3.30`: empty `План` and `Карта` copy now gently points new users back to `Сейчас` instead of acting like separate setup flows.
 - `1.3.30`: post-1.3.29 polish replaced stale `Прогресс` wording in Today Dashboard with secondary `Статистика` language.
 - `1.3.31`: reduced navigation tooltip noise: signed top-bar/bottom-nav buttons no longer repeat their own labels, while compact icon-only states keep hints.
+
+## Next Planned Batches
+
+- `1.3.32` — Planning -> Skill Settings Experiment: remove `План` from primary navigation experimentally, keep rollback path, open skill settings from Act/RoadMap.
+- `1.3.33` — Animated First-Run Tutorial: spotlight real controls, show once, replay from profile.
+- `1.3.34` — RoadMap + Goal Polish: make RoadMap visually and textually lead toward the skill goal, with quiet SMARTER hints.
+- `1.3.35` — Release QA / Public Build Hardening: full regression, manual QA, copy audit, width checks and known non-blockers.
 
 ## P0 - Release / Data Safety
 
@@ -107,31 +114,29 @@ Acceptance:
 
 ## P2 - Product Structure Decisions
 
-### Planning: Redesign, Freeze, Or Remove
+### Planning: Move To Skill Settings - Planned For 1.3.32
 
 Problem:
 `План` still risks feeling visually and functionally overloaded. It is not fully obvious what the user should do there or why it exists separately from `Сейчас` and `Карта`.
 
 Current decision:
-Planning is frozen. Do not add new Planning features or expand diagnostics until a product decision is made.
+Planning is frozen until `1.3.32`. The chosen experiment is to remove `План` from primary navigation and turn it into skill settings.
 
-- Option A: Keep and simplify as a true workshop for one next system fix.
-- Option B: Freeze advanced Planning work and avoid adding anything new there.
-- Option C: Remove or merge Planning functionality into RoadMap/skill settings later.
+Implementation direction:
 
-Questions to answer before implementation:
+- Keep `WorkspaceMode.plan` and `PlanningWorkspace` in code at first, so the experiment has a safe rollback path.
+- Desktop opens skill settings as a large dialog.
+- Mobile opens skill settings as a bottom sheet.
+- Entry points: selected skill in Act/skill workspace and selected skill/stage in RoadMap.
+- Job: `Структура навыка`, not dashboard/audit.
 
-- What is the one-sentence job of `План`?
-- Which actions belong only in Planning and nowhere else?
-- Can Planning be useful without becoming a dashboard/audit screen?
-- Does mobile need Planning as a tab, or should it become a sheet/settings flow?
+Content rules:
 
-Acceptance if kept:
-
-- Active quests remain first.
-- One main improvement is shown, not full diagnostics.
+- Show goal, stages/RoadMap summary, active quests, and one main setup suggestion.
 - Archive/full audit stays hidden by default.
-- Planning does not compete with `Сейчас`.
+- Do not add new diagnostics.
+- Do not let skill settings compete with `Сейчас`.
+- If the experiment feels worse, restore `План` as a primary mode using the preserved code path.
 
 ### First-Run Guided Onboarding
 
@@ -147,9 +152,10 @@ Current light flow:
 
 Do not implement yet. Future direction:
 
-- Design an animated first-run tutorial with spotlight/highlight on specific buttons.
+- Design an animated first-run tutorial with spotlight/highlight on real controls.
 - Teach: create skill -> first stage -> first quest -> minimum step -> XP/growth.
-- Do not persist tutorial state until the onboarding design is stable.
+- Persist `onboardingSeen` once the spotlight tutorial is implemented.
+- Let users replay onboarding from profile/settings.
 - Keep tutorial skippable and non-blocking.
 
 Acceptance:
@@ -172,6 +178,21 @@ Acceptance:
 - Confirm stat-card icon placement on desktop and mobile after the recent right-side icon change.
 - Watch for truncation in Russian labels at narrow widths.
 
+### RoadMap + Goal Polish - Planned For 1.3.34
+
+- Make the RoadMap path feel like it leads to the skill goal, not just to a large skill bubble.
+- Keep SMARTER hints quiet: show only 1-2 helpful hints, not a score dashboard.
+- Use existing `GoalSpec`, `GoalEngine`, `GoalHeader` and skill edit flow.
+- Do not add more RoadMap templates, drag-and-drop or a new goal model in this batch.
+
+### Release QA / Public Build Hardening - Planned For 1.3.35
+
+- Manual QA: fresh state, populated state, first-run tutorial, skill settings, RoadMap focus, stats/trophies.
+- Width checks: `360`, `393`, `430`, `760`, `980+`.
+- Copy audit: no user-facing regressions to `задачи`, `узлы`, `баффы`, `боссы`, `Прогресс`.
+- Regression: `dart format lib test`, `flutter analyze`, `flutter test -r expanded --timeout 30s`.
+- Record known non-blockers before public build packaging.
+
 ### Top Bar Consistency
 
 - `Трофеи` and `Статистика` currently share the same pill component.
@@ -181,6 +202,6 @@ Acceptance:
 
 - Do not implement new gamification systems.
 - Do not add RoadMap drag-and-drop.
-- Do not re-expand Planning before deciding its role.
+- Do not re-expand Planning before the skill-settings experiment is validated.
 - Do not seed demo data into production builds.
 - Do not add a heavy onboarding wizard until the first-run design is clear.

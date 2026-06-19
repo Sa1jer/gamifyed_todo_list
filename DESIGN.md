@@ -23,7 +23,6 @@ If a feature does not serve the core loop, it should be hidden, delayed, or trea
 Primary modes:
 
 - `Сейчас`: the main action surface. Shows what to do now.
-- `План`: frozen until keep/rework/remove decision. Should not receive new visible complexity.
 - `Карта`: RoadMap/path view. Shows stages, roads, and practice context.
 
 Secondary top-bar entries:
@@ -32,7 +31,15 @@ Secondary top-bar entries:
 - `Статистика`: former Progress area, now secondary. Opens as dialog on desktop and as a secondary screen on mobile.
 
 Design implication:
-`Статистика` should be useful but should not compete with `Сейчас / План / Карта`.
+`Статистика` should be useful but should not compete with `Сейчас / Карта`.
+
+Planned `1.3.32` navigation experiment:
+
+- `План` stops being a primary mode.
+- Planning becomes `Настройка навыка`, opened from selected skill/RoadMap context.
+- Desktop surface: dialog.
+- Mobile surface: bottom sheet.
+- Keep internal `WorkspaceMode.plan` / `PlanningWorkspace` code path until the experiment is validated, so rollback stays cheap.
 
 ## Visual Decisions
 
@@ -55,6 +62,7 @@ Design implication:
 - Selected skill focus mode should prioritize roads/stages and keep controls quiet.
 - If no bubble is selected, a small top-right `Отцентровать` button recenters the camera.
 - Template controls should not become a noisy control panel.
+- Planned `1.3.34`: RoadMap should visually and textually lead toward the skill goal. SMARTER hints stay quiet and should not become a new dashboard.
 
 ### Planning
 
@@ -65,12 +73,14 @@ Current design tension:
 - It can help users repair their system.
 - It can also become an admin dashboard with too many diagnostics.
 
-Rule until redesign decision:
+Planned `1.3.32` decision:
 
-- Planning is frozen: do not add new features or diagnostics.
-- Do not add new visible diagnostics to Planning by default.
-- Keep active quests above system analysis.
-- Prefer one main improvement over a full audit.
+- Move Planning out of primary navigation experimentally.
+- Reframe it as skill settings with the job `Структура навыка`.
+- Show goal, RoadMap/stages, active quests and one main setup suggestion.
+- Hide archive/full audit by default.
+- Do not add new visible diagnostics.
+- Preserve rollback path until the experiment is validated.
 
 ## Tooltip / Hint Direction
 
@@ -107,9 +117,19 @@ Current first-run state:
 
 Future onboarding:
 
-- Animated, focused, and skippable.
+- Animated spotlight over real UI controls.
+- Show once on fresh empty state and save `onboardingSeen`.
+- Replay from profile/settings.
+- Skippable and non-blocking.
 - Should teach the core loop by highlighting real controls.
 - Should not rely on fake/demo content in production builds.
+
+## Release QA Rules
+
+- Test fresh and populated flows before public builds.
+- Check widths: `360`, `393`, `430`, `760`, `980+`.
+- Run copy audit for old user-facing terms: `задачи`, `узлы`, `баффы`, `боссы`, `Прогресс`.
+- Keep known non-blockers explicit in `TODO.md`.
 
 ## XP Editing Direction
 
