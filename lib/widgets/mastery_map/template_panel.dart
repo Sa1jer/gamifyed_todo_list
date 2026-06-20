@@ -1,7 +1,6 @@
 part of '../mastery_map_workspace.dart';
 
 const _roadmapEngine = RoadmapEngine();
-const _showRoadmapSummaryInInspector = false;
 const _roadmapGoalAnchorTopOffset = 198.0;
 const _roadmapGoalAnchorEstimatedHeight = 120.0;
 const _roadmapGoalAnchorHorizontalPadding = 20.0;
@@ -13,16 +12,6 @@ Offset _feedbackOriginFor(BuildContext context) {
   if (box == null) return Offset.zero;
   final topLeft = box.localToGlobal(Offset.zero);
   return Offset(topLeft.dx + box.size.width / 2, topLeft.dy + box.size.height);
-}
-
-RoadmapSnapshot _roadmapSnapshotFor(AppState state, Skill skill) {
-  return _roadmapEngine.buildSnapshot(
-    skill,
-    completedQuestCountsByNodeId: {
-      for (final node in skill.treeNodes)
-        node.id: state.completedTasksForTreeNode(skill.id, node.id),
-    },
-  );
 }
 
 double _roadmapGoalAnchorWidth(String text) {
@@ -312,18 +301,52 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                SmallBtn(
-                  label: 'Применить',
-                  icon: Icons.add_road,
-                  color: color,
-                  onTap: () => widget.onApply(config),
+                Expanded(
+                  child: PressFeedback(
+                    scale: 0.96,
+                    onTap: () => widget.onApply(config),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 11,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: color,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.add_road,
+                            color: Colors.white,
+                            size: 15,
+                          ),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              'Применить',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-                const Spacer(),
+                const SizedBox(width: 8),
                 PressFeedback(
                   scale: 0.94,
                   onTap: widget.onHide,
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(9, 7, 0, 2),
+                    padding: const EdgeInsets.fromLTRB(0, 7, 0, 2),
                     child: Text(
                       'Скрыть',
                       style: TextStyle(

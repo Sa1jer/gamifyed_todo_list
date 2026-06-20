@@ -261,6 +261,7 @@ class _MasteryMapInspector extends StatelessWidget {
   final void Function(Skill skill, SkillTreeNode node) onExtendPath;
   final void Function(Skill skill, SkillTreeNode? node) onAddQuest;
   final void Function(Task task, Offset position) onToggleQuest;
+  final void Function(Task task, Offset position) onMinimumAction;
   final void Function(Skill skill, Task task) onEditQuest;
   final ValueChanged<Task> onDeleteQuest;
   final void Function(Skill skill, SkillTreeNode node) onMasterNode;
@@ -276,6 +277,7 @@ class _MasteryMapInspector extends StatelessWidget {
     required this.onExtendPath,
     required this.onAddQuest,
     required this.onToggleQuest,
+    required this.onMinimumAction,
     required this.onEditQuest,
     required this.onDeleteQuest,
     required this.onMasterNode,
@@ -346,18 +348,12 @@ class _MasteryMapInspector extends StatelessWidget {
             onAddQuest: () => onAddQuest(skill, node),
             onSelectQuest: (task) => onSelectQuest(skill, task),
             onToggleQuest: onToggleQuest,
+            onMinimumAction: onMinimumAction,
             onEditQuest: (task) => onEditQuest(skill, task),
             onMaster: () => onMasterNode(skill, node),
             onDelete: () => onDeleteNode(skill, node),
           ),
-          _ => _SkillInspector(
-            state: state,
-            isDark: isDark,
-            skill: skill,
-            onSelectQuest: (task) => onSelectQuest(skill, task),
-            onToggleQuest: onToggleQuest,
-            onEditQuest: (task) => onEditQuest(skill, task),
-          ),
+          _ => _SkillInspector(state: state, isDark: isDark, skill: skill),
         },
       ),
     );
@@ -385,12 +381,12 @@ class _EmptyMapInspector extends StatelessWidget {
           icon: Icons.touch_app_outlined,
           color: const Color(0xFF4A9EFF),
           title: 'Выберите навык',
-          subtitle: 'шар раскроет свою ветку мастерства',
+          subtitle: 'кнопка «Путь» раскроет дорогу мастерства',
           isDark: isDark,
         ),
         const SizedBox(height: 12),
         Text(
-          'Карта показывает все навыки как сферы. Нажмите на любую сферу, чтобы увидеть этапы, практику и следующий шаг освоения.',
+          'Карта показывает все навыки как сферы. Сама сфера — цель, а кнопка «Путь» открывает этапы и практику.',
           style: TextStyle(color: sub, fontSize: 12.5, height: 1.35),
         ),
         const SizedBox(height: 16),
@@ -400,208 +396,50 @@ class _EmptyMapInspector extends StatelessWidget {
             separatorBuilder: (_, _) => const SizedBox(height: 7),
             itemBuilder: (context, index) {
               final skill = state.skills[index];
-              return PressFeedback(
-                scale: 0.98,
-                onTap: () => onSelectSkill(skill),
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? const Color(0xFF14141C)
-                        : const Color(0xFFF4F5FA),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: borderColor(isDark)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(skill.icon, color: skill.color, size: 18),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          skill.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: textColor(isDark),
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                      Text(
-                        '${skill.masteredTreeNodeCount}/${skill.treeNodes.length}',
+              return Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? const Color(0xFF14141C)
+                      : const Color(0xFFF4F5FA),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: borderColor(isDark)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(skill.icon, color: skill.color, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        skill.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: skill.color,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w900,
+                          color: textColor(isDark),
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 8),
+                    _RoadmapPathPill(
+                      color: skill.color,
+                      isDark: isDark,
+                      onTap: () => onSelectSkill(skill),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${skill.masteredTreeNodeCount}/${skill.treeNodes.length}',
+                      style: TextStyle(
+                        color: skill.color,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
                 ),
               );
             },
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _RoadmapSummaryCard extends StatelessWidget {
-  final bool isDark;
-  final Color color;
-  final RoadmapSnapshot snapshot;
-
-  const _RoadmapSummaryCard({
-    required this.isDark,
-    required this.color,
-    required this.snapshot,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final txt = textColor(isDark);
-    final current = snapshot.currentStage;
-    final next = snapshot.nextStage;
-    final progressLabel = '${(snapshot.overallProgress * 100).round()}%';
-
-    return Container(
-      padding: const EdgeInsets.all(11),
-      decoration: BoxDecoration(
-        color: color.withAlpha(12),
-        borderRadius: BorderRadius.circular(13),
-        border: Border.all(color: color.withAlpha(42)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.route_rounded, color: color, size: 17),
-              const SizedBox(width: 7),
-              Expanded(
-                child: Text(
-                  'Roadmap навыка',
-                  style: TextStyle(
-                    color: txt,
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-              Text(
-                progressLabel,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          XPBar(
-            progress: snapshot.overallProgress.clamp(0.0, 1.0),
-            color: color,
-            height: 5,
-          ),
-          const SizedBox(height: 8),
-          GoalHeader(
-            skill: snapshot.skill,
-            isDark: isDark,
-            maxLines: 2,
-            emptyText: 'Roadmap пока без цели',
-          ),
-          const SizedBox(height: 9),
-          _RoadmapFocusLine(
-            isDark: isDark,
-            color: color,
-            icon: Icons.bolt_rounded,
-            label: 'Сейчас',
-            value: current == null
-                ? 'Добавьте первый этап'
-                : current.node.title,
-            meta: current == null
-                ? 'roadmap пока пуст'
-                : '${math.min(current.completedLinkedQuests, current.questTarget)} / ${current.questTarget} практики',
-          ),
-          const SizedBox(height: 7),
-          _RoadmapFocusLine(
-            isDark: isDark,
-            color: const Color(0xFF4A9EFF),
-            icon: Icons.trending_flat_rounded,
-            label: 'Дальше',
-            value: next == null ? 'После текущего этапа' : next.node.title,
-            meta: next == null
-                ? 'новый этап появится в плане'
-                : 'следующая ступень',
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RoadmapFocusLine extends StatelessWidget {
-  final bool isDark;
-  final Color color;
-  final IconData icon;
-  final String label;
-  final String value;
-  final String meta;
-
-  const _RoadmapFocusLine({
-    required this.isDark,
-    required this.color,
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.meta,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 24,
-          height: 24,
-          decoration: BoxDecoration(
-            color: color.withAlpha(18),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, color: color, size: 14),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '$label · $value',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: textColor(isDark),
-                  fontSize: 12,
-                  height: 1.15,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                meta,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: subtext(isDark),
-                  fontSize: 10.8,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
           ),
         ),
       ],
@@ -613,31 +451,16 @@ class _SkillInspector extends StatelessWidget {
   final AppState state;
   final bool isDark;
   final Skill skill;
-  final ValueChanged<Task> onSelectQuest;
-  final void Function(Task task, Offset position) onToggleQuest;
-  final ValueChanged<Task> onEditQuest;
 
   const _SkillInspector({
     required this.state,
     required this.isDark,
     required this.skill,
-    required this.onSelectQuest,
-    required this.onToggleQuest,
-    required this.onEditQuest,
   });
 
   @override
   Widget build(BuildContext context) {
-    final tasks = state.tasksForSkill(skill.id);
-    final activeSkillTasks = _sortedActiveQuests(
-      tasks.where((task) => !task.isDone),
-    );
-    final completedSkillTasks = _sortedCompletedQuests(
-      tasks.where((task) => task.isDone),
-    );
-    final activeTasks = activeSkillTasks.length;
-    final doneTasks = completedSkillTasks.length;
-    final txt = textColor(isDark);
+    final sub = subtext(isDark);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -650,20 +473,14 @@ class _SkillInspector extends StatelessWidget {
           isDark: isDark,
         ),
         const SizedBox(height: 12),
-        if (_showRoadmapSummaryInInspector) ...[
-          _RoadmapSummaryCard(
-            isDark: isDark,
-            color: skill.color,
-            snapshot: _roadmapSnapshotFor(state, skill),
-          ),
-          const SizedBox(height: 10),
-        ],
         _MetricCard(
           isDark: isDark,
           color: skill.color,
-          title: 'Прогресс навыка',
-          value: '${skill.xp} / ${skill.xpNeeded} XP',
-          progress: skill.progress,
+          title: 'Путь навыка',
+          value: '${skill.masteredTreeNodeCount} / ${skill.treeNodes.length}',
+          progress: skill.treeProgress,
+          helperText:
+              'Выберите этап на дороге, чтобы увидеть практику и следующий маленький шаг.',
         ),
         const SizedBox(height: 10),
         Wrap(
@@ -678,36 +495,26 @@ class _SkillInspector extends StatelessWidget {
               label: '${skill.masteredTreeNodeCount} освоено',
               color: const Color(0xFF34C759),
             ),
-            TaskBadge(
-              label: '$activeTasks активн.',
-              color: const Color(0xFF4A9EFF),
-            ),
-            TaskBadge(
-              label: '$doneTasks закрыто',
-              color: const Color(0xFF8E8E93),
-            ),
           ],
         ),
         const SizedBox(height: 14),
-        Text(
-          'Практика навыка',
-          style: TextStyle(
-            color: txt,
-            fontSize: 13,
-            fontWeight: FontWeight.w900,
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: skill.color.withAlpha(isDark ? 16 : 10),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: skill.color.withAlpha(40)),
           ),
-        ),
-        const SizedBox(height: 8),
-        Expanded(
-          child: _StagePracticeQuestList(
-            isDark: isDark,
-            color: skill.color,
-            activeTasks: activeSkillTasks,
-            completedTasks: completedSkillTasks,
-            emptyText: 'Выберите этап на карте, чтобы создать практику.',
-            onSelectQuest: onSelectQuest,
-            onToggleQuest: onToggleQuest,
-            onEditQuest: onEditQuest,
+          child: Text(
+            skill.goal.trim().isEmpty
+                ? 'Цель пути пока не задана. Дорога всё равно показывает, какие этапы ведут навык вперёд.'
+                : 'Цель пути: ${skill.goal}',
+            style: TextStyle(
+              color: sub,
+              fontSize: 12.2,
+              height: 1.35,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
       ],
@@ -724,6 +531,7 @@ class _NodeInspector extends StatelessWidget {
   final VoidCallback onAddQuest;
   final ValueChanged<Task> onSelectQuest;
   final void Function(Task task, Offset position) onToggleQuest;
+  final void Function(Task task, Offset position) onMinimumAction;
   final ValueChanged<Task> onEditQuest;
   final VoidCallback onMaster;
   final VoidCallback onDelete;
@@ -737,6 +545,7 @@ class _NodeInspector extends StatelessWidget {
     required this.onAddQuest,
     required this.onSelectQuest,
     required this.onToggleQuest,
+    required this.onMinimumAction,
     required this.onEditQuest,
     required this.onMaster,
     required this.onDelete,
@@ -821,6 +630,7 @@ class _NodeInspector extends StatelessWidget {
             emptyText: 'Создайте практику для этого этапа.',
             onSelectQuest: onSelectQuest,
             onToggleQuest: onToggleQuest,
+            onMinimumAction: onMinimumAction,
             onEditQuest: onEditQuest,
           ),
         ),
@@ -1163,6 +973,7 @@ class _StagePracticeQuestList extends StatelessWidget {
   final String emptyText;
   final ValueChanged<Task> onSelectQuest;
   final void Function(Task task, Offset position) onToggleQuest;
+  final void Function(Task task, Offset position) onMinimumAction;
   final ValueChanged<Task> onEditQuest;
 
   const _StagePracticeQuestList({
@@ -1173,6 +984,7 @@ class _StagePracticeQuestList extends StatelessWidget {
     required this.emptyText,
     required this.onSelectQuest,
     required this.onToggleQuest,
+    required this.onMinimumAction,
     required this.onEditQuest,
   });
 
@@ -1208,6 +1020,7 @@ class _StagePracticeQuestList extends StatelessWidget {
               muted: false,
               onSelect: () => onSelectQuest(task),
               onToggle: (position) => onToggleQuest(task, position),
+              onMinimumAction: (position) => onMinimumAction(task, position),
               onEdit: () => onEditQuest(task),
             ),
           ),
@@ -1223,6 +1036,7 @@ class _StagePracticeQuestList extends StatelessWidget {
               muted: true,
               onSelect: () => onSelectQuest(task),
               onToggle: (position) => onToggleQuest(task, position),
+              onMinimumAction: (position) => onMinimumAction(task, position),
               onEdit: () => onEditQuest(task),
             ),
           ),
@@ -1238,6 +1052,7 @@ class _InspectorQuestRow extends StatelessWidget {
   final bool muted;
   final VoidCallback onSelect;
   final ValueChanged<Offset> onToggle;
+  final ValueChanged<Offset> onMinimumAction;
   final VoidCallback onEdit;
 
   const _InspectorQuestRow({
@@ -1247,6 +1062,7 @@ class _InspectorQuestRow extends StatelessWidget {
     required this.muted,
     required this.onSelect,
     required this.onToggle,
+    required this.onMinimumAction,
     required this.onEdit,
   });
 
@@ -1255,6 +1071,8 @@ class _InspectorQuestRow extends StatelessWidget {
     final done = task.isDone;
     final sub = subtext(isDark);
     final rowColor = done ? const Color(0xFF34C759) : color;
+    final canStartMinimum =
+        task.hasMinimumAction && !task.isDone && !task.isMinimumActionDone;
     final metadata = [
       typeLabel[task.type]!,
       priorityLabel[task.priority]!,
@@ -1341,11 +1159,28 @@ class _InspectorQuestRow extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                PressFeedback(
-                  scale: 0.9,
-                  tooltip: 'Редактировать',
-                  onTap: onEdit,
-                  child: Icon(Icons.edit_outlined, color: sub, size: 17),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (canStartMinimum) ...[
+                      Builder(
+                        builder: (minimumContext) => _RoadmapMinimumButton(
+                          isDark: isDark,
+                          color: color,
+                          onTap: () => onMinimumAction(
+                            _feedbackOriginFor(minimumContext),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 7),
+                    ],
+                    PressFeedback(
+                      scale: 0.9,
+                      tooltip: 'Редактировать',
+                      onTap: onEdit,
+                      child: Icon(Icons.edit_outlined, color: sub, size: 17),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -1402,6 +1237,50 @@ class _QuestToggleCircle extends StatelessWidget {
                 color: Colors.white,
               )
             : const SizedBox(key: ValueKey('active')),
+      ),
+    );
+  }
+}
+
+class _RoadmapMinimumButton extends StatelessWidget {
+  final bool isDark;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _RoadmapMinimumButton({
+    required this.isDark,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return PressFeedback(
+      scale: 0.92,
+      tooltip: 'Сделать минимальный шаг',
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        decoration: BoxDecoration(
+          color: color.withAlpha(isDark ? 34 : 24),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: color.withAlpha(80)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.bolt_rounded, color: color, size: 13),
+            const SizedBox(width: 3),
+            Text(
+              'Минимум',
+              style: TextStyle(
+                color: color,
+                fontSize: 10.2,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

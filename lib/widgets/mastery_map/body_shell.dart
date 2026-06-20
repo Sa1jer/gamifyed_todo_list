@@ -84,6 +84,7 @@ class _MasteryMapBody extends StatelessWidget {
   final void Function(Skill skill, RoadmapTemplateConfig config)
   onApplyRoadmapTemplate;
   final void Function(Task task, Offset position) onToggleQuest;
+  final void Function(Task task, Offset position) onMinimumAction;
   final void Function(Skill skill, Task task) onEditQuest;
   final ValueChanged<Task> onDeleteQuest;
   final void Function(Skill skill, SkillTreeNode node) onMasterNode;
@@ -100,6 +101,7 @@ class _MasteryMapBody extends StatelessWidget {
     required this.onAddQuest,
     required this.onApplyRoadmapTemplate,
     required this.onToggleQuest,
+    required this.onMinimumAction,
     required this.onEditQuest,
     required this.onDeleteQuest,
     required this.onMasterNode,
@@ -181,6 +183,7 @@ class _MasteryMapBody extends StatelessWidget {
                       onAddQuest: (skill, node) =>
                           closeThen(() => onAddQuest(skill, node)),
                       onToggleQuest: onToggleQuest,
+                      onMinimumAction: onMinimumAction,
                       onEditQuest: (skill, task) =>
                           closeThen(() => onEditQuest(skill, task)),
                       onDeleteQuest: (task) =>
@@ -227,6 +230,7 @@ class _MasteryMapBody extends StatelessWidget {
           onExtendPath: onExtendPath,
           onAddQuest: onAddQuest,
           onToggleQuest: onToggleQuest,
+          onMinimumAction: onMinimumAction,
           onEditQuest: onEditQuest,
           onDeleteQuest: onDeleteQuest,
           onMasterNode: onMasterNode,

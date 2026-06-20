@@ -39,16 +39,22 @@ class _ActWorkspace extends StatelessWidget {
 class _MasteryWorkspace extends StatelessWidget {
   final bool isDark;
   final Function(String taskId, Offset pos) onComplete;
+  final Function(String taskId, Offset pos) onMinimumAction;
 
   const _MasteryWorkspace({
     super.key,
     required this.isDark,
     required this.onComplete,
+    required this.onMinimumAction,
   });
 
   @override
   Widget build(BuildContext context) {
-    return MasteryMapWorkspace(isDark: isDark, onCompleteTask: onComplete);
+    return MasteryMapWorkspace(
+      isDark: isDark,
+      onCompleteTask: onComplete,
+      onMinimumAction: onMinimumAction,
+    );
   }
 }
 

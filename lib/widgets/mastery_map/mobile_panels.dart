@@ -47,12 +47,12 @@ class _MasteryMobileSelectionSummary extends StatelessWidget {
                 icon: Icons.touch_app_outlined,
                 color: const Color(0xFF4A9EFF),
                 title: 'Выберите навык',
-                subtitle: 'карта раскроет этапы, детали откроются отдельно',
+                subtitle: 'кнопка «Путь» раскроет этапы',
                 isDark: isDark,
               ),
               const SizedBox(height: 10),
               Text(
-                'На карте виден путь мастерства. Нажмите на сферу навыка, чтобы посмотреть этапы.',
+                'На карте видны навыки как сферы. Сама сфера — цель, а кнопка «Путь» открывает этапы.',
                 style: TextStyle(
                   color: sub,
                   fontSize: 12,
@@ -176,6 +176,7 @@ class _MobileMasterySelectionPanel extends StatelessWidget {
   final void Function(Skill skill, SkillTreeNode node) onExtendPath;
   final void Function(Skill skill, SkillTreeNode? node) onAddQuest;
   final void Function(Task task, Offset position) onToggleQuest;
+  final void Function(Task task, Offset position) onMinimumAction;
   final void Function(Skill skill, Task task) onEditQuest;
   final ValueChanged<Task> onDeleteQuest;
   final void Function(Skill skill, SkillTreeNode node) onMasterNode;
@@ -191,6 +192,7 @@ class _MobileMasterySelectionPanel extends StatelessWidget {
     required this.onExtendPath,
     required this.onAddQuest,
     required this.onToggleQuest,
+    required this.onMinimumAction,
     required this.onEditQuest,
     required this.onDeleteQuest,
     required this.onMasterNode,
@@ -240,6 +242,7 @@ class _MobileMasterySelectionPanel extends StatelessWidget {
               onAddQuest: () => onAddQuest(skill, node),
               onSelectQuest: (task) => onSelectQuest(skill, task),
               onToggleQuest: onToggleQuest,
+              onMinimumAction: onMinimumAction,
               onEditQuest: (task) => onEditQuest(skill, task),
               onMaster: () => onMasterNode(skill, node),
               onDelete: () => onDeleteNode(skill, node),
@@ -249,9 +252,6 @@ class _MobileMasterySelectionPanel extends StatelessWidget {
               state: state,
               isDark: isDark,
               skill: skill,
-              onSelectQuest: (task) => onSelectQuest(skill, task),
-              onToggleQuest: onToggleQuest,
-              onEditQuest: (task) => onEditQuest(skill, task),
             ),
           _ => _MobileEmptyMasteryPanel(
             state: state,
@@ -286,12 +286,12 @@ class _MobileEmptyMasteryPanel extends StatelessWidget {
           icon: Icons.touch_app_outlined,
           color: const Color(0xFF4A9EFF),
           title: 'Выберите навык',
-          subtitle: 'карта покажет этапы, практика откроется в панели',
+          subtitle: 'кнопка «Путь» покажет этапы',
           isDark: isDark,
         ),
         const SizedBox(height: 10),
         Text(
-          'На мобильном карта остаётся обзором пути. Практика этапов живёт в этой панели ниже canvas.',
+          'На мобильном карта остаётся обзором пути. Открывайте дорогу через «Путь», а практику этапов смотрите в этой панели.',
           style: TextStyle(
             color: sub,
             fontSize: 12,
@@ -349,7 +349,7 @@ class _MobileMasterySkillChip extends StatelessWidget {
             const SizedBox(width: 6),
             Flexible(
               child: Text(
-                skill.name,
+                'Путь · ${skill.name}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -379,26 +379,16 @@ class _MobileSkillMasteryPanel extends StatelessWidget {
   final AppState state;
   final bool isDark;
   final Skill skill;
-  final ValueChanged<Task> onSelectQuest;
-  final void Function(Task task, Offset position) onToggleQuest;
-  final ValueChanged<Task> onEditQuest;
 
   const _MobileSkillMasteryPanel({
     required this.state,
     required this.isDark,
     required this.skill,
-    required this.onSelectQuest,
-    required this.onToggleQuest,
-    required this.onEditQuest,
   });
 
   @override
   Widget build(BuildContext context) {
-    final tasks = state.tasksForSkill(skill.id);
-    final activeTasks = _sortedActiveQuests(
-      tasks.where((task) => !task.isDone),
-    );
-    final completedCount = tasks.where((task) => task.isDone).length;
+    final sub = subtext(isDark);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -411,20 +401,14 @@ class _MobileSkillMasteryPanel extends StatelessWidget {
           isDark: isDark,
         ),
         const SizedBox(height: 12),
-        if (_showRoadmapSummaryInInspector) ...[
-          _RoadmapSummaryCard(
-            isDark: isDark,
-            color: skill.color,
-            snapshot: _roadmapSnapshotFor(state, skill),
-          ),
-          const SizedBox(height: 10),
-        ],
         _MetricCard(
           isDark: isDark,
           color: skill.color,
-          title: 'Прогресс навыка',
-          value: '${skill.xp} / ${skill.xpNeeded} XP',
-          progress: skill.progress,
+          title: 'Путь навыка',
+          value: '${skill.masteredTreeNodeCount} / ${skill.treeNodes.length}',
+          progress: skill.treeProgress,
+          helperText:
+              'Выберите этап на дороге, чтобы увидеть его практику и следующий маленький шаг.',
         ),
         const SizedBox(height: 10),
         Wrap(
@@ -439,26 +423,19 @@ class _MobileSkillMasteryPanel extends StatelessWidget {
               label: '${skill.masteredTreeNodeCount} освоено',
               color: const Color(0xFF34C759),
             ),
-            TaskBadge(
-              label: '${activeTasks.length} активн.',
-              color: const Color(0xFF4A9EFF),
-            ),
-            TaskBadge(
-              label: '$completedCount закрыто',
-              color: const Color(0xFF8E8E93),
-            ),
           ],
         ),
         const SizedBox(height: 12),
-        _MobileMasteryQuestPreview(
-          title: 'Практика навыка',
-          tasks: activeTasks.take(3).toList(),
-          emptyText: 'Выберите этап на карте, чтобы создать практику.',
-          isDark: isDark,
-          color: skill.color,
-          onSelectQuest: onSelectQuest,
-          onToggleQuest: onToggleQuest,
-          onEditQuest: onEditQuest,
+        Text(
+          skill.goal.trim().isEmpty
+              ? 'Цель пути пока не задана. Дорога всё равно показывает, какие этапы ведут навык вперёд.'
+              : 'Цель пути: ${skill.goal}',
+          style: TextStyle(
+            color: sub,
+            fontSize: 12,
+            height: 1.3,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ],
     );
@@ -474,6 +451,7 @@ class _MobileNodeMasteryPanel extends StatelessWidget {
   final VoidCallback onAddQuest;
   final ValueChanged<Task> onSelectQuest;
   final void Function(Task task, Offset position) onToggleQuest;
+  final void Function(Task task, Offset position) onMinimumAction;
   final ValueChanged<Task> onEditQuest;
   final VoidCallback onMaster;
   final VoidCallback onDelete;
@@ -487,6 +465,7 @@ class _MobileNodeMasteryPanel extends StatelessWidget {
     required this.onAddQuest,
     required this.onSelectQuest,
     required this.onToggleQuest,
+    required this.onMinimumAction,
     required this.onEditQuest,
     required this.onMaster,
     required this.onDelete,
@@ -554,6 +533,7 @@ class _MobileNodeMasteryPanel extends StatelessWidget {
           color: skill.color,
           onSelectQuest: onSelectQuest,
           onToggleQuest: onToggleQuest,
+          onMinimumAction: onMinimumAction,
           onEditQuest: onEditQuest,
         ),
         const SizedBox(height: 12),
@@ -702,72 +682,6 @@ class _MobileQuestMasteryPanel extends StatelessWidget {
   }
 }
 
-class _MobileMasteryQuestPreview extends StatelessWidget {
-  final String title;
-  final List<Task> tasks;
-  final String emptyText;
-  final bool isDark;
-  final Color color;
-  final ValueChanged<Task> onSelectQuest;
-  final void Function(Task task, Offset position) onToggleQuest;
-  final ValueChanged<Task> onEditQuest;
-
-  const _MobileMasteryQuestPreview({
-    required this.title,
-    required this.tasks,
-    required this.emptyText,
-    required this.isDark,
-    required this.color,
-    required this.onSelectQuest,
-    required this.onToggleQuest,
-    required this.onEditQuest,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final sub = subtext(isDark);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: TextStyle(
-            color: textColor(isDark),
-            fontSize: 13,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        const SizedBox(height: 7),
-        if (tasks.isEmpty)
-          Text(
-            emptyText,
-            style: TextStyle(
-              color: sub,
-              fontSize: 11.8,
-              height: 1.3,
-              fontWeight: FontWeight.w600,
-            ),
-          )
-        else
-          ...tasks.map(
-            (task) => Padding(
-              padding: const EdgeInsets.only(bottom: 7),
-              child: _MobileMasteryQuestRow(
-                task: task,
-                isDark: isDark,
-                color: color,
-                onSelect: () => onSelectQuest(task),
-                onToggle: (position) => onToggleQuest(task, position),
-                onEdit: () => onEditQuest(task),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
 class _MobileStagePracticeList extends StatelessWidget {
   final String title;
   final List<Task> activeTasks;
@@ -777,6 +691,7 @@ class _MobileStagePracticeList extends StatelessWidget {
   final Color color;
   final ValueChanged<Task> onSelectQuest;
   final void Function(Task task, Offset position) onToggleQuest;
+  final void Function(Task task, Offset position) onMinimumAction;
   final ValueChanged<Task> onEditQuest;
 
   const _MobileStagePracticeList({
@@ -788,6 +703,7 @@ class _MobileStagePracticeList extends StatelessWidget {
     required this.color,
     required this.onSelectQuest,
     required this.onToggleQuest,
+    required this.onMinimumAction,
     required this.onEditQuest,
   });
 
@@ -828,6 +744,7 @@ class _MobileStagePracticeList extends StatelessWidget {
                 color: color,
                 onSelect: () => onSelectQuest(task),
                 onToggle: (position) => onToggleQuest(task, position),
+                onMinimumAction: (position) => onMinimumAction(task, position),
                 onEdit: () => onEditQuest(task),
               ),
             ),
@@ -842,6 +759,7 @@ class _MobileStagePracticeList extends StatelessWidget {
                 color: color,
                 onSelect: () => onSelectQuest(task),
                 onToggle: (position) => onToggleQuest(task, position),
+                onMinimumAction: (position) => onMinimumAction(task, position),
                 onEdit: () => onEditQuest(task),
               ),
             ),
@@ -857,6 +775,7 @@ class _MobileMasteryQuestRow extends StatelessWidget {
   final Color color;
   final VoidCallback onSelect;
   final ValueChanged<Offset> onToggle;
+  final ValueChanged<Offset> onMinimumAction;
   final VoidCallback onEdit;
 
   const _MobileMasteryQuestRow({
@@ -865,12 +784,15 @@ class _MobileMasteryQuestRow extends StatelessWidget {
     required this.color,
     required this.onSelect,
     required this.onToggle,
+    required this.onMinimumAction,
     required this.onEdit,
   });
 
   @override
   Widget build(BuildContext context) {
     final sub = subtext(isDark);
+    final canStartMinimum =
+        task.hasMinimumAction && !task.isDone && !task.isMinimumActionDone;
 
     return PressFeedback(
       scale: 0.985,
@@ -932,6 +854,17 @@ class _MobileMasteryQuestRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
+            if (canStartMinimum) ...[
+              Builder(
+                builder: (minimumContext) => _RoadmapMinimumButton(
+                  isDark: isDark,
+                  color: color,
+                  onTap: () =>
+                      onMinimumAction(_feedbackOriginFor(minimumContext)),
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
             PressFeedback(
               scale: 0.9,
               tooltip: 'Редактировать',

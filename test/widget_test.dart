@@ -316,6 +316,92 @@ void main() {
     await tester.pump();
   });
 
+  testWidgets('RoadMap uses explicit path entry and starts minimum practice', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final stage = SkillTreeNode(id: 'stage-1', title: 'Основа');
+    final storage = InMemoryStorageService()
+      .._onboardingSeen = true
+      ..skills = [
+        Skill(
+          id: 'skill-1',
+          name: 'Python',
+          goal: 'Собрать первый проект',
+          color: const Color(0xFF4A9EFF),
+          icon: Icons.code,
+          treeNodes: [stage],
+        ),
+      ]
+      ..tasks = [
+        Task(
+          id: 'task-min',
+          title: 'Открыть редактор',
+          skillId: 'skill-1',
+          xpReward: 20,
+          type: TaskType.shortTerm,
+          treeNodeId: stage.id,
+          minimumAction: 'Открыть файл на 5 минут',
+        ),
+        Task(
+          id: 'task-no-min',
+          title: 'Написать модуль',
+          skillId: 'skill-1',
+          xpReward: 20,
+          type: TaskType.shortTerm,
+          treeNodeId: stage.id,
+        ),
+      ];
+
+    await storage.init();
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    await tester.tap(find.byIcon(Icons.account_tree).first);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Python').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Шаблон RoadMap'), findsNothing);
+    expect(find.text('Назад к навыкам'), findsNothing);
+
+    await tester.tap(find.text('Путь').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Шаблон RoadMap'), findsOneWidget);
+    expect(find.text('Назад к навыкам'), findsOneWidget);
+
+    await tester.tap(find.text('Основа').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Практика этапа'), findsOneWidget);
+    expect(find.text('Открыть редактор'), findsOneWidget);
+    expect(find.text('Написать модуль'), findsOneWidget);
+    expect(find.text('Минимум'), findsOneWidget);
+
+    await tester.tap(find.text('Минимум'));
+    await tester.pumpAndSettle();
+
+    final minimumTask = storage.tasks.firstWhere(
+      (task) => task.id == 'task-min',
+    );
+    final noMinimumTask = storage.tasks.firstWhere(
+      (task) => task.id == 'task-no-min',
+    );
+    expect(minimumTask.minimumActionDoneAt, isNotNull);
+    expect(minimumTask.minimumActionEarnedXP, greaterThan(0));
+    expect(noMinimumTask.minimumActionDoneAt, isNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+
   testWidgets('AddTaskDialog allows editing XP by typing the number', (
     WidgetTester tester,
   ) async {

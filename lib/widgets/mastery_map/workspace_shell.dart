@@ -3,11 +3,13 @@ part of '../mastery_map_workspace.dart';
 class MasteryMapWorkspace extends StatefulWidget {
   final bool isDark;
   final void Function(String taskId, Offset position) onCompleteTask;
+  final void Function(String taskId, Offset position) onMinimumAction;
 
   const MasteryMapWorkspace({
     super.key,
     required this.isDark,
     required this.onCompleteTask,
+    required this.onMinimumAction,
   });
 
   @override
@@ -59,6 +61,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
               setState(() => _selection = _MasterySelection.skill(skill.id));
             },
             onToggleQuest: _toggleQuestFromMap,
+            onMinimumAction: _minimumActionFromMap,
             onEditQuest: (skill, task) => _editQuest(context, skill, task),
             onDeleteQuest: (task) {
               state.removeTask(task.id);
@@ -117,6 +120,10 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
       return;
     }
     widget.onCompleteTask(task.id, position);
+  }
+
+  void _minimumActionFromMap(Task task, Offset position) {
+    widget.onMinimumAction(task.id, position);
   }
 
   void _addNode(
@@ -429,6 +436,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
                                 );
                               },
                               onToggleQuest: _toggleQuestFromMap,
+                              onMinimumAction: _minimumActionFromMap,
                               onEditQuest: (skill, task) => _editQuest(
                                 dialogContext,
                                 skill,

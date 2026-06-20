@@ -314,6 +314,7 @@ class _MainPageState extends State<MainPage> {
                             key: const ValueKey('mastery-workspace'),
                             isDark: isDark,
                             onComplete: _onComplete,
+                            onMinimumAction: _onMinimumAction,
                           ),
                           WorkspaceMode.stats => _buildStatisticsWorkspace(
                             s,

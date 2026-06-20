@@ -10,7 +10,6 @@ import '../feedback_service.dart';
 import '../models.dart';
 import '../utils.dart';
 import 'dialogs.dart';
-import 'goal_header.dart';
 import 'shared.dart';
 
 part 'mastery_map/selection_models.dart';
