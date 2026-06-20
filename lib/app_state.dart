@@ -59,6 +59,7 @@ class AppState extends ChangeNotifier {
   final List<RewardChest> _pendingRewardNotifications = [];
   final List<Buff> _pendingBuffNotifications = [];
   final List<Achievement> _pendingAchievementNotifications = [];
+  final Set<String> _dismissedCourseNudgeKeys = {};
   DailyStats? todayStats;
 
   int _bestStreak = 0;
@@ -472,6 +473,15 @@ class AppState extends ChangeNotifier {
     _tooltipsEnabled = !_tooltipsEnabled;
     notifyListeners();
     _storage.saveTooltipsEnabled(_tooltipsEnabled);
+  }
+
+  bool isCourseNudgeDismissed(String key) =>
+      _dismissedCourseNudgeKeys.contains(key);
+
+  void dismissCourseNudge(String key) {
+    if (_dismissedCourseNudgeKeys.add(key)) {
+      notifyListeners();
+    }
   }
 
   void dismissFirstRunTutorial() {

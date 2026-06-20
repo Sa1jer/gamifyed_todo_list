@@ -5,6 +5,9 @@ class AddTaskDialog extends StatefulWidget {
   final Color skillColor;
   final Skill? skill;
   final String? initialTreeNodeId;
+  final String? initialTitle;
+  final String? initialMinimumAction;
+  final bool focusMinimumAction;
   final Task? existing;
   final Function(
     String title,
@@ -28,6 +31,9 @@ class AddTaskDialog extends StatefulWidget {
     required this.skillColor,
     this.skill,
     this.initialTreeNodeId,
+    this.initialTitle,
+    this.initialMinimumAction,
+    this.focusMinimumAction = false,
     this.existing,
     required this.onSave,
   });
@@ -38,6 +44,7 @@ class AddTaskDialog extends StatefulWidget {
 class _AddTaskDialogState extends State<AddTaskDialog> {
   final _titleCtrl = TextEditingController();
   final _minimumActionCtrl = TextEditingController();
+  final _minimumActionFocusNode = FocusNode();
   final _customCtrl = TextEditingController(text: '1');
   final _subtaskCtrl = TextEditingController();
   final _tagCtrl = TextEditingController();
@@ -143,7 +150,8 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     if (widget.existing case final ex?) {
       _titleCtrl.text = ex.title;
       _minimumActionCtrl.text = ex.minimumAction;
-      _minimumActionEnabled = ex.minimumAction.trim().isNotEmpty;
+      _minimumActionEnabled =
+          ex.minimumAction.trim().isNotEmpty || widget.focusMinimumAction;
       _xp = ex.xpReward;
       _type = ex.type;
       _freq = ex.repeatFrequency;
@@ -168,17 +176,34 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
         );
       }
     } else {
+      final initialTitle = widget.initialTitle?.trim();
+      final initialMinimum = widget.initialMinimumAction?.trim();
+      if (initialTitle != null && initialTitle.isNotEmpty) {
+        _titleCtrl.text = initialTitle;
+      }
+      if (initialMinimum != null && initialMinimum.isNotEmpty) {
+        _minimumActionCtrl.text = initialMinimum;
+      }
       _treeNodeId = widget.initialTreeNodeId;
-      _minimumActionEnabled = widget.initialTreeNodeId != null;
+      _minimumActionEnabled =
+          widget.initialTreeNodeId != null ||
+          _minimumActionCtrl.text.trim().isNotEmpty ||
+          widget.focusMinimumAction;
     }
     _titleCtrl.addListener(_refreshDraft);
     _minimumActionCtrl.addListener(_refreshDraft);
+    if (widget.focusMinimumAction) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _minimumActionFocusNode.requestFocus();
+      });
+    }
   }
 
   @override
   void dispose() {
     _titleCtrl.dispose();
     _minimumActionCtrl.dispose();
+    _minimumActionFocusNode.dispose();
     _customCtrl.dispose();
     _subtaskCtrl.dispose();
     _tagCtrl.dispose();
@@ -428,6 +453,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
               padding: const EdgeInsets.only(top: 10),
               child: TextField(
                 controller: _minimumActionCtrl,
+                focusNode: _minimumActionFocusNode,
                 style: TextStyle(color: txt, fontSize: 13),
                 minLines: 2,
                 maxLines: 4,

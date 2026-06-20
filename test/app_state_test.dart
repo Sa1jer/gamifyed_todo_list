@@ -143,6 +143,31 @@ void main() {
     });
   });
 
+  group('course nudge runtime dismiss', () {
+    test('dismissed keys are session-only', () {
+      final storage = _InMemoryStorageService();
+      final state = AppState(storage: storage, seedDefaults: false);
+
+      state.dismissCourseNudge('skill:review:createFocusQuest:target');
+
+      expect(
+        state.isCourseNudgeDismissed('skill:review:createFocusQuest:target'),
+        isTrue,
+      );
+
+      final restarted = AppState(storage: storage, seedDefaults: false);
+      expect(
+        restarted.isCourseNudgeDismissed(
+          'skill:review:createFocusQuest:target',
+        ),
+        isFalse,
+      );
+
+      state.dispose();
+      restarted.dispose();
+    });
+  });
+
   group('profile image hardening', () {
     late AppState state;
 

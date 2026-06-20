@@ -1,6 +1,6 @@
 # DESIGN / Product And UI Notes
 
-Last updated: 2026-06-19
+Last updated: 2026-06-20
 
 This file records design direction, product guardrails, and UI decisions. Update it after every meaningful product/UI change so implementation stays aligned with the app's intended mental model.
 
@@ -32,6 +32,14 @@ Secondary top-bar entries:
 
 Design implication:
 `Статистика` should be useful but should not compete with `Сейчас / Карта`.
+
+Current `1.3.35` nudge decision:
+
+- Former Planning does not return as a section.
+- Course correction appears as one derived `Следующая корректировка` card inside `Статистика -> История роста`.
+- The card is review-driven and offers one action only.
+- `Позже` is session-only and not persisted.
+- Act stays action-first and does not show nudges in this iteration.
 
 Current `1.3.34` Planning decision:
 
@@ -79,6 +87,34 @@ Current `1.3.34` decision:
 - Do not add new Planning diagnostics or settings.
 - Keep setup pressure in existing lighter surfaces: creation flow, RoadMap stage actions, task edit dialogs and profile/settings.
 - Do not let Planning return as a dashboard/audit center.
+
+### Review-To-Action Nudges
+
+Design rule:
+Nudge is not a new task type, not a status, and not an inbox. It is a small moment of course correction after reflection.
+
+Allowed:
+
+- One card at a time.
+- One reason.
+- One primary CTA.
+- Runtime-only dismiss.
+- Derived from current skills, reviews, quests and stages.
+
+Not allowed:
+
+- Lists of issues.
+- Readiness dashboard.
+- Persistent pending/applied/dismissed nudge state.
+- Showing in `Сейчас` before the behavior is validated.
+
+Action hierarchy:
+
+- Actionable review focus can become a prefilled quest.
+- Vague focus asks for clarification instead of creating a bad quest.
+- Missing minimum step opens the existing quest with minimum-step focus.
+- Active stage without practice opens a prefilled stage quest.
+- Weak goal opens existing skill edit, not a SMARTER wizard.
 
 ## Tooltip / Hint Direction
 

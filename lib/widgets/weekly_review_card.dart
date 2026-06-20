@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../app_state.dart';
+import '../engines/course_nudge_engine.dart';
 import '../engines/review_engine.dart';
 import '../models.dart';
 import '../utils.dart';
+import 'course_nudge_card.dart';
 import 'shared.dart';
 
 class WeeklyReviewCard extends StatefulWidget {
@@ -11,6 +13,11 @@ class WeeklyReviewCard extends StatefulWidget {
   final bool isDark;
   final Skill? skill;
   final bool initiallyExpanded;
+  final bool autoExpandWhenDue;
+  final bool showSavedNudge;
+  final CourseNudge? Function(Skill skill)? buildNudgeForSkill;
+  final ValueChanged<CourseNudge>? onApplyNudge;
+  final ValueChanged<CourseNudge>? onDismissNudge;
 
   const WeeklyReviewCard({
     super.key,
@@ -18,6 +25,11 @@ class WeeklyReviewCard extends StatefulWidget {
     required this.isDark,
     this.skill,
     this.initiallyExpanded = false,
+    this.autoExpandWhenDue = false,
+    this.showSavedNudge = false,
+    this.buildNudgeForSkill,
+    this.onApplyNudge,
+    this.onDismissNudge,
   });
 
   @override
@@ -36,6 +48,8 @@ class _WeeklyReviewCardState extends State<WeeklyReviewCard> {
   bool _dismissed = false;
   String? _syncedSkillId;
   int? _syncedReviewCount;
+  String? _autoExpandedSkillId;
+  CourseNudge? _savedNudge;
 
   @override
   void initState() {
@@ -62,6 +76,7 @@ class _WeeklyReviewCardState extends State<WeeklyReviewCard> {
     if (suggestion == null) return const SizedBox.shrink();
 
     _syncControllers(suggestion);
+    _autoExpandIfNeeded(suggestion);
 
     final isDark = widget.isDark;
     final color = suggestion.skill.color;
@@ -226,9 +241,46 @@ class _WeeklyReviewCardState extends State<WeeklyReviewCard> {
               ],
             ),
           ],
+          if (widget.showSavedNudge && _savedNudge != null) ...[
+            const SizedBox(height: 12),
+            CourseNudgeCard(
+              nudge: _savedNudge!,
+              isDark: isDark,
+              onPrimary: () {
+                final nudge = _savedNudge!;
+                if (nudge.kind == CourseNudgeKind.clarifyFocus) {
+                  setState(() {
+                    _savedNudge = null;
+                    _expanded = true;
+                  });
+                  return;
+                }
+                setState(() => _savedNudge = null);
+                widget.onApplyNudge?.call(nudge);
+              },
+              onDismiss: () {
+                final nudge = _savedNudge!;
+                widget.onDismissNudge?.call(nudge);
+                setState(() => _savedNudge = null);
+              },
+            ),
+          ],
         ],
       ),
     );
+  }
+
+  void _autoExpandIfNeeded(ReviewSuggestion suggestion) {
+    if (!widget.autoExpandWhenDue ||
+        !suggestion.isDue ||
+        _expanded ||
+        _autoExpandedSkillId == suggestion.skill.id) {
+      return;
+    }
+    _autoExpandedSkillId = suggestion.skill.id;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _expanded = true);
+    });
   }
 
   void _syncControllers(ReviewSuggestion suggestion) {
@@ -259,10 +311,16 @@ class _WeeklyReviewCardState extends State<WeeklyReviewCard> {
     );
 
     widget.state.addGoalReview(skill.id, review);
-    setState(() => _expanded = false);
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      const SnackBar(content: Text('Review сохранён в историю цели')),
-    );
+    final freshSkill = widget.state.skills
+        .where((candidate) => candidate.id == skill.id)
+        .firstOrNull;
+    final nextNudge = freshSkill == null
+        ? null
+        : widget.buildNudgeForSkill?.call(freshSkill);
+    setState(() {
+      _expanded = false;
+      _savedNudge = widget.showSavedNudge ? nextNudge : null;
+    });
   }
 }
 

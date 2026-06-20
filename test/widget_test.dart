@@ -321,4 +321,59 @@ void main() {
 
     expect(find.text('75 XP'), findsOneWidget);
   });
+
+  testWidgets('AddTaskDialog supports course nudge prefilled quest', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(900, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    String? savedTitle;
+    String? savedMinimum;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AddTaskDialog(
+            isDark: true,
+            skillColor: const Color(0xFF4A9EFF),
+            initialTitle: 'прочитать 20 страниц',
+            initialMinimumAction: 'Открыть книгу на 5 минут',
+            focusMinimumAction: true,
+            onSave:
+                (
+                  title,
+                  xp,
+                  type,
+                  freq,
+                  customDays,
+                  priority,
+                  minimumAction,
+                  subtasks,
+                  tags,
+                  notificationsEnabled,
+                  notificationHour,
+                  notificationMinute,
+                  treeNodeId,
+                ) {
+                  savedTitle = title;
+                  savedMinimum = minimumAction;
+                },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('прочитать 20 страниц'), findsOneWidget);
+    expect(find.text('Открыть книгу на 5 минут'), findsOneWidget);
+
+    await tester.tap(find.text('Создать'));
+    await tester.pumpAndSettle();
+
+    expect(savedTitle, 'прочитать 20 страниц');
+    expect(savedMinimum, 'Открыть книгу на 5 минут');
+  });
 }

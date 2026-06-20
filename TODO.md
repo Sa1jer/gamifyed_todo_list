@@ -1,6 +1,6 @@
 # TODO / Living Backlog
 
-Last updated: 2026-06-19
+Last updated: 2026-06-20
 
 This file tracks technical details, completed work, open tasks, and remaining work sorted by priority. Update it after every meaningful code or design change, even when the change is small.
 
@@ -29,11 +29,16 @@ This file tracks technical details, completed work, open tasks, and remaining wo
 - `1.3.32`: moved `План` out of primary navigation experimentally and exposed it as `Настройка навыка` from Act/RoadMap.
 - `1.3.33`: added a show-once animated first-run spotlight over the real `Создать первый навык` CTA, with replay from profile settings.
 - `1.3.34`: froze Planning and removed its user-facing entry points from Act/RoadMap/app shell; Planning code remains dormant for reference only.
+- `1.3.35`: added derived-only `CourseNudgeEngine` and `Следующая корректировка` in `Статистика -> История роста`.
+- `1.3.35`: weekly review now feeds one actionable nudge instead of a generic saved-review snackbar.
+- `1.3.35`: nudge dismiss is runtime-only (`Позже` lasts for the current session, with no storage model).
+- `1.3.35`: `AddTaskDialog` supports nudge prefill for title/minimum step and focused minimum editing.
 
 ## Next Planned Batches
 
-- `1.3.35` — RoadMap + Goal Polish: make RoadMap visually and textually lead toward the skill goal, with quiet SMARTER hints.
-- `1.3.36` — Release QA / Public Build Hardening: full regression, manual QA, copy audit, width checks and known non-blockers.
+- `1.3.36` — Statistics Cleanup: ensure `Статистика` does not become the new Planning; keep `Следующая корректировка` small and review-driven.
+- `1.3.37` — RoadMap + Goal Polish: make RoadMap visually and textually lead toward the skill goal, with quiet SMARTER hints.
+- `1.3.38` — Release QA / Public Build Hardening: full regression, manual QA, copy audit, width checks and known non-blockers.
 
 ## P0 - Release / Data Safety
 
@@ -138,6 +143,28 @@ Content rules:
 - If the feature returns, redesign it from first principles instead of restoring the overloaded dashboard.
 - Core setup should happen through creation flow, RoadMap stage actions, and lightweight edit dialogs.
 
+### Review-To-Action Nudge Loop - Implemented In 1.3.35
+
+Resolved:
+Former Planning should not return as a dashboard. Course correction now appears only after review / inside `Статистика -> История роста`.
+
+Implemented:
+
+- Added derived-only `CourseNudgeEngine`; no Hive/storage lifecycle and no new persisted entity.
+- `CourseNudgeCard` shows one small correction: title, reason, one primary CTA and `Позже`.
+- Priority: actionable review focus -> missing minimum step -> active stage without active quest -> weak SMARTER goal.
+- Vague review focus does not become a quest automatically; it asks the user to clarify focus.
+- `doReview` is not a nudge card; overdue review expands/highlights `WeeklyReviewCard`.
+- `Позже` is runtime-only and returns after app restart.
+- Act does not show course nudges in `1.3.35`.
+
+Acceptance:
+
+- No list of diagnostics.
+- No Planning tab, overlay, skill settings surface or dashboard returns.
+- Nudge disappears when the underlying issue is fixed.
+- New quest nudges open `AddTaskDialog` with prefilled title/minimum/stage context where available.
+
 ### First-Run Guided Onboarding - Implemented In 1.3.33
 
 Problem:
@@ -178,14 +205,21 @@ Acceptance:
 - Confirm stat-card icon placement on desktop and mobile after the recent right-side icon change.
 - Watch for truncation in Russian labels at narrow widths.
 
-### RoadMap + Goal Polish - Planned For 1.3.35
+### RoadMap + Goal Polish - Planned For 1.3.37
 
 - Make the RoadMap path feel like it leads to the skill goal, not just to a large skill bubble.
 - Keep SMARTER hints quiet: show only 1-2 helpful hints, not a score dashboard.
 - Use existing `GoalSpec`, `GoalEngine`, `GoalHeader` and skill edit flow.
 - Do not add more RoadMap templates, drag-and-drop or a new goal model in this batch.
 
-### Release QA / Public Build Hardening - Planned For 1.3.36
+### Statistics Cleanup - Planned For 1.3.36
+
+- Audit `Статистика` after the nudge loop.
+- Keep `CourseNudgeCard` as one correction, not a diagnostics panel.
+- Avoid showing nudges in Act until validated.
+- Check that weekly review, growth story and deeper stats still read as history, not management work.
+
+### Release QA / Public Build Hardening - Planned For 1.3.38
 
 - Manual QA: fresh state, populated state, first-run tutorial, RoadMap focus, stats/trophies.
 - Width checks: `360`, `393`, `430`, `760`, `980+`.
