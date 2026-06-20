@@ -400,7 +400,7 @@ class ProgressHubContent extends StatelessWidget {
                   const SizedBox(width: 9),
                   Expanded(
                     child: Text(
-                      'Прогресс здесь рассказывает историю роста. Если хочешь не анализировать, а двигаться дальше, вернись в режим “Действовать”.',
+                      'Статистика здесь рассказывает историю роста. Если хочешь не анализировать, а двигаться дальше, вернись в режим “Действовать”.',
                       style: TextStyle(color: sub, fontSize: 12, height: 1.3),
                     ),
                   ),

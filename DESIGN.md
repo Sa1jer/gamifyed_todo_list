@@ -184,6 +184,13 @@ Future tutorial polish:
 - Run copy audit for old user-facing terms: `задачи`, `узлы`, `баффы`, `боссы`, `Прогресс`.
 - Keep known non-blockers explicit in `TODO.md`.
 
+Current `1.3.38` release QA status:
+
+- Regression checks are green.
+- Stale user-facing `Прогресс` copy in Statistics was replaced.
+- Remaining old terms are either documentation, dormant Planning/legacy stage code, or compatibility classifiers.
+- Real-device/emulator width QA is still recommended before packaging a public build.
+
 ## XP Editing Direction
 
 Where XP can be changed by slider, numeric editing should eventually be available by tapping/clicking the number.

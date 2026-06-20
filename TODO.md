@@ -37,10 +37,12 @@ This file tracks technical details, completed work, open tasks, and remaining wo
 - `1.3.36`: added regression coverage that course nudges stay out of `Сейчас` and only appear in `Статистика`.
 - `1.3.37`: RoadMap skill bubbles stay as direct RoadMap entry points; practice rows no longer open quest focus on row tap.
 - `1.3.37`: RoadMap stage/practice rows can start an available `Минимум` through the existing XP/feedback flow.
+- `1.3.38`: completed release QA hardening pass: bumped version, fixed stale `Прогресс` copy in Statistics, reran copy audit and full regression suite.
 
 ## Next Planned Batches
 
-- `1.3.38` — Release QA / Public Build Hardening: full regression, manual QA, copy audit, width checks and known non-blockers.
+- No active implementation batch locked after `1.3.38`.
+- Next decision point: public build packaging vs. a new product phase.
 
 ## P0 - Release / Data Safety
 
@@ -245,13 +247,22 @@ Acceptance:
 - Review/nudge is a small correction moment, not a dashboard.
 - `Сейчас` remains action-first and nudge-free.
 
-### Release QA / Public Build Hardening - Planned For 1.3.38
+### Release QA / Public Build Hardening - Done In 1.3.38
 
-- Manual QA: fresh state, populated state, first-run tutorial, RoadMap focus, stats/trophies.
-- Width checks: `360`, `393`, `430`, `760`, `980+`.
-- Copy audit: no user-facing regressions to `задачи`, `узлы`, `баффы`, `боссы`, `Прогресс`.
-- Regression: `dart format lib test`, `flutter analyze`, `flutter test -r expanded --timeout 30s`.
-- Record known non-blockers before public build packaging.
+Completed:
+
+- Bumped release version to `1.3.38+1`.
+- Replaced stale user-facing Statistics copy that still said `Прогресс`.
+- Ran copy audit for old user-facing terms: `задачи`, `узлы`, `баффы`, `боссы`, `Прогресс`.
+- Ran regression checks: `dart format lib test`, `flutter analyze`, `flutter test -r expanded --timeout 30s`.
+- Confirmed Planning remains frozen and has no app-shell entry point.
+
+Known non-blockers before packaging:
+
+- `PlanningWorkspace` code and old Planning copy still exist as dormant rollback/reference code, but are not reachable from the app shell.
+- `shared.dart` still recognizes legacy words like `бафф` and `босс` in a keyword classifier for compatibility.
+- `dialogs/skill_tree_dialogs.dart` still contains legacy tree/stage dialog code and generic text like `Прогресс освоения`; this is not the main RoadMap surface.
+- Manual visual width QA should still be repeated on real device/emulator widths before a public store-style build.
 
 ### Top Bar Consistency
 
