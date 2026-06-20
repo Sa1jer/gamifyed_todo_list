@@ -47,12 +47,12 @@ class _MasteryMobileSelectionSummary extends StatelessWidget {
                 icon: Icons.touch_app_outlined,
                 color: const Color(0xFF4A9EFF),
                 title: 'Выберите навык',
-                subtitle: 'кнопка «Путь» раскроет этапы',
+                subtitle: 'карта покажет этапы',
                 isDark: isDark,
               ),
               const SizedBox(height: 10),
               Text(
-                'На карте видны навыки как сферы. Сама сфера — цель, а кнопка «Путь» открывает этапы.',
+                'На карте видны навыки как сферы. Выберите навык, чтобы увидеть путь и практику.',
                 style: TextStyle(
                   color: sub,
                   fontSize: 12,
@@ -171,7 +171,6 @@ class _MobileMasterySelectionPanel extends StatelessWidget {
   final bool isDark;
   final _MasterySelection? selection;
   final ValueChanged<Skill> onSelectSkill;
-  final void Function(Skill skill, Task task) onSelectQuest;
   final ValueChanged<Skill> onAddRoot;
   final void Function(Skill skill, SkillTreeNode node) onExtendPath;
   final void Function(Skill skill, SkillTreeNode? node) onAddQuest;
@@ -187,7 +186,6 @@ class _MobileMasterySelectionPanel extends StatelessWidget {
     required this.isDark,
     required this.selection,
     required this.onSelectSkill,
-    required this.onSelectQuest,
     required this.onAddRoot,
     required this.onExtendPath,
     required this.onAddQuest,
@@ -240,7 +238,6 @@ class _MobileMasterySelectionPanel extends StatelessWidget {
               node: node,
               onExtendPath: () => onExtendPath(skill, node),
               onAddQuest: () => onAddQuest(skill, node),
-              onSelectQuest: (task) => onSelectQuest(skill, task),
               onToggleQuest: onToggleQuest,
               onMinimumAction: onMinimumAction,
               onEditQuest: (task) => onEditQuest(skill, task),
@@ -286,12 +283,12 @@ class _MobileEmptyMasteryPanel extends StatelessWidget {
           icon: Icons.touch_app_outlined,
           color: const Color(0xFF4A9EFF),
           title: 'Выберите навык',
-          subtitle: 'кнопка «Путь» покажет этапы',
+          subtitle: 'карта покажет этапы, практика откроется в панели',
           isDark: isDark,
         ),
         const SizedBox(height: 10),
         Text(
-          'На мобильном карта остаётся обзором пути. Открывайте дорогу через «Путь», а практику этапов смотрите в этой панели.',
+          'На мобильном карта остаётся обзором пути. Практика этапов живёт в этой панели ниже canvas.',
           style: TextStyle(
             color: sub,
             fontSize: 12,
@@ -349,7 +346,7 @@ class _MobileMasterySkillChip extends StatelessWidget {
             const SizedBox(width: 6),
             Flexible(
               child: Text(
-                'Путь · ${skill.name}',
+                skill.name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -449,7 +446,6 @@ class _MobileNodeMasteryPanel extends StatelessWidget {
   final SkillTreeNode node;
   final VoidCallback onExtendPath;
   final VoidCallback onAddQuest;
-  final ValueChanged<Task> onSelectQuest;
   final void Function(Task task, Offset position) onToggleQuest;
   final void Function(Task task, Offset position) onMinimumAction;
   final ValueChanged<Task> onEditQuest;
@@ -463,7 +459,6 @@ class _MobileNodeMasteryPanel extends StatelessWidget {
     required this.node,
     required this.onExtendPath,
     required this.onAddQuest,
-    required this.onSelectQuest,
     required this.onToggleQuest,
     required this.onMinimumAction,
     required this.onEditQuest,
@@ -531,7 +526,6 @@ class _MobileNodeMasteryPanel extends StatelessWidget {
           emptyText: 'Создайте практику для этого этапа.',
           isDark: isDark,
           color: skill.color,
-          onSelectQuest: onSelectQuest,
           onToggleQuest: onToggleQuest,
           onMinimumAction: onMinimumAction,
           onEditQuest: onEditQuest,
@@ -689,7 +683,6 @@ class _MobileStagePracticeList extends StatelessWidget {
   final String emptyText;
   final bool isDark;
   final Color color;
-  final ValueChanged<Task> onSelectQuest;
   final void Function(Task task, Offset position) onToggleQuest;
   final void Function(Task task, Offset position) onMinimumAction;
   final ValueChanged<Task> onEditQuest;
@@ -701,7 +694,6 @@ class _MobileStagePracticeList extends StatelessWidget {
     required this.emptyText,
     required this.isDark,
     required this.color,
-    required this.onSelectQuest,
     required this.onToggleQuest,
     required this.onMinimumAction,
     required this.onEditQuest,
@@ -742,7 +734,6 @@ class _MobileStagePracticeList extends StatelessWidget {
                 task: task,
                 isDark: isDark,
                 color: color,
-                onSelect: () => onSelectQuest(task),
                 onToggle: (position) => onToggleQuest(task, position),
                 onMinimumAction: (position) => onMinimumAction(task, position),
                 onEdit: () => onEditQuest(task),
@@ -757,7 +748,6 @@ class _MobileStagePracticeList extends StatelessWidget {
                 task: task,
                 isDark: isDark,
                 color: color,
-                onSelect: () => onSelectQuest(task),
                 onToggle: (position) => onToggleQuest(task, position),
                 onMinimumAction: (position) => onMinimumAction(task, position),
                 onEdit: () => onEditQuest(task),
@@ -773,7 +763,6 @@ class _MobileMasteryQuestRow extends StatelessWidget {
   final Task task;
   final bool isDark;
   final Color color;
-  final VoidCallback onSelect;
   final ValueChanged<Offset> onToggle;
   final ValueChanged<Offset> onMinimumAction;
   final VoidCallback onEdit;
@@ -782,7 +771,6 @@ class _MobileMasteryQuestRow extends StatelessWidget {
     required this.task,
     required this.isDark,
     required this.color,
-    required this.onSelect,
     required this.onToggle,
     required this.onMinimumAction,
     required this.onEdit,
@@ -794,85 +782,81 @@ class _MobileMasteryQuestRow extends StatelessWidget {
     final canStartMinimum =
         task.hasMinimumAction && !task.isDone && !task.isMinimumActionDone;
 
-    return PressFeedback(
-      scale: 0.985,
-      onTap: onSelect,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF14141C) : const Color(0xFFF4F5FA),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: borderColor(isDark)),
-        ),
-        child: Row(
-          children: [
-            Builder(
-              builder: (iconContext) => PressFeedback(
-                scale: 0.9,
-                onTap: () => onToggle(_feedbackOriginFor(iconContext)),
-                child: _QuestToggleCircle(
-                  done: task.isDone,
-                  color: color,
-                  isDark: isDark,
-                  size: 18,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    task.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: task.isDone ? sub : textColor(isDark),
-                      fontSize: _adaptiveQuestTitleFontSize(task.title),
-                      height: 1.12,
-                      fontWeight: FontWeight.w900,
-                      decoration: task.isDone
-                          ? TextDecoration.lineThrough
-                          : TextDecoration.none,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    task.hasMinimumAction
-                        ? 'Минимум есть · +${task.xpReward} XP'
-                        : '+${task.xpReward} XP',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: sub,
-                      fontSize: 10.8,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            if (canStartMinimum) ...[
-              Builder(
-                builder: (minimumContext) => _RoadmapMinimumButton(
-                  isDark: isDark,
-                  color: color,
-                  onTap: () =>
-                      onMinimumAction(_feedbackOriginFor(minimumContext)),
-                ),
-              ),
-              const SizedBox(width: 8),
-            ],
-            PressFeedback(
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF14141C) : const Color(0xFFF4F5FA),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: borderColor(isDark)),
+      ),
+      child: Row(
+        children: [
+          Builder(
+            builder: (iconContext) => PressFeedback(
               scale: 0.9,
-              tooltip: 'Редактировать',
-              onTap: onEdit,
-              child: Icon(Icons.edit_outlined, color: sub, size: 17),
+              onTap: () => onToggle(_feedbackOriginFor(iconContext)),
+              child: _QuestToggleCircle(
+                done: task.isDone,
+                color: color,
+                isDark: isDark,
+                size: 18,
+              ),
             ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  task.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: task.isDone ? sub : textColor(isDark),
+                    fontSize: _adaptiveQuestTitleFontSize(task.title),
+                    height: 1.12,
+                    fontWeight: FontWeight.w900,
+                    decoration: task.isDone
+                        ? TextDecoration.lineThrough
+                        : TextDecoration.none,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  task.hasMinimumAction
+                      ? 'Минимум есть · +${task.xpReward} XP'
+                      : '+${task.xpReward} XP',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: sub,
+                    fontSize: 10.8,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          if (canStartMinimum) ...[
+            Builder(
+              builder: (minimumContext) => _RoadmapMinimumButton(
+                isDark: isDark,
+                color: color,
+                onTap: () =>
+                    onMinimumAction(_feedbackOriginFor(minimumContext)),
+              ),
+            ),
+            const SizedBox(width: 8),
           ],
-        ),
+          PressFeedback(
+            scale: 0.9,
+            tooltip: 'Редактировать',
+            onTap: onEdit,
+            child: Icon(Icons.edit_outlined, color: sub, size: 17),
+          ),
+        ],
       ),
     );
   }

@@ -316,7 +316,7 @@ void main() {
     await tester.pump();
   });
 
-  testWidgets('RoadMap uses explicit path entry and starts minimum practice', (
+  testWidgets('RoadMap keeps skill focus and starts minimum practice', (
     WidgetTester tester,
   ) async {
     tester.view.physicalSize = const Size(1400, 900);
@@ -368,12 +368,6 @@ void main() {
     await tester.tap(find.text('Python').first);
     await tester.pumpAndSettle();
 
-    expect(find.text('Шаблон RoadMap'), findsNothing);
-    expect(find.text('Назад к навыкам'), findsNothing);
-
-    await tester.tap(find.text('Путь').first);
-    await tester.pumpAndSettle();
-
     expect(find.text('Шаблон RoadMap'), findsOneWidget);
     expect(find.text('Назад к навыкам'), findsOneWidget);
 
@@ -384,6 +378,13 @@ void main() {
     expect(find.text('Открыть редактор'), findsOneWidget);
     expect(find.text('Написать модуль'), findsOneWidget);
     expect(find.text('Минимум'), findsOneWidget);
+    expect(find.text('Минимальный шаг: Открыть файл на 5 минут'), findsNothing);
+
+    await tester.tap(find.text('Открыть редактор'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Практика этапа'), findsOneWidget);
+    expect(find.text('Минимальный шаг: Открыть файл на 5 минут'), findsNothing);
 
     await tester.tap(find.text('Минимум'));
     await tester.pumpAndSettle();

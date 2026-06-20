@@ -76,9 +76,9 @@ Current `1.3.34` Planning decision:
 - Selected skill focus mode should prioritize roads/stages and keep controls quiet.
 - If no bubble is selected, a small top-right `Отцентровать` button recenters the camera.
 - Template controls should not become a noisy control panel.
-- Current `1.3.37`: skill bubbles are visual goals, not direct open buttons.
-- Current `1.3.37`: the explicit `Путь` pill opens RoadMap focus mode.
+- Current `1.3.37`: skill bubbles remain the direct entry into RoadMap focus mode.
 - Current `1.3.37`: skill-level details do not show a full task list; users choose a stage to see practice.
+- Current `1.3.37`: practice rows are not quest-focus buttons; direct row actions are completion, `Минимум`, and edit.
 - Current `1.3.37`: RoadMap quest rows may show `Минимум` only when a minimum step is actually available.
 - RoadMap minimum action must reuse the same XP/feedback flow as `Сейчас`, not create a separate map-only action path.
 

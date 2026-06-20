@@ -256,7 +256,6 @@ class _MasteryMapInspector extends StatelessWidget {
   final bool isDark;
   final _MasterySelection? selection;
   final ValueChanged<Skill> onSelectSkill;
-  final void Function(Skill skill, Task task) onSelectQuest;
   final ValueChanged<Skill> onAddRoot;
   final void Function(Skill skill, SkillTreeNode node) onExtendPath;
   final void Function(Skill skill, SkillTreeNode? node) onAddQuest;
@@ -272,7 +271,6 @@ class _MasteryMapInspector extends StatelessWidget {
     required this.isDark,
     required this.selection,
     required this.onSelectSkill,
-    required this.onSelectQuest,
     required this.onAddRoot,
     required this.onExtendPath,
     required this.onAddQuest,
@@ -346,7 +344,6 @@ class _MasteryMapInspector extends StatelessWidget {
             node: node,
             onExtendPath: () => onExtendPath(skill, node),
             onAddQuest: () => onAddQuest(skill, node),
-            onSelectQuest: (task) => onSelectQuest(skill, task),
             onToggleQuest: onToggleQuest,
             onMinimumAction: onMinimumAction,
             onEditQuest: (task) => onEditQuest(skill, task),
@@ -381,12 +378,12 @@ class _EmptyMapInspector extends StatelessWidget {
           icon: Icons.touch_app_outlined,
           color: const Color(0xFF4A9EFF),
           title: 'Выберите навык',
-          subtitle: 'кнопка «Путь» раскроет дорогу мастерства',
+          subtitle: 'шар раскроет свою ветку мастерства',
           isDark: isDark,
         ),
         const SizedBox(height: 12),
         Text(
-          'Карта показывает все навыки как сферы. Сама сфера — цель, а кнопка «Путь» открывает этапы и практику.',
+          'Карта показывает все навыки как сферы. Нажмите на любую сферу, чтобы увидеть этапы, практику и следующий шаг освоения.',
           style: TextStyle(color: sub, fontSize: 12.5, height: 1.35),
         ),
         const SizedBox(height: 16),
@@ -396,47 +393,45 @@ class _EmptyMapInspector extends StatelessWidget {
             separatorBuilder: (_, _) => const SizedBox(height: 7),
             itemBuilder: (context, index) {
               final skill = state.skills[index];
-              return Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? const Color(0xFF14141C)
-                      : const Color(0xFFF4F5FA),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: borderColor(isDark)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(skill.icon, color: skill.color, size: 18),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        skill.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: textColor(isDark),
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w800,
+              return PressFeedback(
+                scale: 0.98,
+                onTap: () => onSelectSkill(skill),
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0xFF14141C)
+                        : const Color(0xFFF4F5FA),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: borderColor(isDark)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(skill.icon, color: skill.color, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          skill.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: textColor(isDark),
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    _RoadmapPathPill(
-                      color: skill.color,
-                      isDark: isDark,
-                      onTap: () => onSelectSkill(skill),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${skill.masteredTreeNodeCount}/${skill.treeNodes.length}',
-                      style: TextStyle(
-                        color: skill.color,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w900,
+                      const SizedBox(width: 8),
+                      Text(
+                        '${skill.masteredTreeNodeCount}/${skill.treeNodes.length}',
+                        style: TextStyle(
+                          color: skill.color,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               );
             },
@@ -529,7 +524,6 @@ class _NodeInspector extends StatelessWidget {
   final SkillTreeNode node;
   final VoidCallback onExtendPath;
   final VoidCallback onAddQuest;
-  final ValueChanged<Task> onSelectQuest;
   final void Function(Task task, Offset position) onToggleQuest;
   final void Function(Task task, Offset position) onMinimumAction;
   final ValueChanged<Task> onEditQuest;
@@ -543,7 +537,6 @@ class _NodeInspector extends StatelessWidget {
     required this.node,
     required this.onExtendPath,
     required this.onAddQuest,
-    required this.onSelectQuest,
     required this.onToggleQuest,
     required this.onMinimumAction,
     required this.onEditQuest,
@@ -628,7 +621,6 @@ class _NodeInspector extends StatelessWidget {
             activeTasks: activeNodeTasks,
             completedTasks: completedNodeTasks,
             emptyText: 'Создайте практику для этого этапа.',
-            onSelectQuest: onSelectQuest,
             onToggleQuest: onToggleQuest,
             onMinimumAction: onMinimumAction,
             onEditQuest: onEditQuest,
@@ -971,7 +963,6 @@ class _StagePracticeQuestList extends StatelessWidget {
   final List<Task> activeTasks;
   final List<Task> completedTasks;
   final String emptyText;
-  final ValueChanged<Task> onSelectQuest;
   final void Function(Task task, Offset position) onToggleQuest;
   final void Function(Task task, Offset position) onMinimumAction;
   final ValueChanged<Task> onEditQuest;
@@ -982,7 +973,6 @@ class _StagePracticeQuestList extends StatelessWidget {
     required this.activeTasks,
     required this.completedTasks,
     required this.emptyText,
-    required this.onSelectQuest,
     required this.onToggleQuest,
     required this.onMinimumAction,
     required this.onEditQuest,
@@ -1018,7 +1008,6 @@ class _StagePracticeQuestList extends StatelessWidget {
               isDark: isDark,
               color: color,
               muted: false,
-              onSelect: () => onSelectQuest(task),
               onToggle: (position) => onToggleQuest(task, position),
               onMinimumAction: (position) => onMinimumAction(task, position),
               onEdit: () => onEditQuest(task),
@@ -1034,7 +1023,6 @@ class _StagePracticeQuestList extends StatelessWidget {
               isDark: isDark,
               color: color,
               muted: true,
-              onSelect: () => onSelectQuest(task),
               onToggle: (position) => onToggleQuest(task, position),
               onMinimumAction: (position) => onMinimumAction(task, position),
               onEdit: () => onEditQuest(task),
@@ -1050,7 +1038,6 @@ class _InspectorQuestRow extends StatelessWidget {
   final bool isDark;
   final Color color;
   final bool muted;
-  final VoidCallback onSelect;
   final ValueChanged<Offset> onToggle;
   final ValueChanged<Offset> onMinimumAction;
   final VoidCallback onEdit;
@@ -1060,7 +1047,6 @@ class _InspectorQuestRow extends StatelessWidget {
     required this.isDark,
     required this.color,
     required this.muted,
-    required this.onSelect,
     required this.onToggle,
     required this.onMinimumAction,
     required this.onEdit,
@@ -1080,112 +1066,107 @@ class _InspectorQuestRow extends StatelessWidget {
     ].join(' · ');
     final titleFontSize = _adaptiveQuestTitleFontSize(task.title);
 
-    return PressFeedback(
-      scale: 0.985,
-      onTap: onSelect,
-      child: AnimatedContainer(
-        duration: kMotionStandard,
-        curve: kMotionCurve,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-        decoration: BoxDecoration(
-          color: muted || done
-              ? surface(isDark).withAlpha(isDark ? 112 : 176)
-              : (isDark ? const Color(0xFF14141C) : const Color(0xFFF4F5FA)),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: done ? rowColor.withAlpha(42) : borderColor(isDark),
-          ),
+    return AnimatedContainer(
+      duration: kMotionStandard,
+      curve: kMotionCurve,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      decoration: BoxDecoration(
+        color: muted || done
+            ? surface(isDark).withAlpha(isDark ? 112 : 176)
+            : (isDark ? const Color(0xFF14141C) : const Color(0xFFF4F5FA)),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: done ? rowColor.withAlpha(42) : borderColor(isDark),
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Builder(
-              builder: (iconContext) => PressFeedback(
-                scale: 0.9,
-                onTap: () => onToggle(_feedbackOriginFor(iconContext)),
-                child: _QuestToggleCircle(
-                  done: done,
-                  color: rowColor,
-                  isDark: isDark,
-                  size: 18,
-                ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Builder(
+            builder: (iconContext) => PressFeedback(
+              scale: 0.9,
+              onTap: () => onToggle(_feedbackOriginFor(iconContext)),
+              child: _QuestToggleCircle(
+                done: done,
+                color: rowColor,
+                isDark: isDark,
+                size: 18,
               ),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    task.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    softWrap: true,
-                    style: TextStyle(
-                      color: done ? sub : textColor(isDark),
-                      fontSize: titleFontSize,
-                      height: 1.12,
-                      fontWeight: FontWeight.w900,
-                      decoration: done
-                          ? TextDecoration.lineThrough
-                          : TextDecoration.none,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    done ? 'Завершено' : metadata,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: sub,
-                      fontSize: 10.8,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisSize: MainAxisSize.min,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '+${task.xpReward} XP',
+                  task.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  softWrap: true,
                   style: TextStyle(
-                    color: done ? sub : rowColor,
-                    fontSize: 11,
+                    color: done ? sub : textColor(isDark),
+                    fontSize: titleFontSize,
+                    height: 1.12,
                     fontWeight: FontWeight.w900,
+                    decoration: done
+                        ? TextDecoration.lineThrough
+                        : TextDecoration.none,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (canStartMinimum) ...[
-                      Builder(
-                        builder: (minimumContext) => _RoadmapMinimumButton(
-                          isDark: isDark,
-                          color: color,
-                          onTap: () => onMinimumAction(
-                            _feedbackOriginFor(minimumContext),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 7),
-                    ],
-                    PressFeedback(
-                      scale: 0.9,
-                      tooltip: 'Редактировать',
-                      onTap: onEdit,
-                      child: Icon(Icons.edit_outlined, color: sub, size: 17),
-                    ),
-                  ],
+                const SizedBox(height: 4),
+                Text(
+                  done ? 'Завершено' : metadata,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: sub,
+                    fontSize: 10.8,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '+${task.xpReward} XP',
+                style: TextStyle(
+                  color: done ? sub : rowColor,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (canStartMinimum) ...[
+                    Builder(
+                      builder: (minimumContext) => _RoadmapMinimumButton(
+                        isDark: isDark,
+                        color: color,
+                        onTap: () =>
+                            onMinimumAction(_feedbackOriginFor(minimumContext)),
+                      ),
+                    ),
+                    const SizedBox(width: 7),
+                  ],
+                  PressFeedback(
+                    scale: 0.9,
+                    tooltip: 'Редактировать',
+                    onTap: onEdit,
+                    child: Icon(Icons.edit_outlined, color: sub, size: 17),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

@@ -167,16 +167,6 @@ class _MasteryMapBody extends StatelessWidget {
                         Navigator.pop(sheetContext);
                         onSelectionChanged(_MasterySelection.skill(skill.id));
                       },
-                      onSelectQuest: (skill, task) {
-                        Navigator.pop(sheetContext);
-                        onSelectionChanged(
-                          _MasterySelection.quest(
-                            skill.id,
-                            task.treeNodeId,
-                            task.id,
-                          ),
-                        );
-                      },
                       onAddRoot: (skill) => closeThen(() => onAddRoot(skill)),
                       onExtendPath: (skill, node) =>
                           closeThen(() => onExtendPath(skill, node)),
@@ -223,9 +213,6 @@ class _MasteryMapBody extends StatelessWidget {
           selection: selection,
           onSelectSkill: (skill) =>
               onSelectionChanged(_MasterySelection.skill(skill.id)),
-          onSelectQuest: (skill, task) => onSelectionChanged(
-            _MasterySelection.quest(skill.id, task.treeNodeId, task.id),
-          ),
           onAddRoot: onAddRoot,
           onExtendPath: onExtendPath,
           onAddQuest: onAddQuest,

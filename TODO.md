@@ -35,7 +35,7 @@ This file tracks technical details, completed work, open tasks, and remaining wo
 - `1.3.35`: `AddTaskDialog` supports nudge prefill for title/minimum step and focused minimum editing.
 - `1.3.36`: grouped weekly review and `Следующая корректировка` into one quiet `Review цели` block inside `Статистика`.
 - `1.3.36`: added regression coverage that course nudges stay out of `Сейчас` and only appear in `Статистика`.
-- `1.3.37`: RoadMap skill bubbles are no longer direct open buttons; the explicit `Путь` pill opens focus mode.
+- `1.3.37`: RoadMap skill bubbles stay as direct RoadMap entry points; practice rows no longer open quest focus on row tap.
 - `1.3.37`: RoadMap stage/practice rows can start an available `Минимум` through the existing XP/feedback flow.
 
 ## Next Planned Batches
@@ -210,20 +210,21 @@ Acceptance:
 ### RoadMap + Goal Polish - Implemented In 1.3.37
 
 Resolved:
-RoadMap focus should be an explicit path action, not an accidental click on the skill bubble. Practice rows also needed a direct way to do the minimum step without turning the map into a full task editor.
+RoadMap skill bubbles should keep their direct “open the path” behavior. The accidental focus problem belongs to practice rows: tapping a quest row should not open a separate quest focus. Practice rows also needed a direct way to do the minimum step without turning the map into a full task editor.
 
 Implemented:
 
-- Skill bubbles remain visual goals; `Путь` is the explicit control that opens focus mode.
+- Skill bubbles remain direct RoadMap entry points; tapping a sphere opens the focused path.
 - Skill-level inspector no longer lists all skill quests; it shows path/goal context and asks the user to choose a stage.
+- Stage/practice rows are passive containers; only the completion circle, `Минимум`, and edit icon perform actions.
 - Stage/practice rows show `Минимум` only when the task has an available minimum step.
 - RoadMap minimum action uses the existing `MainPage._onMinimumAction` path, preserving XP bubbles, feedback and reward side-effects.
-- Mobile RoadMap uses the same `Путь` and `Минимум` language.
+- Mobile RoadMap follows the same rule: select skills/stages normally, but practice rows do not open a quest focus.
 
 Acceptance:
 
-- Clicking the skill bubble itself does not open the skill.
-- `Путь` opens the RoadMap focus.
+- Clicking the skill bubble opens the RoadMap focus as before.
+- Clicking a practice row does not open quest focus.
 - `Минимум` appears only for eligible active quests and completes only the minimum step.
 
 ### Statistics Cleanup - Implemented In 1.3.36

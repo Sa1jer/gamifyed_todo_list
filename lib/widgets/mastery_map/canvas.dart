@@ -293,9 +293,9 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
                             duration: kMotionSlow,
                             curve: kMotionCurve,
                             left: position.dx - (roadFocus ? 110 : 90),
-                            top: position.dy - (roadFocus ? 62 : 84),
+                            top: position.dy - (roadFocus ? 62 : 70),
                             width: roadFocus ? 220 : 180,
-                            height: roadFocus ? 184 : 184,
+                            height: roadFocus ? 184 : 156,
                             child: _SkillOrbButton(
                               skill: skill,
                               isDark: isDark,
@@ -303,7 +303,7 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
                               roadFocus: roadFocus,
                               hiddenInFocus: hiddenInFocus,
                               dimmed: selectedSkill != null && !selected,
-                              onPathTap: () => widget.onSelectSkill(skill),
+                              onTap: () => widget.onSelectSkill(skill),
                             ),
                           );
                         }),
