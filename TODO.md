@@ -33,10 +33,11 @@ This file tracks technical details, completed work, open tasks, and remaining wo
 - `1.3.35`: weekly review now feeds one actionable nudge instead of a generic saved-review snackbar.
 - `1.3.35`: nudge dismiss is runtime-only (`Позже` lasts for the current session, with no storage model).
 - `1.3.35`: `AddTaskDialog` supports nudge prefill for title/minimum step and focused minimum editing.
+- `1.3.36`: grouped weekly review and `Следующая корректировка` into one quiet `Review цели` block inside `Статистика`.
+- `1.3.36`: added regression coverage that course nudges stay out of `Сейчас` and only appear in `Статистика`.
 
 ## Next Planned Batches
 
-- `1.3.36` — Statistics Cleanup: ensure `Статистика` does not become the new Planning; keep `Следующая корректировка` small and review-driven.
 - `1.3.37` — RoadMap + Goal Polish: make RoadMap visually and textually lead toward the skill goal, with quiet SMARTER hints.
 - `1.3.38` — Release QA / Public Build Hardening: full regression, manual QA, copy audit, width checks and known non-blockers.
 
@@ -212,12 +213,23 @@ Acceptance:
 - Use existing `GoalSpec`, `GoalEngine`, `GoalHeader` and skill edit flow.
 - Do not add more RoadMap templates, drag-and-drop or a new goal model in this batch.
 
-### Statistics Cleanup - Planned For 1.3.36
+### Statistics Cleanup - Implemented In 1.3.36
 
-- Audit `Статистика` after the nudge loop.
-- Keep `CourseNudgeCard` as one correction, not a diagnostics panel.
-- Avoid showing nudges in Act until validated.
-- Check that weekly review, growth story and deeper stats still read as history, not management work.
+Resolved:
+After `1.3.35`, `Следующая корректировка` was useful but could visually read like the beginning of a new Planning panel.
+
+Implemented:
+
+- Wrapped `WeeklyReviewCard` and `CourseNudgeCard` in one `Review цели` block.
+- Clarified copy: review checks the course and offers at most one small correction.
+- Kept deeper stats below the growth story/review flow.
+- Added widget regression that Act does not show `Следующая корректировка`, while Statistics does.
+
+Acceptance:
+
+- `Статистика` still reads as growth history first.
+- Review/nudge is a small correction moment, not a dashboard.
+- `Сейчас` remains action-first and nudge-free.
 
 ### Release QA / Public Build Hardening - Planned For 1.3.38
 

@@ -271,6 +271,51 @@ void main() {
     await tester.pump();
   });
 
+  testWidgets('Course nudge stays out of Act and appears in Statistics', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = InMemoryStorageService()
+      ..skills = [
+        Skill(
+          id: 'skill-1',
+          name: 'Python',
+          goal: 'Собрать первый проект',
+          color: const Color(0xFF4A9EFF),
+          icon: Icons.code,
+        ),
+      ]
+      ..tasks = [
+        Task(
+          id: 'task-1',
+          title: 'Написать функцию',
+          skillId: 'skill-1',
+          xpReward: 20,
+          type: TaskType.shortTerm,
+        ),
+      ];
+
+    await storage.init();
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.text('Следующая корректировка'), findsNothing);
+
+    await tester.tap(find.byIcon(Icons.query_stats).first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Следующая корректировка'), findsOneWidget);
+    expect(find.text('Добавь лёгкий старт'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+
   testWidgets('AddTaskDialog allows editing XP by typing the number', (
     WidgetTester tester,
   ) async {

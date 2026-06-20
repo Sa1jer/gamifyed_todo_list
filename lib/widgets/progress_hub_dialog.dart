@@ -271,33 +271,33 @@ class ProgressHubContent extends StatelessWidget {
                         ? onOpenWeekly
                         : onOpenCharacterTimeline,
                   ),
-                  if (courseNudge != null) ...[
-                    const SizedBox(height: 14),
-                    CourseNudgeCard(
-                      nudge: courseNudge,
-                      isDark: isDark,
-                      onPrimary: () => _handleCourseNudge(
-                        context,
-                        state,
-                        isDark,
-                        courseNudge,
-                      ),
-                      onDismiss: () =>
-                          state.dismissCourseNudge(courseNudge.key),
-                    ),
-                  ],
                   if (state.skills.isNotEmpty) ...[
                     const SizedBox(height: 14),
-                    WeeklyReviewCard(
-                      state: state,
+                    _ProgressReviewBlock(
                       isDark: isDark,
-                      autoExpandWhenDue: true,
-                      buildNudgeForSkill: (skill) =>
-                          _visibleCourseNudgeForSkill(state, skill),
-                      onApplyNudge: (nudge) =>
-                          _handleCourseNudge(context, state, isDark, nudge),
-                      onDismissNudge: (nudge) =>
-                          state.dismissCourseNudge(nudge.key),
+                      nudge: courseNudge,
+                      onApplyNudge: courseNudge == null
+                          ? null
+                          : () => _handleCourseNudge(
+                              context,
+                              state,
+                              isDark,
+                              courseNudge,
+                            ),
+                      onDismissNudge: courseNudge == null
+                          ? null
+                          : () => state.dismissCourseNudge(courseNudge.key),
+                      reviewCard: WeeklyReviewCard(
+                        state: state,
+                        isDark: isDark,
+                        autoExpandWhenDue: true,
+                        buildNudgeForSkill: (skill) =>
+                            _visibleCourseNudgeForSkill(state, skill),
+                        onApplyNudge: (nudge) =>
+                            _handleCourseNudge(context, state, isDark, nudge),
+                        onDismissNudge: (nudge) =>
+                            state.dismissCourseNudge(nudge.key),
+                      ),
                     ),
                   ],
                   const SizedBox(height: 14),
@@ -608,6 +608,98 @@ void _showSkillGoalDialogForNudge(
       ),
     ),
   );
+}
+
+class _ProgressReviewBlock extends StatelessWidget {
+  final bool isDark;
+  final CourseNudge? nudge;
+  final VoidCallback? onApplyNudge;
+  final VoidCallback? onDismissNudge;
+  final Widget reviewCard;
+
+  const _ProgressReviewBlock({
+    required this.isDark,
+    required this.nudge,
+    required this.onApplyNudge,
+    required this.onDismissNudge,
+    required this.reviewCard,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final txt = textColor(isDark);
+    final sub = subtext(isDark);
+    final bdr = borderColor(isDark);
+
+    return Container(
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF15151C) : const Color(0xFFF7F7FA),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: bdr),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF4A9EFF).withAlpha(22),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.route_rounded,
+                  color: Color(0xFF4A9EFF),
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Review цели',
+                      style: TextStyle(
+                        color: txt,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      'Коротко сверяем курс и, если нужно, делаем одну маленькую корректировку.',
+                      style: TextStyle(
+                        color: sub,
+                        fontSize: 12,
+                        height: 1.3,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          reviewCard,
+          if (nudge != null) ...[
+            const SizedBox(height: 12),
+            CourseNudgeCard(
+              nudge: nudge!,
+              isDark: isDark,
+              onPrimary: onApplyNudge ?? () {},
+              onDismiss: onDismissNudge ?? () {},
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 }
 
 class _GoalProgressOverview extends StatelessWidget {

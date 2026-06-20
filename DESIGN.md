@@ -41,6 +41,12 @@ Current `1.3.35` nudge decision:
 - `Позже` is session-only and not persisted.
 - Act stays action-first and does not show nudges in this iteration.
 
+Current `1.3.36` statistics cleanup:
+
+- `WeeklyReviewCard` and `Следующая корректировка` are grouped into one `Review цели` block.
+- The block explains course correction as one small adjustment after reflection, not as a system audit.
+- Deeper charts and journals stay below this block.
+
 Current `1.3.34` Planning decision:
 
 - `План` is frozen and removed from the app shell.
@@ -100,6 +106,7 @@ Allowed:
 - One primary CTA.
 - Runtime-only dismiss.
 - Derived from current skills, reviews, quests and stages.
+- Placement inside `Review цели`, not as a standalone planning panel.
 
 Not allowed:
 
@@ -107,6 +114,7 @@ Not allowed:
 - Readiness dashboard.
 - Persistent pending/applied/dismissed nudge state.
 - Showing in `Сейчас` before the behavior is validated.
+- Turning `Статистика` into a new Planning surface.
 
 Action hierarchy:
 
