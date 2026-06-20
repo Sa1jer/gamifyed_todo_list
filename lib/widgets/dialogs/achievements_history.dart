@@ -169,9 +169,12 @@ class _AchievementCard extends StatelessWidget {
     if (def == null) return;
 
     final unlocked = achievement.isUnlocked;
+    final sub = subtext(isDark);
+    final txt = textColor(isDark);
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
+        backgroundColor: surface(isDark),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: Container(
           padding: const EdgeInsets.all(20),
@@ -184,17 +187,11 @@ class _AchievementCard extends StatelessWidget {
                 height: 64,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color:
-                      (unlocked
-                              ? def.color
-                              : subtext(AppStateProvider.of(ctx).isDark))
-                          .withAlpha(30),
+                  color: (unlocked ? def.color : sub).withAlpha(30),
                 ),
                 child: Icon(
                   def.icon,
-                  color: unlocked
-                      ? def.color
-                      : subtext(AppStateProvider.of(ctx).isDark),
+                  color: unlocked ? def.color : sub,
                   size: 32,
                 ),
               ),
@@ -204,16 +201,13 @@ class _AchievementCard extends StatelessWidget {
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
-                  color: textColor(AppStateProvider.of(ctx).isDark),
+                  color: txt,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 def.description,
-                style: TextStyle(
-                  color: subtext(AppStateProvider.of(ctx).isDark),
-                  fontSize: 13,
-                ),
+                style: TextStyle(color: sub, fontSize: 13),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),

@@ -38,11 +38,13 @@ This file tracks technical details, completed work, open tasks, and remaining wo
 - `1.3.37`: RoadMap skill bubbles stay as direct RoadMap entry points; practice rows no longer open quest focus on row tap.
 - `1.3.37`: RoadMap stage/practice rows can start an available `Минимум` through the existing XP/feedback flow.
 - `1.3.38`: completed release QA hardening pass: bumped version, fixed stale `Прогресс` copy in Statistics, reran copy audit and full regression suite.
+- `1.3.39`: fixed achievement details crash caused by using `AppStateProvider.of(ctx)` inside a dialog builder context.
+- `1.3.39`: added locked/unlocked achievement detail regression tests and audited similar provider-context patterns.
 
 ## Next Planned Batches
 
-- No active implementation batch locked after `1.3.38`.
-- Next decision point: public build packaging vs. a new product phase.
+- `1.3.40` — Debug shell + hidden entry: create debug-only panel entry via 5 taps on the top-bar app icon, without scenarios yet.
+- `1.3.41` — Debug persistence: separate `__debug__` Hive box with debug-only overrides, outside `StorageService` and `AppState._saveAll()`.
 
 ## P0 - Release / Data Safety
 
@@ -268,6 +270,23 @@ Known non-blockers before packaging:
 
 - `Трофеи` and `Статистика` currently share the same pill component.
 - Re-check top-bar overflow at compact widths after more controls are added.
+
+### Achievement Details Crash - Done In 1.3.39
+
+Resolved:
+Clicking an achievement could crash because the details dialog builder used `AppStateProvider.of(ctx)`, and that builder context is not guaranteed to contain the inherited provider.
+
+Implemented:
+
+- `_AchievementCard._showDetails()` now uses the existing `isDark` value and locally computed `txt/sub` colors.
+- Added widget coverage for locked and unlocked achievement details.
+- Audited `AppStateProvider.of(ctx/dialogContext/sheetContext/_)` patterns. Remaining `ctx` usages are outside builder contexts or intentionally wrapped with a provider.
+
+Acceptance:
+
+- Locked achievement details open without crash.
+- Unlocked achievement details open without crash.
+- Debug Admin work remains a later batch and does not touch AchievementsDialog in this fix.
 
 ## Known Non-Goals For Now
 

@@ -191,6 +191,19 @@ Current `1.3.38` release QA status:
 - Remaining old terms are either documentation, dormant Planning/legacy stage code, or compatibility classifiers.
 - Real-device/emulator width QA is still recommended before packaging a public build.
 
+Current `1.3.39` crash-fix status:
+
+- Achievement details must not read `AppStateProvider` from dialog builder contexts when local state is already available.
+- Dialog/sheet builder contexts should be treated as potentially detached from the app provider unless explicitly wrapped.
+
+## Debug Admin Direction
+
+- Debug Admin is a state simulator, not an Achievement Editor.
+- It must stay debug-only and hidden behind a gesture; no visible release entry.
+- Planned entry: 5 taps on the top-bar app icon under `kDebugMode`.
+- Planned persistence: separate `__debug__` Hive box with debug-only overrides, outside production `StorageService` and `AppState._saveAll()`.
+- `AppState` must not import `DebugService`.
+
 ## XP Editing Direction
 
 Where XP can be changed by slider, numeric editing should eventually be available by tapping/clicking the number.

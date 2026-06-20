@@ -224,6 +224,62 @@ void main() {
     await tester.pump();
   });
 
+  testWidgets('Locked achievement details open without provider crash', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(900, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final achievement = Achievement(id: achievementDefinitions.first.id)
+      ..def = achievementDefinitions.first;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AchievementsDialog(achievements: [achievement], isDark: true),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text(achievement.def!.name));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Заблокировано'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Unlocked achievement details open without provider crash', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(900, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final achievement = Achievement(
+      id: achievementDefinitions.first.id,
+      unlockedAt: DateTime(2026, 6, 20),
+    )..def = achievementDefinitions.first;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AchievementsDialog(achievements: [achievement], isDark: false),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text(achievement.def!.name));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Разблокировано!'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Selected skill does not expose Planning settings in Act', (
     WidgetTester tester,
   ) async {
