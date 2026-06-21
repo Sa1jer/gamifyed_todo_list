@@ -201,14 +201,16 @@ Current `1.3.39` crash-fix status:
 - Debug Admin is a state simulator, not an Achievement Editor.
 - It must stay debug-only and hidden behind a gesture; no visible release entry.
 - Planned entry: 5 taps on the top-bar app icon under `kDebugMode`.
-- Planned persistence: separate `__debug__` Hive box with debug-only overrides, outside production `StorageService` and `AppState._saveAll()`.
+- Persistence: separate `__debug__` Hive box with debug-only draft overrides, outside production `StorageService` and `AppState._saveAll()`.
 - `AppState` must not import `DebugService`.
 
-Current `1.3.40` debug shell status:
+Current `1.3.41` debug shell status:
 
 - Hidden entry exists through 5 taps on the top-bar app mark under `kDebugMode`.
-- Debug Admin is read-only and placeholder-only.
-- No simulator scenarios, debug persistence, `DebugService`, or AppState mutations exist yet.
+- Debug Admin lazy-initializes `DebugService` only when opened.
+- Debug draft state is typed but not applied to AppState.
+- Debug Admin shows storage status and can clear only `__debug__` after confirmation.
+- No simulator scenarios, production storage changes, or AppState mutations exist yet.
 
 ## XP Editing Direction
 

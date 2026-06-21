@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:todo_list_app/debug/debug_admin_panel.dart';
+import 'package:todo_list_app/debug/debug_service.dart';
 import 'package:todo_list_app/main.dart';
 import 'package:todo_list_app/models.dart';
 import 'package:todo_list_app/storage_service.dart';
@@ -126,6 +128,36 @@ class InMemoryStorageService extends StorageService {
   }
 }
 
+class _FakeDebugService extends DebugService {
+  DebugAdminDraftState draft;
+  bool cleared = false;
+  bool _initialized = false;
+
+  _FakeDebugService({required this.draft});
+
+  @override
+  bool get isInitialized => _initialized;
+
+  @override
+  Future<void> init() async {
+    _initialized = true;
+  }
+
+  @override
+  Future<DebugAdminDraftState> loadDraftState() async => draft;
+
+  @override
+  Future<void> saveDraftState(DebugAdminDraftState state) async {
+    draft = state;
+  }
+
+  @override
+  Future<void> clear() async {
+    cleared = true;
+    draft = const DebugAdminDraftState.empty();
+  }
+}
+
 void main() {
   testWidgets('App smoke test', (WidgetTester tester) async {
     tester.view.physicalSize = const Size(1400, 900);
@@ -227,6 +259,17 @@ void main() {
   testWidgets('Debug admin opens after hidden top-bar gesture', (
     WidgetTester tester,
   ) async {
+    final fakeDebugService = _FakeDebugService(
+      draft: const DebugAdminDraftState(
+        selectedScenarioId: 'epic_chest_pending',
+        pendingChestRarity: RewardRarity.epic,
+      ),
+    );
+    addTearDown(() async {
+      debugServiceOverride = null;
+    });
+    debugServiceOverride = fakeDebugService;
+
     tester.view.physicalSize = const Size(1400, 900);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -250,14 +293,31 @@ void main() {
     expect(find.text('DEBUG ADMIN'), findsNothing);
 
     await tester.tap(appMark);
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
 
     expect(find.text('DEBUG ADMIN'), findsOneWidget);
+    expect(find.text('Debug storage'), findsOneWidget);
+    expect(find.textContaining(DebugService.boxName), findsOneWidget);
     expect(find.text('Сценарии'), findsOneWidget);
-    expect(find.text('Reset tools'), findsOneWidget);
+    expect(find.text('Reset tools', skipOffstage: false), findsOneWidget);
+
+    await tester.tap(find.text('Очистить'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.text('Очистить debug state?'), findsOneWidget);
+    await tester.tap(find.text('Отмена'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.text('Очистить debug state?'), findsNothing);
+    expect(fakeDebugService.cleared, isFalse);
+    expect(storage.skills, isEmpty);
 
     await tester.tap(find.byIcon(Icons.close).last);
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
 
     expect(find.text('DEBUG ADMIN'), findsNothing);
 

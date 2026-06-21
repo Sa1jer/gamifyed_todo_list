@@ -42,10 +42,11 @@ This file tracks technical details, completed work, open tasks, and remaining wo
 - `1.3.39`: added locked/unlocked achievement detail regression tests and audited similar provider-context patterns.
 - `1.3.40`: added debug-only hidden entry through 5 taps on the top-bar app mark.
 - `1.3.40`: added read-only Debug Admin shell with placeholder sections and no AppState mutations.
+- `1.3.41`: added debug-only persistence through the separate `__debug__` Hive box.
+- `1.3.41`: Debug Admin now shows debug storage status and confirm-guarded debug-state clearing without touching AppState.
 
 ## Next Planned Batches
 
-- `1.3.41` — Debug persistence: separate `__debug__` Hive box with debug-only overrides, outside `StorageService` and `AppState._saveAll()`.
 - `1.3.42` — Debug State Simulator scenarios: fresh user, streak 7, all achievements, epic chest, defeated resistance and active effects.
 
 ## P0 - Release / Data Safety
@@ -305,6 +306,24 @@ Acceptance:
 - Four taps do not open the panel; the fifth quick tap opens it in debug tests.
 - The panel can be dismissed.
 - AppState still does not import debug code.
+
+### Debug Persistence - Done In 1.3.41
+
+Implemented:
+
+- Added `DebugService` in `lib/debug/`.
+- Added separate Hive box `__debug__`, outside `StorageService` and `AppState._saveAll()`.
+- Added typed `DebugAdminDraftState` for future simulator draft values: selected scenario, achievement overrides, profile overrides, pending chest rarity and pending effect type.
+- Debug Admin lazy-initializes debug storage only when the hidden panel opens.
+- Debug Admin shows storage status, draft value count and last update timestamp.
+- `Очистить` clears only `__debug__` and requires confirmation.
+
+Acceptance:
+
+- No simulator scenarios or AppState mutations yet.
+- AppState does not import DebugService.
+- Production storage schema is unchanged.
+- Corrupted debug draft JSON falls back to empty debug state.
 
 ## Known Non-Goals For Now
 
