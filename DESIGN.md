@@ -204,6 +204,12 @@ Current `1.3.39` crash-fix status:
 - Planned persistence: separate `__debug__` Hive box with debug-only overrides, outside production `StorageService` and `AppState._saveAll()`.
 - `AppState` must not import `DebugService`.
 
+Current `1.3.40` debug shell status:
+
+- Hidden entry exists through 5 taps on the top-bar app mark under `kDebugMode`.
+- Debug Admin is read-only and placeholder-only.
+- No simulator scenarios, debug persistence, `DebugService`, or AppState mutations exist yet.
+
 ## XP Editing Direction
 
 Where XP can be changed by slider, numeric editing should eventually be available by tapping/clicking the number.

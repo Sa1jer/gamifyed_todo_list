@@ -224,6 +224,47 @@ void main() {
     await tester.pump();
   });
 
+  testWidgets('Debug admin opens after hidden top-bar gesture', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = InMemoryStorageService().._onboardingSeen = true;
+    await storage.init();
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    final appMark = find.byKey(const ValueKey('top-bar-app-mark'));
+    expect(appMark, findsOneWidget);
+    expect(find.text('DEBUG ADMIN'), findsNothing);
+
+    for (var i = 0; i < 4; i++) {
+      await tester.tap(appMark);
+      await tester.pump(const Duration(milliseconds: 80));
+    }
+
+    expect(find.text('DEBUG ADMIN'), findsNothing);
+
+    await tester.tap(appMark);
+    await tester.pumpAndSettle();
+
+    expect(find.text('DEBUG ADMIN'), findsOneWidget);
+    expect(find.text('Сценарии'), findsOneWidget);
+    expect(find.text('Reset tools'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.close).last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('DEBUG ADMIN'), findsNothing);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+
   testWidgets('Locked achievement details open without provider crash', (
     WidgetTester tester,
   ) async {

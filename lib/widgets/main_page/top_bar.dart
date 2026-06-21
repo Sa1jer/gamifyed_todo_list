@@ -9,6 +9,7 @@ class TopBar extends StatelessWidget {
   final GlobalKey? rewardsKey;
   final VoidCallback? onRewardsTap;
   final VoidCallback onStatsTap;
+  final VoidCallback? onAppIconTap;
   final bool showModeSwitch;
   const TopBar({
     super.key,
@@ -18,6 +19,7 @@ class TopBar extends StatelessWidget {
     required this.mode,
     required this.onModeChanged,
     required this.onStatsTap,
+    this.onAppIconTap,
     this.rewardsKey,
     this.onRewardsTap,
     this.showModeSwitch = true,
@@ -50,23 +52,39 @@ class TopBar extends StatelessWidget {
 
           return Row(
             children: [
-              const Icon(Icons.security, color: Color(0xFF4A9EFF), size: 18),
-              if (!veryCompact) ...[
-                const SizedBox(width: 8),
-                ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: compact ? 150 : 190),
-                  child: Text(
-                    'RPG To-Do List',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 17,
-                      color: txt,
+              GestureDetector(
+                key: const ValueKey('top-bar-app-mark'),
+                behavior: HitTestBehavior.opaque,
+                onTap: onAppIconTap,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.security,
+                      color: Color(0xFF4A9EFF),
+                      size: 18,
                     ),
-                  ),
+                    if (!veryCompact) ...[
+                      const SizedBox(width: 8),
+                      ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: compact ? 150 : 190,
+                        ),
+                        child: Text(
+                          'RPG To-Do List',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 17,
+                            color: txt,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-              ],
+              ),
               if (showModeSwitch) ...[
                 SizedBox(width: compact ? 10 : 18),
                 _WorkspaceModeSwitch(

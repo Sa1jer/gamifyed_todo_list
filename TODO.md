@@ -40,11 +40,13 @@ This file tracks technical details, completed work, open tasks, and remaining wo
 - `1.3.38`: completed release QA hardening pass: bumped version, fixed stale `Прогресс` copy in Statistics, reran copy audit and full regression suite.
 - `1.3.39`: fixed achievement details crash caused by using `AppStateProvider.of(ctx)` inside a dialog builder context.
 - `1.3.39`: added locked/unlocked achievement detail regression tests and audited similar provider-context patterns.
+- `1.3.40`: added debug-only hidden entry through 5 taps on the top-bar app mark.
+- `1.3.40`: added read-only Debug Admin shell with placeholder sections and no AppState mutations.
 
 ## Next Planned Batches
 
-- `1.3.40` — Debug shell + hidden entry: create debug-only panel entry via 5 taps on the top-bar app icon, without scenarios yet.
 - `1.3.41` — Debug persistence: separate `__debug__` Hive box with debug-only overrides, outside `StorageService` and `AppState._saveAll()`.
+- `1.3.42` — Debug State Simulator scenarios: fresh user, streak 7, all achievements, epic chest, defeated resistance and active effects.
 
 ## P0 - Release / Data Safety
 
@@ -287,6 +289,22 @@ Acceptance:
 - Locked achievement details open without crash.
 - Unlocked achievement details open without crash.
 - Debug Admin work remains a later batch and does not touch AchievementsDialog in this fix.
+
+### Debug Shell + Hidden Entry - Done In 1.3.40
+
+Implemented:
+
+- Added `lib/debug/debug_admin_panel.dart` as a read-only placeholder shell.
+- Hidden entry opens only in debug mode after 5 quick taps on the top-bar app mark.
+- Debug panel shows future sections: scenarios, achievements, profile, chests/effects, resistance and reset tools.
+- No `DebugService`, `__debug__` box, scenario logic or AppState mutation was added.
+
+Acceptance:
+
+- `DEBUG ADMIN` is absent on normal startup.
+- Four taps do not open the panel; the fifth quick tap opens it in debug tests.
+- The panel can be dismissed.
+- AppState still does not import debug code.
 
 ## Known Non-Goals For Now
 

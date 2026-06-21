@@ -12,6 +12,9 @@ class MainPage extends StatefulWidget {
 }
 
 class _MainPageState extends State<MainPage> {
+  static const _debugAdminTapWindow = Duration(seconds: 2);
+  static const _debugAdminRequiredTaps = 5;
+
   final List<XPBubble> _bubbles = [];
   final GlobalKey _pageStackKey = GlobalKey();
   final GlobalKey _rewardsButtonKey = GlobalKey();
@@ -19,6 +22,28 @@ class _MainPageState extends State<MainPage> {
   WorkspaceMode _mode = WorkspaceMode.act;
   _RewardNotice? _rewardNotice;
   Offset? _rewardNoticeAnchor;
+  int _debugAdminTapCount = 0;
+  DateTime? _lastDebugAdminTapAt;
+
+  void _handleDebugAdminTap(AppState state) {
+    if (!kDebugMode) return;
+
+    final now = DateTime.now();
+    final lastTap = _lastDebugAdminTapAt;
+    if (lastTap == null || now.difference(lastTap) > _debugAdminTapWindow) {
+      _debugAdminTapCount = 0;
+    }
+
+    _lastDebugAdminTapAt = now;
+    _debugAdminTapCount++;
+
+    if (_debugAdminTapCount < _debugAdminRequiredTaps) return;
+
+    _debugAdminTapCount = 0;
+    _lastDebugAdminTapAt = null;
+    AppFeedback.selection();
+    showDebugAdminPanel(context, state: state);
+  }
 
   void _showBubble(String message, Offset pos) {
     final isMilestone = AppFeedback.isMilestoneMessage(message);
@@ -295,6 +320,9 @@ class _MainPageState extends State<MainPage> {
                     onStatsTap: openStatistics,
                     rewardsKey: _rewardsButtonKey,
                     onRewardsTap: () => _openRewardsDialog(s),
+                    onAppIconTap: kDebugMode
+                        ? () => _handleDebugAdminTap(s)
+                        : null,
                     showModeSwitch: !mobileShell,
                   ),
                   ProfileBar(isDark: isDark),
