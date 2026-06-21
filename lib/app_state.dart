@@ -1791,6 +1791,39 @@ class AppState extends ChangeNotifier {
 
   int get bestStreak => _bestStreak;
 
+  void normalizeAfterBulkStateChange({bool resetBestStreak = false}) {
+    for (final skill in skills) {
+      skill.syncChecklistDone();
+      skill.syncTreeNodes();
+    }
+    final validSkillIds = skills.map((skill) => skill.id).toSet();
+    for (final task in tasks) {
+      task.syncSubtaskDone();
+      if (!validSkillIds.contains(task.skillId)) {
+        task.treeNodeId = null;
+      } else if (task.treeNodeId != null) {
+        final skill = _skillById(task.skillId);
+        final nodeExists =
+            skill?.treeNodes.any((node) => node.id == task.treeNodeId) ?? false;
+        if (!nodeExists) task.treeNodeId = null;
+      }
+    }
+    if (selectedSkillId != null && _skillById(selectedSkillId!) == null) {
+      selectedSkillId = null;
+    }
+    _ensureAchievementDefinitions();
+    if (resetBestStreak) {
+      _bestStreak = 0;
+    }
+    _recalculateBestStreakFromTasks();
+    _invalidateHistoryCaches();
+    _syncAllBosses();
+    _checkAchievements();
+    _syncAllTaskNotifications();
+    notifyListeners();
+    _saveAll();
+  }
+
   void refresh() {
     notifyListeners();
     _saveAll();

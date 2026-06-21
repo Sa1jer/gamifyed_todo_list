@@ -204,13 +204,15 @@ Current `1.3.39` crash-fix status:
 - Persistence: separate `__debug__` Hive box with debug-only draft overrides, outside production `StorageService` and `AppState._saveAll()`.
 - `AppState` must not import `DebugService`.
 
-Current `1.3.41` debug shell status:
+Current `1.3.42` debug simulator status:
 
 - Hidden entry exists through 5 taps on the top-bar app mark under `kDebugMode`.
 - Debug Admin lazy-initializes `DebugService` only when opened.
-- Debug draft state is typed but not applied to AppState.
+- Debug draft state stores the selected simulator scenario and remains separate from production data.
 - Debug Admin shows storage status and can clear only `__debug__` after confirmation.
-- No simulator scenarios, production storage changes, or AppState mutations exist yet.
+- Core simulator scenarios can mutate AppState only after explicit confirmation.
+- Scenario state is saved through existing AppState persistence so test worlds survive restart in debug app data.
+- No production storage schema changes or `AppState -> DebugService` imports exist.
 
 ## XP Editing Direction
 

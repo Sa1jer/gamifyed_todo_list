@@ -300,7 +300,32 @@ void main() {
     expect(find.text('Debug storage'), findsOneWidget);
     expect(find.textContaining(DebugService.boxName), findsOneWidget);
     expect(find.text('Сценарии'), findsOneWidget);
-    expect(find.text('Reset tools', skipOffstage: false), findsOneWidget);
+    expect(find.text('Новый пользователь'), findsOneWidget);
+    expect(find.text('Стрик 7 дней'), findsOneWidget);
+
+    await tester.tap(find.text('Стрик 7 дней'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.text('Применить сценарий?'), findsOneWidget);
+    await tester.tap(find.text('Отмена'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.text('Применить сценарий?'), findsNothing);
+    expect(storage.skills, isEmpty);
+    expect(fakeDebugService.draft.selectedScenarioId, 'epic_chest_pending');
+
+    await tester.tap(find.text('Стрик 7 дней'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.tap(find.text('Применить'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
+
+    expect(fakeDebugService.draft.selectedScenarioId, 'streak_7');
+    expect(storage.skills, hasLength(1));
+    expect(storage.tasks, hasLength(1));
 
     await tester.tap(find.text('Очистить'));
     await tester.pump();
@@ -313,7 +338,7 @@ void main() {
 
     expect(find.text('Очистить debug state?'), findsNothing);
     expect(fakeDebugService.cleared, isFalse);
-    expect(storage.skills, isEmpty);
+    expect(storage.skills, hasLength(1));
 
     await tester.tap(find.byIcon(Icons.close).last);
     await tester.pump();

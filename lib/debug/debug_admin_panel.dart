@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../utils.dart';
 import '../widgets/shared.dart';
+import 'debug_admin_controller.dart';
+import 'debug_scenarios.dart';
 import 'debug_service.dart';
 
 @visibleForTesting
@@ -77,7 +79,58 @@ class _DebugAdminPanelState extends State<_DebugAdminPanel> {
     );
 
     if (confirmed != true) return;
-    await widget.debugService.clear();
+    final controller = DebugAdminController(
+      state: widget.state,
+      debugService: widget.debugService,
+    );
+    await controller.clearDebugDraftState();
+    if (!mounted) return;
+    setState(() {
+      _draftFuture = _loadDraft();
+    });
+  }
+
+  Future<void> _confirmApplyScenario(DebugScenarioDef scenario) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        final isDark = widget.state.isDark;
+        final txt = textColor(isDark);
+        final sub = subtext(isDark);
+        final isOverwrite =
+            scenario.dangerLevel == DebugScenarioDanger.overwrite;
+        return AlertDialog(
+          backgroundColor: surface(isDark),
+          title: Text(
+            'Применить сценарий?',
+            style: TextStyle(color: txt, fontWeight: FontWeight.w900),
+          ),
+          content: Text(
+            isOverwrite
+                ? '«${scenario.title}» перезапишет часть текущего состояния приложения. Это debug-only действие.'
+                : '«${scenario.title}» добавит или изменит тестовое состояние приложения. Это debug-only действие.',
+            style: TextStyle(color: sub, fontWeight: FontWeight.w700),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Отмена'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Применить'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+    final controller = DebugAdminController(
+      state: widget.state,
+      debugService: widget.debugService,
+    );
+    await controller.applyScenario(scenario);
     if (!mounted) return;
     setState(() {
       _draftFuture = _loadDraft();
@@ -137,7 +190,7 @@ class _DebugAdminPanelState extends State<_DebugAdminPanel> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'State Simulator shell',
+                          'State Simulator',
                           style: TextStyle(
                             color: sub,
                             fontSize: 11.5,
@@ -176,7 +229,7 @@ class _DebugAdminPanelState extends State<_DebugAdminPanel> {
                     const SizedBox(width: 9),
                     Expanded(
                       child: Text(
-                        'Debug only. Инструменты симуляции состояния появятся в следующих фазах.',
+                        'Debug only. Сценарии ниже меняют состояние приложения только в debug-сборке.',
                         style: TextStyle(
                           color: txt,
                           fontSize: 12.2,
@@ -208,12 +261,10 @@ class _DebugAdminPanelState extends State<_DebugAdminPanel> {
                 child: ListView(
                   shrinkWrap: true,
                   children: [
-                    _DebugAdminSection(
+                    _DebugScenariosSection(
                       isDark: isDark,
-                      icon: Icons.auto_fix_high_outlined,
-                      title: 'Сценарии',
-                      description:
-                          'Fresh user, streak, trophies and load states.',
+                      scenarios: debugScenarios,
+                      onApplyScenario: _confirmApplyScenario,
                     ),
                     _DebugAdminSection(
                       isDark: isDark,
@@ -255,7 +306,7 @@ class _DebugAdminPanelState extends State<_DebugAdminPanel> {
               Container(height: 1, color: border),
               const SizedBox(height: 10),
               Text(
-                'Debug persistence in 1.3.41 · no AppState mutations',
+                'State simulator in 1.3.42 · debug-only mutations',
                 style: TextStyle(
                   color: sub,
                   fontSize: 11,
@@ -350,6 +401,163 @@ class _DebugStorageStatusCard extends StatelessWidget {
             child: const Text('Очистить'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _DebugScenariosSection extends StatelessWidget {
+  final bool isDark;
+  final List<DebugScenarioDef> scenarios;
+  final ValueChanged<DebugScenarioDef> onApplyScenario;
+
+  const _DebugScenariosSection({
+    required this.isDark,
+    required this.scenarios,
+    required this.onApplyScenario,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final txt = textColor(isDark);
+    final sub = subtext(isDark);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF15151D) : const Color(0xFFF4F5FA),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: borderColor(isDark)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.auto_fix_high_outlined, color: sub, size: 18),
+              const SizedBox(width: 9),
+              Expanded(
+                child: Text(
+                  'Сценарии',
+                  style: TextStyle(
+                    color: txt,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              Text(
+                '${scenarios.length}',
+                style: TextStyle(
+                  color: sub,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Быстро собрать состояние для QA. Каждое применение требует подтверждения.',
+            style: TextStyle(
+              color: sub,
+              fontSize: 11.2,
+              height: 1.3,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 10),
+          for (final scenario in scenarios)
+            _DebugScenarioCard(
+              isDark: isDark,
+              scenario: scenario,
+              onTap: () => onApplyScenario(scenario),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DebugScenarioCard extends StatelessWidget {
+  final bool isDark;
+  final DebugScenarioDef scenario;
+  final VoidCallback onTap;
+
+  const _DebugScenarioCard({
+    required this.isDark,
+    required this.scenario,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final txt = textColor(isDark);
+    final sub = subtext(isDark);
+    final isOverwrite = scenario.dangerLevel == DebugScenarioDanger.overwrite;
+    final accent = isOverwrite
+        ? const Color(0xFFFF9500)
+        : const Color(0xFF4A9EFF);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: PressFeedback(
+        scale: 0.985,
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(11),
+          decoration: BoxDecoration(
+            color: accent.withAlpha(isDark ? 18 : 12),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: accent.withAlpha(isDark ? 56 : 48)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                isOverwrite
+                    ? Icons.warning_amber_rounded
+                    : Icons.play_circle_outline,
+                color: accent,
+                size: 18,
+              ),
+              const SizedBox(width: 9),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      scenario.title,
+                      style: TextStyle(
+                        color: txt,
+                        fontSize: 12.8,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      scenario.description,
+                      style: TextStyle(
+                        color: sub,
+                        fontSize: 10.9,
+                        height: 1.25,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                isOverwrite ? 'overwrite' : 'add',
+                style: TextStyle(
+                  color: accent,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

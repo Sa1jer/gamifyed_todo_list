@@ -44,10 +44,12 @@ This file tracks technical details, completed work, open tasks, and remaining wo
 - `1.3.40`: added read-only Debug Admin shell with placeholder sections and no AppState mutations.
 - `1.3.41`: added debug-only persistence through the separate `__debug__` Hive box.
 - `1.3.41`: Debug Admin now shows debug storage status and confirm-guarded debug-state clearing without touching AppState.
+- `1.3.42`: added Debug State Simulator scenarios for fresh user, streak 7, all achievements, epic chest, defeated resistance and active effects.
+- `1.3.42`: Debug scenarios require confirmation, update debug draft metadata and remain isolated from production storage architecture.
 
 ## Next Planned Batches
 
-- `1.3.42` — Debug State Simulator scenarios: fresh user, streak 7, all achievements, epic chest, defeated resistance and active effects.
+- `1.3.43` — Achievement state tools: unlock/lock all and per-achievement toggles inside Debug Admin.
 
 ## P0 - Release / Data Safety
 
@@ -324,6 +326,22 @@ Acceptance:
 - AppState does not import DebugService.
 - Production storage schema is unchanged.
 - Corrupted debug draft JSON falls back to empty debug state.
+
+### Debug State Simulator Scenarios - Done In 1.3.42
+
+Implemented:
+
+- Added `DebugAdminController` and `debug_scenarios.dart` in `lib/debug/`.
+- Added six confirmed scenarios: fresh user, streak 7, all achievements, epic chest pending, defeated resistance and active effects.
+- Scenario application updates AppState only from Debug Admin and saves selected scenario metadata to `__debug__`.
+- Added AppState bulk normalization after scenario changes to keep history caches, achievements, selected skill, best streak and notifications consistent.
+
+Acceptance:
+
+- Scenarios stay hidden behind debug-only entry.
+- Applying a scenario requires confirmation.
+- `AppState` still does not import debug code.
+- `StorageService` still does not know about `__debug__`.
 
 ## Known Non-Goals For Now
 
