@@ -1,9 +1,29 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
+
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
+}
+
+fun releaseSigningConfigured(): Boolean =
+    listOf("storeFile", "storePassword", "keyAlias", "keyPassword").all { key ->
+        keystoreProperties.getProperty(key)?.isNotBlank() == true
+    }
+
+fun releaseBuildRequested(): Boolean =
+    gradle.startParameter.taskNames.any { taskName ->
+        taskName.contains("Release", ignoreCase = true) ||
+            taskName.contains("bundle", ignoreCase = true) ||
+            taskName.contains("publish", ignoreCase = true)
+    }
 
 android {
     namespace = "com.example.todo_list_app"
@@ -31,11 +51,29 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            val storeFilePath = keystoreProperties.getProperty("storeFile")
+            if (!storeFilePath.isNullOrBlank()) {
+                storeFile = file(storeFilePath)
+            }
+            storePassword = keystoreProperties.getProperty("storePassword")
+            keyAlias = keystoreProperties.getProperty("keyAlias")
+            keyPassword = keystoreProperties.getProperty("keyPassword")
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            if (!releaseSigningConfigured() && releaseBuildRequested()) {
+                throw GradleException(
+                    "Release signing is not configured. Create android/key.properties " +
+                        "with storeFile, storePassword, keyAlias, and keyPassword.",
+                )
+            }
+            if (releaseSigningConfigured()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 }

@@ -9,6 +9,8 @@ import 'package:todo_list_app/utils.dart';
 
 class _InMemoryStorageService extends StorageService {
   int? bestStreak;
+  bool? onboardingSeen;
+  TutorialProgress? tutorialProgress;
 
   @override
   Future<void> init() async {}
@@ -38,10 +40,20 @@ class _InMemoryStorageService extends StorageService {
   Future<void> saveTooltipsEnabled(bool enabled) async {}
 
   @override
-  Future<bool?> loadOnboardingSeen() async => null;
+  Future<bool?> loadOnboardingSeen() async => onboardingSeen;
 
   @override
-  Future<void> saveOnboardingSeen(bool seen) async {}
+  Future<void> saveOnboardingSeen(bool seen) async {
+    onboardingSeen = seen;
+  }
+
+  @override
+  Future<TutorialProgress?> loadTutorialProgress() async => tutorialProgress;
+
+  @override
+  Future<void> saveTutorialProgress(TutorialProgress progress) async {
+    tutorialProgress = progress;
+  }
 
   @override
   Future<int?> loadBestStreak() async => bestStreak;
@@ -180,6 +192,26 @@ void main() {
         isTrue,
       );
       expect(result.debug.draft.selectedScenarioId, debugScenarioFreshUser.id);
+    });
+
+    test('fresh user resets first-run tutorial state', () async {
+      final storage = _InMemoryStorageService()..onboardingSeen = true;
+      final state = AppState(storage: storage, seedDefaults: true);
+      final debug = _FakeDebugService();
+      final controller = DebugAdminController(
+        state: state,
+        debugService: debug,
+      );
+      addTearDown(state.dispose);
+
+      await state.loadSavedData();
+      expect(state.onboardingSeen, isTrue);
+
+      await controller.applyScenario(debugScenarioFreshUser);
+
+      expect(state.onboardingSeen, isFalse);
+      expect(storage.onboardingSeen, isFalse);
+      expect(state.shouldShowFirstRunTutorial, isTrue);
     });
 
     test(

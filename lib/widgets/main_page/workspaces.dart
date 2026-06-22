@@ -4,14 +4,20 @@ class _ActWorkspace extends StatelessWidget {
   final void Function(String taskId, Offset position) onComplete;
   final void Function(String taskId, Offset position) onMinimumAction;
   final VoidCallback onCreateFirstSkill;
+  final ValueChanged<Skill> onOpenRoadmap;
   final Key? createFirstSkillButtonKey;
+  final Key? createFirstQuestButtonKey;
+  final Key? nextQuestActionKey;
 
   const _ActWorkspace({
     super.key,
     required this.onComplete,
     required this.onMinimumAction,
     required this.onCreateFirstSkill,
+    required this.onOpenRoadmap,
     this.createFirstSkillButtonKey,
+    this.createFirstQuestButtonKey,
+    this.nextQuestActionKey,
   });
 
   @override
@@ -23,12 +29,15 @@ class _ActWorkspace extends StatelessWidget {
           onMinimumAction: onMinimumAction,
           onCreateFirstSkill: onCreateFirstSkill,
           createFirstSkillButtonKey: createFirstSkillButtonKey,
+          nextQuestActionKey: nextQuestActionKey,
         ),
         const SizedBox(height: 8),
         Expanded(
           child: _SkillTaskWorkspace(
             onComplete: onComplete,
             onMinimumAction: onMinimumAction,
+            onOpenRoadmap: onOpenRoadmap,
+            createFirstQuestButtonKey: createFirstQuestButtonKey,
           ),
         ),
       ],
@@ -38,12 +47,20 @@ class _ActWorkspace extends StatelessWidget {
 
 class _MasteryWorkspace extends StatelessWidget {
   final bool isDark;
+  final String? focusSkillId;
+  final GlobalKey? canvasTutorialKey;
+  final GlobalKey? inspectorTutorialKey;
+  final GlobalKey? practiceTutorialKey;
   final Function(String taskId, Offset pos) onComplete;
   final Function(String taskId, Offset pos) onMinimumAction;
 
   const _MasteryWorkspace({
     super.key,
     required this.isDark,
+    this.focusSkillId,
+    this.canvasTutorialKey,
+    this.inspectorTutorialKey,
+    this.practiceTutorialKey,
     required this.onComplete,
     required this.onMinimumAction,
   });
@@ -52,6 +69,10 @@ class _MasteryWorkspace extends StatelessWidget {
   Widget build(BuildContext context) {
     return MasteryMapWorkspace(
       isDark: isDark,
+      focusSkillId: focusSkillId,
+      canvasTutorialKey: canvasTutorialKey,
+      inspectorTutorialKey: inspectorTutorialKey,
+      practiceTutorialKey: practiceTutorialKey,
       onCompleteTask: onComplete,
       onMinimumAction: onMinimumAction,
     );
@@ -61,6 +82,8 @@ class _MasteryWorkspace extends StatelessWidget {
 class _ProgressWorkspace extends StatelessWidget {
   final AppState state;
   final bool isDark;
+  final bool showTutorialHint;
+  final VoidCallback? onTutorialComplete;
   final VoidCallback onOpenDailyVictories;
   final VoidCallback onOpenCharacterTimeline;
   final VoidCallback onOpenWeekly;
@@ -75,6 +98,8 @@ class _ProgressWorkspace extends StatelessWidget {
     super.key,
     required this.state,
     required this.isDark,
+    this.showTutorialHint = false,
+    this.onTutorialComplete,
     required this.onOpenDailyVictories,
     required this.onOpenCharacterTimeline,
     required this.onOpenWeekly,
@@ -92,6 +117,8 @@ class _ProgressWorkspace extends StatelessWidget {
       child: ProgressHubContent(
         state: state,
         isDark: isDark,
+        showTutorialHint: showTutorialHint,
+        onTutorialComplete: onTutorialComplete,
         subtitle: 'Что получилось, какой навык вырос и что продолжить.',
         onOpenDailyVictories: onOpenDailyVictories,
         onOpenCharacterTimeline: onOpenCharacterTimeline,
@@ -110,10 +137,14 @@ class _ProgressWorkspace extends StatelessWidget {
 class _SkillTaskWorkspace extends StatelessWidget {
   final void Function(String taskId, Offset position) onComplete;
   final void Function(String taskId, Offset position) onMinimumAction;
+  final ValueChanged<Skill> onOpenRoadmap;
+  final Key? createFirstQuestButtonKey;
 
   const _SkillTaskWorkspace({
     required this.onComplete,
     required this.onMinimumAction,
+    required this.onOpenRoadmap,
+    this.createFirstQuestButtonKey,
   });
 
   @override
@@ -129,6 +160,7 @@ class _SkillTaskWorkspace extends StatelessWidget {
                 child: TasksPanel(
                   onComplete: onComplete,
                   onMinimumAction: onMinimumAction,
+                  createFirstQuestButtonKey: createFirstQuestButtonKey,
                 ),
               ),
             ],
@@ -140,12 +172,16 @@ class _SkillTaskWorkspace extends StatelessWidget {
         return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(width: skillsWidth, child: const SkillsPanel()),
+            SizedBox(
+              width: skillsWidth,
+              child: SkillsPanel(onOpenRoadmap: onOpenRoadmap),
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: TasksPanel(
                 onComplete: onComplete,
                 onMinimumAction: onMinimumAction,
+                createFirstQuestButtonKey: createFirstQuestButtonKey,
               ),
             ),
           ],

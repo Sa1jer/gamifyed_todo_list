@@ -9,6 +9,7 @@ class TodayDashboard extends StatefulWidget {
   final Function(String id, Offset pos) onMinimumAction;
   final VoidCallback? onCreateFirstSkill;
   final Key? createFirstSkillButtonKey;
+  final Key? nextQuestActionKey;
 
   const TodayDashboard({
     super.key,
@@ -16,6 +17,7 @@ class TodayDashboard extends StatefulWidget {
     required this.onMinimumAction,
     this.onCreateFirstSkill,
     this.createFirstSkillButtonKey,
+    this.nextQuestActionKey,
   });
 
   static Skill? _skillFor(AppState state, Task task) {
@@ -277,6 +279,8 @@ class _TodayDashboardState extends State<TodayDashboard> {
                                           widget.onCreateFirstSkill,
                                       createFirstSkillButtonKey:
                                           widget.createFirstSkillButtonKey,
+                                      nextQuestActionKey:
+                                          widget.nextQuestActionKey,
                                     );
 
                                     if (constraints.maxWidth < 720) {
@@ -290,6 +294,8 @@ class _TodayDashboardState extends State<TodayDashboard> {
                                             widget.onCreateFirstSkill,
                                         createFirstSkillButtonKey:
                                             widget.createFirstSkillButtonKey,
+                                        nextQuestActionKey:
+                                            widget.nextQuestActionKey,
                                       );
                                     }
 
@@ -338,6 +344,7 @@ class _DashboardContent extends StatelessWidget {
   final Function(String id, Offset pos) onMinimumAction;
   final VoidCallback? onCreateFirstSkill;
   final Key? createFirstSkillButtonKey;
+  final Key? nextQuestActionKey;
 
   const _DashboardContent({
     required this.state,
@@ -352,6 +359,7 @@ class _DashboardContent extends StatelessWidget {
     required this.onMinimumAction,
     required this.onCreateFirstSkill,
     required this.createFirstSkillButtonKey,
+    required this.nextQuestActionKey,
   });
 
   @override
@@ -372,6 +380,7 @@ class _DashboardContent extends StatelessWidget {
             onMinimumAction: onMinimumAction,
             onCreateFirstSkill: onCreateFirstSkill,
             createFirstSkillButtonKey: createFirstSkillButtonKey,
+            nextQuestActionKey: nextQuestActionKey,
           ),
         ),
         const SizedBox(width: 10),
@@ -418,6 +427,7 @@ class _CompactDashboardContent extends StatelessWidget {
   final Function(String id, Offset pos) onMinimumAction;
   final VoidCallback? onCreateFirstSkill;
   final Key? createFirstSkillButtonKey;
+  final Key? nextQuestActionKey;
 
   const _CompactDashboardContent({
     required this.state,
@@ -427,6 +437,7 @@ class _CompactDashboardContent extends StatelessWidget {
     required this.onMinimumAction,
     required this.onCreateFirstSkill,
     required this.createFirstSkillButtonKey,
+    required this.nextQuestActionKey,
   });
 
   @override
@@ -442,6 +453,7 @@ class _CompactDashboardContent extends StatelessWidget {
       onMinimumAction: onMinimumAction,
       onCreateFirstSkill: onCreateFirstSkill,
       createFirstSkillButtonKey: createFirstSkillButtonKey,
+      nextQuestActionKey: nextQuestActionKey,
     );
   }
 }
@@ -455,6 +467,7 @@ class _NextActionCard extends StatelessWidget {
   final Function(String id, Offset pos) onMinimumAction;
   final VoidCallback? onCreateFirstSkill;
   final Key? createFirstSkillButtonKey;
+  final Key? nextQuestActionKey;
 
   const _NextActionCard({
     required this.state,
@@ -465,6 +478,7 @@ class _NextActionCard extends StatelessWidget {
     required this.onMinimumAction,
     required this.onCreateFirstSkill,
     required this.createFirstSkillButtonKey,
+    required this.nextQuestActionKey,
   });
 
   @override
@@ -516,7 +530,7 @@ class _NextActionCard extends StatelessWidget {
             const SizedBox(height: 4),
             if (isFreshStart) ...[
               Text(
-                '1. Навык → 2. Этап → 3. Квест',
+                'Сначала направление роста, затем первый квест.',
                 style: TextStyle(
                   color: accent,
                   fontSize: 12.5,
@@ -531,7 +545,7 @@ class _NextActionCard extends StatelessWidget {
             Text(
               hasSkills
                   ? 'Добавьте один маленький квест или минимальный шаг.'
-                  : 'Создайте навык: первый этап и первый квест с минимумом появятся сразу.',
+                  : 'Создайте навык: первый этап появится сразу, а квест добавим следующим шагом.',
               style: TextStyle(color: sub, fontSize: 12, height: 1.25),
               maxLines: isFreshStart ? 2 : 1,
               overflow: TextOverflow.ellipsis,
@@ -651,6 +665,7 @@ class _NextActionCard extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               _QuickActionButton(
+                key: nextQuestActionKey,
                 task: task!,
                 color: accent,
                 label: actionLabel,
@@ -991,6 +1006,7 @@ class _QuickActionButton extends StatelessWidget {
   final Function(String id, Offset pos) onTrigger;
 
   const _QuickActionButton({
+    super.key,
     required this.task,
     required this.color,
     required this.label,

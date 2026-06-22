@@ -11,6 +11,9 @@ class DebugAdminController {
   const DebugAdminController({required this.state, required this.debugService});
 
   Future<void> applyScenario(DebugScenarioDef scenario) async {
+    if (!kDebugMode) {
+      throw StateError('Debug scenarios must not run outside debug mode.');
+    }
     assert(kDebugMode, 'Debug scenarios must not run outside debug mode');
     scenario.apply(state);
     state.normalizeAfterBulkStateChange(
@@ -28,6 +31,9 @@ class DebugAdminController {
   }
 
   Future<void> clearDebugDraftState() {
+    if (!kDebugMode) {
+      throw StateError('Debug tools must not run outside debug mode.');
+    }
     assert(kDebugMode, 'Debug tools must not run outside debug mode');
     return debugService.clear();
   }

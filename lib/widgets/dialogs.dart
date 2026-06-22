@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 import '../app_state.dart';
-import '../engines/goal_engine.dart';
 import '../feedback_service.dart';
 import '../models.dart';
 import '../utils.dart';

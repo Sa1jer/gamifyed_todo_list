@@ -177,44 +177,21 @@ class _PlanningWorkspaceState extends State<PlanningWorkspace> {
       context: context,
       builder: (_) => AddSkillDialog(
         isDark: state.isDark,
-        onSave:
-            (
-              name,
-              goal,
-              checklist,
-              color,
-              icon,
-              initialTreeNodes,
-              initialQuest,
-            ) {
-              final skillId = uid();
-              state.addSkill(
-                Skill(
-                  id: skillId,
-                  name: name,
-                  goal: goal,
-                  color: color,
-                  icon: icon,
-                  checklist: checklist,
-                  treeNodes: initialTreeNodes,
-                ),
-              );
-              state.selectSkill(skillId);
-              if (initialQuest != null) {
-                state.addTask(
-                  Task(
-                    id: uid(),
-                    title: initialQuest.title,
-                    skillId: skillId,
-                    xpReward: 20,
-                    type: TaskType.shortTerm,
-                    priority: Priority.medium,
-                    minimumAction: initialQuest.minimumAction,
-                    treeNodeId: initialQuest.treeNodeId,
-                  ),
-                );
-              }
-            },
+        onSave: (name, goal, checklist, color, icon, initialTreeNodes, _) {
+          final skillId = uid();
+          state.addSkill(
+            Skill(
+              id: skillId,
+              name: name,
+              goal: goal,
+              color: color,
+              icon: icon,
+              checklist: checklist,
+              treeNodes: initialTreeNodes,
+            ),
+          );
+          state.selectSkill(skillId);
+        },
       ),
     );
   }

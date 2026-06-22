@@ -2,12 +2,20 @@ part of '../mastery_map_workspace.dart';
 
 class MasteryMapWorkspace extends StatefulWidget {
   final bool isDark;
+  final String? focusSkillId;
+  final GlobalKey? canvasTutorialKey;
+  final GlobalKey? inspectorTutorialKey;
+  final GlobalKey? practiceTutorialKey;
   final void Function(String taskId, Offset position) onCompleteTask;
   final void Function(String taskId, Offset position) onMinimumAction;
 
   const MasteryMapWorkspace({
     super.key,
     required this.isDark,
+    this.focusSkillId,
+    this.canvasTutorialKey,
+    this.inspectorTutorialKey,
+    this.practiceTutorialKey,
     required this.onCompleteTask,
     required this.onMinimumAction,
   });
@@ -18,6 +26,27 @@ class MasteryMapWorkspace extends StatefulWidget {
 
 class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
   _MasterySelection? _selection;
+  String? _lastAppliedFocusSkillId;
+
+  @override
+  void initState() {
+    super.initState();
+    _applyExternalFocus(widget.focusSkillId);
+  }
+
+  @override
+  void didUpdateWidget(covariant MasteryMapWorkspace oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.focusSkillId != oldWidget.focusSkillId) {
+      _applyExternalFocus(widget.focusSkillId);
+    }
+  }
+
+  void _applyExternalFocus(String? skillId) {
+    if (skillId == null || skillId == _lastAppliedFocusSkillId) return;
+    _lastAppliedFocusSkillId = skillId;
+    _selection = _MasterySelection.skill(skillId);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +60,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
         child: EmptyStateMessage(
           isDark: isDark,
           icon: Icons.account_tree_outlined,
-          title: 'Карта мастерства пока пустая',
+          title: 'RoadMap пока пустой',
           subtitle:
               'Сначала создай первый навык в “Сейчас”: карта покажет этапы, когда появится путь.',
         ),
@@ -50,9 +79,13 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
             state: state,
             isDark: isDark,
             selection: selection,
+            canvasTutorialKey: widget.canvasTutorialKey,
+            inspectorTutorialKey: widget.inspectorTutorialKey,
+            practiceTutorialKey: widget.practiceTutorialKey,
             onSelectionChanged: (next) => setState(() => _selection = next),
             onAddRoot: (skill) => _addNode(context, skill),
             onExtendPath: (skill, node) => _extendPath(context, skill, node),
+            onRenameNode: (skill, node) => _renameNode(context, skill, node),
             onInsertStageAfter: (skill, leftNode, rightNode) =>
                 _insertStageAfter(context, skill, leftNode, rightNode),
             onAddQuest: (skill, node) => _addQuest(context, skill, node: node),
@@ -188,6 +221,36 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
           final nextSelection = _MasterySelection.node(skill.id, created.id);
           setState(() => _selection = nextSelection);
           onCreated?.call(nextSelection);
+        },
+      ),
+    );
+  }
+
+  void _renameNode(
+    BuildContext context,
+    Skill skill,
+    SkillTreeNode node, {
+    ValueChanged<_MasterySelection>? onSaved,
+  }) {
+    final state = AppStateProvider.of(context);
+    showDialog<void>(
+      context: context,
+      useRootNavigator: true,
+      builder: (dialogContext) => _RenameRoadmapStageDialog(
+        isDark: state.isDark,
+        initialTitle: node.title,
+        onCancel: () => Navigator.of(dialogContext, rootNavigator: true).pop(),
+        onSave: (nextTitle) {
+          Navigator.of(dialogContext, rootNavigator: true).pop();
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            state.renameSkillTreeNode(skill.id, node.id, nextTitle);
+            final nextSelection = _MasterySelection.node(skill.id, node.id);
+            if (mounted) {
+              setState(() => _selection = nextSelection);
+            }
+            onSaved?.call(nextSelection);
+          });
         },
       ),
     );
@@ -379,7 +442,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Text(
-                                  'Карта мастерства',
+                                  'RoadMap',
                                   style: TextStyle(
                                     color: textColor(isDark),
                                     fontSize: 18,
@@ -402,6 +465,9 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
                               isDark: isDark,
                               selection: fullscreenSelection,
                               fullscreen: true,
+                              canvasTutorialKey: null,
+                              inspectorTutorialKey: null,
+                              practiceTutorialKey: null,
                               onSelectionChanged: updateSelection,
                               onAddRoot: (skill) => _addNode(
                                 dialogContext,
@@ -413,6 +479,12 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
                                 skill,
                                 node,
                                 onCreated: updateSelection,
+                              ),
+                              onRenameNode: (skill, node) => _renameNode(
+                                dialogContext,
+                                skill,
+                                node,
+                                onSaved: updateSelection,
                               ),
                               onInsertStageAfter:
                                   (skill, leftNode, rightNode) =>
@@ -465,6 +537,85 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
               },
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+class _RenameRoadmapStageDialog extends StatefulWidget {
+  final bool isDark;
+  final String initialTitle;
+  final VoidCallback onCancel;
+  final ValueChanged<String> onSave;
+
+  const _RenameRoadmapStageDialog({
+    required this.isDark,
+    required this.initialTitle,
+    required this.onCancel,
+    required this.onSave,
+  });
+
+  @override
+  State<_RenameRoadmapStageDialog> createState() =>
+      _RenameRoadmapStageDialogState();
+}
+
+class _RenameRoadmapStageDialogState extends State<_RenameRoadmapStageDialog> {
+  late final TextEditingController _titleCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleCtrl = TextEditingController(text: widget.initialTitle);
+  }
+
+  @override
+  void dispose() {
+    _titleCtrl.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final nextTitle = _titleCtrl.text.trim();
+    if (nextTitle.isEmpty) return;
+    widget.onSave(nextTitle);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = widget.isDark;
+    final bg = surface(isDark);
+    final fBg = isDark ? const Color(0xFF13131A) : const Color(0xFFF5F5F7);
+    final txt = textColor(isDark);
+    final sub = subtext(isDark);
+    final bdr = borderColor(isDark);
+
+    return Dialog(
+      backgroundColor: bg,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: SizedBox(
+        width: 410,
+        child: Padding(
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              DlgHeader(title: 'Переименовать этап', txtColor: txt),
+              const SizedBox(height: 14),
+              DlgField(
+                label: 'Название этапа',
+                ctrl: _titleCtrl,
+                fBg: fBg,
+                txt: txt,
+                sub: sub,
+                bdr: bdr,
+              ),
+              const SizedBox(height: 18),
+              DlgActions(onCancel: widget.onCancel, onSave: _save),
+            ],
+          ),
         ),
       ),
     );

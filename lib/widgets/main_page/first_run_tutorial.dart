@@ -1,17 +1,53 @@
 part of '../main_page.dart';
 
+class _GuidedTutorialStep {
+  final String id;
+  final GlobalKey targetKey;
+  final String title;
+  final String body;
+  final String primaryLabel;
+  final IconData primaryIcon;
+  final String? secondaryLabel;
+  final VoidCallback onPrimaryAction;
+
+  const _GuidedTutorialStep({
+    required this.id,
+    required this.targetKey,
+    required this.title,
+    required this.body,
+    required this.primaryLabel,
+    this.primaryIcon = Icons.arrow_forward_rounded,
+    this.secondaryLabel = 'Пропустить обучение',
+    required this.onPrimaryAction,
+  });
+}
+
 class _FirstRunTutorialOverlay extends StatefulWidget {
+  final String stepId;
   final GlobalKey targetKey;
   final bool isDark;
+  final bool visible;
+  final String title;
+  final String body;
+  final String primaryLabel;
+  final IconData primaryIcon;
+  final String? secondaryLabel;
   final VoidCallback onDismiss;
-  final VoidCallback onCreateFirstSkill;
+  final VoidCallback onPrimaryAction;
 
-  const _FirstRunTutorialOverlay({
+  _FirstRunTutorialOverlay({
+    required this.stepId,
     required this.targetKey,
     required this.isDark,
+    required this.visible,
+    required this.title,
+    required this.body,
+    required this.primaryLabel,
+    this.primaryIcon = Icons.arrow_forward_rounded,
+    this.secondaryLabel = 'Пропустить обучение',
     required this.onDismiss,
-    required this.onCreateFirstSkill,
-  });
+    required this.onPrimaryAction,
+  }) : super(key: ValueKey('first-run-tutorial-overlay-$stepId'));
 
   @override
   State<_FirstRunTutorialOverlay> createState() =>
@@ -63,12 +99,16 @@ class _FirstRunTutorialOverlayState extends State<_FirstRunTutorialOverlay> {
       child: Material(
         color: Colors.transparent,
         child: TweenAnimationBuilder<double>(
-          tween: Tween(begin: 0, end: 1),
+          tween: Tween(begin: 0, end: widget.visible ? 1 : 0),
           duration: kMotionSlow,
           curve: kMotionCurve,
-          builder: (context, t, child) => Opacity(
-            opacity: t,
-            child: Transform.scale(scale: 0.98 + (0.02 * t), child: child),
+          builder: (context, t, child) => IgnorePointer(
+            ignoring: !widget.visible || t < 0.05,
+            child: Opacity(
+              key: const ValueKey('first-run-tutorial-opacity'),
+              opacity: t,
+              child: Transform.scale(scale: 0.98 + (0.02 * t), child: child),
+            ),
           ),
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -172,7 +212,7 @@ class _FirstRunTutorialOverlayState extends State<_FirstRunTutorialOverlay> {
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: Text(
-                                    'Первый запуск',
+                                    widget.title,
                                     style: TextStyle(
                                       color: txt,
                                       fontSize: 18,
@@ -184,7 +224,7 @@ class _FirstRunTutorialOverlayState extends State<_FirstRunTutorialOverlay> {
                             ),
                             const SizedBox(height: 12),
                             Text(
-                              'Начни с одного навыка. Приложение сразу создаст первый этап, первый квест и минимальный шаг.',
+                              widget.body,
                               style: TextStyle(
                                 color: sub,
                                 fontSize: 13,
@@ -192,24 +232,23 @@ class _FirstRunTutorialOverlayState extends State<_FirstRunTutorialOverlay> {
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
-                            const SizedBox(height: 14),
-                            const _TutorialLoopPill(),
                             const SizedBox(height: 16),
                             Wrap(
                               spacing: 10,
                               runSpacing: 10,
                               children: [
                                 SmallBtn(
-                                  label: 'Создать навык',
-                                  icon: Icons.add,
+                                  label: widget.primaryLabel,
+                                  icon: widget.primaryIcon,
                                   color: const Color(0xFFFF9500),
-                                  onTap: widget.onCreateFirstSkill,
+                                  onTap: widget.onPrimaryAction,
                                 ),
-                                _TutorialGhostButton(
-                                  label: 'Понятно',
-                                  isDark: widget.isDark,
-                                  onTap: widget.onDismiss,
-                                ),
+                                if (widget.secondaryLabel != null)
+                                  _TutorialGhostButton(
+                                    label: widget.secondaryLabel!,
+                                    isDark: widget.isDark,
+                                    onTap: widget.onDismiss,
+                                  ),
                               ],
                             ),
                           ],
@@ -257,60 +296,6 @@ class _TutorialSpotlightPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _TutorialSpotlightPainter oldDelegate) {
     return oldDelegate.targetRect != targetRect || oldDelegate.isDark != isDark;
-  }
-}
-
-class _TutorialLoopPill extends StatelessWidget {
-  const _TutorialLoopPill();
-
-  @override
-  Widget build(BuildContext context) {
-    const steps = ['Навык', 'Этап', 'Квест', 'Минимум', 'Рост'];
-    return Wrap(
-      spacing: 6,
-      runSpacing: 6,
-      children: [
-        for (var i = 0; i < steps.length; i++) ...[
-          _TutorialStepChip(index: i + 1, label: steps[i]),
-          if (i != steps.length - 1)
-            const Padding(
-              padding: EdgeInsets.only(top: 6),
-              child: Icon(
-                Icons.arrow_forward_rounded,
-                size: 13,
-                color: Color(0xFFFF9500),
-              ),
-            ),
-        ],
-      ],
-    );
-  }
-}
-
-class _TutorialStepChip extends StatelessWidget {
-  final int index;
-  final String label;
-
-  const _TutorialStepChip({required this.index, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFF9500).withAlpha(24),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0xFFFF9500).withAlpha(72)),
-      ),
-      child: Text(
-        '$index. $label',
-        style: const TextStyle(
-          color: Color(0xFFFF9500),
-          fontSize: 11,
-          fontWeight: FontWeight.w900,
-        ),
-      ),
-    );
   }
 }
 

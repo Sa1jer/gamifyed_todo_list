@@ -26,6 +26,7 @@ class AppState extends ChangeNotifier {
   bool _tooltipsEnabled = true;
   bool _onboardingSeen = false;
   bool _onboardingReplayRequested = false;
+  TutorialProgress _tutorialProgress = const TutorialProgress.empty();
   bool _hasLoadedSavedData = false;
   String? selectedSkillId;
   final StorageService _storage;
@@ -41,11 +42,40 @@ class AppState extends ChangeNotifier {
   bool get sfxEnabled => _sfxEnabled;
   bool get tooltipsEnabled => _tooltipsEnabled;
   bool get onboardingSeen => _onboardingSeen;
+  TutorialProgress get tutorialProgress => _tutorialProgress;
+  String? get activeTutorialModuleId => _effectiveTutorialModuleId;
+  String? get activeTutorialStepId => _effectiveTutorialStepId;
   bool get hasLoadedSavedData => _hasLoadedSavedData;
   bool get shouldShowFirstRunTutorial =>
       _hasLoadedSavedData &&
-      (_onboardingReplayRequested ||
-          (!_onboardingSeen && skills.isEmpty && tasks.isEmpty));
+      (_effectiveTutorialModuleId != null || _shouldAutoShowCoreTutorial);
+
+  bool get _coreTutorialCompleted =>
+      _tutorialProgress.isModuleCompleted(TutorialModuleIds.core);
+
+  bool get _shouldAutoShowCoreTutorial =>
+      !_coreTutorialCompleted && !_onboardingSeen && tasks.isEmpty;
+
+  String? get _effectiveTutorialModuleId {
+    if (_tutorialProgress.activeModuleId != null) {
+      return _tutorialProgress.activeModuleId;
+    }
+    if (_onboardingReplayRequested || _shouldAutoShowCoreTutorial) {
+      return TutorialModuleIds.core;
+    }
+    return null;
+  }
+
+  String? get _effectiveTutorialStepId {
+    final activeStep = _tutorialProgress.activeStepId;
+    final module = _effectiveTutorialModuleId;
+    if (module == null) return null;
+    final step = activeStep ?? _defaultTutorialStepForModule(module);
+    if (module == TutorialModuleIds.core) {
+      return _normalizedCoreTutorialStep(step);
+    }
+    return step;
+  }
 
   UserProfile profile = UserProfile(name: 'Your Name');
   final List<HistoryEntry> history = [];
@@ -287,6 +317,7 @@ class AppState extends ChangeNotifier {
     final savedSfxEnabled = await _storage.loadSfxEnabled();
     final savedTooltipsEnabled = await _storage.loadTooltipsEnabled();
     final savedOnboardingSeen = await _storage.loadOnboardingSeen();
+    final savedTutorialProgress = await _storage.loadTutorialProgress();
 
     if (savedTheme != null) {
       _isDark = savedTheme;
@@ -300,6 +331,8 @@ class AppState extends ChangeNotifier {
     if (savedOnboardingSeen != null) {
       _onboardingSeen = savedOnboardingSeen;
     }
+    _tutorialProgress =
+        savedTutorialProgress ?? _legacyTutorialProgress(_onboardingSeen);
     _applySfxEnabled();
 
     if (hasSavedSkills || loadedSkills.isNotEmpty) {
@@ -433,6 +466,7 @@ class AppState extends ChangeNotifier {
     await _storage.saveSfxEnabled(_sfxEnabled);
     await _storage.saveTooltipsEnabled(_tooltipsEnabled);
     await _storage.saveOnboardingSeen(_onboardingSeen);
+    await _storage.saveTutorialProgress(_tutorialProgress);
     await _storage.saveSkills(skills);
     await _storage.saveTasks(tasks);
     await _storage.saveProfile(profile);
@@ -485,17 +519,218 @@ class AppState extends ChangeNotifier {
   }
 
   void dismissFirstRunTutorial() {
-    _onboardingReplayRequested = false;
-    if (!_onboardingSeen) {
-      _onboardingSeen = true;
-      _storage.saveOnboardingSeen(true);
-    }
-    notifyListeners();
+    dismissActiveTutorial();
+  }
+
+  void resetFirstRunTutorial() {
+    resetTutorialProgress();
+  }
+
+  void _completeOnboardingAfterFirstTask() {
+    completeTutorialStep(TutorialStepIds.coreCreateQuest);
   }
 
   void replayFirstRunTutorial() {
-    _onboardingReplayRequested = true;
+    startTutorialModule(TutorialModuleIds.core);
+  }
+
+  void startTutorialModule(String id) {
+    final safeId = TutorialModuleIds.all.contains(id)
+        ? id
+        : TutorialModuleIds.core;
+    final dismissed = Set<String>.from(_tutorialProgress.dismissedModuleIds)
+      ..remove(safeId);
+    _onboardingReplayRequested = safeId == TutorialModuleIds.core;
+    _tutorialProgress = _tutorialProgress.copyWith(
+      dismissedModuleIds: dismissed,
+      activeModuleId: safeId,
+      activeStepId: _defaultTutorialStepForModule(safeId),
+      updatedAt: DateTime.now(),
+    );
+    _persistTutorialProgress();
     notifyListeners();
+  }
+
+  void completeTutorialStep(String stepId) {
+    final moduleId = _moduleForTutorialStep(stepId);
+    if (moduleId == null) return;
+
+    final completedSteps = Set<String>.from(_tutorialProgress.completedStepIds)
+      ..add(stepId);
+    final activeModule = _effectiveTutorialModuleId;
+    final activeStep = _effectiveTutorialStepId;
+    final shouldAdvance =
+        activeModule == moduleId &&
+        (activeStep == null || activeStep == stepId);
+    final nextStep = shouldAdvance ? _nextTutorialStep(stepId) : activeStep;
+
+    _tutorialProgress = _tutorialProgress.copyWith(
+      completedStepIds: completedSteps,
+      activeModuleId: activeModule,
+      activeStepId: nextStep,
+      clearActive: shouldAdvance && nextStep == null,
+      updatedAt: DateTime.now(),
+    );
+
+    if (shouldAdvance && nextStep == null) {
+      completeTutorialModule(moduleId);
+      return;
+    }
+
+    _persistTutorialProgress();
+    notifyListeners();
+  }
+
+  void completeTutorialModule(String id) {
+    final completedModules = Set<String>.from(
+      _tutorialProgress.completedModuleIds,
+    )..add(id);
+    final completedSteps = Set<String>.from(_tutorialProgress.completedStepIds)
+      ..addAll(_tutorialStepsForModule(id));
+    final clearActive = _effectiveTutorialModuleId == id;
+
+    if (id == TutorialModuleIds.core && !_onboardingSeen) {
+      _onboardingSeen = true;
+      _storage.saveOnboardingSeen(true);
+    }
+    if (id == TutorialModuleIds.core) {
+      _onboardingReplayRequested = false;
+    }
+
+    _tutorialProgress = _tutorialProgress.copyWith(
+      completedModuleIds: completedModules,
+      completedStepIds: completedSteps,
+      clearActive: clearActive,
+      updatedAt: DateTime.now(),
+    );
+    _persistTutorialProgress();
+    notifyListeners();
+  }
+
+  void dismissTutorialModule(String id) {
+    final dismissed = Set<String>.from(_tutorialProgress.dismissedModuleIds)
+      ..add(id);
+    final clearActive = _effectiveTutorialModuleId == id;
+    if (id == TutorialModuleIds.core && !_onboardingSeen) {
+      _onboardingSeen = true;
+      _storage.saveOnboardingSeen(true);
+    }
+    if (id == TutorialModuleIds.core) {
+      _onboardingReplayRequested = false;
+    }
+    _tutorialProgress = _tutorialProgress.copyWith(
+      dismissedModuleIds: dismissed,
+      clearActive: clearActive,
+      updatedAt: DateTime.now(),
+    );
+    _persistTutorialProgress();
+    notifyListeners();
+  }
+
+  void dismissActiveTutorial() {
+    final module = _effectiveTutorialModuleId ?? TutorialModuleIds.core;
+    dismissTutorialModule(module);
+  }
+
+  void resetTutorialProgress() {
+    _onboardingReplayRequested = false;
+    _onboardingSeen = false;
+    _tutorialProgress = const TutorialProgress.empty();
+    _storage.saveOnboardingSeen(false);
+    _persistTutorialProgress();
+    notifyListeners();
+  }
+
+  void _persistTutorialProgress() {
+    _storage.saveTutorialProgress(_tutorialProgress);
+  }
+
+  TutorialProgress _legacyTutorialProgress(bool onboardingSeen) {
+    if (!onboardingSeen) return const TutorialProgress.empty();
+    return TutorialProgress(
+      completedModuleIds: const {TutorialModuleIds.core},
+      completedStepIds: _tutorialStepsForModule(TutorialModuleIds.core).toSet(),
+      updatedAt: DateTime.now(),
+    );
+  }
+
+  String _defaultTutorialStepForModule(String moduleId) {
+    if (moduleId == TutorialModuleIds.core) {
+      return _defaultCoreTutorialStep();
+    }
+    final steps = _tutorialStepsForModule(moduleId);
+    for (final step in steps) {
+      if (!_tutorialProgress.isStepCompleted(step)) return step;
+    }
+    return steps.firstOrNull ?? TutorialStepIds.coreCreateSkill;
+  }
+
+  bool get _hasActiveTutorialQuest => tasks.any((task) => !task.isDone);
+
+  String _defaultCoreTutorialStep() {
+    if (skills.isEmpty) return TutorialStepIds.coreCreateSkill;
+    if (_hasActiveTutorialQuest) return TutorialStepIds.coreCompleteQuest;
+    return TutorialStepIds.coreCreateQuest;
+  }
+
+  String _normalizedCoreTutorialStep(String stepId) {
+    if (stepId == TutorialStepIds.coreCreateSkill && skills.isNotEmpty) {
+      return _defaultCoreTutorialStep();
+    }
+    if (stepId == TutorialStepIds.coreCreateQuest && _hasActiveTutorialQuest) {
+      return TutorialStepIds.coreCompleteQuest;
+    }
+    return stepId;
+  }
+
+  List<String> _tutorialStepsForModule(String moduleId) {
+    return switch (moduleId) {
+      TutorialModuleIds.core => const [
+        TutorialStepIds.coreCreateSkill,
+        TutorialStepIds.coreCreateQuest,
+        TutorialStepIds.coreCompleteQuest,
+        TutorialStepIds.coreXpFeedback,
+        TutorialStepIds.coreOpenRoadmap,
+        TutorialStepIds.coreRoadmapDetails,
+        TutorialStepIds.coreOpenStats,
+      ],
+      TutorialModuleIds.act => const [
+        TutorialStepIds.actNextQuest,
+        TutorialStepIds.actMinimum,
+      ],
+      TutorialModuleIds.roadmap => const [
+        TutorialStepIds.roadmapPath,
+        TutorialStepIds.roadmapPractice,
+      ],
+      TutorialModuleIds.stats => const [TutorialStepIds.statsGrowth],
+      TutorialModuleIds.trophies => const [TutorialStepIds.trophiesFeedback],
+      TutorialModuleIds.profile => const [TutorialStepIds.profileReplay],
+      _ => const [],
+    };
+  }
+
+  String? _moduleForTutorialStep(String stepId) {
+    for (final moduleId in TutorialModuleIds.all) {
+      if (_tutorialStepsForModule(moduleId).contains(stepId)) return moduleId;
+    }
+    return null;
+  }
+
+  String? _nextTutorialStep(String stepId) {
+    final moduleId = _moduleForTutorialStep(stepId);
+    if (moduleId == null) return null;
+    final steps = _tutorialStepsForModule(moduleId);
+    final index = steps.indexOf(stepId);
+    if (index == -1 || index >= steps.length - 1) return null;
+    return steps[index + 1];
+  }
+
+  void _completeCoreTutorialAfterFirstAction() {
+    final activeCoreAction =
+        activeTutorialModuleId == TutorialModuleIds.core &&
+        activeTutorialStepId == TutorialStepIds.coreCompleteQuest;
+    if (!activeCoreAction && (_onboardingSeen || tasks.isEmpty)) return;
+    completeTutorialStep(TutorialStepIds.coreCompleteQuest);
   }
 
   // ── Resets ───────────────────────────────────────────────────────────────────
@@ -946,6 +1181,7 @@ class AppState extends ChangeNotifier {
     _maybeGrantBehaviorBuffs(task);
     _checkAchievements();
     _checkBosses(task);
+    _completeCoreTutorialAfterFirstAction();
     final bossFeedback = _bossFeedbackForSkill(task.skillId, bossMomentsBefore);
     _syncTaskNotification(task);
     notifyListeners();
@@ -1020,6 +1256,7 @@ class AppState extends ChangeNotifier {
     _checkBosses(task);
     final bossFeedback = _bossFeedbackForSkill(task.skillId, bossMomentsBefore);
     _checkAchievements();
+    _completeCoreTutorialAfterFirstAction();
     _syncTaskNotification(task);
     notifyListeners();
     _saveAll();
@@ -1558,6 +1795,21 @@ class AppState extends ChangeNotifier {
     _saveAll();
   }
 
+  void renameSkillTreeNode(String skillId, String nodeId, String title) {
+    final skill = _skillById(skillId);
+    final node = skill?.treeNodes
+        .where((candidate) => candidate.id == nodeId)
+        .firstOrNull;
+    final safeTitle = title.trim();
+    if (skill == null || node == null || safeTitle.isEmpty) return;
+    if (node.title == safeTitle) return;
+    node.title = safeTitle;
+    skill.syncTreeNodes();
+    _syncBossesForSkill(skillId);
+    notifyListeners();
+    _saveAll();
+  }
+
   void removeSkillTreeNode(String skillId, String nodeId) {
     final skill = _skillById(skillId);
     if (skill == null) return;
@@ -1669,6 +1921,7 @@ class AppState extends ChangeNotifier {
     t.createdAt = DateTime.now();
     t.updatedAt = t.createdAt;
     tasks.add(t);
+    _completeOnboardingAfterFirstTask();
     _syncTaskNotification(t);
     notifyListeners();
     _saveAll();

@@ -270,44 +270,43 @@ class InitialSkillQuestDraft {
   });
 }
 
-class _FirstRunPathStep extends StatelessWidget {
-  final String number;
-  final String label;
+class FirstRunDialogHint extends StatelessWidget {
+  final String text;
   final Color color;
+  final bool isDark;
 
-  const _FirstRunPathStep({
-    required this.number,
-    required this.label,
+  const FirstRunDialogHint({
+    super.key,
+    required this.text,
     required this.color,
+    required this.isDark,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+      key: const ValueKey('first-run-dialog-hint'),
+      width: double.infinity,
+      padding: const EdgeInsets.all(11),
       decoration: BoxDecoration(
-        color: color.withAlpha(24),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withAlpha(95)),
+        color: color.withAlpha(isDark ? 24 : 16),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withAlpha(70)),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '$number.',
-            style: TextStyle(
-              color: color,
-              fontSize: 11.5,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              color: color,
-              fontSize: 11.5,
-              fontWeight: FontWeight.w800,
+          Icon(Icons.auto_awesome, color: color, size: 17),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: textColor(isDark),
+                fontSize: 12.2,
+                height: 1.3,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
         ],

@@ -156,6 +156,9 @@ class DebugService {
   bool get isInitialized => _box != null;
 
   Future<void> init() async {
+    if (!kDebugMode) {
+      throw StateError('DebugService must not be used outside debug mode.');
+    }
     assert(kDebugMode, 'DebugService must not be used outside debug mode');
     if (_box != null) return;
     _box = await Hive.openBox<String>(boxName);

@@ -1,0 +1,14 @@
+title = "todo_list_app secret scanning"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Generated Flutter artifacts"
+paths = [
+  '''^build/''',
+  '''^\.dart_tool/''',
+  '''^coverage/''',
+  '''^macos/Flutter/ephemeral/''',
+  '''^ios/Flutter/ephemeral/''',
+]

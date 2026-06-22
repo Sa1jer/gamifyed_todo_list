@@ -25,6 +25,7 @@ class StorageService {
   static const String _sfxEnabledKey = 'sfxEnabled';
   static const String _tooltipsEnabledKey = 'tooltipsEnabled';
   static const String _onboardingSeenKey = 'onboardingSeen';
+  static const String _tutorialProgressKey = 'tutorialProgress';
   static const String _bestStreakKey = 'bestStreak';
   static const String _schemaVersionKey = 'schemaVersion';
   static const int _legacySchemaVersion = 1;
@@ -329,6 +330,20 @@ class StorageService {
   Future<void> saveOnboardingSeen(bool seen) async {
     _ensureInit();
     await _meta.put(_onboardingSeenKey, seen ? 'true' : 'false');
+  }
+
+  Future<TutorialProgress?> loadTutorialProgress() async {
+    _ensureInit();
+    final raw = _meta.get(_tutorialProgressKey);
+    if (raw == null) return null;
+    final data = _decodeOrNull(raw, _decodeMap);
+    if (data == null) return const TutorialProgress.empty();
+    return TutorialProgress.fromJson(data);
+  }
+
+  Future<void> saveTutorialProgress(TutorialProgress progress) async {
+    _ensureInit();
+    await _meta.put(_tutorialProgressKey, jsonEncode(progress.toJson()));
   }
 
   @visibleForTesting

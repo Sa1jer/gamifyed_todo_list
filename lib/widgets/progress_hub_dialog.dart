@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../engines/course_nudge_engine.dart';
@@ -22,11 +24,15 @@ class ProgressHubDialog extends StatelessWidget {
   final VoidCallback onOpenAchievements;
   final VoidCallback onOpenHistory;
   final VoidCallback onOpenRewards;
+  final bool showTutorialHint;
+  final VoidCallback? onTutorialComplete;
 
   const ProgressHubDialog({
     super.key,
     required this.state,
     required this.isDark,
+    this.showTutorialHint = false,
+    this.onTutorialComplete,
     required this.onOpenDailyVictories,
     required this.onOpenCharacterTimeline,
     required this.onOpenWeekly,
@@ -43,12 +49,16 @@ class ProgressHubDialog extends StatelessWidget {
     final size = MediaQuery.sizeOf(context);
     final availableWidth = size.width - 40;
     final availableHeight = size.height - 48;
-    final dialogWidth = availableWidth < 360
+    var dialogWidth = availableWidth < 760
         ? availableWidth
-        : availableWidth.clamp(360.0, 620.0).toDouble();
-    final maxHeight = availableHeight < 520
-        ? availableHeight
-        : availableHeight.clamp(520.0, 620.0).toDouble();
+        : (availableWidth * 0.82).clamp(760.0, 1120.0).toDouble();
+    var dialogHeight = dialogWidth / 1.6;
+    if (dialogHeight > availableHeight) {
+      dialogHeight = availableHeight;
+      dialogWidth = (dialogHeight * 1.6)
+          .clamp(math.min(availableWidth, 320.0), availableWidth)
+          .toDouble();
+    }
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -57,10 +67,17 @@ class ProgressHubDialog extends StatelessWidget {
         state: state,
         isDark: isDark,
         width: dialogWidth,
-        constraints: BoxConstraints(maxHeight: maxHeight),
+        constraints: BoxConstraints.tightFor(height: dialogHeight),
         showCloseButton: true,
+        showTutorialHint: showTutorialHint,
         subtitle: 'Что получилось, какой навык вырос и что продолжить.',
         onClose: () => Navigator.pop(context),
+        onTutorialComplete: onTutorialComplete == null
+            ? null
+            : () {
+                onTutorialComplete!.call();
+                Navigator.maybePop(context);
+              },
         onOpenDailyVictories: onOpenDailyVictories,
         onOpenCharacterTimeline: onOpenCharacterTimeline,
         onOpenWeekly: onOpenWeekly,
@@ -81,8 +98,10 @@ class ProgressHubContent extends StatelessWidget {
   final double? width;
   final BoxConstraints? constraints;
   final bool showCloseButton;
+  final bool showTutorialHint;
   final String subtitle;
   final VoidCallback? onClose;
+  final VoidCallback? onTutorialComplete;
   final VoidCallback onOpenDailyVictories;
   final VoidCallback onOpenCharacterTimeline;
   final VoidCallback onOpenWeekly;
@@ -100,8 +119,10 @@ class ProgressHubContent extends StatelessWidget {
     this.width,
     this.constraints,
     this.showCloseButton = false,
+    this.showTutorialHint = false,
     this.subtitle = 'Что получилось, какой навык вырос и что продолжить.',
     this.onClose,
+    this.onTutorialComplete,
     required this.onOpenDailyVictories,
     required this.onOpenCharacterTimeline,
     required this.onOpenWeekly,
@@ -138,279 +159,502 @@ class ProgressHubContent extends StatelessWidget {
         ? 'события пути'
         : 'спокойно';
     final courseNudge = _visiblePrimaryCourseNudge(state);
+    final tutorialTargetKey = GlobalKey();
 
-    return Container(
-      width: width,
-      constraints: constraints,
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: bdr),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(isDark ? 80 : 28),
-            blurRadius: 24,
-            offset: const Offset(0, 14),
+    return Stack(
+      children: [
+        Container(
+          width: width,
+          constraints: constraints,
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: bdr),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(isDark ? 80 : 28),
+                blurRadius: 24,
+                offset: const Offset(0, 14),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(22, 20, 16, 14),
-            child: Row(
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF4A9EFF).withAlpha(26),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Icon(
-                    Icons.auto_stories,
-                    color: Color(0xFF4A9EFF),
-                    size: 22,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              KeyedSubtree(
+                key: tutorialTargetKey,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(22, 20, 16, 14),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF4A9EFF).withAlpha(26),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: const Icon(
+                          Icons.auto_stories,
+                          color: Color(0xFF4A9EFF),
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'История роста',
+                              style: TextStyle(
+                                color: txt,
+                                fontSize: 19,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              subtitle,
+                              style: TextStyle(
+                                color: sub,
+                                fontSize: 12.5,
+                                height: 1.25,
+                              ),
+                            ),
+                            const SizedBox(height: 9),
+                            _ProgressStoryFacts(story: story, isDark: isDark),
+                          ],
+                        ),
+                      ),
+                      if (showCloseButton && onClose != null)
+                        PressFeedback(
+                          scale: 0.94,
+                          tooltip: 'Закрыть историю роста',
+                          onTap: onClose!,
+                          child: Icon(Icons.close, color: sub, size: 22),
+                        ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
+              ),
+              Container(height: 1, color: bdr),
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'История роста',
-                        style: TextStyle(
-                          color: txt,
-                          fontSize: 19,
-                          fontWeight: FontWeight.w900,
+                      _ProgressHubSection(
+                        isDark: isDark,
+                        title: 'История роста',
+                        subtitle:
+                            'Сначала то, что уже получилось и стало частью пути.',
+                        startIndex: 0,
+                        cards: [
+                          _ProgressHubCard(
+                            isDark: isDark,
+                            icon: Icons.celebration,
+                            color: const Color(0xFFFF9500),
+                            title: 'Победы дня',
+                            subtitle: 'Итог сегодняшнего рывка',
+                            value: story.todayValue,
+                            onTap: onOpenDailyVictories,
+                          ),
+                          _ProgressHubCard(
+                            isDark: isDark,
+                            icon: Icons.calendar_view_week,
+                            color: const Color(0xFF34C759),
+                            title: 'Неделя',
+                            subtitle: 'XP, квесты, навыки и риск серии',
+                            value: story.weekValue,
+                            onTap: onOpenWeekly,
+                          ),
+                          _ProgressHubCard(
+                            isDark: isDark,
+                            icon: Icons.auto_stories,
+                            color: const Color(0xFFAF52DE),
+                            title: 'Летопись',
+                            subtitle:
+                                'Уровни, сопротивление, освоение и недели',
+                            value: 'Ур. ${state.profile.level}',
+                            onTap: onOpenCharacterTimeline,
+                          ),
+                        ],
+                      ),
+                      if (!goalProgress.isEmpty) ...[
+                        const SizedBox(height: 14),
+                        _GoalProgressOverview(
+                          snapshot: goalProgress,
+                          isDark: isDark,
+                          onReviewSkill: (skill) => _showGoalReviewSheet(
+                            context,
+                            state,
+                            isDark,
+                            skill,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        subtitle,
-                        style: TextStyle(
-                          color: sub,
-                          fontSize: 12.5,
-                          height: 1.25,
-                        ),
-                      ),
-                      const SizedBox(height: 9),
-                      _ProgressStoryFacts(story: story, isDark: isDark),
-                    ],
-                  ),
-                ),
-                if (showCloseButton && onClose != null)
-                  PressFeedback(
-                    scale: 0.94,
-                    tooltip: 'Закрыть историю роста',
-                    onTap: onClose!,
-                    child: Icon(Icons.close, color: sub, size: 22),
-                  ),
-              ],
-            ),
-          ),
-          Container(height: 1, color: bdr),
-          Flexible(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _ProgressHubSection(
-                    isDark: isDark,
-                    title: 'История роста',
-                    subtitle:
-                        'Сначала то, что уже получилось и стало частью пути.',
-                    startIndex: 0,
-                    cards: [
-                      _ProgressHubCard(
+                      ],
+                      const SizedBox(height: 14),
+                      _ProgressContinueCard(
+                        story: story,
                         isDark: isDark,
-                        icon: Icons.celebration,
-                        color: const Color(0xFFFF9500),
-                        title: 'Победы дня',
-                        subtitle: 'Итог сегодняшнего рывка',
-                        value: story.todayValue,
-                        onTap: onOpenDailyVictories,
+                        onTap: story.continuationPrefersWeekly
+                            ? onOpenWeekly
+                            : onOpenCharacterTimeline,
                       ),
-                      _ProgressHubCard(
-                        isDark: isDark,
-                        icon: Icons.calendar_view_week,
-                        color: const Color(0xFF34C759),
-                        title: 'Неделя',
-                        subtitle: 'XP, квесты, навыки и риск серии',
-                        value: story.weekValue,
-                        onTap: onOpenWeekly,
-                      ),
-                      _ProgressHubCard(
-                        isDark: isDark,
-                        icon: Icons.auto_stories,
-                        color: const Color(0xFFAF52DE),
-                        title: 'Летопись',
-                        subtitle: 'Уровни, сопротивление, освоение и недели',
-                        value: 'Ур. ${state.profile.level}',
-                        onTap: onOpenCharacterTimeline,
-                      ),
-                    ],
-                  ),
-                  if (!goalProgress.isEmpty) ...[
-                    const SizedBox(height: 14),
-                    _GoalProgressOverview(
-                      snapshot: goalProgress,
-                      isDark: isDark,
-                      onReviewSkill: (skill) =>
-                          _showGoalReviewSheet(context, state, isDark, skill),
-                    ),
-                  ],
-                  const SizedBox(height: 14),
-                  _ProgressContinueCard(
-                    story: story,
-                    isDark: isDark,
-                    onTap: story.continuationPrefersWeekly
-                        ? onOpenWeekly
-                        : onOpenCharacterTimeline,
-                  ),
-                  if (state.skills.isNotEmpty) ...[
-                    const SizedBox(height: 14),
-                    _ProgressReviewBlock(
-                      isDark: isDark,
-                      nudge: courseNudge,
-                      onApplyNudge: courseNudge == null
-                          ? null
-                          : () => _handleCourseNudge(
+                      if (state.skills.isNotEmpty) ...[
+                        const SizedBox(height: 14),
+                        _ProgressReviewBlock(
+                          isDark: isDark,
+                          nudge: courseNudge,
+                          onApplyNudge: courseNudge == null
+                              ? null
+                              : () => _handleCourseNudge(
+                                  context,
+                                  state,
+                                  isDark,
+                                  courseNudge,
+                                ),
+                          onDismissNudge: courseNudge == null
+                              ? null
+                              : () => state.dismissCourseNudge(courseNudge.key),
+                          reviewCard: WeeklyReviewCard(
+                            state: state,
+                            isDark: isDark,
+                            autoExpandWhenDue: true,
+                            buildNudgeForSkill: (skill) =>
+                                _visibleCourseNudgeForSkill(state, skill),
+                            onApplyNudge: (nudge) => _handleCourseNudge(
                               context,
                               state,
                               isDark,
-                              courseNudge,
+                              nudge,
                             ),
-                      onDismissNudge: courseNudge == null
-                          ? null
-                          : () => state.dismissCourseNudge(courseNudge.key),
-                      reviewCard: WeeklyReviewCard(
-                        state: state,
+                            onDismissNudge: (nudge) =>
+                                state.dismissCourseNudge(nudge.key),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 14),
+                      _ProgressHubSection(
                         isDark: isDark,
-                        autoExpandWhenDue: true,
-                        buildNudgeForSkill: (skill) =>
-                            _visibleCourseNudgeForSkill(state, skill),
-                        onApplyNudge: (nudge) =>
-                            _handleCourseNudge(context, state, isDark, nudge),
-                        onDismissNudge: (nudge) =>
-                            state.dismissCourseNudge(nudge.key),
+                        title: 'Разобраться глубже',
+                        subtitle:
+                            'Цифры и журнал остаются рядом, но не первыми.',
+                        startIndex: 4,
+                        cards: [
+                          _ProgressHubCard(
+                            isDark: isDark,
+                            icon: Icons.bar_chart,
+                            color: const Color(0xFF4A9EFF),
+                            title: 'Срез роста',
+                            subtitle: 'XP, уровни, темп дня',
+                            value:
+                                '${state.todayStats?.xpEarned ?? 0} XP сегодня',
+                            onTap: onOpenStats,
+                          ),
+                          _ProgressHubCard(
+                            isDark: isDark,
+                            icon: Icons.calendar_month,
+                            color: const Color(0xFF30D158),
+                            title: 'Календарь квестов',
+                            subtitle: 'Когда реально закрывались квесты',
+                            value: '${story.completedDays} активных дней',
+                            onTap: onOpenCalendar,
+                          ),
+                          _ProgressHubCard(
+                            isDark: isDark,
+                            icon: Icons.history,
+                            color: const Color(0xFF8E8E93),
+                            title: 'Журнал XP',
+                            subtitle: 'Начисления, отмены и проверки',
+                            value: '${state.history.length} записей',
+                            onTap: onOpenHistory,
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                  const SizedBox(height: 14),
-                  _ProgressHubSection(
-                    isDark: isDark,
-                    title: 'Разобраться глубже',
-                    subtitle: 'Цифры и журнал остаются рядом, но не первыми.',
-                    startIndex: 4,
-                    cards: [
-                      _ProgressHubCard(
+                      const SizedBox(height: 14),
+                      _ProgressHubSection(
                         isDark: isDark,
-                        icon: Icons.bar_chart,
-                        color: const Color(0xFF4A9EFF),
-                        title: 'Срез роста',
-                        subtitle: 'XP, уровни, темп дня',
-                        value: '${state.todayStats?.xpEarned ?? 0} XP сегодня',
-                        onTap: onOpenStats,
-                      ),
-                      _ProgressHubCard(
-                        isDark: isDark,
-                        icon: Icons.calendar_month,
-                        color: const Color(0xFF30D158),
-                        title: 'Календарь квестов',
-                        subtitle: 'Когда реально закрывались квесты',
-                        value: '${story.completedDays} активных дней',
-                        onTap: onOpenCalendar,
-                      ),
-                      _ProgressHubCard(
-                        isDark: isDark,
-                        icon: Icons.history,
-                        color: const Color(0xFF8E8E93),
-                        title: 'Журнал XP',
-                        subtitle: 'Начисления, отмены и проверки',
-                        value: '${state.history.length} записей',
-                        onTap: onOpenHistory,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  _ProgressHubSection(
-                    isDark: isDark,
-                    title: 'Трофеи и события',
-                    subtitle:
-                        'Трофеи, достижения и сопротивление — последствия прогресса, а не работа на сегодня.',
-                    startIndex: 7,
-                    cards: [
-                      _ProgressHubCard(
-                        isDark: isDark,
-                        icon: Icons.emoji_events,
-                        color: const Color(0xFFFFCC00),
-                        title: 'Достижения',
-                        subtitle: 'Открытые рубежи',
-                        value:
-                            '$unlockedAchievements / ${state.achievements.length}',
-                        onTap: onOpenAchievements,
-                      ),
-                      _ProgressHubCard(
-                        isDark: isDark,
-                        icon: Icons.redeem,
-                        color: const Color(0xFFFF9500),
-                        title: 'Трофеи',
-                        subtitle: 'Сундуки и эффекты после действий',
-                        value: trophyValue,
-                        onTap: onOpenRewards,
-                      ),
-                      _ProgressHubCard(
-                        isDark: isDark,
-                        icon: Icons.shield,
-                        color: const Color(0xFFFF2D55),
-                        title: 'Сопротивление',
-                        subtitle: 'События сопротивления и побед',
-                        value: resistanceValue,
-                        onTap: onOpenBosses,
+                        title: 'Трофеи и события',
+                        subtitle:
+                            'Трофеи, достижения и сопротивление — последствия прогресса, а не работа на сегодня.',
+                        startIndex: 7,
+                        cards: [
+                          _ProgressHubCard(
+                            isDark: isDark,
+                            icon: Icons.emoji_events,
+                            color: const Color(0xFFFFCC00),
+                            title: 'Достижения',
+                            subtitle: 'Открытые рубежи',
+                            value:
+                                '$unlockedAchievements / ${state.achievements.length}',
+                            onTap: onOpenAchievements,
+                          ),
+                          _ProgressHubCard(
+                            isDark: isDark,
+                            icon: Icons.redeem,
+                            color: const Color(0xFFFF9500),
+                            title: 'Трофеи',
+                            subtitle: 'Сундуки и эффекты после действий',
+                            value: trophyValue,
+                            onTap: onOpenRewards,
+                          ),
+                          _ProgressHubCard(
+                            isDark: isDark,
+                            icon: Icons.shield,
+                            color: const Color(0xFFFF2D55),
+                            title: 'Сопротивление',
+                            subtitle: 'События сопротивления и побед',
+                            value: resistanceValue,
+                            onTap: onOpenBosses,
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFF4A9EFF).withAlpha(14),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: const Color(0xFF4A9EFF).withAlpha(36),
                 ),
               ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(
-                    Icons.lightbulb_outline,
-                    color: Color(0xFF4A9EFF),
-                    size: 18,
-                  ),
-                  const SizedBox(width: 9),
-                  Expanded(
-                    child: Text(
-                      'Статистика здесь рассказывает историю роста. Если хочешь не анализировать, а двигаться дальше, вернись в режим “Действовать”.',
-                      style: TextStyle(color: sub, fontSize: 12, height: 1.3),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF4A9EFF).withAlpha(14),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: const Color(0xFF4A9EFF).withAlpha(36),
                     ),
                   ),
-                ],
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.lightbulb_outline,
+                        color: Color(0xFF4A9EFF),
+                        size: 18,
+                      ),
+                      const SizedBox(width: 9),
+                      Expanded(
+                        child: Text(
+                          'Статистика здесь рассказывает историю роста. Если хочешь не анализировать, а двигаться дальше, вернись в режим “Действовать”.',
+                          style: TextStyle(
+                            color: sub,
+                            fontSize: 12,
+                            height: 1.3,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
+            ],
+          ),
+        ),
+        if (showTutorialHint && onTutorialComplete != null)
+          Positioned.fill(
+            child: _ProgressTutorialSpotlight(
+              targetKey: tutorialTargetKey,
+              isDark: isDark,
+              onComplete: onTutorialComplete!,
             ),
           ),
-        ],
+      ],
+    );
+  }
+}
+
+class _ProgressTutorialSpotlight extends StatefulWidget {
+  final GlobalKey targetKey;
+  final bool isDark;
+  final VoidCallback onComplete;
+
+  const _ProgressTutorialSpotlight({
+    required this.targetKey,
+    required this.isDark,
+    required this.onComplete,
+  });
+
+  @override
+  State<_ProgressTutorialSpotlight> createState() =>
+      _ProgressTutorialSpotlightState();
+}
+
+class _ProgressTutorialSpotlightState
+    extends State<_ProgressTutorialSpotlight> {
+  Rect? _targetRect;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _updateTargetRect());
+  }
+
+  void _updateTargetRect() {
+    if (!mounted) return;
+    final overlayBox = context.findRenderObject() as RenderBox?;
+    final targetContext = widget.targetKey.currentContext;
+    final targetBox = targetContext?.findRenderObject() as RenderBox?;
+    if (overlayBox == null || targetBox == null || !targetBox.attached) {
+      setState(() => _targetRect = null);
+      return;
+    }
+    final topLeft = targetBox.localToGlobal(Offset.zero, ancestor: overlayBox);
+    setState(() => _targetRect = topLeft & targetBox.size);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const color = Color(0xFFFF9500);
+    final size = MediaQuery.of(context).size;
+    final txt = textColor(widget.isDark);
+    final sub = subtext(widget.isDark);
+    final panelWidth = math.min(size.width - 32, 420.0);
+    final rect = _targetRect;
+    final top = rect == null
+        ? (size.height - 250) / 2
+        : (rect.bottom + 18).clamp(18.0, size.height - 250.0).toDouble();
+    final left = rect == null
+        ? (size.width - panelWidth) / 2
+        : (rect.center.dx - panelWidth / 2)
+              .clamp(16.0, math.max(16.0, size.width - panelWidth - 16))
+              .toDouble();
+
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: kMotionSlow,
+      curve: kMotionCurve,
+      builder: (context, t, child) {
+        return Opacity(
+          opacity: t,
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: _ProgressTutorialSpotlightPainter(
+                    targetRect: rect,
+                    color: color,
+                  ),
+                ),
+              ),
+              Positioned(
+                left: left,
+                top: top,
+                width: panelWidth,
+                child: Transform.scale(scale: 0.96 + 0.04 * t, child: child),
+              ),
+            ],
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: surface(widget.isDark),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: borderColor(widget.isDark)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(80),
+              blurRadius: 28,
+              offset: const Offset(0, 16),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: color.withAlpha(34),
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+                  child: const Icon(Icons.auto_stories, color: color, size: 21),
+                ),
+                const SizedBox(width: 11),
+                Expanded(
+                  child: Text(
+                    'Статистика',
+                    style: TextStyle(
+                      color: txt,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Статистика — это история роста: что сделано, какой навык рос и что продолжить.',
+              style: TextStyle(
+                color: sub,
+                fontSize: 13.5,
+                height: 1.35,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: SmallBtn(
+                label: 'Завершить обучение',
+                icon: Icons.check_rounded,
+                color: color,
+                onTap: widget.onComplete,
+              ),
+            ),
+          ],
+        ),
       ),
     );
+  }
+}
+
+class _ProgressTutorialSpotlightPainter extends CustomPainter {
+  final Rect? targetRect;
+  final Color color;
+
+  const _ProgressTutorialSpotlightPainter({
+    required this.targetRect,
+    required this.color,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final overlay = Paint()..color = Colors.black.withAlpha(184);
+    final base = Path()..addRect(Offset.zero & size);
+    final rect = targetRect?.inflate(10);
+    if (rect == null) {
+      canvas.drawRect(Offset.zero & size, overlay);
+      return;
+    }
+    final cutout = Path()
+      ..addRRect(RRect.fromRectAndRadius(rect, const Radius.circular(22)));
+    canvas.drawPath(
+      Path.combine(PathOperation.difference, base, cutout),
+      overlay,
+    );
+    final glow = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
+      ..color = color.withAlpha(210);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(rect, const Radius.circular(22)),
+      glow,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _ProgressTutorialSpotlightPainter oldDelegate) {
+    return oldDelegate.targetRect != targetRect || oldDelegate.color != color;
   }
 }
 

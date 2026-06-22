@@ -172,10 +172,13 @@ class NotificationService {
     if (!scheduledDate.isAfter(now)) {
       final originalScheduledDate = scheduledDate;
       scheduledDate = now.add(const Duration(minutes: 1));
-      debugPrint(
-        'Repeating notification $id "$title" was scheduled in the past '
-        '($originalScheduledDate); rescheduled to $scheduledDate.',
-      );
+      if (kDebugMode) {
+        debugPrint(
+          'Repeating notification $id was scheduled in the past '
+          '($originalScheduledDate); rescheduled to $scheduledDate '
+          'with repeat mode ${repeatMode.name}.',
+        );
+      }
     }
 
     await _notifications.zonedSchedule(

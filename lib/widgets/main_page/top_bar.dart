@@ -7,6 +7,8 @@ class TopBar extends StatelessWidget {
   final WorkspaceMode mode;
   final ValueChanged<WorkspaceMode> onModeChanged;
   final GlobalKey? rewardsKey;
+  final GlobalKey? roadmapKey;
+  final GlobalKey? statsKey;
   final VoidCallback? onRewardsTap;
   final VoidCallback onStatsTap;
   final VoidCallback? onAppIconTap;
@@ -21,6 +23,8 @@ class TopBar extends StatelessWidget {
     required this.onStatsTap,
     this.onAppIconTap,
     this.rewardsKey,
+    this.roadmapKey,
+    this.statsKey,
     this.onRewardsTap,
     this.showModeSwitch = true,
   });
@@ -70,15 +74,32 @@ class TopBar extends StatelessWidget {
                         constraints: BoxConstraints(
                           maxWidth: compact ? 150 : 190,
                         ),
-                        child: Text(
-                          'RPG To-Do List',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 17,
-                            color: txt,
-                          ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              kAppVersionLabel,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 9.5,
+                                letterSpacing: 0.4,
+                                color: sub.withAlpha(isDark ? 96 : 128),
+                              ),
+                            ),
+                            Text(
+                              'RPG To-Do List',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 17,
+                                color: txt,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -92,6 +113,7 @@ class TopBar extends StatelessWidget {
                   isDark: isDark,
                   compact: compact,
                   showCompactLabels: showCompactModeLabels,
+                  roadmapKey: roadmapKey,
                   onChanged: onModeChanged,
                 ),
               ],
@@ -118,6 +140,7 @@ class TopBar extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               _TopBarPillButton(
+                key: statsKey,
                 icon: WorkspaceMode.stats.icon,
                 label: WorkspaceMode.stats.label,
                 tooltip: 'Открыть статистику роста',
@@ -166,6 +189,7 @@ class _WorkspaceModeSwitch extends StatelessWidget {
   final bool isDark;
   final bool compact;
   final bool showCompactLabels;
+  final GlobalKey? roadmapKey;
   final ValueChanged<WorkspaceMode> onChanged;
 
   const _WorkspaceModeSwitch({
@@ -173,6 +197,7 @@ class _WorkspaceModeSwitch extends StatelessWidget {
     required this.isDark,
     required this.compact,
     this.showCompactLabels = false,
+    this.roadmapKey,
     required this.onChanged,
   });
 
@@ -192,6 +217,7 @@ class _WorkspaceModeSwitch extends StatelessWidget {
         children: [
           for (final item in _primaryWorkspaceModes)
             _WorkspaceModeButton(
+              key: item == WorkspaceMode.mastery ? roadmapKey : null,
               mode: item,
               isDark: isDark,
               compact: compact,
@@ -214,6 +240,7 @@ class _WorkspaceModeButton extends StatefulWidget {
   final VoidCallback onTap;
 
   const _WorkspaceModeButton({
+    super.key,
     required this.mode,
     required this.isDark,
     required this.compact,
@@ -313,11 +340,13 @@ class _MobileWorkspaceNav extends StatelessWidget {
   final WorkspaceMode mode;
   final bool isDark;
   final ValueChanged<WorkspaceMode> onChanged;
+  final Key? roadmapKey;
 
   const _MobileWorkspaceNav({
     required this.mode,
     required this.isDark,
     required this.onChanged,
+    this.roadmapKey,
   });
 
   @override
@@ -337,47 +366,50 @@ class _MobileWorkspaceNav extends StatelessWidget {
           children: [
             for (final item in _primaryWorkspaceModes)
               Expanded(
-                child: PressFeedback(
-                  scale: 0.96,
-                  onTap: () => onChanged(item),
-                  child: AnimatedContainer(
-                    duration: kMotionStandard,
-                    curve: kMotionCurve,
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    decoration: BoxDecoration(
-                      color: item == mode
-                          ? item.color.withAlpha(isDark ? 34 : 24)
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
+                child: KeyedSubtree(
+                  key: item == WorkspaceMode.mastery ? roadmapKey : null,
+                  child: PressFeedback(
+                    scale: 0.96,
+                    onTap: () => onChanged(item),
+                    child: AnimatedContainer(
+                      duration: kMotionStandard,
+                      curve: kMotionCurve,
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
                         color: item == mode
-                            ? item.color.withAlpha(75)
+                            ? item.color.withAlpha(isDark ? 34 : 24)
                             : Colors.transparent,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: item == mode
+                              ? item.color.withAlpha(75)
+                              : Colors.transparent,
+                        ),
                       ),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          item.icon,
-                          color: item == mode ? item.color : sub,
-                          size: 18,
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          item.shortLabel,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            item.icon,
                             color: item == mode ? item.color : sub,
-                            fontSize: 11,
-                            fontWeight: item == mode
-                                ? FontWeight.w900
-                                : FontWeight.w700,
+                            size: 18,
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 3),
+                          Text(
+                            item.shortLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: item == mode ? item.color : sub,
+                              fontSize: 11,
+                              fontWeight: item == mode
+                                  ? FontWeight.w900
+                                  : FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),

@@ -1,6 +1,6 @@
 # TODO / Living Backlog
 
-Last updated: 2026-06-20
+Last updated: 2026-06-22
 
 This file tracks technical details, completed work, open tasks, and remaining work sorted by priority. Update it after every meaningful code or design change, even when the change is small.
 
@@ -22,7 +22,7 @@ This file tracks technical details, completed work, open tasks, and remaining wo
 - `1.3.29`: XP values next to sliders can be edited by typing a number.
 - `1.3.29`: RoadMap overview gets a quiet `Отцентровать` camera button.
 - `1.3.29`: `План` was frozen pending a product decision; this is superseded by the planned `1.3.32` skill-settings experiment.
-- `1.3.30`: first empty `Сейчас` screen now shows a light core-loop primer: `1. Навык -> 2. Этап -> 3. Квест`.
+- `1.3.30`: first empty `Сейчас` screen added a light core-loop primer; later simplified to plain text without numbered chips.
 - `1.3.30`: empty `План` and `Карта` copy now gently points new users back to `Сейчас` instead of acting like separate setup flows.
 - `1.3.30`: post-1.3.29 polish replaced stale `Прогресс` wording in Today Dashboard with secondary `Статистика` language.
 - `1.3.31`: reduced navigation tooltip noise: signed top-bar/bottom-nav buttons no longer repeat their own labels, while compact icon-only states keep hints.
@@ -46,6 +46,29 @@ This file tracks technical details, completed work, open tasks, and remaining wo
 - `1.3.41`: Debug Admin now shows debug storage status and confirm-guarded debug-state clearing without touching AppState.
 - `1.3.42`: added Debug State Simulator scenarios for fresh user, streak 7, all achievements, epic chest, defeated resistance and active effects.
 - `1.3.42`: Debug scenarios require confirmation, update debug draft metadata and remain isolated from production storage architecture.
+- Post-`1.3.42` onboarding cleanup: first-run primer no longer shows the numbered core-loop chip strip, and skill creation no longer auto-creates a quest or mandatory stage.
+- Post-`1.3.42` skill creation cleanup: skill criteria editing is frozen/hidden from `AddSkillDialog`; existing checklist data is preserved for compatibility.
+- Post-`1.3.42` onboarding cleanup: after creating the first skill, the tutorial now continues to the `Первый квест` CTA instead of disappearing.
+- Post-`1.3.42` debug fix: `Новый пользователь` scenario now resets first-run tutorial state so onboarding appears again after debug data reset.
+- Post-`1.3.42` skill form cleanup: SMARTER helper UI is frozen/hidden from `AddSkillDialog`; preview icon moved above the name field; first stage is optional.
+- Post-`1.3.42` quest form cleanup: behavior, contexts and manual focus controls are frozen/hidden; XP sits under the quest title; stage link is now `Этап в дорожной карте`.
+- Post-`1.3.42` RoadMap polish: stages can be renamed from desktop and mobile stage panels.
+- Post-`1.3.42` form polish: skill preview icon moved above the name field, palette expanded to 13 rainbow-ordered colors, and first-run dialog hints became inline.
+- Post-`1.3.42` quest settings correction: `Поведение квеста`, type, habit repeat rhythm and reminders returned to advanced settings; contexts and manual focus remain hidden.
+- Post-`1.3.42` onboarding correction: primary tutorial actions temporarily hide the overlay while creation dialogs are open, then continue to the next onboarding step.
+- Post-`1.3.42` tutorial v2.1: core tutorial replay now starts from the first relevant missing step instead of always showing `Первый запуск`.
+- Post-`1.3.42` tutorial v2.1: `Первое действие` no longer completes a quest from the tutorial card; `Понятно` advances the lesson while real quest/minimum actions still advance naturally.
+- Post-`1.3.42` tutorial v2.1: step transitions now wait 2 seconds before the next spotlight fades in.
+- Post-`1.3.42` tutorial v2.1: `XP и рост` points to `Карта`, RoadMap now explains the skill bubble, canvas and right-side details, and Statistics uses the same orange spotlight style as the rest of onboarding.
+- Post-`1.3.42` tutorial v2.1: completing the core Statistics step now continues into `Трофеи и эффекты` instead of ending silently.
+- Post-`1.3.42` tutorial v2.1: the secondary tutorial dismiss button is now `Пропустить обучение`, while primary step buttons still advance the lesson.
+- Post-`1.3.42` tutorial v2.1: completing the trophies tutorial now continues into the profile/help topic.
+- Post-`1.3.42` UI polish: desktop `Статистика` opens as a wider centered 16:10 dialog.
+- Post-`1.3.42` UI polish: app version is visible above the app title in the top-left header.
+- Post-`1.3.42` safety polish: deleting a skill now requires confirmation and warns that skill XP/level, RoadMap stages and linked quests will be deleted.
+- Post-`1.3.42` RoadMap polish: focused skill orb stays centered when there are no stages, then moves right as stages appear without changing camera scaling.
+- Post-`1.3.42` RoadMap polish: selected skills now show unlinked skill quests in the RoadMap inspector, with complete/minimum/edit/delete actions.
+- Post-`1.3.42` RoadMap polish: RoadMap skill/stage bubbles are 20% larger; selected skill details show the path goal as subtitle, then unlinked quests first and thin collapsible stage groups below; selected stage details show only that stage's quests without an extra group header.
 
 ## Next Planned Batches
 
@@ -176,31 +199,42 @@ Acceptance:
 - Nudge disappears when the underlying issue is fixed.
 - New quest nudges open `AddTaskDialog` with prefilled title/minimum/stage context where available.
 
-### First-Run Guided Onboarding - Implemented In 1.3.33
+### Tutorial System v2 - Implemented
 
 Problem:
-Fresh install should be empty, but later the app should teach the first core loop through a polished guided experience.
+Fresh install should be empty, but the app still needs to teach the real core loop without seeded demo data or a heavy wizard.
 
-Current light flow:
+Current guided flow:
 
-- Empty `Сейчас` explains `1. Навык -> 2. Этап -> 3. Квест`.
+- Empty `Сейчас` explains the first move in plain text instead of a numbered chip strip.
 - CTA remains `Создать первый навык`.
-- Existing creation flow still creates the first stage and first quest.
+- Skill creation creates only the skill by default; the optional first stage can be added from the form or later in RoadMap.
+- After the first skill is created, onboarding highlights `Первый квест`.
+- After the first quest is created, onboarding continues to the real next quest action instead of ending immediately.
+- Completing the quest or minimum step shows one short XP/growth explanation, then points to RoadMap and Statistics.
+- Tutorial primary actions hide the spotlight while creation dialogs are open and show compact inline guidance inside those dialogs.
 - `Карта` empty state points back to `Сейчас` instead of adding a separate setup branch.
 
 Implemented:
 
-- Added animated spotlight/highlight over the real `Создать первый навык` control.
-- Tutorial teaches: create skill -> first stage -> first quest -> minimum step -> XP/growth.
-- Persisted `onboardingSeen` in storage meta.
-- Added replay entry in profile interface settings.
+- Added animated spotlight/highlight over real controls.
+- Added persisted per-module tutorial progress in storage meta, with legacy `onboardingSeen` fallback.
+- Added Profile training center via `Пройти обучение заново`.
+- Replayable modules: `Первый путь`, `Сейчас`, `RoadMap`, `Статистика`, `Трофеи и эффекты`, `Профиль`.
 - Kept tutorial skippable and non-blocking.
 
 Acceptance:
 
 - First run does not feel abandoned even without demo data.
-- Tutorial explains the core loop without adding permanent UI clutter.
-- User can skip and still understand how to create the first action.
+- Tutorial explains the first action loop without adding permanent UI clutter.
+- User can skip, replay the whole path, or replay a specific module.
+
+Follow-up:
+
+- Validate tutorial target positioning on real Android widths after the new 2-second transition behavior.
+- Manual QA on Android widths for spotlight target positioning.
+- Add richer inline examples later only where concepts remain unclear.
+- Keep skill criteria/checklist frozen unless there is a clear product reason to reintroduce it as an advanced-only concept.
 
 ## P3 - Polish / Consistency
 
@@ -224,7 +258,7 @@ RoadMap skill bubbles should keep their direct “open the path” behavior. The
 Implemented:
 
 - Skill bubbles remain direct RoadMap entry points; tapping a sphere opens the focused path.
-- Skill-level inspector no longer lists all skill quests; it shows path/goal context and asks the user to choose a stage.
+- Skill-level inspector keeps goal context in the title subtitle, shows unlinked quests first and groups stage-linked quests below.
 - Stage/practice rows are passive containers; only the completion circle, `Минимум`, and edit icon perform actions.
 - Stage/practice rows show `Минимум` only when the task has an available minimum step.
 - RoadMap minimum action uses the existing `MainPage._onMinimumAction` path, preserving XP bubbles, feedback and reward side-effects.
@@ -342,6 +376,21 @@ Acceptance:
 - Applying a scenario requires confirmation.
 - `AppState` still does not import debug code.
 - `StorageService` still does not know about `__debug__`.
+
+### Skill/Quest Polish + RoadMap Entry - Current Batch
+
+Implemented direction:
+
+- Keep skill creation light: icon preview near the top, optional first stage and no mandatory first quest.
+- Keep the skill color palette compact: rainbow order, 12 colors, gray last, no extra pink/magenta option.
+- Keep quest creation focused: title, XP, optional minimum step, then advanced behavior/RoadMap settings.
+- Replace `Качество квеста` with quiet `SMARTER квеста` checks based only on data the form can actually know.
+- Disable the old `SkillTreeDialog` entry from skill cards; the route action should open the modern RoadMap focused on the selected skill.
+
+Remaining follow-up:
+
+- Decide later whether to physically delete unused legacy SkillTree dialog code after RoadMap stage dialogs are fully separated.
+- Continue checking first-run tutorial flow manually on narrow/mobile widths.
 
 ## Known Non-Goals For Now
 

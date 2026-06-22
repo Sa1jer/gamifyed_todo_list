@@ -34,6 +34,145 @@ class _ProfileDialogState extends State<ProfileDialog> {
     _ageCtrl = TextEditingController();
   }
 
+  void _openTrainingCenter(BuildContext context, AppState state, bool isDark) {
+    final txt = textColor(isDark);
+    final sub = subtext(isDark);
+    final bg = surface(isDark);
+    final bdr = borderColor(isDark);
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        void startModule(String moduleId, {bool resetAll = false}) {
+          if (resetAll) {
+            state.resetTutorialProgress();
+          }
+          state.startTutorialModule(moduleId);
+          Navigator.pop(dialogContext);
+          Navigator.pop(context);
+        }
+
+        return AlertDialog(
+          backgroundColor: bg,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          title: Text(
+            'Пройти обучение заново',
+            style: TextStyle(color: txt, fontWeight: FontWeight.w900),
+          ),
+          content: SizedBox(
+            width: 420,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Выбери короткую тему. Подсказки появятся поверх настоящего интерфейса и не сбросят твои данные.',
+                  style: TextStyle(
+                    color: sub,
+                    height: 1.35,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _TutorialModuleTile(
+                  title: 'Первый путь',
+                  subtitle: 'Навык → квест → действие → XP → RoadMap',
+                  icon: Icons.auto_awesome,
+                  color: const Color(0xFFFF9500),
+                  completed: state.tutorialProgress.isModuleCompleted(
+                    TutorialModuleIds.core,
+                  ),
+                  isDark: isDark,
+                  borderColor: bdr,
+                  onTap: () => startModule(TutorialModuleIds.core),
+                ),
+                _TutorialModuleTile(
+                  title: 'Сейчас',
+                  subtitle: 'Следующий квест, минимум и быстрый старт',
+                  icon: Icons.bolt_rounded,
+                  color: const Color(0xFFFF9500),
+                  completed: state.tutorialProgress.isModuleCompleted(
+                    TutorialModuleIds.act,
+                  ),
+                  isDark: isDark,
+                  borderColor: bdr,
+                  onTap: () => startModule(TutorialModuleIds.act),
+                ),
+                _TutorialModuleTile(
+                  title: 'RoadMap',
+                  subtitle: 'Путь навыка, этапы и практика',
+                  icon: Icons.account_tree_rounded,
+                  color: const Color(0xFF4A9EFF),
+                  completed: state.tutorialProgress.isModuleCompleted(
+                    TutorialModuleIds.roadmap,
+                  ),
+                  isDark: isDark,
+                  borderColor: bdr,
+                  onTap: () => startModule(TutorialModuleIds.roadmap),
+                ),
+                _TutorialModuleTile(
+                  title: 'Статистика',
+                  subtitle: 'История роста и review-корректировка',
+                  icon: Icons.query_stats_rounded,
+                  color: const Color(0xFF34C759),
+                  completed: state.tutorialProgress.isModuleCompleted(
+                    TutorialModuleIds.stats,
+                  ),
+                  isDark: isDark,
+                  borderColor: bdr,
+                  onTap: () => startModule(TutorialModuleIds.stats),
+                ),
+                _TutorialModuleTile(
+                  title: 'Трофеи и эффекты',
+                  subtitle: 'Feedback-layer после действий',
+                  icon: Icons.redeem_rounded,
+                  color: const Color(0xFFFFCC00),
+                  completed: state.tutorialProgress.isModuleCompleted(
+                    TutorialModuleIds.trophies,
+                  ),
+                  isDark: isDark,
+                  borderColor: bdr,
+                  onTap: () => startModule(TutorialModuleIds.trophies),
+                ),
+                _TutorialModuleTile(
+                  title: 'Профиль',
+                  subtitle: 'Повтор обучения, подсказки, звук и тема',
+                  icon: Icons.person_rounded,
+                  color: const Color(0xFFAF52DE),
+                  completed: state.tutorialProgress.isModuleCompleted(
+                    TutorialModuleIds.profile,
+                  ),
+                  isDark: isDark,
+                  borderColor: bdr,
+                  onTap: () => startModule(TutorialModuleIds.profile),
+                ),
+                _TutorialModuleTile(
+                  title: 'Пройти всё заново',
+                  subtitle:
+                      'Сбросить прогресс обучения и начать с первого пути',
+                  icon: Icons.replay_rounded,
+                  color: const Color(0xFFFF3B30),
+                  completed: false,
+                  isDark: isDark,
+                  borderColor: bdr,
+                  onTap: () =>
+                      startModule(TutorialModuleIds.core, resetAll: true),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Закрыть'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -673,10 +812,7 @@ class _ProfileDialogState extends State<ProfileDialog> {
         ),
         const SizedBox(height: 8),
         GestureDetector(
-          onTap: () {
-            state.replayFirstRunTutorial();
-            Navigator.pop(context);
-          },
+          onTap: () => _openTrainingCenter(context, state, isDark),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
@@ -697,7 +833,7 @@ class _ProfileDialogState extends State<ProfileDialog> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Повторить первый путь',
+                        'Пройти обучение заново',
                         style: TextStyle(
                           color: txt,
                           fontSize: 13,
@@ -706,7 +842,7 @@ class _ProfileDialogState extends State<ProfileDialog> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Короткая подсказка: навык → этап → квест → минимум.',
+                        'Выбери тему: первый путь, Сейчас, RoadMap или Статистика.',
                         style: TextStyle(color: sub, fontSize: 11.5),
                       ),
                     ],
@@ -834,6 +970,94 @@ class _ProfileTimelineButton extends StatelessWidget {
             ),
             Icon(Icons.chevron_right, color: sub.withAlpha(180), size: 18),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Tutorial module tile ─────────────────────────────────────────────────────
+
+class _TutorialModuleTile extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+  final bool completed;
+  final bool isDark;
+  final Color borderColor;
+  final VoidCallback onTap;
+
+  const _TutorialModuleTile({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+    required this.completed,
+    required this.isDark,
+    required this.borderColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final txt = textColor(isDark);
+    final sub = subtext(isDark);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: PressFeedback(
+        scale: 0.98,
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(11),
+          decoration: BoxDecoration(
+            color: color.withAlpha(isDark ? 18 : 12),
+            borderRadius: BorderRadius.circular(13),
+            border: Border.all(color: borderColor),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: color.withAlpha(isDark ? 30 : 22),
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: Icon(icon, color: color, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(color: txt, fontWeight: FontWeight.w900),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        color: sub,
+                        fontSize: 11.5,
+                        height: 1.25,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                completed
+                    ? Icons.check_circle_rounded
+                    : Icons.play_arrow_rounded,
+                color: completed ? const Color(0xFF34C759) : color,
+                size: 20,
+              ),
+            ],
+          ),
         ),
       ),
     );

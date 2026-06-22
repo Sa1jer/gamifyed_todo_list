@@ -88,6 +88,7 @@ const debugScenarios = <DebugScenarioDef>[
 void _applyFreshUser(AppState state) {
   _clearWorld(state);
   state.profile = UserProfile(name: 'Your Name');
+  state.resetFirstRunTutorial();
 }
 
 void _applyStreak7(AppState state) {

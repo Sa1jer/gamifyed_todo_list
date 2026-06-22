@@ -8,6 +8,7 @@ class AddTaskDialog extends StatefulWidget {
   final String? initialTitle;
   final String? initialMinimumAction;
   final bool focusMinimumAction;
+  final bool showFirstRunHints;
   final Task? existing;
   final Function(
     String title,
@@ -34,6 +35,7 @@ class AddTaskDialog extends StatefulWidget {
     this.initialTitle,
     this.initialMinimumAction,
     this.focusMinimumAction = false,
+    this.showFirstRunHints = false,
     this.existing,
     required this.onSave,
   });
@@ -47,7 +49,6 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   final _minimumActionFocusNode = FocusNode();
   final _customCtrl = TextEditingController(text: '1');
   final _subtaskCtrl = TextEditingController();
-  final _tagCtrl = TextEditingController();
   int _xp = 20;
   TaskType _type = TaskType.shortTerm;
   RepeatFrequency _freq = RepeatFrequency.daily;
@@ -61,7 +62,6 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   bool _advancedExpanded = false;
   bool _qualityExpanded = false;
   bool _subtasksExpanded = false;
-  bool _tagsExpanded = false;
 
   int get _softCap => typeSoftCap[_type]!;
   bool get _overCap => _xp > _softCap;
@@ -71,17 +71,6 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
       _type == TaskType.midTerm ||
       _type == TaskType.longTerm ||
       _subtasks.isNotEmpty;
-  String get _advancedSummary {
-    final parts = <String>[];
-    if (_type != TaskType.shortTerm) parts.add(typeLabel[_type]!);
-    if (_treeNodeId != null) parts.add('этап');
-    if (_notificationsEnabled) parts.add('напоминание');
-    if (_subtasks.isNotEmpty) parts.add('${_subtasks.length} шаг.');
-    if (_tags.isNotEmpty) parts.add('${_tags.length} конт.');
-    return parts.isEmpty
-        ? 'Поведение, этап, контексты и баланс'
-        : parts.join(' · ');
-  }
 
   SkillTreeNode? get _initialStage {
     if (widget.existing != null) return null;
@@ -127,15 +116,37 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     return !generic.contains(title.toLowerCase());
   }
 
-  String get _qualityStatus {
-    if (_looksBigTask && !_hasMinimumAction && _subtasks.isEmpty) {
-      return 'Сложно начать';
+  bool get _hasMeasurableSignal {
+    final haystack =
+        '${_titleCtrl.text.trim()} ${_minimumActionCtrl.text.trim()}';
+    return RegExp(r'\d').hasMatch(haystack) || _type == TaskType.repeating;
+  }
+
+  bool get _hasAchievableStart => _hasMinimumAction || !_looksBigTask;
+
+  bool get _hasGrowthLink {
+    final skill = widget.skill;
+    if (skill == null) return false;
+    return skill.treeNodes.isEmpty || _treeNodeId != null;
+  }
+
+  bool get _hasRhythmSignal =>
+      _type == TaskType.repeating || _notificationsEnabled;
+
+  int get _smarterReadySignals => [
+    _hasSpecificTitle,
+    _hasMeasurableSignal,
+    _hasAchievableStart,
+    _hasGrowthLink,
+    _hasRhythmSignal,
+  ].where((ok) => ok).length;
+
+  String get _smarterStatus {
+    if (_hasSpecificTitle && _hasAchievableStart && _smarterReadySignals >= 4) {
+      return 'Собран';
     }
-    if (_looksBigTask && (!_hasMinimumAction || _subtasks.isEmpty)) {
-      return 'Лучше разбить';
-    }
-    if (!_hasSpecificTitle) return 'Уточни действие';
-    return 'Хороший квест';
+    if (_smarterReadySignals >= 3) return 'Стоит уточнить';
+    return 'Добавь опору';
   }
 
   void _refreshDraft() {
@@ -161,14 +172,8 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
       _tags.addAll(ex.tags);
       _treeNodeId = ex.treeNodeId;
       _notificationsEnabled = ex.notificationsEnabled;
-      _advancedExpanded =
-          ex.type == TaskType.repeating ||
-          ex.subtasks.isNotEmpty ||
-          ex.tags.isNotEmpty ||
-          ex.notificationsEnabled ||
-          ex.treeNodeId != null;
+      _advancedExpanded = ex.subtasks.isNotEmpty || ex.treeNodeId != null;
       _subtasksExpanded = ex.subtasks.isNotEmpty;
-      _tagsExpanded = ex.tags.isNotEmpty;
       if (ex.notificationHour != null && ex.notificationMinute != null) {
         _notificationTime = TimeOfDay(
           hour: ex.notificationHour!,
@@ -186,7 +191,6 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
       }
       _treeNodeId = widget.initialTreeNodeId;
       _minimumActionEnabled =
-          widget.initialTreeNodeId != null ||
           _minimumActionCtrl.text.trim().isNotEmpty ||
           widget.focusMinimumAction;
     }
@@ -206,7 +210,6 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     _minimumActionFocusNode.dispose();
     _customCtrl.dispose();
     _subtaskCtrl.dispose();
-    _tagCtrl.dispose();
     super.dispose();
   }
 
@@ -254,6 +257,17 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                 bdr: bdr,
               ),
               const SizedBox(height: 16),
+              if (widget.showFirstRunHints && widget.existing == null) ...[
+                FirstRunDialogHint(
+                  text:
+                      'Квест — одно конкретное действие. Минимальный шаг можно включить вручную, если нужен лёгкий старт.',
+                  color: c,
+                  isDark: isDark,
+                ),
+                const SizedBox(height: 16),
+              ],
+              _buildXpSection(sub, bdr, c, isDark),
+              const SizedBox(height: 16),
               _buildMinimumActionSection(fBg, txt, sub, bdr, c),
               const SizedBox(height: 16),
               _buildAdvancedSection(fBg, txt, sub, bdr, c, isDark),
@@ -262,6 +276,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                 onCancel: () => Navigator.pop(context),
                 onSave: _save,
                 saveLabel: widget.existing == null ? 'Создать' : 'Сохранить',
+                saveColor: c,
               ),
             ],
           ),
@@ -303,7 +318,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Этап: ${stage.title}',
+                  'Этап дорожной карты: ${stage.title}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -314,7 +329,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Этот квест двигает выбранный этап мастерства.',
+                  'Этот квест двигает выбранный этап RoadMap.',
                   style: TextStyle(
                     color: sub,
                     fontSize: 11.5,
@@ -366,7 +381,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Можно связать квест с текущей ступенью roadmap.',
+                  'Можно связать квест с текущей ступенью RoadMap.',
                   style: TextStyle(
                     color: sub,
                     fontSize: 11.3,
@@ -610,189 +625,6 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     );
   }
 
-  Widget _buildTypeSection(Color sub, Color bdr, bool isDark) {
-    return _advancedCard(
-      isDark: isDark,
-      bdr: bdr,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SubLbl('Тип квеста', sub),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: TaskType.values.map((t) {
-              final sel = _type == t;
-              final tc = typeColor[t]!;
-              return _DialogChoiceChip(
-                label: typeLabel[t]!,
-                color: tc,
-                selected: sel,
-                backgroundColor: isDark
-                    ? const Color(0xFF23232D)
-                    : const Color(0xFFF0F0F5),
-                borderColor: bdr,
-                inactiveTextColor: sub,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                radius: 999,
-                selectedWeight: FontWeight.w700,
-                onTap: () => setState(() {
-                  _type = t;
-                  if (t == TaskType.repeating) {
-                    _advancedExpanded = true;
-                  }
-                }),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 7),
-          Text(
-            'Лёгкий tie-breaker: в “Сейчас” важнее риск привычки, минимальный шаг и активный этап.',
-            style: TextStyle(color: sub, fontSize: 11.2, height: 1.25),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPrioritySection(Color sub, Color bdr, bool isDark) {
-    return _advancedCard(
-      isDark: isDark,
-      bdr: bdr,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SubLbl('Ручной фокус', sub),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: Priority.values.map((priority) {
-              final sel = _priority == priority;
-              final pc = priorityColor[priority]!;
-              return _DialogChoiceChip(
-                label: priorityLabel[priority]!,
-                color: pc,
-                selected: sel,
-                backgroundColor: isDark
-                    ? const Color(0xFF23232D)
-                    : const Color(0xFFF0F0F5),
-                borderColor: bdr,
-                inactiveTextColor: sub,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                radius: 999,
-                selectedWeight: FontWeight.w700,
-                onTap: () => setState(() => _priority = priority),
-              );
-            }).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBehaviorSection(
-    Color fBg,
-    Color txt,
-    Color sub,
-    Color bdr,
-    Color color,
-    bool isDark,
-  ) {
-    return _advancedCard(
-      isDark: isDark,
-      bdr: bdr,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.route_outlined, color: color, size: 16),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Поведение',
-                      style: TextStyle(
-                        color: txt,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Тип квеста, повторяемость и напоминание.',
-                      style: TextStyle(color: sub, fontSize: 11.3),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          _buildTypeSection(sub, bdr, isDark),
-          if (_type == TaskType.repeating) ...[
-            const SizedBox(height: 10),
-            _buildRepeatSection(fBg, txt, sub, bdr, isDark),
-          ],
-          const SizedBox(height: 10),
-          _buildNotificationSection(fBg, txt, sub, bdr, color),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBalanceFocusSection(
-    Color sub,
-    Color bdr,
-    Color color,
-    bool isDark,
-  ) {
-    return _advancedCard(
-      isDark: isDark,
-      bdr: bdr,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.tune_rounded, color: color, size: 16),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Баланс и фокус',
-                  style: TextStyle(
-                    color: textColor(isDark),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 3),
-          Text(
-            'Вторичные настройки: ручной XP и фокус.',
-            style: TextStyle(color: sub, fontSize: 11.3),
-          ),
-          const SizedBox(height: 10),
-          _buildXpSection(sub, bdr, color, isDark),
-          const SizedBox(height: 10),
-          _buildPrioritySection(sub, bdr, isDark),
-        ],
-      ),
-    );
-  }
-
   Widget _buildAdvancedSection(
     Color fBg,
     Color txt,
@@ -813,7 +645,6 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
           _sectionToggle(
             icon: Icons.tune_rounded,
             title: 'Настройки квеста',
-            subtitle: _advancedSummary,
             expanded: _advancedExpanded,
             color: color,
             txt: txt,
@@ -850,25 +681,240 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                     ),
                     const SizedBox(height: 10),
                   ],
-                  _buildTextListEditor(
-                    title: 'Контексты',
-                    hint: '+ Добавить контекст',
-                    items: _tags,
-                    ctrl: _tagCtrl,
-                    color: color,
-                    txt: txt,
-                    sub: sub,
-                    bdr: bdr,
-                    expanded: _tagsExpanded,
-                    onToggle: () =>
-                        setState(() => _tagsExpanded = !_tagsExpanded),
-                  ),
-                  const SizedBox(height: 10),
                   _buildQualityCheck(fBg, txt, sub, bdr, color),
-                  const SizedBox(height: 10),
-                  _buildBalanceFocusSection(sub, bdr, color, isDark),
                 ],
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBehaviorSection(
+    Color fBg,
+    Color txt,
+    Color sub,
+    Color bdr,
+    Color color,
+    bool isDark,
+  ) {
+    return _advancedCard(
+      isDark: isDark,
+      bdr: bdr,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.route_outlined, color: color, size: 16),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Поведение квеста',
+                      style: TextStyle(
+                        color: txt,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Тип, ритм и напоминание',
+                      style: TextStyle(color: sub, fontSize: 11.5),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          SubLbl('Тип квеста', sub),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 7,
+            runSpacing: 7,
+            children: TaskType.values.map((type) {
+              final selected = _type == type;
+              return _DialogChoiceChip(
+                label: typeLabel[type]!,
+                color: typeColor[type]!,
+                selected: selected,
+                backgroundColor: isDark
+                    ? const Color(0xFF23232D)
+                    : const Color(0xFFF0F0F5),
+                borderColor: bdr,
+                inactiveTextColor: sub,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                radius: 999,
+                selectedWeight: FontWeight.w700,
+                onTap: () => setState(() => _type = type),
+              );
+            }).toList(),
+          ),
+          MotionExpandable(
+            expanded: _type == TaskType.repeating,
+            expandedChild: Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SubLbl('Повторяемость', sub),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 7,
+                    runSpacing: 7,
+                    children: RepeatFrequency.values.map((freq) {
+                      final selected = _freq == freq;
+                      return _DialogChoiceChip(
+                        label: freqLabel[freq]!,
+                        color: color,
+                        selected: selected,
+                        backgroundColor: isDark
+                            ? const Color(0xFF23232D)
+                            : const Color(0xFFF0F0F5),
+                        borderColor: bdr,
+                        inactiveTextColor: sub,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        radius: 999,
+                        selectedWeight: FontWeight.w700,
+                        onTap: () => setState(() => _freq = freq),
+                      );
+                    }).toList(),
+                  ),
+                  MotionExpandable(
+                    expanded: _freq == RepeatFrequency.custom,
+                    expandedChild: Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: Row(
+                        children: [
+                          Text(
+                            'Каждые',
+                            style: TextStyle(color: txt, fontSize: 13),
+                          ),
+                          const SizedBox(width: 8),
+                          SizedBox(
+                            width: 64,
+                            child: TextField(
+                              controller: _customCtrl,
+                              style: TextStyle(color: txt, fontSize: 13),
+                              keyboardType: TextInputType.number,
+                              onChanged: (_) => setState(() {}),
+                              decoration: InputDecoration(
+                                isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 8,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(color: bdr),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(color: color),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'дней',
+                            style: TextStyle(color: txt, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Риск сброса будет считаться по этому ритму.',
+                    style: TextStyle(color: sub, fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: fBg,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: bdr.withAlpha(170)),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.notifications_active_outlined,
+                      color: sub,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Напоминание',
+                        style: TextStyle(
+                          color: txt,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    Switch(
+                      value: _notificationsEnabled,
+                      activeThumbColor: color,
+                      onChanged: (value) =>
+                          setState(() => _notificationsEnabled = value),
+                    ),
+                  ],
+                ),
+                MotionExpandable(
+                  expanded: _notificationsEnabled,
+                  expandedChild: Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: PressFeedback(
+                      scale: 0.98,
+                      tooltip: 'Выбрать время напоминания',
+                      onTap: _pickNotificationTime,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: color.withAlpha(20),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: color.withAlpha(70)),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.schedule, color: color, size: 16),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Время: ${_formatTimeOfDay(_notificationTime)}',
+                              style: TextStyle(color: color, fontSize: 13),
+                            ),
+                            const Spacer(),
+                            Icon(Icons.edit_outlined, color: color, size: 15),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -909,7 +955,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Этап мастерства',
+                      'Этап в дорожной карте',
                       style: TextStyle(
                         color: txt,
                         fontSize: 13,
@@ -918,7 +964,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'К какому этапу навыка относится квест?',
+                      'К какому этапу RoadMap относится квест?',
                       style: TextStyle(color: sub, fontSize: 11.5),
                     ),
                   ],
@@ -971,101 +1017,6 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                 );
               }),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRepeatSection(
-    Color fBg,
-    Color txt,
-    Color sub,
-    Color bdr,
-    bool isDark,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF181820) : const Color(0xFFFFFFFF),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: bdr.withAlpha(180)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SubLbl('Повторяемость', sub),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 7,
-            runSpacing: 7,
-            children: RepeatFrequency.values.map((f) {
-              final sel = _freq == f;
-              return _DialogChoiceChip(
-                label: freqLabel[f]!,
-                color: const Color(0xFF4A9EFF),
-                selected: sel,
-                backgroundColor: isDark
-                    ? const Color(0xFF23232D)
-                    : const Color(0xFFF0F0F5),
-                borderColor: isDark
-                    ? const Color(0xFF2A2A35)
-                    : const Color(0xFFE0E0E8),
-                inactiveTextColor: sub,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                radius: 999,
-                selectedWeight: FontWeight.w600,
-                onTap: () => setState(() => _freq = f),
-              );
-            }).toList(),
-          ),
-          MotionExpandable(
-            expanded: _freq == RepeatFrequency.custom,
-            expandedChild: Padding(
-              padding: const EdgeInsets.only(top: 10),
-              child: Row(
-                children: [
-                  Text('Каждые', style: TextStyle(color: txt, fontSize: 13)),
-                  const SizedBox(width: 8),
-                  SizedBox(
-                    width: 60,
-                    child: TextField(
-                      controller: _customCtrl,
-                      style: TextStyle(color: txt, fontSize: 13),
-                      keyboardType: TextInputType.number,
-                      onChanged: (_) => setState(() {}),
-                      decoration: InputDecoration(
-                        isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 8,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: bdr),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(
-                            color: Color(0xFF4A9EFF),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text('дней', style: TextStyle(color: txt, fontSize: 13)),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Обновится в 03:00 через ${freqDays(_freq, _customDays)} дн.',
-            style: TextStyle(color: sub, fontSize: 11),
           ),
         ],
       ),
@@ -1155,7 +1106,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _sectionToggle(
-            icon: title == 'Контексты' ? Icons.sell_outlined : Icons.checklist,
+            icon: Icons.checklist,
             title: title,
             subtitle: '${items.length}',
             expanded: expanded,
@@ -1264,9 +1215,9 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     Color bdr,
     Color color,
   ) {
-    final qualityColor = switch (_qualityStatus) {
-      'Хороший квест' => const Color(0xFF34C759),
-      'Уточни действие' => const Color(0xFFFFCC00),
+    final qualityColor = switch (_smarterStatus) {
+      'Собран' => const Color(0xFF34C759),
+      'Стоит уточнить' => const Color(0xFFFFCC00),
       _ => const Color(0xFFFF9500),
     };
 
@@ -1282,7 +1233,8 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
         children: [
           _sectionToggle(
             icon: Icons.rule_folder_outlined,
-            title: 'Качество квеста',
+            title: 'SMARTER квеста',
+            subtitle: _smarterStatus,
             expanded: _qualityExpanded,
             color: qualityColor,
             txt: txt,
@@ -1297,32 +1249,43 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                 children: [
                   _qualityRow(
                     ok: _hasSpecificTitle,
-                    okLabel: 'Есть понятное действие',
-                    warnLabel: 'Название слишком общее',
+                    okLabel: 'S · Конкретно: действие понятно',
+                    warnLabel: 'S · Конкретно: уточни действие',
                     txt: txt,
                     sub: sub,
                   ),
                   const SizedBox(height: 6),
                   _qualityRow(
-                    ok: _hasMinimumAction,
-                    okLabel: 'Есть минимальный старт',
-                    warnLabel: 'Добавь лёгкий старт',
+                    ok: _hasMeasurableSignal,
+                    okLabel: 'M · Измеримо: есть число или ритм',
+                    warnLabel: 'M · Измеримо: добавь число, объём или ритм',
                     txt: txt,
                     sub: sub,
                   ),
                   const SizedBox(height: 6),
                   _qualityRow(
-                    ok: _xp > 0,
-                    okLabel: 'XP настроен',
-                    warnLabel: 'Добавь XP для обратной связи',
+                    ok: _hasAchievableStart,
+                    okLabel: 'A · Лёгкий старт: начать несложно',
+                    warnLabel:
+                        'A · Лёгкий старт: включи минимум или разбей квест',
                     txt: txt,
                     sub: sub,
                   ),
                   const SizedBox(height: 6),
                   _qualityRow(
-                    ok: !_looksBigTask || _subtasks.isNotEmpty,
-                    okLabel: 'Структура уже разбита на шаги',
-                    warnLabel: 'Для большого квеста лучше добавить 2–3 шага',
+                    ok: _hasGrowthLink,
+                    okLabel: 'R · Связано с ростом: есть навык или этап',
+                    warnLabel:
+                        'R · Связано с ростом: выбери навык или этап RoadMap',
+                    txt: txt,
+                    sub: sub,
+                  ),
+                  const SizedBox(height: 6),
+                  _qualityRow(
+                    ok: _hasRhythmSignal,
+                    okLabel: 'T · Ритм: есть повтор или напоминание',
+                    warnLabel:
+                        'T · Ритм: при необходимости добавь повтор или напоминание',
                     txt: txt,
                     sub: sub,
                   ),
@@ -1387,85 +1350,6 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildNotificationSection(
-    Color fBg,
-    Color txt,
-    Color sub,
-    Color bdr,
-    Color color,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: fBg,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: bdr),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Icon(Icons.notifications_active_outlined, color: sub, size: 16),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Напоминание',
-                  style: TextStyle(
-                    color: txt,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              Switch(
-                value: _notificationsEnabled,
-                activeThumbColor: color,
-                onChanged: (value) => setState(() {
-                  _notificationsEnabled = value;
-                }),
-              ),
-            ],
-          ),
-          MotionExpandable(
-            expanded: _notificationsEnabled,
-            expandedChild: Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Tooltip(
-                message: 'Выбрать время напоминания',
-                child: GestureDetector(
-                  onTap: _pickNotificationTime,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: color.withAlpha(20),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: color.withAlpha(70)),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.schedule, color: color, size: 16),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Время: ${_formatTimeOfDay(_notificationTime)}',
-                          style: TextStyle(color: color, fontSize: 13),
-                        ),
-                        const Spacer(),
-                        Icon(Icons.edit_outlined, color: color, size: 15),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 

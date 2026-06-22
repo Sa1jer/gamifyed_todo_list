@@ -31,7 +31,7 @@ class _MasteryMapHero extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Карта мастерства',
+                    'RoadMap',
                     style: TextStyle(
                       color: textColor(isDark),
                       fontSize: 18,
@@ -71,9 +71,13 @@ class _MasteryMapBody extends StatelessWidget {
   final bool isDark;
   final _MasterySelection? selection;
   final bool fullscreen;
+  final GlobalKey? canvasTutorialKey;
+  final GlobalKey? inspectorTutorialKey;
+  final GlobalKey? practiceTutorialKey;
   final ValueChanged<_MasterySelection?> onSelectionChanged;
   final ValueChanged<Skill> onAddRoot;
   final void Function(Skill skill, SkillTreeNode node) onExtendPath;
+  final void Function(Skill skill, SkillTreeNode node) onRenameNode;
   final void Function(
     Skill skill,
     SkillTreeNode leftNode,
@@ -94,9 +98,13 @@ class _MasteryMapBody extends StatelessWidget {
     required this.state,
     required this.isDark,
     required this.selection,
+    this.canvasTutorialKey,
+    this.inspectorTutorialKey,
+    this.practiceTutorialKey,
     required this.onSelectionChanged,
     required this.onAddRoot,
     required this.onExtendPath,
+    required this.onRenameNode,
     required this.onInsertStageAfter,
     required this.onAddQuest,
     required this.onApplyRoadmapTemplate,
@@ -115,6 +123,7 @@ class _MasteryMapBody extends StatelessWidget {
       builder: (context, constraints) {
         final narrow = constraints.maxWidth < 980;
         final canvas = _OrbMasteryMapCanvas(
+          key: canvasTutorialKey,
           state: state,
           isDark: isDark,
           selection: selection,
@@ -170,6 +179,8 @@ class _MasteryMapBody extends StatelessWidget {
                       onAddRoot: (skill) => closeThen(() => onAddRoot(skill)),
                       onExtendPath: (skill, node) =>
                           closeThen(() => onExtendPath(skill, node)),
+                      onRenameNode: (skill, node) =>
+                          closeThen(() => onRenameNode(skill, node)),
                       onAddQuest: (skill, node) =>
                           closeThen(() => onAddQuest(skill, node)),
                       onToggleQuest: onToggleQuest,
@@ -182,6 +193,7 @@ class _MasteryMapBody extends StatelessWidget {
                           closeThen(() => onMasterNode(skill, node)),
                       onDeleteNode: (skill, node) =>
                           closeThen(() => onDeleteNode(skill, node)),
+                      practiceTutorialKey: practiceTutorialKey,
                     ),
                   ),
                 );
@@ -215,6 +227,7 @@ class _MasteryMapBody extends StatelessWidget {
               onSelectionChanged(_MasterySelection.skill(skill.id)),
           onAddRoot: onAddRoot,
           onExtendPath: onExtendPath,
+          onRenameNode: onRenameNode,
           onAddQuest: onAddQuest,
           onToggleQuest: onToggleQuest,
           onMinimumAction: onMinimumAction,
@@ -222,6 +235,7 @@ class _MasteryMapBody extends StatelessWidget {
           onDeleteQuest: onDeleteQuest,
           onMasterNode: onMasterNode,
           onDeleteNode: onDeleteNode,
+          practiceTutorialKey: practiceTutorialKey,
         );
 
         return Row(
@@ -229,7 +243,10 @@ class _MasteryMapBody extends StatelessWidget {
           children: [
             Expanded(child: canvas),
             const SizedBox(width: 10),
-            SizedBox(width: fullscreen ? 380 : 340, child: inspector),
+            SizedBox(
+              width: fullscreen ? 380 : 340,
+              child: KeyedSubtree(key: inspectorTutorialKey, child: inspector),
+            ),
           ],
         );
       },

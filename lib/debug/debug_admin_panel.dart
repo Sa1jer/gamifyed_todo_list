@@ -15,6 +15,9 @@ Future<void> showDebugAdminPanel(
   BuildContext context, {
   required AppState state,
 }) {
+  if (!kDebugMode) {
+    throw StateError('Debug Admin must not be used outside debug mode.');
+  }
   assert(kDebugMode, 'Debug Admin must not be used outside debug mode');
   final debugService = debugServiceOverride ?? DebugService();
   return showDialog<void>(

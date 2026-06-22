@@ -11,8 +11,9 @@ import 'dialogs.dart';
 
 class SkillsPanel extends StatelessWidget {
   final bool planningMode;
+  final ValueChanged<Skill>? onOpenRoadmap;
 
-  const SkillsPanel({super.key, this.planningMode = false});
+  const SkillsPanel({super.key, this.planningMode = false, this.onOpenRoadmap});
 
   @override
   Widget build(BuildContext context) {
@@ -122,9 +123,9 @@ class SkillsPanel extends StatelessWidget {
                             isSelected: state.selectedSkillId == sk.id,
                             isDark: isDark,
                             onTap: () => state.selectSkill(sk.id),
-                            onTree: () => _treeDialog(context, sk),
+                            onRoadmap: () => onOpenRoadmap?.call(sk),
                             onEdit: () => _editDialog(context, sk),
-                            onDelete: () => state.removeSkill(sk.id),
+                            onDelete: () => _confirmDeleteSkill(context, sk),
                           ),
                         );
                       },
@@ -142,44 +143,21 @@ class SkillsPanel extends StatelessWidget {
       final state = AppStateProvider.of(ctx);
       return AddSkillDialog(
         isDark: state.isDark,
-        onSave:
-            (
-              name,
-              goal,
-              checklist,
-              color,
-              icon,
-              initialTreeNodes,
-              initialQuest,
-            ) {
-              final skillId = uid();
-              state.addSkill(
-                Skill(
-                  id: skillId,
-                  name: name,
-                  goal: goal,
-                  color: color,
-                  icon: icon,
-                  checklist: checklist,
-                  treeNodes: initialTreeNodes,
-                ),
-              );
-              state.selectSkill(skillId);
-              if (initialQuest != null) {
-                state.addTask(
-                  Task(
-                    id: uid(),
-                    title: initialQuest.title,
-                    skillId: skillId,
-                    xpReward: 20,
-                    type: TaskType.shortTerm,
-                    priority: Priority.medium,
-                    minimumAction: initialQuest.minimumAction,
-                    treeNodeId: initialQuest.treeNodeId,
-                  ),
-                );
-              }
-            },
+        onSave: (name, goal, checklist, color, icon, initialTreeNodes, _) {
+          final skillId = uid();
+          state.addSkill(
+            Skill(
+              id: skillId,
+              name: name,
+              goal: goal,
+              color: color,
+              icon: icon,
+              checklist: checklist,
+              treeNodes: initialTreeNodes,
+            ),
+          );
+          state.selectSkill(skillId);
+        },
       );
     },
   );
@@ -203,13 +181,115 @@ class SkillsPanel extends StatelessWidget {
     },
   );
 
-  void _treeDialog(BuildContext ctx, Skill sk) => showDialog(
-    context: ctx,
-    builder: (_) {
-      final state = AppStateProvider.of(ctx);
-      return SkillTreeDialog(state: state, skill: sk);
-    },
-  );
+  void _confirmDeleteSkill(BuildContext ctx, Skill skill) {
+    final state = AppStateProvider.of(ctx);
+    final isDark = state.isDark;
+    final taskCount = state.tasks
+        .where((task) => task.skillId == skill.id)
+        .length;
+    final txt = textColor(isDark);
+    final sub = subtext(isDark);
+    const danger = Color(0xFFFF3B30);
+
+    showDialog<void>(
+      context: ctx,
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            width: 420,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: surface(isDark),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: danger.withAlpha(80)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha(isDark ? 130 : 34),
+                  blurRadius: 28,
+                  offset: const Offset(0, 16),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: danger.withAlpha(28),
+                        borderRadius: BorderRadius.circular(13),
+                      ),
+                      child: const Icon(
+                        Icons.delete_outline,
+                        color: danger,
+                        size: 21,
+                      ),
+                    ),
+                    const SizedBox(width: 11),
+                    Expanded(
+                      child: Text(
+                        'Удалить навык?',
+                        style: TextStyle(
+                          color: txt,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'Навык «${skill.name}» будет удалён вместе с уровнем, XP, этапами RoadMap и всеми квестами этого навыка.',
+                  style: TextStyle(
+                    color: sub,
+                    fontSize: 13,
+                    height: 1.35,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TaskBadge(
+                  icon: Icons.warning_amber_rounded,
+                  label: taskCount == 0
+                      ? 'Квестов нет'
+                      : 'Будет удалено квестов: $taskCount',
+                  color: danger,
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    SmallBtn(
+                      label: 'Отмена',
+                      icon: Icons.close_rounded,
+                      color: sub,
+                      onTap: () => Navigator.pop(dialogContext),
+                    ),
+                    const SizedBox(width: 10),
+                    SmallBtn(
+                      label: 'Удалить',
+                      icon: Icons.delete_outline,
+                      color: danger,
+                      onTap: () {
+                        state.removeSkill(skill.id);
+                        Navigator.pop(dialogContext);
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
 
 class _EmptySkillsState extends StatelessWidget {
@@ -247,7 +327,7 @@ class _EmptySkillsState extends StatelessWidget {
             ),
             const SizedBox(height: 5),
             Text(
-              'Навык — это направление роста. Первый этап и первый квест появятся сразу, чтобы можно было начать сегодня.',
+              'Навык — это направление роста. Первый этап появится сразу, а квест добавляется следующим шагом.',
               textAlign: TextAlign.center,
               style: TextStyle(color: sub, fontSize: 12, height: 1.3),
             ),
@@ -274,7 +354,7 @@ class SkillCard extends StatefulWidget {
   final Skill skill;
   final int taskCount;
   final bool isSelected, isDark;
-  final VoidCallback onTap, onTree, onEdit, onDelete;
+  final VoidCallback onTap, onRoadmap, onEdit, onDelete;
   const SkillCard({
     super.key,
     required this.skill,
@@ -282,7 +362,7 @@ class SkillCard extends StatefulWidget {
     required this.isSelected,
     required this.isDark,
     required this.onTap,
-    required this.onTree,
+    required this.onRoadmap,
     required this.onEdit,
     required this.onDelete,
   });
@@ -464,10 +544,10 @@ class _SkillCardState extends State<SkillCard> {
                             child: Row(
                               children: [
                                 MiniBtn(
-                                  icon: Icons.account_tree,
+                                  icon: Icons.route_rounded,
                                   color: sk.color,
-                                  tooltip: 'Открыть карту мастерства',
-                                  onTap: widget.onTree,
+                                  tooltip: 'Открыть путь навыка в RoadMap',
+                                  onTap: widget.onRoadmap,
                                 ),
                                 MiniBtn(
                                   icon: Icons.edit,

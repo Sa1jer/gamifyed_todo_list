@@ -16,6 +16,34 @@ Uint8List _validJpegBytes() =>
 Uint8List _invalidImageBytes() => Uint8List.fromList([1, 2, 3, 4]);
 
 void main() {
+  group('TutorialProgress compatibility', () {
+    test('roundtrip keeps modules, steps and active replay module', () {
+      final progress = TutorialProgress(
+        completedModuleIds: const {TutorialModuleIds.core},
+        completedStepIds: const {
+          TutorialStepIds.coreCreateSkill,
+          TutorialStepIds.coreCreateQuest,
+        },
+        dismissedModuleIds: const {TutorialModuleIds.trophies},
+        activeModuleId: TutorialModuleIds.roadmap,
+        activeStepId: TutorialStepIds.roadmapPath,
+        updatedAt: DateTime.utc(2026, 6, 22, 10),
+      );
+
+      final decoded = TutorialProgress.fromJson(progress.toJson());
+
+      expect(decoded.completedModuleIds, {TutorialModuleIds.core});
+      expect(decoded.completedStepIds, {
+        TutorialStepIds.coreCreateSkill,
+        TutorialStepIds.coreCreateQuest,
+      });
+      expect(decoded.dismissedModuleIds, {TutorialModuleIds.trophies});
+      expect(decoded.activeModuleId, TutorialModuleIds.roadmap);
+      expect(decoded.activeStepId, TutorialStepIds.roadmapPath);
+      expect(decoded.updatedAt, DateTime.utc(2026, 6, 22, 10));
+    });
+  });
+
   group('StorageService enum compatibility', () {
     test('task roundtrip stores enum names', () {
       final storage = StorageService();

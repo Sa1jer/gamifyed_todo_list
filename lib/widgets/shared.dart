@@ -1040,11 +1040,13 @@ class DlgField extends StatelessWidget {
 class DlgActions extends StatelessWidget {
   final VoidCallback onCancel, onSave;
   final String saveLabel;
+  final Color saveColor;
   const DlgActions({
     super.key,
     required this.onCancel,
     required this.onSave,
     this.saveLabel = 'Сохранить',
+    this.saveColor = const Color(0xFF4A9EFF),
   });
   @override
   Widget build(BuildContext context) => Row(
@@ -1074,7 +1076,7 @@ class DlgActions extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
           decoration: BoxDecoration(
-            color: const Color(0xFF4A9EFF),
+            color: saveColor,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Text(
@@ -1179,6 +1181,7 @@ Future<int?> showIntegerEditDialog(
                       DlgActions(
                         onCancel: () => Navigator.pop(dialogContext),
                         onSave: save,
+                        saveColor: color,
                       ),
                     ],
                   ),

@@ -13,6 +13,7 @@ class _InMemoryStorageService extends StorageService {
   bool? _theme;
   bool? _tooltipsEnabled;
   bool? _onboardingSeen;
+  TutorialProgress? _tutorialProgress;
   int? _bestStreak;
 
   @override
@@ -52,6 +53,14 @@ class _InMemoryStorageService extends StorageService {
   @override
   Future<void> saveOnboardingSeen(bool seen) async {
     _onboardingSeen = seen;
+  }
+
+  @override
+  Future<TutorialProgress?> loadTutorialProgress() async => _tutorialProgress;
+
+  @override
+  Future<void> saveTutorialProgress(TutorialProgress progress) async {
+    _tutorialProgress = progress;
   }
 
   @override
@@ -244,6 +253,154 @@ void main() {
 
       state.dispose();
     });
+
+    test(
+      'first-run tutorial continues through quest action before completion',
+      () async {
+        final storage = _InMemoryStorageService();
+        final state = AppState(storage: storage, seedDefaults: false);
+
+        await state.loadSavedData();
+        state.startTutorialModule(TutorialModuleIds.core);
+
+        state.addSkill(
+          Skill(
+            id: 'skill-1',
+            name: 'Подтягивания',
+            goal: 'Подтягиваться 20 раз',
+            color: const Color(0xFFFF9500),
+            icon: Icons.fitness_center,
+            treeNodes: [SkillTreeNode(id: 'stage-1', title: 'Основа')],
+          ),
+        );
+
+        expect(state.shouldShowFirstRunTutorial, isTrue);
+        expect(state.onboardingSeen, isFalse);
+        expect(state.activeTutorialStepId, TutorialStepIds.coreCreateQuest);
+        state.completeTutorialStep(TutorialStepIds.coreCreateSkill);
+
+        state.addTask(
+          Task(
+            id: 'task-1',
+            title: 'Сделать первый подход',
+            skillId: 'skill-1',
+            xpReward: 20,
+            type: TaskType.shortTerm,
+            minimumAction: 'Сделать 1 подтягивание',
+            treeNodeId: 'stage-1',
+          ),
+        );
+
+        expect(state.shouldShowFirstRunTutorial, isTrue);
+        expect(state.onboardingSeen, isFalse);
+        expect(state.activeTutorialStepId, TutorialStepIds.coreCompleteQuest);
+
+        state.completeMinimumAction('task-1');
+
+        expect(state.shouldShowFirstRunTutorial, isTrue);
+        expect(state.activeTutorialStepId, TutorialStepIds.coreXpFeedback);
+        expect(state.onboardingSeen, isFalse);
+
+        state.completeTutorialStep(TutorialStepIds.coreXpFeedback);
+        state.completeTutorialStep(TutorialStepIds.coreOpenRoadmap);
+        state.completeTutorialStep(TutorialStepIds.coreRoadmapDetails);
+        state.completeTutorialStep(TutorialStepIds.coreOpenStats);
+
+        expect(state.shouldShowFirstRunTutorial, isFalse);
+        expect(state.onboardingSeen, isTrue);
+        expect(storage._onboardingSeen, isTrue);
+        expect(
+          storage._tutorialProgress!.isModuleCompleted(TutorialModuleIds.core),
+          isTrue,
+        );
+
+        state.dispose();
+      },
+    );
+
+    test('core tutorial starts from skill when no skills exist', () async {
+      final storage = _InMemoryStorageService();
+      final state = AppState(storage: storage, seedDefaults: false);
+
+      await state.loadSavedData();
+      state.startTutorialModule(TutorialModuleIds.core);
+
+      expect(state.activeTutorialStepId, TutorialStepIds.coreCreateSkill);
+
+      state.dispose();
+    });
+
+    test(
+      'core tutorial starts from quest when skill exists without quests',
+      () async {
+        final storage = _InMemoryStorageService();
+        final state = AppState(storage: storage, seedDefaults: false);
+
+        await state.loadSavedData();
+        state.addSkill(
+          Skill(
+            id: 'skill-1',
+            name: 'Плавание',
+            goal: 'Проплыть километр',
+            color: const Color(0xFF4A9EFF),
+            icon: Icons.pool,
+          ),
+        );
+        state.startTutorialModule(TutorialModuleIds.core);
+
+        expect(state.activeTutorialStepId, TutorialStepIds.coreCreateQuest);
+
+        state.dispose();
+      },
+    );
+
+    test('core tutorial starts from action when active quest exists', () async {
+      final storage = _InMemoryStorageService();
+      final state = AppState(storage: storage, seedDefaults: false);
+
+      await state.loadSavedData();
+      state.addSkill(
+        Skill(
+          id: 'skill-1',
+          name: 'Плавание',
+          goal: 'Проплыть километр',
+          color: const Color(0xFF4A9EFF),
+          icon: Icons.pool,
+        ),
+      );
+      state.addTask(
+        Task(
+          id: 'task-1',
+          title: 'Проплыть 100 метров',
+          skillId: 'skill-1',
+          xpReward: 20,
+          type: TaskType.shortTerm,
+        ),
+      );
+      state.startTutorialModule(TutorialModuleIds.core);
+
+      expect(state.activeTutorialStepId, TutorialStepIds.coreCompleteQuest);
+
+      state.dispose();
+    });
+
+    test(
+      'legacy onboardingSeen maps to completed core tutorial module',
+      () async {
+        final storage = _InMemoryStorageService().._onboardingSeen = true;
+        final state = AppState(storage: storage, seedDefaults: false);
+
+        await state.loadSavedData();
+
+        expect(state.shouldShowFirstRunTutorial, isFalse);
+        expect(
+          state.tutorialProgress.isModuleCompleted(TutorialModuleIds.core),
+          isTrue,
+        );
+
+        state.dispose();
+      },
+    );
   });
 
   group('streak protection', () {
@@ -652,6 +809,31 @@ void main() {
 
       state.updateSkillTreeNodePracticeTarget(skill.id, node.id, 0);
       expect(node.questTarget, 1);
+      expect(linkedQuest.treeNodeId, node.id);
+    });
+
+    test('renames roadmap stage without relinking quests', () {
+      final skill = state.skills.first;
+      final node = SkillTreeNode(id: 'rename-stage', title: 'Старый этап');
+      state.addSkillTreeNode(skill.id, node);
+      final linkedQuest = Task(
+        id: 'rename-linked-quest',
+        title: 'Закрыть практику',
+        skillId: skill.id,
+        xpReward: 20,
+        type: TaskType.shortTerm,
+        treeNodeId: node.id,
+      );
+      state.addTask(linkedQuest);
+
+      state.renameSkillTreeNode(skill.id, node.id, 'Новый этап');
+
+      expect(node.title, 'Новый этап');
+      expect(linkedQuest.treeNodeId, node.id);
+
+      state.renameSkillTreeNode(skill.id, node.id, '   ');
+
+      expect(node.title, 'Новый этап');
       expect(linkedQuest.treeNodeId, node.id);
     });
   });

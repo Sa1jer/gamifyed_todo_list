@@ -1,6 +1,6 @@
 # DESIGN / Product And UI Notes
 
-Last updated: 2026-06-20
+Last updated: 2026-06-22
 
 This file records design direction, product guardrails, and UI decisions. Update it after every meaningful product/UI change so implementation stays aligned with the app's intended mental model.
 
@@ -62,6 +62,13 @@ Current `1.3.34` Planning decision:
 - `Трофеи` and `Статистика` use the same pill button visual language.
 - They sit together in the top-right cluster.
 - They are secondary utilities, not primary navigation tabs.
+- The app version is shown quietly above the app title in the top-left header, using muted gray so it is available for QA/support without becoming navigation.
+
+### Statistics
+
+- Desktop `Статистика` opens as a centered, wider dialog with an approximate `16:10` proportion.
+- The wider shape should make statistics feel like a secondary overview surface, not a cramped modal or a primary full-screen mode.
+- Tutorial inside Statistics uses the same orange spotlight/highlight pattern as the rest of onboarding; avoid separate card styles that feel like another product.
 
 ### Today Dashboard Stat Cards
 
@@ -81,6 +88,13 @@ Current `1.3.34` Planning decision:
 - Current `1.3.37`: practice rows are not quest-focus buttons; direct row actions are completion, `Минимум`, and edit.
 - Current `1.3.37`: RoadMap quest rows may show `Минимум` only when a minimum step is actually available.
 - RoadMap minimum action must reuse the same XP/feedback flow as `Сейчас`, not create a separate map-only action path.
+- Current post-`1.3.42`: RoadMap stages can be renamed directly from stage detail panels.
+- Stage naming should stay lightweight: rename is a small edit action, not a separate roadmap editor mode.
+- When a focused skill has no stages, its orb should sit near the center of the usable canvas area. As stages are added, the orb may move right to make room for the road, while the existing auto-fit scaling remains responsible for fitting content.
+- Skill-level RoadMap details may show only quests that belong to the skill but are not linked to a RoadMap stage.
+- Selected skill details show the path goal as the title subtitle, then unlinked quests first and collapsible groups for stages that have quests; selected stage details show a plain quest list without another wrapper.
+- Stage count / mastered count should not appear as separate chips in selected skill details; the canvas and RoadMap itself should carry that structure visually.
+- RoadMap skill and stage bubbles should be large enough to feel tactile; current baseline is 20% larger than the earlier compact map.
 
 ### Planning
 
@@ -157,25 +171,90 @@ Current first-run state:
 - No quests.
 - No history.
 - No trophies/effects/resistance events.
-- Empty `Сейчас` shows a light primer: `1. Навык -> 2. Этап -> 3. Квест`.
+- Empty `Сейчас` shows a light primer in plain text, without the numbered core-loop chip strip.
 - Clear CTA to create the first skill.
+- Creating the first skill creates only the skill by default; the first stage is optional.
+- The first quest is a separate guided action after the skill exists.
 - Empty `Карта` should gently point back to `Сейчас`, not become a separate onboarding surface.
 
-Future onboarding:
-
-Current `1.3.33` onboarding:
+Tutorial system:
 
 - Animated spotlight over the real `Создать первый навык` CTA.
-- Shows once on fresh empty state and saves `onboardingSeen`.
-- Can be replayed from profile/settings.
+- If the first path is replayed with existing data, it starts from the first useful missing step: skill, quest, or first action.
+- Continues to the `Первый квест` CTA after the first skill is created.
+- Continues after first quest creation to `Первое действие`, but the tutorial card does not perform the quest for the user.
+- `Первое действие` uses a single `Понятно` button to continue; real quest/minimum actions still advance the flow when the user chooses to act.
+- After each completed step, the next spotlight waits about 2 seconds and then fades/scales in.
+- `XP и рост` points toward `Карта`, then RoadMap explains the skill bubble, the road canvas and the right-side details panel.
+- Statistics opens with the same orange spotlight-style tutorial and `Завершить обучение` action instead of completing invisibly before the user sees the screen.
+- Finishing the core Statistics step continues to `Трофеи и эффекты`; replaying the standalone Statistics module still ends after that module.
+- The secondary tutorial dismiss action is named `Пропустить обучение`; buttons like `Понятно` are reserved for advancing a specific lesson step.
+- Finishing the trophies topic continues to the profile/help topic so the replay path has a clear ending.
+- Primary tutorial actions temporarily hide the overlay while the real creation dialog is open.
+- Creation dialogs use inline hints for onboarding guidance instead of nested spotlights or wizard steps.
+- Saves per-module tutorial progress in meta storage; legacy `onboardingSeen` remains as fallback for the first module.
+- Can be replayed from profile/settings through `Пройти обучение заново`.
+- Modules: `Первый путь`, `Сейчас`, `RoadMap`, `Статистика`, `Трофеи и эффекты`, `Профиль`.
 - Skippable and non-blocking.
-- Teaches the core loop by highlighting real controls.
+- Teaches by highlighting real controls when possible and using centered fallback cards when the target is not present.
 - Does not rely on fake/demo content in production builds.
 
 Future tutorial polish:
 
-- Consider multi-step spotlight only after the current one-step primer is validated.
+- Validate target positioning on Android widths and reduce copy where it feels repetitive.
 - Keep replay optional and quiet; do not turn onboarding into a mandatory wizard.
+
+## Skill Creation Direction
+
+Current decision:
+
+- `AddSkillDialog` should stay light: name, goal, icon, color and optional first stage.
+- The selected skill preview icon sits between the dialog title and the skill name field, so the form immediately feels like “creating a skill identity”.
+- Color choices are rainbow-ordered and include 12 options; neutral gray remains last and the extra pink/magenta option stays out of the default palette.
+- New skills do not auto-create a quest.
+- SMARTER helper UI is frozen/hidden from the skill form. Goal quality may return later as quiet review/nudge logic, not as a visible setup block.
+- Skill checklist/criteria editing is frozen and hidden from the creation/edit dialog.
+- First stage is optional and starts empty: the user can create a skill now and build the RoadMap later.
+- Existing checklist data remains in models/storage for compatibility, but should not re-enter the default UX without a new product decision.
+
+Rationale:
+
+- The first form should not feel like a wizard.
+- The user should understand the skill direction before being asked to define practice.
+- The first quest belongs to the next guided step, not the skill form.
+- Deleting a skill requires confirmation because it removes the skill level/XP context, RoadMap stages and linked quests.
+
+## Quest Creation Direction
+
+Current decision:
+
+- `AddTaskDialog` should prioritize: quest title, XP, minimum step, then optional RoadMap/stage settings.
+- `Поведение квеста` belongs in advanced settings and includes type, habit repeat rhythm and reminder.
+- `Контексты` are removed from the visible quest form. Existing `Task.tags` remain only for compatibility.
+- Manual priority/focus controls are frozen in the UI. Priority can remain as legacy data/tie-breaker but should not look like a primary user choice.
+- Stage linking is called `Этап в дорожной карте`, not `Этап мастерства`, to match the RoadMap mental model.
+- New quests start with `Минимальный шаг` disabled unless a concrete initial minimum is passed by a nudge or other prefill flow.
+- `SMARTER квеста` is a quiet quality helper, not validation. It only checks what the form can know: specificity, measurable signal, easy start, growth/RoadMap link and rhythm.
+- The quest save action follows the selected skill color, so creation feels attached to the skill context.
+
+Rationale:
+
+- The quest form should not become a configuration survey.
+- XP can stay visible because it is immediate feedback, but advanced system fields should not compete with the first action.
+- RoadMap linkage is useful only when it clarifies where the quest belongs.
+
+## RoadMap Entry Direction
+
+Current decision:
+
+- The old `SkillTreeDialog` is no longer a user-facing entrypoint from skill cards.
+- The skill-card route/tree action now opens the main RoadMap screen focused on that skill.
+- Stage data and `SkillTreeNode` remain compatible under the hood; only the outdated visual surface is bypassed.
+
+Rationale:
+
+- There should be one RoadMap surface, not a legacy mastery-map dialog plus the modern RoadMap.
+- Opening RoadMap in focus mode preserves the user intent: “show me this skill path”.
 
 ## Release QA Rules
 
@@ -212,6 +291,7 @@ Current `1.3.42` debug simulator status:
 - Debug Admin shows storage status and can clear only `__debug__` after confirmation.
 - Core simulator scenarios can mutate AppState only after explicit confirmation.
 - Scenario state is saved through existing AppState persistence so test worlds survive restart in debug app data.
+- `Новый пользователь` resets first-run tutorial state and should behave like a real fresh install.
 - No production storage schema changes or `AppState -> DebugService` imports exist.
 
 ## XP Editing Direction

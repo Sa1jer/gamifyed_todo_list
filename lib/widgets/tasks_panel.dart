@@ -16,11 +16,13 @@ class TasksPanel extends StatefulWidget {
   final Function(String id, Offset pos) onComplete;
   final Function(String id, Offset pos) onMinimumAction;
   final bool planningMode;
+  final Key? createFirstQuestButtonKey;
   const TasksPanel({
     super.key,
     required this.onComplete,
     required this.onMinimumAction,
     this.planningMode = false,
+    this.createFirstQuestButtonKey,
   });
   @override
   State<TasksPanel> createState() => _TasksPanelState();
@@ -195,6 +197,8 @@ class _TasksPanelState extends State<TasksPanel> {
                       skillColor: skill.color,
                       skillName: skill.name,
                       onAdd: () => _addTask(context, skill),
+                      createFirstQuestButtonKey:
+                          widget.createFirstQuestButtonKey,
                     )
                   : ListView(
                       key: const ValueKey('tasks-list'),
@@ -373,6 +377,7 @@ class _EmptyTasksState extends StatelessWidget {
   final Color skillColor;
   final String skillName;
   final VoidCallback onAdd;
+  final Key? createFirstQuestButtonKey;
 
   const _EmptyTasksState({
     super.key,
@@ -380,6 +385,7 @@ class _EmptyTasksState extends StatelessWidget {
     required this.skillColor,
     required this.skillName,
     required this.onAdd,
+    this.createFirstQuestButtonKey,
   });
 
   @override
@@ -413,6 +419,7 @@ class _EmptyTasksState extends StatelessWidget {
             const SizedBox(height: 14),
             HoverScale(
               child: SmallBtn(
+                key: createFirstQuestButtonKey,
                 label: 'Первый квест',
                 icon: Icons.add,
                 color: skillColor,

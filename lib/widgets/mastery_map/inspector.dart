@@ -255,9 +255,11 @@ class _MasteryMapInspector extends StatelessWidget {
   final AppState state;
   final bool isDark;
   final _MasterySelection? selection;
+  final GlobalKey? practiceTutorialKey;
   final ValueChanged<Skill> onSelectSkill;
   final ValueChanged<Skill> onAddRoot;
   final void Function(Skill skill, SkillTreeNode node) onExtendPath;
+  final void Function(Skill skill, SkillTreeNode node) onRenameNode;
   final void Function(Skill skill, SkillTreeNode? node) onAddQuest;
   final void Function(Task task, Offset position) onToggleQuest;
   final void Function(Task task, Offset position) onMinimumAction;
@@ -270,9 +272,11 @@ class _MasteryMapInspector extends StatelessWidget {
     required this.state,
     required this.isDark,
     required this.selection,
+    this.practiceTutorialKey,
     required this.onSelectSkill,
     required this.onAddRoot,
     required this.onExtendPath,
+    required this.onRenameNode,
     required this.onAddQuest,
     required this.onToggleQuest,
     required this.onMinimumAction,
@@ -342,15 +346,26 @@ class _MasteryMapInspector extends StatelessWidget {
             isDark: isDark,
             skill: skill,
             node: node,
+            practiceTutorialKey: practiceTutorialKey,
+            onRename: () => onRenameNode(skill, node),
             onExtendPath: () => onExtendPath(skill, node),
             onAddQuest: () => onAddQuest(skill, node),
             onToggleQuest: onToggleQuest,
             onMinimumAction: onMinimumAction,
             onEditQuest: (task) => onEditQuest(skill, task),
+            onDeleteQuest: onDeleteQuest,
             onMaster: () => onMasterNode(skill, node),
             onDelete: () => onDeleteNode(skill, node),
           ),
-          _ => _SkillInspector(state: state, isDark: isDark, skill: skill),
+          _ => _SkillInspector(
+            state: state,
+            isDark: isDark,
+            skill: skill,
+            onToggleQuest: onToggleQuest,
+            onMinimumAction: onMinimumAction,
+            onEditQuest: (task) => onEditQuest(skill, task),
+            onDeleteQuest: onDeleteQuest,
+          ),
         },
       ),
     );
@@ -446,16 +461,50 @@ class _SkillInspector extends StatelessWidget {
   final AppState state;
   final bool isDark;
   final Skill skill;
+  final void Function(Task task, Offset position) onToggleQuest;
+  final void Function(Task task, Offset position) onMinimumAction;
+  final ValueChanged<Task> onEditQuest;
+  final ValueChanged<Task> onDeleteQuest;
 
   const _SkillInspector({
     required this.state,
     required this.isDark,
     required this.skill,
+    required this.onToggleQuest,
+    required this.onMinimumAction,
+    required this.onEditQuest,
+    required this.onDeleteQuest,
   });
 
   @override
   Widget build(BuildContext context) {
-    final sub = subtext(isDark);
+    final freeTasks = state.tasks
+        .where((task) => task.skillId == skill.id && task.treeNodeId == null)
+        .toList();
+    final activeFreeTasks = _sortedActiveQuests(
+      freeTasks.where((task) => !task.isDone),
+    );
+    final completedFreeTasks = _sortedCompletedQuests(
+      freeTasks.where((task) => task.isDone),
+    );
+    final stageGroups = <_StageQuestGroup>[];
+    for (final node in skill.treeNodes) {
+      final linkedTasks = state.tasksForTreeNode(skill.id, node.id);
+      if (linkedTasks.isEmpty) continue;
+      stageGroups.add(
+        _StageQuestGroup(
+          node: node,
+          activeTasks: _sortedActiveQuests(
+            linkedTasks.where((task) => !task.isDone),
+          ),
+          completedTasks: _sortedCompletedQuests(
+            linkedTasks.where((task) => task.isDone),
+          ),
+        ),
+      );
+    }
+    final hasFreeTasks =
+        activeFreeTasks.isNotEmpty || completedFreeTasks.isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -464,51 +513,66 @@ class _SkillInspector extends StatelessWidget {
           icon: skill.icon,
           color: skill.color,
           title: skill.name,
-          subtitle: 'roadmap навыка',
+          subtitle: skill.goal.trim().isEmpty
+              ? 'Цель пути пока не задана'
+              : 'Цель пути: ${skill.goal}',
           isDark: isDark,
-        ),
-        const SizedBox(height: 12),
-        _MetricCard(
-          isDark: isDark,
-          color: skill.color,
-          title: 'Путь навыка',
-          value: '${skill.masteredTreeNodeCount} / ${skill.treeNodes.length}',
-          progress: skill.treeProgress,
-          helperText:
-              'Выберите этап на дороге, чтобы увидеть практику и следующий маленький шаг.',
-        ),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 7,
-          runSpacing: 7,
-          children: [
-            TaskBadge(
-              label: '${skill.treeNodes.length} этап.',
-              color: skill.color,
-            ),
-            TaskBadge(
-              label: '${skill.masteredTreeNodeCount} освоено',
-              color: const Color(0xFF34C759),
-            ),
-          ],
         ),
         const SizedBox(height: 14),
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: skill.color.withAlpha(isDark ? 16 : 10),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: skill.color.withAlpha(40)),
-          ),
-          child: Text(
-            skill.goal.trim().isEmpty
-                ? 'Цель пути пока не задана. Дорога всё равно показывает, какие этапы ведут навык вперёд.'
-                : 'Цель пути: ${skill.goal}',
-            style: TextStyle(
-              color: sub,
-              fontSize: 12.2,
-              height: 1.35,
-              fontWeight: FontWeight.w700,
+        Expanded(
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (hasFreeTasks || stageGroups.isEmpty) ...[
+                  Text(
+                    hasFreeTasks ? 'Квесты без этапа' : 'Квесты навыка',
+                    style: TextStyle(
+                      color: textColor(isDark),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _StagePracticeQuestList(
+                    isDark: isDark,
+                    color: skill.color,
+                    activeTasks: activeFreeTasks,
+                    completedTasks: completedFreeTasks,
+                    emptyText: 'Квестов у навыка пока нет.',
+                    shrinkWrap: true,
+                    onToggleQuest: onToggleQuest,
+                    onMinimumAction: onMinimumAction,
+                    onEditQuest: onEditQuest,
+                    onDeleteQuest: onDeleteQuest,
+                  ),
+                ],
+                if (stageGroups.isNotEmpty) ...[
+                  if (hasFreeTasks) const SizedBox(height: 14),
+                  for (final group in stageGroups) ...[
+                    _CollapsibleQuestSection(
+                      isDark: isDark,
+                      color: skill.color,
+                      title: group.node.title,
+                      subtitle: 'Квесты, которые двигают этот этап',
+                      count: group.count,
+                      child: _StagePracticeQuestList(
+                        isDark: isDark,
+                        color: skill.color,
+                        activeTasks: group.activeTasks,
+                        completedTasks: group.completedTasks,
+                        emptyText: 'Создайте практику для этого этапа.',
+                        shrinkWrap: true,
+                        onToggleQuest: onToggleQuest,
+                        onMinimumAction: onMinimumAction,
+                        onEditQuest: onEditQuest,
+                        onDeleteQuest: onDeleteQuest,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                ],
+              ],
             ),
           ),
         ),
@@ -517,16 +581,33 @@ class _SkillInspector extends StatelessWidget {
   }
 }
 
+class _StageQuestGroup {
+  final SkillTreeNode node;
+  final List<Task> activeTasks;
+  final List<Task> completedTasks;
+
+  const _StageQuestGroup({
+    required this.node,
+    required this.activeTasks,
+    required this.completedTasks,
+  });
+
+  int get count => activeTasks.length + completedTasks.length;
+}
+
 class _NodeInspector extends StatelessWidget {
   final AppState state;
   final bool isDark;
   final Skill skill;
   final SkillTreeNode node;
+  final GlobalKey? practiceTutorialKey;
+  final VoidCallback onRename;
   final VoidCallback onExtendPath;
   final VoidCallback onAddQuest;
   final void Function(Task task, Offset position) onToggleQuest;
   final void Function(Task task, Offset position) onMinimumAction;
   final ValueChanged<Task> onEditQuest;
+  final ValueChanged<Task> onDeleteQuest;
   final VoidCallback onMaster;
   final VoidCallback onDelete;
 
@@ -535,11 +616,14 @@ class _NodeInspector extends StatelessWidget {
     required this.isDark,
     required this.skill,
     required this.node,
+    this.practiceTutorialKey,
+    required this.onRename,
     required this.onExtendPath,
     required this.onAddQuest,
     required this.onToggleQuest,
     required this.onMinimumAction,
     required this.onEditQuest,
+    required this.onDeleteQuest,
     required this.onMaster,
     required this.onDelete,
   });
@@ -605,25 +689,20 @@ class _NodeInspector extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 14),
-        Text(
-          'Практика этапа',
-          style: TextStyle(
-            color: textColor(isDark),
-            fontSize: 13,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        const SizedBox(height: 8),
         Expanded(
-          child: _StagePracticeQuestList(
-            isDark: isDark,
-            color: skill.color,
-            activeTasks: activeNodeTasks,
-            completedTasks: completedNodeTasks,
-            emptyText: 'Создайте практику для этого этапа.',
-            onToggleQuest: onToggleQuest,
-            onMinimumAction: onMinimumAction,
-            onEditQuest: onEditQuest,
+          child: KeyedSubtree(
+            key: practiceTutorialKey,
+            child: _StagePracticeQuestList(
+              isDark: isDark,
+              color: skill.color,
+              activeTasks: activeNodeTasks,
+              completedTasks: completedNodeTasks,
+              emptyText: 'Создайте практику для этого этапа.',
+              onToggleQuest: onToggleQuest,
+              onMinimumAction: onMinimumAction,
+              onEditQuest: onEditQuest,
+              onDeleteQuest: onDeleteQuest,
+            ),
           ),
         ),
         const SizedBox(height: 12),
@@ -631,6 +710,12 @@ class _NodeInspector extends StatelessWidget {
           spacing: 8,
           runSpacing: 8,
           children: [
+            SmallBtn(
+              label: 'Переименовать',
+              icon: Icons.edit_note,
+              color: statusColor,
+              onTap: onRename,
+            ),
             SmallBtn(
               label: 'Создать квест',
               icon: Icons.add_task,
@@ -856,7 +941,7 @@ class _InspectorTitle extends StatelessWidget {
               const SizedBox(height: 3),
               Text(
                 subtitle,
-                maxLines: 1,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: subtext(isDark),
@@ -957,6 +1042,106 @@ class _MetricCard extends StatelessWidget {
   }
 }
 
+class _CollapsibleQuestSection extends StatefulWidget {
+  final bool isDark;
+  final Color color;
+  final String title;
+  final String subtitle;
+  final int count;
+  final Widget child;
+
+  const _CollapsibleQuestSection({
+    required this.isDark,
+    required this.color,
+    required this.title,
+    required this.subtitle,
+    required this.count,
+    required this.child,
+  });
+
+  @override
+  State<_CollapsibleQuestSection> createState() =>
+      _CollapsibleQuestSectionState();
+}
+
+class _CollapsibleQuestSectionState extends State<_CollapsibleQuestSection> {
+  bool _expanded = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        PressFeedback(
+          scale: 0.99,
+          onTap: () => setState(() => _expanded = !_expanded),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+            decoration: BoxDecoration(
+              color: widget.color.withAlpha(widget.isDark ? 18 : 12),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: widget.color.withAlpha(42)),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  _expanded ? Icons.expand_less : Icons.expand_more,
+                  color: widget.color,
+                  size: 16,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    widget.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: textColor(widget.isDark),
+                      fontSize: 12.2,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: widget.color.withAlpha(widget.isDark ? 34 : 22),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: widget.color.withAlpha(55)),
+                  ),
+                  child: Text(
+                    '${widget.count}',
+                    style: TextStyle(
+                      color: widget.color,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        AnimatedSwitcher(
+          duration: kMotionStandard,
+          switchInCurve: kMotionCurve,
+          switchOutCurve: kMotionExitCurve,
+          child: _expanded
+              ? Padding(
+                  key: const ValueKey('expanded'),
+                  padding: const EdgeInsets.only(top: 8),
+                  child: widget.child,
+                )
+              : const SizedBox.shrink(key: ValueKey('collapsed')),
+        ),
+      ],
+    );
+  }
+}
+
 class _StagePracticeQuestList extends StatelessWidget {
   final bool isDark;
   final Color color;
@@ -966,6 +1151,8 @@ class _StagePracticeQuestList extends StatelessWidget {
   final void Function(Task task, Offset position) onToggleQuest;
   final void Function(Task task, Offset position) onMinimumAction;
   final ValueChanged<Task> onEditQuest;
+  final ValueChanged<Task> onDeleteQuest;
+  final bool shrinkWrap;
 
   const _StagePracticeQuestList({
     required this.isDark,
@@ -976,6 +1163,8 @@ class _StagePracticeQuestList extends StatelessWidget {
     required this.onToggleQuest,
     required this.onMinimumAction,
     required this.onEditQuest,
+    required this.onDeleteQuest,
+    this.shrinkWrap = false,
   });
 
   @override
@@ -999,6 +1188,8 @@ class _StagePracticeQuestList extends StatelessWidget {
     }
 
     return ListView(
+      shrinkWrap: shrinkWrap,
+      physics: shrinkWrap ? const NeverScrollableScrollPhysics() : null,
       children: [
         for (final task in activeTasks)
           Padding(
@@ -1011,6 +1202,7 @@ class _StagePracticeQuestList extends StatelessWidget {
               onToggle: (position) => onToggleQuest(task, position),
               onMinimumAction: (position) => onMinimumAction(task, position),
               onEdit: () => onEditQuest(task),
+              onDelete: () => onDeleteQuest(task),
             ),
           ),
         if (activeTasks.isNotEmpty && completedTasks.isNotEmpty)
@@ -1026,6 +1218,7 @@ class _StagePracticeQuestList extends StatelessWidget {
               onToggle: (position) => onToggleQuest(task, position),
               onMinimumAction: (position) => onMinimumAction(task, position),
               onEdit: () => onEditQuest(task),
+              onDelete: () => onDeleteQuest(task),
             ),
           ),
       ],
@@ -1041,6 +1234,7 @@ class _InspectorQuestRow extends StatelessWidget {
   final ValueChanged<Offset> onToggle;
   final ValueChanged<Offset> onMinimumAction;
   final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   const _InspectorQuestRow({
     required this.task,
@@ -1050,6 +1244,7 @@ class _InspectorQuestRow extends StatelessWidget {
     required this.onToggle,
     required this.onMinimumAction,
     required this.onEdit,
+    required this.onDelete,
   });
 
   @override
@@ -1069,7 +1264,7 @@ class _InspectorQuestRow extends StatelessWidget {
     return AnimatedContainer(
       duration: kMotionStandard,
       curve: kMotionCurve,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: muted || done
             ? surface(isDark).withAlpha(isDark ? 112 : 176)
@@ -1080,7 +1275,7 @@ class _InspectorQuestRow extends StatelessWidget {
         ),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Builder(
             builder: (iconContext) => PressFeedback(
@@ -1129,10 +1324,20 @@ class _InspectorQuestRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (canStartMinimum) ...[
+                Builder(
+                  builder: (minimumContext) => _RoadmapMinimumButton(
+                    isDark: isDark,
+                    color: color,
+                    onTap: () =>
+                        onMinimumAction(_feedbackOriginFor(minimumContext)),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
               Text(
                 '+${task.xpReward} XP',
                 style: TextStyle(
@@ -1141,28 +1346,22 @@ class _InspectorQuestRow extends StatelessWidget {
                   fontWeight: FontWeight.w900,
                 ),
               ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (canStartMinimum) ...[
-                    Builder(
-                      builder: (minimumContext) => _RoadmapMinimumButton(
-                        isDark: isDark,
-                        color: color,
-                        onTap: () =>
-                            onMinimumAction(_feedbackOriginFor(minimumContext)),
-                      ),
-                    ),
-                    const SizedBox(width: 7),
-                  ],
-                  PressFeedback(
-                    scale: 0.9,
-                    tooltip: 'Редактировать',
-                    onTap: onEdit,
-                    child: Icon(Icons.edit_outlined, color: sub, size: 17),
-                  ),
-                ],
+              const SizedBox(width: 8),
+              PressFeedback(
+                scale: 0.9,
+                tooltip: 'Редактировать',
+                onTap: onEdit,
+                child: Icon(Icons.edit_outlined, color: sub, size: 18),
+              ),
+              const SizedBox(width: 7),
+              PressFeedback(
+                scale: 0.9,
+                tooltip: 'Удалить квест',
+                onTap: () {
+                  AppFeedback.destructive();
+                  onDelete();
+                },
+                child: Icon(Icons.delete_outline, color: sub, size: 18),
               ),
             ],
           ),

@@ -29,20 +29,20 @@ class _SkillOrbButtonState extends State<_SkillOrbButton> {
   @override
   Widget build(BuildContext context) {
     final orbSize = widget.roadFocus
-        ? 124.0
+        ? 149.0
         : widget.selected
-        ? 82.0
-        : 74.0;
+        ? 98.0
+        : 89.0;
     final iconSize = widget.roadFocus
-        ? 43.0
+        ? 52.0
         : widget.selected
-        ? 31.0
-        : 27.0;
+        ? 37.0
+        : 32.0;
     final levelSize = widget.roadFocus
-        ? 27.0
+        ? 32.0
         : widget.selected
-        ? 18.0
-        : 16.0;
+        ? 22.0
+        : 19.0;
     final glowAlpha = _hovered
         ? widget.roadFocus
               ? 128
@@ -350,9 +350,9 @@ class _MapNodeButtonState extends State<_MapNodeButton> {
     );
     final target = widget.node.questTarget;
     final diameter = switch (target) {
-      <= 1 => 52.0,
-      <= 3 => 62.0,
-      _ => 72.0,
+      <= 1 => 62.0,
+      <= 3 => 74.0,
+      _ => 86.0,
     };
     final icon = switch (status) {
       SkillTreeNodeStatus.locked => Icons.lock,
