@@ -73,11 +73,11 @@ This file tracks technical details, completed work, open tasks, and remaining wo
 - Post-`1.3.43` quest polish: quests now support an optional saved description in creation/edit flows; main quest widgets show it as quiet gray inline context, while RoadMap rows stay compact.
 - Post-`1.3.44` architecture audit: added `docs/APPSTATE_MAP.md` with AppState responsibility map, mutation boundaries, future sync notes and extraction risk order.
 - `1.3.45`: extracted pure `AchievementEngine` evaluation from `AppState` while keeping unlock mutation, pending notifications and storage behavior in `AppState`.
+- `1.3.46`: added Debug Admin achievement tools for unlock all, lock all and per-achievement toggles, with debug draft metadata only.
 
 ## Next Planned Batches
 
 - Next architecture batch — `RewardEngine` extraction planning: preserve chest/effect `sourceKey` idempotency, undo behavior and reward notifications with characterization tests first.
-- Later — Debug Admin achievement state tools: unlock/lock all and per-achievement toggles, still debug-only.
 - Later — task-completion characterization tests before any high-risk XP/history/reward extraction.
 
 ## P0 - Release / Data Safety
@@ -421,6 +421,22 @@ Acceptance:
 - Applying a scenario requires confirmation.
 - `AppState` still does not import debug code.
 - `StorageService` still does not know about `__debug__`.
+
+### Debug Achievement State Tools - Done In 1.3.46
+
+Implemented:
+
+- Replaced the Debug Admin `Достижения` placeholder with live achievement state tools.
+- Added `Unlock all`, `Lock all` and per-achievement toggles.
+- Kept operations debug-only and isolated in `lib/debug/`.
+- Stored only debug metadata in `DebugAdminDraftState.achievementUnlockOverrides`; production achievement state still uses existing AppState/storage flow.
+- Kept `AchievementEngine`, achievement definitions, user-facing achievements UI, rewards/effects and boss-flow unchanged.
+
+Acceptance:
+
+- Release entry remains gated by existing Debug Admin safeguards.
+- No new AppState debug methods were introduced.
+- Unknown achievement ids are ignored safely.
 
 ### Skill/Quest Polish + RoadMap Entry - Current Batch
 

@@ -167,6 +167,17 @@ void main() {
     return (state: state, debug: debug);
   }
 
+  ({AppState state, _FakeDebugService debug, DebugAdminController controller})
+  createController({bool seedDefaults = true}) {
+    final state = AppState(
+      storage: _InMemoryStorageService(),
+      seedDefaults: seedDefaults,
+    );
+    final debug = _FakeDebugService();
+    final controller = DebugAdminController(state: state, debugService: debug);
+    return (state: state, debug: debug, controller: controller);
+  }
+
   group('Debug scenarios', () {
     test('fresh user clears app entities and resets achievements', () async {
       final result = await applyScenario(
@@ -299,6 +310,102 @@ void main() {
       expect(
         result.state.activeBuffs.map((buff) => buff.type).toSet(),
         containsAll([BuffType.nextQuestXpBoost, BuffType.skillFocusXpBoost]),
+      );
+    });
+  });
+
+  group('Debug achievement tools', () {
+    test('unlock one achievement sets state and draft override', () async {
+      final result = createController();
+      addTearDown(result.state.dispose);
+
+      await result.controller.setAchievementUnlocked('level_10', true);
+
+      expect(
+        result.state.achievements
+            .firstWhere((item) => item.id == 'level_10')
+            .isUnlocked,
+        isTrue,
+      );
+      expect(result.debug.draft.achievementUnlockOverrides['level_10'], isTrue);
+      expect(result.debug.draft.updatedAt, isNotNull);
+    });
+
+    test('lock one achievement clears state and draft override', () async {
+      final result = createController();
+      addTearDown(result.state.dispose);
+
+      await result.controller.setAchievementUnlocked('level_10', true);
+      await result.controller.setAchievementUnlocked('level_10', false);
+
+      expect(
+        result.state.achievements
+            .firstWhere((item) => item.id == 'level_10')
+            .isUnlocked,
+        isFalse,
+      );
+      expect(
+        result.debug.draft.achievementUnlockOverrides['level_10'],
+        isFalse,
+      );
+    });
+
+    test('unlock all opens every achievement definition', () async {
+      final result = createController();
+      addTearDown(result.state.dispose);
+
+      await result.controller.setAllAchievementsUnlocked(true);
+
+      expect(
+        result.state.achievements,
+        hasLength(achievementDefinitions.length),
+      );
+      expect(
+        result.state.achievements.every((item) => item.isUnlocked),
+        isTrue,
+      );
+      expect(
+        result.debug.draft.achievementUnlockOverrides.length,
+        achievementDefinitions.length,
+      );
+      expect(
+        result.debug.draft.achievementUnlockOverrides.values.every(
+          (value) => value,
+        ),
+        isTrue,
+      );
+    });
+
+    test('lock all closes every achievement definition', () async {
+      final result = createController();
+      addTearDown(result.state.dispose);
+
+      await result.controller.setAllAchievementsUnlocked(true);
+      await result.controller.setAllAchievementsUnlocked(false);
+
+      expect(
+        result.state.achievements.every((item) => !item.isUnlocked),
+        isTrue,
+      );
+      expect(
+        result.debug.draft.achievementUnlockOverrides.values.every(
+          (value) => !value,
+        ),
+        isTrue,
+      );
+    });
+
+    test('unknown achievement id is ignored safely', () async {
+      final result = createController();
+      addTearDown(result.state.dispose);
+      final beforeLength = result.state.achievements.length;
+
+      await result.controller.setAchievementUnlocked('missing_debug_id', true);
+
+      expect(result.state.achievements, hasLength(beforeLength));
+      expect(
+        result.debug.draft.achievementUnlockOverrides,
+        isNot(contains('missing_debug_id')),
       );
     });
   });

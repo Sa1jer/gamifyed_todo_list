@@ -822,7 +822,72 @@ void main() {
     expect(find.text('Сценарии'), findsOneWidget);
     expect(find.text('Новый пользователь'), findsOneWidget);
     expect(find.text('Стрик 7 дней'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Достижения'),
+      180,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Достижения'), findsOneWidget);
 
+    final firstAchievementToggle = find.byKey(
+      const ValueKey('debug-achievement-toggle-first_task'),
+    );
+    await tester.ensureVisible(firstAchievementToggle);
+    await tester.pumpAndSettle();
+
+    expect(find.text('first_task · locked'), findsOneWidget);
+    await tester.tap(firstAchievementToggle);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
+
+    expect(find.text('first_task · unlocked'), findsOneWidget);
+    expect(
+      fakeDebugService.draft.achievementUnlockOverrides['first_task'],
+      isTrue,
+    );
+
+    final unlockAll = find.byKey(
+      const ValueKey('debug-achievements-unlock-all'),
+    );
+    await tester.ensureVisible(unlockAll);
+    await tester.pumpAndSettle();
+    await tester.tap(unlockAll);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.text('Unlock all achievements?'), findsOneWidget);
+    await tester.tap(find.text('Отмена'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.text('Unlock all achievements?'), findsNothing);
+    expect(fakeDebugService.draft.achievementUnlockOverrides, hasLength(1));
+
+    await tester.tap(unlockAll);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.tap(find.widgetWithText(TextButton, 'Unlock all').last);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
+
+    expect(
+      fakeDebugService.draft.achievementUnlockOverrides,
+      hasLength(achievementDefinitions.length),
+    );
+    expect(
+      fakeDebugService.draft.achievementUnlockOverrides.values.every(
+        (value) => value,
+      ),
+      isTrue,
+    );
+
+    await tester.scrollUntilVisible(
+      find.text('Стрик 7 дней'),
+      -180,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Стрик 7 дней'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));

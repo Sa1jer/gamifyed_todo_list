@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../app_state.dart';
+import '../models.dart';
 import '../utils.dart';
 import '../widgets/shared.dart';
 import 'debug_admin_controller.dart';
@@ -140,6 +141,63 @@ class _DebugAdminPanelState extends State<_DebugAdminPanel> {
     });
   }
 
+  Future<void> _confirmSetAllAchievements(bool unlocked) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        final isDark = widget.state.isDark;
+        final txt = textColor(isDark);
+        final sub = subtext(isDark);
+        return AlertDialog(
+          backgroundColor: surface(isDark),
+          title: Text(
+            unlocked ? 'Unlock all achievements?' : 'Lock all achievements?',
+            style: TextStyle(color: txt, fontWeight: FontWeight.w900),
+          ),
+          content: Text(
+            unlocked
+                ? 'Все достижения будут открыты в текущем debug-состоянии приложения.'
+                : 'Все достижения будут закрыты в текущем debug-состоянии приложения.',
+            style: TextStyle(color: sub, fontWeight: FontWeight.w700),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Отмена'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(unlocked ? 'Unlock all' : 'Lock all'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+    final controller = DebugAdminController(
+      state: widget.state,
+      debugService: widget.debugService,
+    );
+    await controller.setAllAchievementsUnlocked(unlocked);
+    if (!mounted) return;
+    setState(() {
+      _draftFuture = _loadDraft();
+    });
+  }
+
+  Future<void> _setAchievementUnlocked(String id, bool unlocked) async {
+    final controller = DebugAdminController(
+      state: widget.state,
+      debugService: widget.debugService,
+    );
+    await controller.setAchievementUnlocked(id, unlocked);
+    if (!mounted) return;
+    setState(() {
+      _draftFuture = _loadDraft();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = widget.state.isDark;
@@ -269,12 +327,11 @@ class _DebugAdminPanelState extends State<_DebugAdminPanel> {
                       scenarios: debugScenarios,
                       onApplyScenario: _confirmApplyScenario,
                     ),
-                    _DebugAdminSection(
+                    _DebugAchievementsSection(
                       isDark: isDark,
-                      icon: Icons.emoji_events_outlined,
-                      title: 'Достижения',
-                      description:
-                          'Unlock, lock and inspect achievement state.',
+                      achievements: widget.state.achievements,
+                      onSetAll: _confirmSetAllAchievements,
+                      onToggleAchievement: _setAchievementUnlocked,
                     ),
                     _DebugAdminSection(
                       isDark: isDark,
@@ -561,6 +618,188 @@ class _DebugScenarioCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _DebugAchievementsSection extends StatelessWidget {
+  final bool isDark;
+  final List<Achievement> achievements;
+  final ValueChanged<bool> onSetAll;
+  final void Function(String id, bool unlocked) onToggleAchievement;
+
+  const _DebugAchievementsSection({
+    required this.isDark,
+    required this.achievements,
+    required this.onSetAll,
+    required this.onToggleAchievement,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final txt = textColor(isDark);
+    final sub = subtext(isDark);
+    final unlockedCount = achievementDefinitions.where(_isUnlocked).length;
+    final totalCount = achievementDefinitions.length;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF15151D) : const Color(0xFFF4F5FA),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: borderColor(isDark)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.emoji_events_outlined, color: sub, size: 18),
+              const SizedBox(width: 9),
+              Expanded(
+                child: Text(
+                  'Достижения',
+                  style: TextStyle(
+                    color: txt,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              Text(
+                '$unlockedCount / $totalCount',
+                style: TextStyle(
+                  color: const Color(0xFFFF9500),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Открыть, закрыть или проверить отдельные achievement states.',
+            style: TextStyle(
+              color: sub,
+              fontSize: 11.2,
+              height: 1.3,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  key: const ValueKey('debug-achievements-unlock-all'),
+                  onPressed: () => onSetAll(true),
+                  icon: const Icon(Icons.lock_open_rounded, size: 16),
+                  label: const Text('Unlock all'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  key: const ValueKey('debug-achievements-lock-all'),
+                  onPressed: () => onSetAll(false),
+                  icon: const Icon(Icons.lock_outline_rounded, size: 16),
+                  label: const Text('Lock all'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          for (final definition in achievementDefinitions)
+            _DebugAchievementRow(
+              isDark: isDark,
+              definition: definition,
+              isUnlocked: _isUnlocked(definition),
+              onChanged: (value) => onToggleAchievement(definition.id, value),
+            ),
+        ],
+      ),
+    );
+  }
+
+  bool _isUnlocked(AchievementDef definition) {
+    for (final achievement in achievements) {
+      if (achievement.id == definition.id) return achievement.isUnlocked;
+    }
+    return false;
+  }
+}
+
+class _DebugAchievementRow extends StatelessWidget {
+  final bool isDark;
+  final AchievementDef definition;
+  final bool isUnlocked;
+  final ValueChanged<bool> onChanged;
+
+  const _DebugAchievementRow({
+    required this.isDark,
+    required this.definition,
+    required this.isUnlocked,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final txt = textColor(isDark);
+    final sub = subtext(isDark);
+    final accent = isUnlocked
+        ? const Color(0xFF34C759)
+        : const Color(0xFF8E8E93);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: accent.withAlpha(isDark ? 16 : 10),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: accent.withAlpha(isDark ? 52 : 42)),
+      ),
+      child: Row(
+        children: [
+          Icon(definition.icon, color: definition.color, size: 18),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  definition.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: txt,
+                    fontSize: 12.4,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${definition.id} · ${isUnlocked ? 'unlocked' : 'locked'}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: sub,
+                    fontSize: 10.4,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Switch.adaptive(
+            key: ValueKey('debug-achievement-toggle-${definition.id}'),
+            value: isUnlocked,
+            activeThumbColor: const Color(0xFF34C759),
+            onChanged: onChanged,
+          ),
+        ],
       ),
     );
   }
