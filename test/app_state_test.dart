@@ -613,6 +613,129 @@ void main() {
       );
     });
 
+    test('reused stages can become roots when template adds roads', () {
+      final skill = Skill(
+        id: 'roadmap-split-skill',
+        name: 'RoadMap split',
+        goal: 'Разделить дороги',
+        color: const Color(0xFFFF9500),
+        icon: Icons.route,
+      );
+      state.addSkill(skill);
+
+      state.applyRoadmapTemplate(
+        skill.id,
+        const RoadmapTemplateConfig(
+          template: RoadmapTemplate.simple,
+          stagesPerPath: 4,
+        ),
+      );
+      final originalIds = skill.treeNodes.map((node) => node.id).toList();
+
+      state.applyRoadmapTemplate(
+        skill.id,
+        const RoadmapTemplateConfig(
+          template: RoadmapTemplate.normal,
+          stagesPerPath: 3,
+        ),
+      );
+
+      final layout = const RoadmapEngine().buildPathLayout(skill);
+      final pathIds = layout.paths
+          .map((path) => path.nodes.map((node) => node.id).toList())
+          .toList();
+      final reusedRoot = skill.treeNodes.firstWhere(
+        (node) => node.id == originalIds[3],
+      );
+
+      expect(layout.paths, hasLength(2));
+      expect(pathIds, contains(equals(originalIds.take(3).toList())));
+      expect(pathIds.any((path) => path.first == originalIds[3]), isTrue);
+      expect(reusedRoot.prerequisiteIds, isEmpty);
+    });
+
+    test(
+      'template expansion keeps reused roads separate across three paths',
+      () {
+        final skill = Skill(
+          id: 'roadmap-hard-skill',
+          name: 'RoadMap hard split',
+          goal: 'Три дороги',
+          color: const Color(0xFFFF9500),
+          icon: Icons.route,
+        );
+        state.addSkill(skill);
+
+        state.applyRoadmapTemplate(
+          skill.id,
+          const RoadmapTemplateConfig(
+            template: RoadmapTemplate.normal,
+            stagesPerPath: 3,
+          ),
+        );
+        final originalIds = skill.treeNodes.map((node) => node.id).toList();
+
+        state.applyRoadmapTemplate(
+          skill.id,
+          const RoadmapTemplateConfig(
+            template: RoadmapTemplate.hard,
+            stagesPerPath: 2,
+          ),
+        );
+
+        final layout = const RoadmapEngine().buildPathLayout(skill);
+        final pathIds = layout.paths
+            .map((path) => path.nodes.map((node) => node.id).toList())
+            .toList();
+
+        expect(layout.paths, hasLength(3));
+        expect(pathIds, contains(equals([originalIds[0], originalIds[1]])));
+        expect(pathIds, contains(equals([originalIds[2], originalIds[3]])));
+        expect(pathIds, contains(equals([originalIds[4], originalIds[5]])));
+        for (final rootId in [originalIds[0], originalIds[2], originalIds[4]]) {
+          final root = skill.treeNodes.firstWhere((node) => node.id == rootId);
+          expect(root.prerequisiteIds, isEmpty);
+        }
+      },
+    );
+
+    test('template shrink removes stale unlinked road stages', () {
+      final skill = Skill(
+        id: 'roadmap-shrink-skill',
+        name: 'RoadMap shrink',
+        goal: 'Сжать дороги',
+        color: const Color(0xFFFF9500),
+        icon: Icons.route,
+      );
+      state.addSkill(skill);
+
+      state.applyRoadmapTemplate(
+        skill.id,
+        const RoadmapTemplateConfig(
+          template: RoadmapTemplate.hard,
+          stagesPerPath: 2,
+        ),
+      );
+
+      state.applyRoadmapTemplate(
+        skill.id,
+        const RoadmapTemplateConfig(
+          template: RoadmapTemplate.normal,
+          stagesPerPath: 2,
+        ),
+      );
+
+      final layout = const RoadmapEngine().buildPathLayout(skill);
+      final nodeIds = skill.treeNodes.map((node) => node.id).toSet();
+
+      expect(skill.treeNodes, hasLength(4));
+      expect(layout.paths, hasLength(2));
+      expect(layout.paths.every((path) => path.nodes.length == 2), isTrue);
+      for (final node in skill.treeNodes) {
+        expect(node.prerequisiteIds.every(nodeIds.contains), isTrue);
+      }
+    });
+
     test('preserves linked stages when applying a smaller template', () {
       final skill = Skill(
         id: 'linked-roadmap-skill',

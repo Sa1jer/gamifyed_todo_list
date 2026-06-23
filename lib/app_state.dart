@@ -1611,10 +1611,16 @@ class AppState extends ChangeNotifier {
     };
 
     for (final node in finalNodes) {
+      final isTemplateNode = requiredPrerequisiteByNodeId.containsKey(node.id);
       final requiredPrerequisite = requiredPrerequisiteByNodeId[node.id];
-      final existingPrerequisites =
-          reusedNodeIds.contains(node.id) ||
-              preservedExtraNodes.any((extra) => extra.id == node.id)
+      final isTemplateRoot = isTemplateNode && requiredPrerequisite == null;
+      // A reused stage can become the first stage of a new road. Keeping its
+      // old parent would silently attach that road back to the previous road.
+      final shouldMergeExistingPrerequisites =
+          !isTemplateRoot &&
+          (reusedNodeIds.contains(node.id) ||
+              preservedExtraNodes.any((extra) => extra.id == node.id));
+      final existingPrerequisites = shouldMergeExistingPrerequisites
           ? originalPrerequisitesByNodeId[node.id] ?? const <String>[]
           : const <String>[];
       final mergedPrerequisites = _mergeRoadmapPrerequisites(
