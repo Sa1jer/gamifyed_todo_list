@@ -72,12 +72,13 @@ This file tracks technical details, completed work, open tasks, and remaining wo
 - Post-`1.3.43` tutorial polish: `Трофеи` now has its own orange spotlight inside the rewards dialog and closes into the profile/help tutorial step.
 - Post-`1.3.43` quest polish: quests now support an optional saved description in creation/edit flows; main quest widgets show it as quiet gray inline context, while RoadMap rows stay compact.
 - Post-`1.3.44` architecture audit: added `docs/APPSTATE_MAP.md` with AppState responsibility map, mutation boundaries, future sync notes and extraction risk order.
+- `1.3.45`: extracted pure `AchievementEngine` evaluation from `AppState` while keeping unlock mutation, pending notifications and storage behavior in `AppState`.
 
 ## Next Planned Batches
 
-- `1.3.45` — `AchievementEngine` extraction: pure achievement evaluation snapshot, no storage/UI behavior change.
+- Next architecture batch — `RewardEngine` extraction planning: preserve chest/effect `sourceKey` idempotency, undo behavior and reward notifications with characterization tests first.
 - Later — Debug Admin achievement state tools: unlock/lock all and per-achievement toggles, still debug-only.
-- Later — `RewardEngine` and task-completion characterization tests before any high-risk XP/reward extraction.
+- Later — task-completion characterization tests before any high-risk XP/history/reward extraction.
 
 ## P0 - Release / Data Safety
 
@@ -100,18 +101,25 @@ Acceptance:
 - No Firebase/cloud/sync implementation was added.
 - Future AppState work has a concrete map and first safe extraction target.
 
-### AchievementEngine Extraction - Planned
+### AchievementEngine Extraction - Done In 1.3.45
 
-Goal:
-Extract hardcoded achievement evaluation into a pure engine while keeping AppState responsible for mutation, pending notifications and persistence.
+Resolved:
+Hardcoded achievement threshold checks lived directly inside `AppState._checkAchievements()`, making future AppState decomposition harder than necessary.
+
+Implemented:
+
+- Added `AchievementEngineSnapshot`.
+- Added pure `AchievementEngine.achievementIdsFor(...)`.
+- Moved the existing threshold rules for task count, streak, profile level, skill count and completed checklist into the engine.
+- Kept `AppState` responsible for `_unlockAchievement`, `unlockedAt`, pending achievement notifications and persistence.
+- Kept `first_boss` as the existing boss-defeat side effect instead of changing boss/reward timing.
 
 Acceptance:
 
-- Add an `AchievementEngineSnapshot` with only needed inputs.
-- Engine returns achievement ids to unlock.
 - Existing achievement behavior remains unchanged.
-- AppState keeps `_unlockAchievement` side effects.
-- Unit tests cover the snapshot rules before replacing the current hardcoded checks.
+- No storage/model/UI migration.
+- No Debug Admin achievement editor introduced.
+- Unit tests cover engine rules and AppState notification side effects.
 
 ### Fresh Install Must Be Empty - Done In 1.3.29
 

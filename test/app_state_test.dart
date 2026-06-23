@@ -403,6 +403,49 @@ void main() {
     );
   });
 
+  group('achievement engine integration', () {
+    test(
+      'AppState keeps achievement unlock notifications as side effects',
+      () async {
+        final storage = _InMemoryStorageService();
+        final state = AppState(storage: storage, seedDefaults: false);
+        addTearDown(state.dispose);
+
+        await state.loadSavedData();
+
+        final skill = Skill(
+          id: 'achievement-skill',
+          name: 'Achievement skill',
+          goal: 'Unlock first quest achievement',
+          color: const Color(0xFFFF9500),
+          icon: Icons.star,
+        );
+        final task = Task(
+          id: 'achievement-task',
+          title: 'Complete first quest',
+          skillId: skill.id,
+          xpReward: 20,
+          type: TaskType.shortTerm,
+        );
+
+        state.addSkill(skill);
+        state.addTask(task);
+        state.completeTask(task.id);
+
+        final unlocked = state.achievements.firstWhere(
+          (achievement) => achievement.id == 'first_task',
+        );
+        final notifications = state.consumeAchievementNotifications();
+
+        expect(unlocked.isUnlocked, isTrue);
+        expect(notifications.map((achievement) => achievement.id), [
+          'first_task',
+        ]);
+        expect(state.consumeAchievementNotifications(), isEmpty);
+      },
+    );
+  });
+
   group('streak protection', () {
     late AppState state;
     late Task task;

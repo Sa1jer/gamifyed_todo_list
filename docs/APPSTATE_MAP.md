@@ -98,8 +98,8 @@ The future sync boundary should be planned without implementing Firebase/cloud.
 
 ### Low Risk
 
-- `AchievementEngine`: pure evaluation from a snapshot to achievement ids.
-  AppState can keep mutation and pending-notification behavior.
+- `AchievementEngine`: completed in `1.3.45` as pure evaluation from a snapshot
+  to achievement ids. AppState keeps mutation and pending-notification behavior.
 - Additional read-only progress/review evaluators, following the existing
   engine pattern.
 
@@ -124,18 +124,16 @@ The future sync boundary should be planned without implementing Firebase/cloud.
 
 ## Recommended Next Batch
 
-Start with `AchievementEngine`.
+Plan `RewardEngine`, but do not extract mutation yet.
 
 Implementation direction:
 
-- Add an `AchievementEngineSnapshot` with only the data needed for evaluation:
-  total completed tasks, best streak, profile level, skill count, fully
-  completed checklist signal and defeated resistance signal.
-- Add a pure engine method that returns achievement ids to unlock.
-- Keep `_unlockAchievement` and pending notification mutation in `AppState`.
-- Replace hardcoded `_checkAchievements` conditions with snapshot + engine
-  output.
-- Add characterization tests before replacement so achievement behavior stays
-  unchanged.
+- First add characterization tests around chest creation, effect grants,
+  `sourceKey` idempotency, undo rollback and pending reward/effect
+  notifications.
+- Extract pure reward decisions only where AppState can keep mutation, history
+  and notification side effects.
+- Keep task completion, minimum action and undo orchestration in AppState until
+  stronger coverage exists.
 
-Do not start with task completion, rewards or save pipeline extraction.
+Do not start with task completion orchestration or save pipeline extraction.

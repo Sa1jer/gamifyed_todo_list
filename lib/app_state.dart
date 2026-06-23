@@ -7,6 +7,7 @@ import 'utils.dart';
 import 'storage_service.dart';
 import 'notification_service.dart';
 import 'sfx_service.dart';
+import 'engines/achievement_engine.dart';
 import 'engines/boss_engine.dart';
 import 'engines/roadmap_engine.dart';
 
@@ -32,6 +33,7 @@ class AppState extends ChangeNotifier {
   final StorageService _storage;
   final NotificationService _notifications;
   final math.Random _random;
+  final AchievementEngine _achievementEngine = const AchievementEngine();
   final BossEngine _bossEngine = const BossEngine();
   Timer? _resetTimer;
   Timer? _saveDebounceTimer;
@@ -1296,15 +1298,20 @@ class AppState extends ChangeNotifier {
   }
 
   void _checkAchievements() {
-    _unlockAchievement('first_task', totalTasksCompleted >= 1);
-    _unlockAchievement('tasks_100', totalTasksCompleted >= 100);
-    _unlockAchievement('tasks_500', totalTasksCompleted >= 500);
-    _unlockAchievement('streak_7', _bestStreak >= 7);
-    _unlockAchievement('streak_30', _bestStreak >= 30);
-    _unlockAchievement('level_5', profile.level >= 5);
-    _unlockAchievement('level_10', profile.level >= 10);
-    _unlockAchievement('skills_3', skills.length >= 3);
-    _unlockAchievement('all_checklist', _hasFullyCompletedChecklist());
+    final snapshot = _buildAchievementSnapshot();
+    for (final id in _achievementEngine.achievementIdsFor(snapshot)) {
+      _unlockAchievement(id, true);
+    }
+  }
+
+  AchievementEngineSnapshot _buildAchievementSnapshot() {
+    return AchievementEngineSnapshot(
+      totalTasksCompleted: totalTasksCompleted,
+      bestStreak: _bestStreak,
+      profileLevel: profile.level,
+      skillsCount: skills.length,
+      hasFullyCompletedChecklist: _hasFullyCompletedChecklist(),
+    );
   }
 
   bool _hasFullyCompletedChecklist() {
