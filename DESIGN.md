@@ -18,6 +18,28 @@ Every new feature should answer:
 
 If a feature does not serve the core loop, it should be hidden, delayed, or treated as secondary.
 
+## Architecture Direction
+
+Current AppState direction:
+
+- `AppState` remains the public runtime facade until responsibilities are extracted one at a time.
+- Decomposition starts from `docs/APPSTATE_MAP.md`, not from broad file splitting.
+- Pure evaluation engines should come before mutation helpers.
+- Do not mix AppState extraction with product redesign, storage migrations or new game mechanics.
+
+Future sync boundary:
+
+- The app stays local-first; do not add Firebase/auth/sync unless there is a separate approved plan.
+- Stable ids, `updatedAt` and centralized mutation paths matter because a future sync layer would observe them.
+- Debug state remains separate from production user data and storage.
+- Notifications are local-device side effects and should not become shared cloud state.
+
+Extraction order:
+
+- First: `AchievementEngine`, because achievement evaluation can be pure and AppState can keep unlock side effects.
+- Next: `RewardEngine`, only after preserving `sourceKey` idempotency and undo behavior with tests.
+- Later/high-risk: `TaskCompletionEngine`, because completion/minimum/undo touch XP, history, buffs, rewards, resistance, tutorial and notifications.
+
 ## Current Navigation Model
 
 Primary modes:

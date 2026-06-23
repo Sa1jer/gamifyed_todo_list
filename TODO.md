@@ -71,12 +71,47 @@ This file tracks technical details, completed work, open tasks, and remaining wo
 - Post-`1.3.42` RoadMap polish: RoadMap skill/stage bubbles are 20% larger; selected skill details show the path goal as subtitle, then unlinked quests first and thin collapsible stage groups below; selected stage details show only that stage's quests without an extra group header.
 - Post-`1.3.43` tutorial polish: `Трофеи` now has its own orange spotlight inside the rewards dialog and closes into the profile/help tutorial step.
 - Post-`1.3.43` quest polish: quests now support an optional saved description in creation/edit flows; main quest widgets show it as quiet gray inline context, while RoadMap rows stay compact.
+- Post-`1.3.44` architecture audit: added `docs/APPSTATE_MAP.md` with AppState responsibility map, mutation boundaries, future sync notes and extraction risk order.
 
 ## Next Planned Batches
 
-- `1.3.43` — Achievement state tools: unlock/lock all and per-achievement toggles inside Debug Admin.
+- `1.3.45` — `AchievementEngine` extraction: pure achievement evaluation snapshot, no storage/UI behavior change.
+- Later — Debug Admin achievement state tools: unlock/lock all and per-achievement toggles, still debug-only.
+- Later — `RewardEngine` and task-completion characterization tests before any high-risk XP/reward extraction.
 
 ## P0 - Release / Data Safety
+
+### AppState Decomposition Map - Done In Docs
+
+Resolved:
+Before extracting code from the central `AppState`, the project needed a clear responsibility and mutation map so future refactors do not accidentally mix storage, XP, RoadMap, tutorial, rewards or notifications.
+
+Implemented:
+
+- Added `docs/APPSTATE_MAP.md`.
+- Mapped AppState responsibilities: storage lifecycle, settings/tutorial, skills, RoadMap, tasks, completion/minimum/undo, history, achievements, rewards/effects, resistance, notifications and debug bulk normalization.
+- Recorded mutation boundaries for `_saveAll`, task completion, minimum action, undo, skill/RoadMap/task CRUD, rewards/effects and debug normalization.
+- Captured future-cloud constraints: stable ids, `updatedAt` gaps, full-domain saves, debug/user-data separation and notification locality.
+- Ranked extraction risk: `AchievementEngine` first, `RewardEngine` second, `TaskCompletionEngine` only after stronger characterization tests.
+
+Acceptance:
+
+- No app behavior changed.
+- No Firebase/cloud/sync implementation was added.
+- Future AppState work has a concrete map and first safe extraction target.
+
+### AchievementEngine Extraction - Planned
+
+Goal:
+Extract hardcoded achievement evaluation into a pure engine while keeping AppState responsible for mutation, pending notifications and persistence.
+
+Acceptance:
+
+- Add an `AchievementEngineSnapshot` with only needed inputs.
+- Engine returns achievement ids to unlock.
+- Existing achievement behavior remains unchanged.
+- AppState keeps `_unlockAchievement` side effects.
+- Unit tests cover the snapshot rules before replacing the current hardcoded checks.
 
 ### Fresh Install Must Be Empty - Done In 1.3.29
 
