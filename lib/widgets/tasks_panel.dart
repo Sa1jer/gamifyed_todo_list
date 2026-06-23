@@ -292,6 +292,7 @@ class _TasksPanelState extends State<TasksPanel> {
         onSave:
             (
               title,
+              description,
               xp,
               type,
               freq,
@@ -308,6 +309,7 @@ class _TasksPanelState extends State<TasksPanel> {
               Task(
                 id: uid(),
                 title: title,
+                description: description,
                 skillId: skill.id,
                 xpReward: xp,
                 type: type,
@@ -339,6 +341,7 @@ class _TasksPanelState extends State<TasksPanel> {
         onSave:
             (
               title,
+              description,
               xp,
               type,
               freq,
@@ -354,6 +357,7 @@ class _TasksPanelState extends State<TasksPanel> {
             ) => s.updateTask(
               task,
               title: title,
+              description: description,
               xpReward: xp,
               type: type,
               repeatFrequency: freq,
@@ -637,17 +641,18 @@ class _TaskTileState extends State<TaskTile> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        t.title,
-                        style: TextStyle(
+                      TaskTitleWithDescription(
+                        task: t,
+                        titleStyle: TextStyle(
                           fontWeight: FontWeight.w500,
                           fontSize: 14,
                           color: t.isDone ? sub : txt,
-                          decoration: t.isDone
-                              ? TextDecoration.lineThrough
-                              : null,
-                          decorationColor: sub,
                         ),
+                        descriptionColor: sub,
+                        titleDecoration: t.isDone
+                            ? TextDecoration.lineThrough
+                            : null,
+                        decorationColor: sub,
                       ),
                       if (t.hasMinimumAction) ...[
                         const SizedBox(height: 4),

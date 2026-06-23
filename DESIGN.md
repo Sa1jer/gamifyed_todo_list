@@ -1,6 +1,6 @@
 # DESIGN / Product And UI Notes
 
-Last updated: 2026-06-22
+Last updated: 2026-06-23
 
 This file records design direction, product guardrails, and UI decisions. Update it after every meaningful product/UI change so implementation stays aligned with the app's intended mental model.
 
@@ -88,8 +88,8 @@ Current `1.3.34` Planning decision:
 - Current `1.3.37`: practice rows are not quest-focus buttons; direct row actions are completion, `Минимум`, and edit.
 - Current `1.3.37`: RoadMap quest rows may show `Минимум` only when a minimum step is actually available.
 - RoadMap minimum action must reuse the same XP/feedback flow as `Сейчас`, not create a separate map-only action path.
-- Current post-`1.3.42`: RoadMap stages can be renamed directly from stage detail panels.
-- Stage naming should stay lightweight: rename is a small edit action, not a separate roadmap editor mode.
+- Current post-`1.3.42`: RoadMap stages can be renamed from a small pencil icon beside the stage title in desktop and mobile detail panels.
+- Stage naming should stay lightweight: rename is an inline title action, not a separate button or roadmap editor mode.
 - When a focused skill has no stages, its orb should sit near the center of the usable canvas area. As stages are added, the orb may move right to make room for the road, while the existing auto-fit scaling remains responsible for fitting content.
 - Skill-level RoadMap details may show only quests that belong to the skill but are not linked to a RoadMap stage.
 - Selected skill details show the path goal as the title subtitle, then unlinked quests first and collapsible groups for stages that have quests; selected stage details show a plain quest list without another wrapper.
@@ -188,6 +188,7 @@ Tutorial system:
 - `XP и рост` points toward `Карта`, then RoadMap explains the skill bubble, the road canvas and the right-side details panel.
 - Statistics opens with the same orange spotlight-style tutorial and `Завершить обучение` action instead of completing invisibly before the user sees the screen.
 - Finishing the core Statistics step continues to `Трофеи и эффекты`; replaying the standalone Statistics module still ends after that module.
+- `Трофеи и эффекты` teaches from inside the rewards dialog with the same orange spotlight language, then continues into the profile/help topic.
 - The secondary tutorial dismiss action is named `Пропустить обучение`; buttons like `Понятно` are reserved for advancing a specific lesson step.
 - Finishing the trophies topic continues to the profile/help topic so the replay path has a clear ending.
 - Primary tutorial actions temporarily hide the overlay while the real creation dialog is open.
@@ -234,6 +235,7 @@ Current decision:
 - Manual priority/focus controls are frozen in the UI. Priority can remain as legacy data/tie-breaker but should not look like a primary user choice.
 - Stage linking is called `Этап в дорожной карте`, not `Этап мастерства`, to match the RoadMap mental model.
 - New quests start with `Минимальный шаг` disabled unless a concrete initial minimum is passed by a nudge or other prefill flow.
+- Quest descriptions are optional lightweight context below XP. They should appear quietly next to the quest title in action/task widgets, but RoadMap practice rows should not show descriptions unless the user opens edit.
 - `SMARTER квеста` is a quiet quality helper, not validation. It only checks what the form can know: specificity, measurable signal, easy start, growth/RoadMap link and rhythm.
 - The quest save action follows the selected skill color, so creation feels attached to the skill context.
 

@@ -1930,6 +1930,7 @@ class AppState extends ChangeNotifier {
   void updateTask(
     Task task, {
     required String title,
+    required String description,
     required int xpReward,
     required TaskType type,
     required RepeatFrequency repeatFrequency,
@@ -1947,6 +1948,7 @@ class AppState extends ChangeNotifier {
     final hadNotification = task.notificationsEnabled;
     final oldMinimumAction = task.minimumAction;
     task.title = title;
+    task.description = description.trim();
     task.xpReward = xpReward;
     task.type = type;
     task.repeatFrequency = repeatFrequency;

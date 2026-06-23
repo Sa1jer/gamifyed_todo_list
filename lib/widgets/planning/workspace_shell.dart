@@ -258,6 +258,7 @@ class _PlanningWorkspaceState extends State<PlanningWorkspace> {
         onSave:
             (
               title,
+              description,
               xp,
               type,
               freq,
@@ -274,6 +275,7 @@ class _PlanningWorkspaceState extends State<PlanningWorkspace> {
               Task(
                 id: uid(),
                 title: title,
+                description: description,
                 skillId: skill.id,
                 xpReward: xp,
                 type: type,
@@ -305,6 +307,7 @@ class _PlanningWorkspaceState extends State<PlanningWorkspace> {
         onSave:
             (
               title,
+              description,
               xp,
               type,
               freq,
@@ -320,6 +323,7 @@ class _PlanningWorkspaceState extends State<PlanningWorkspace> {
             ) => state.updateTask(
               task,
               title: title,
+              description: description,
               xpReward: xp,
               type: type,
               repeatFrequency: freq,

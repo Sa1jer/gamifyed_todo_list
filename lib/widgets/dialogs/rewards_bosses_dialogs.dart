@@ -2,7 +2,14 @@ part of '../dialogs.dart';
 
 class RewardsDialog extends StatefulWidget {
   final AppState state;
-  const RewardsDialog({super.key, required this.state});
+  final bool showTutorialHint;
+  final VoidCallback? onTutorialComplete;
+  const RewardsDialog({
+    super.key,
+    required this.state,
+    this.showTutorialHint = false,
+    this.onTutorialComplete,
+  });
 
   @override
   State<RewardsDialog> createState() => _RewardsDialogState();
@@ -21,6 +28,7 @@ class _RewardsDialogState extends State<RewardsDialog> {
     final bdr = borderColor(isDark);
     final unopened = widget.state.unopenedRewardChests;
     final buffs = widget.state.activeBuffs;
+    final tutorialTargetKey = GlobalKey();
     final size = MediaQuery.sizeOf(context);
     final availableWidth = size.width - 36;
     final availableHeight = size.height - 40;
@@ -38,224 +46,253 @@ class _RewardsDialogState extends State<RewardsDialog> {
       child: SizedBox(
         width: dialogWidth,
         height: dialogHeight,
-        child: Column(
+        child: Stack(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(22, 20, 16, 14),
-              child: Row(
-                children: [
-                  const Icon(Icons.redeem, color: Color(0xFFFFCC00), size: 22),
-                  const SizedBox(width: 10),
-                  Text(
-                    'Трофеи после действий',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                      color: txt,
-                    ),
-                  ),
-                  const Spacer(),
-                  PressFeedback(
-                    scale: 0.94,
-                    tooltip: 'Закрыть трофеи',
-                    onTap: () => Navigator.pop(context),
-                    child: Icon(Icons.close, color: sub, size: 22),
-                  ),
-                ],
-              ),
-            ),
-            Container(height: 1, color: bdr),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _StatCard(
-                            title: 'Новые сундуки',
-                            value: '${unopened.length}',
-                            icon: Icons.inventory_2,
-                            color: const Color(0xFFFFCC00),
-                            isDark: isDark,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _StatCard(
-                            title: 'Пассивные эффекты',
-                            value: '${buffs.length}',
-                            icon: Icons.bolt,
-                            color: const Color(0xFF34C759),
-                            isDark: isDark,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Трофеи появляются после заметных действий: сильного дня, рубежа серии или победы над сопротивлением.',
-                      style: TextStyle(color: sub, fontSize: 12, height: 1.35),
-                    ),
-                    MotionExpandable(
-                      expanded: _lastReveal != null,
-                      collapsedChild: const SizedBox(height: 18),
-                      expandedChild: _lastReveal == null
-                          ? const SizedBox.shrink()
-                          : Padding(
-                              padding: const EdgeInsets.only(top: 12),
-                              child: _RewardRevealNotice(
-                                key: ValueKey(_lastReveal!.id),
-                                reveal: _lastReveal!,
-                                isDark: isDark,
-                              ),
-                            ),
-                    ),
-                    Text(
-                      'Новые сундуки',
-                      style: TextStyle(
-                        color: txt,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
+            Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(22, 20, 16, 14),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.redeem,
+                        color: Color(0xFFFFCC00),
+                        size: 22,
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    MotionFadeSlideSwitcher(
-                      child: unopened.isEmpty
-                          ? _RewardsEmptyState(
-                              key: const ValueKey('empty-chests'),
-                              icon: Icons.inventory_2_outlined,
-                              title: 'Пока нет сундуков',
-                              subtitle:
-                                  'Закрой сильный день, удержи серию или пройди событие сопротивления, чтобы получить трофей.',
-                              isDark: isDark,
-                            )
-                          : Column(
-                              key: const ValueKey('chest-list'),
-                              children: unopened.asMap().entries.map((entry) {
-                                final chest = entry.value;
-                                return MotionListItem(
-                                  key: ValueKey('chest-${chest.id}'),
-                                  index: entry.key,
-                                  slide: 5,
-                                  child: _RewardChestCard(
-                                    chest: chest,
-                                    skill: chest.skillId == null
-                                        ? null
-                                        : widget.state.skills
-                                              .where(
-                                                (skill) =>
-                                                    skill.id == chest.skillId,
-                                              )
-                                              .firstOrNull,
-                                    isDark: isDark,
-                                    onOpen: () => _openChest(context, chest.id),
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                    ),
-                    const SizedBox(height: 18),
-                    GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () =>
-                          setState(() => _buffsExpanded = !_buffsExpanded),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 2),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.bolt,
-                              color: const Color(0xFF34C759).withAlpha(190),
-                              size: 16,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Пассивные эффекты',
-                                style: TextStyle(
-                                  color: txt,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
+                      const SizedBox(width: 10),
+                      Text(
+                        'Трофеи после действий',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                          color: txt,
+                        ),
+                      ),
+                      const Spacer(),
+                      PressFeedback(
+                        scale: 0.94,
+                        tooltip: 'Закрыть трофеи',
+                        onTap: () => Navigator.pop(context),
+                        child: Icon(Icons.close, color: sub, size: 22),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(height: 1, color: bdr),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(18),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        KeyedSubtree(
+                          key: tutorialTargetKey,
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: _StatCard(
+                                  title: 'Новые сундуки',
+                                  value: '${unopened.length}',
+                                  icon: Icons.inventory_2,
+                                  color: const Color(0xFFFFCC00),
+                                  isDark: isDark,
                                 ),
                               ),
-                            ),
-                            TaskBadge(
-                              label: '${buffs.length}',
-                              color: const Color(0xFF34C759),
-                            ),
-                            const SizedBox(width: 8),
-                            Icon(
-                              _buffsExpanded
-                                  ? Icons.expand_less
-                                  : Icons.expand_more,
-                              color: sub,
-                              size: 18,
-                            ),
-                          ],
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _StatCard(
+                                  title: 'Пассивные эффекты',
+                                  value: '${buffs.length}',
+                                  icon: Icons.bolt,
+                                  color: const Color(0xFF34C759),
+                                  isDark: isDark,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ),
-                    MotionExpandable(
-                      expanded: _buffsExpanded,
-                      collapsedChild: Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Text(
-                          buffs.isEmpty
-                              ? 'Эффектов сейчас нет. Они появятся после открытия сундуков.'
-                              : 'Эффекты применятся сами, когда подойдут к квесту.',
+                        const SizedBox(height: 16),
+                        Text(
+                          'Трофеи появляются после заметных действий: сильного дня, рубежа серии или победы над сопротивлением.',
                           style: TextStyle(
                             color: sub,
-                            fontSize: 11.5,
+                            fontSize: 12,
                             height: 1.35,
                           ),
                         ),
-                      ),
-                      expandedChild: Padding(
-                        padding: const EdgeInsets.only(top: 10),
-                        child: MotionFadeSlideSwitcher(
-                          child: buffs.isEmpty
+                        MotionExpandable(
+                          expanded: _lastReveal != null,
+                          collapsedChild: const SizedBox(height: 18),
+                          expandedChild: _lastReveal == null
+                              ? const SizedBox.shrink()
+                              : Padding(
+                                  padding: const EdgeInsets.only(top: 12),
+                                  child: _RewardRevealNotice(
+                                    key: ValueKey(_lastReveal!.id),
+                                    reveal: _lastReveal!,
+                                    isDark: isDark,
+                                  ),
+                                ),
+                        ),
+                        Text(
+                          'Новые сундуки',
+                          style: TextStyle(
+                            color: txt,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        MotionFadeSlideSwitcher(
+                          child: unopened.isEmpty
                               ? _RewardsEmptyState(
-                                  key: const ValueKey('empty-buffs'),
-                                  icon: Icons.bolt_outlined,
-                                  title: 'Нет пассивных эффектов',
+                                  key: const ValueKey('empty-chests'),
+                                  icon: Icons.inventory_2_outlined,
+                                  title: 'Пока нет сундуков',
                                   subtitle:
-                                      'Открой сундук, и здесь появится временное усиление для следующих квестов.',
+                                      'Закрой сильный день, удержи серию или пройди событие сопротивления, чтобы получить трофей.',
                                   isDark: isDark,
                                 )
                               : Column(
-                                  key: const ValueKey('buff-list'),
-                                  children: buffs.asMap().entries.map((entry) {
-                                    final buff = entry.value;
+                                  key: const ValueKey('chest-list'),
+                                  children: unopened.asMap().entries.map((
+                                    entry,
+                                  ) {
+                                    final chest = entry.value;
                                     return MotionListItem(
-                                      key: ValueKey('buff-${buff.id}'),
+                                      key: ValueKey('chest-${chest.id}'),
                                       index: entry.key,
                                       slide: 5,
-                                      child: _ActiveBuffCard(
-                                        buff: buff,
-                                        skill: buff.skillId == null
+                                      child: _RewardChestCard(
+                                        chest: chest,
+                                        skill: chest.skillId == null
                                             ? null
                                             : widget.state.skills
                                                   .where(
                                                     (skill) =>
                                                         skill.id ==
-                                                        buff.skillId,
+                                                        chest.skillId,
                                                   )
                                                   .firstOrNull,
                                         isDark: isDark,
+                                        onOpen: () =>
+                                            _openChest(context, chest.id),
                                       ),
                                     );
                                   }).toList(),
                                 ),
                         ),
-                      ),
+                        const SizedBox(height: 18),
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () =>
+                              setState(() => _buffsExpanded = !_buffsExpanded),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.bolt,
+                                  color: const Color(0xFF34C759).withAlpha(190),
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Пассивные эффекты',
+                                    style: TextStyle(
+                                      color: txt,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                TaskBadge(
+                                  label: '${buffs.length}',
+                                  color: const Color(0xFF34C759),
+                                ),
+                                const SizedBox(width: 8),
+                                Icon(
+                                  _buffsExpanded
+                                      ? Icons.expand_less
+                                      : Icons.expand_more,
+                                  color: sub,
+                                  size: 18,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        MotionExpandable(
+                          expanded: _buffsExpanded,
+                          collapsedChild: Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              buffs.isEmpty
+                                  ? 'Эффектов сейчас нет. Они появятся после открытия сундуков.'
+                                  : 'Эффекты применятся сами, когда подойдут к квесту.',
+                              style: TextStyle(
+                                color: sub,
+                                fontSize: 11.5,
+                                height: 1.35,
+                              ),
+                            ),
+                          ),
+                          expandedChild: Padding(
+                            padding: const EdgeInsets.only(top: 10),
+                            child: MotionFadeSlideSwitcher(
+                              child: buffs.isEmpty
+                                  ? _RewardsEmptyState(
+                                      key: const ValueKey('empty-buffs'),
+                                      icon: Icons.bolt_outlined,
+                                      title: 'Нет пассивных эффектов',
+                                      subtitle:
+                                          'Открой сундук, и здесь появится временное усиление для следующих квестов.',
+                                      isDark: isDark,
+                                    )
+                                  : Column(
+                                      key: const ValueKey('buff-list'),
+                                      children: buffs.asMap().entries.map((
+                                        entry,
+                                      ) {
+                                        final buff = entry.value;
+                                        return MotionListItem(
+                                          key: ValueKey('buff-${buff.id}'),
+                                          index: entry.key,
+                                          slide: 5,
+                                          child: _ActiveBuffCard(
+                                            buff: buff,
+                                            skill: buff.skillId == null
+                                                ? null
+                                                : widget.state.skills
+                                                      .where(
+                                                        (skill) =>
+                                                            skill.id ==
+                                                            buff.skillId,
+                                                      )
+                                                      .firstOrNull,
+                                            isDark: isDark,
+                                          ),
+                                        );
+                                      }).toList(),
+                                    ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
+                ),
+              ],
+            ),
+            if (widget.showTutorialHint && widget.onTutorialComplete != null)
+              Positioned.fill(
+                child: _RewardsTutorialSpotlight(
+                  targetKey: tutorialTargetKey,
+                  isDark: isDark,
+                  onComplete: widget.onTutorialComplete!,
                 ),
               ),
-            ),
           ],
         ),
       ),
@@ -287,6 +324,197 @@ class _RewardsDialogState extends State<RewardsDialog> {
             : Icons.inventory_2,
       ),
     );
+  }
+}
+
+class _RewardsTutorialSpotlight extends StatefulWidget {
+  final GlobalKey targetKey;
+  final bool isDark;
+  final VoidCallback onComplete;
+
+  const _RewardsTutorialSpotlight({
+    required this.targetKey,
+    required this.isDark,
+    required this.onComplete,
+  });
+
+  @override
+  State<_RewardsTutorialSpotlight> createState() =>
+      _RewardsTutorialSpotlightState();
+}
+
+class _RewardsTutorialSpotlightState extends State<_RewardsTutorialSpotlight> {
+  Rect? _targetRect;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _updateTargetRect());
+  }
+
+  void _updateTargetRect() {
+    if (!mounted) return;
+    final overlayBox = context.findRenderObject() as RenderBox?;
+    final targetContext = widget.targetKey.currentContext;
+    final targetBox = targetContext?.findRenderObject() as RenderBox?;
+    if (overlayBox == null || targetBox == null || !targetBox.attached) {
+      setState(() => _targetRect = null);
+      return;
+    }
+    final topLeft = targetBox.localToGlobal(Offset.zero, ancestor: overlayBox);
+    setState(() => _targetRect = topLeft & targetBox.size);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const color = Color(0xFFFF9500);
+    final size = MediaQuery.of(context).size;
+    final txt = textColor(widget.isDark);
+    final sub = subtext(widget.isDark);
+    final panelWidth = math.min(size.width - 32, 420.0);
+    final rect = _targetRect;
+    final top = rect == null
+        ? (size.height - 250) / 2
+        : (rect.bottom + 18).clamp(18.0, size.height - 250.0).toDouble();
+    final left = rect == null
+        ? (size.width - panelWidth) / 2
+        : (rect.center.dx - panelWidth / 2)
+              .clamp(16.0, math.max(16.0, size.width - panelWidth - 16))
+              .toDouble();
+
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: kMotionSlow,
+      curve: kMotionCurve,
+      builder: (context, t, child) {
+        return Opacity(
+          opacity: t,
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: _RewardsTutorialSpotlightPainter(
+                    targetRect: rect,
+                    color: color,
+                  ),
+                ),
+              ),
+              Positioned(
+                left: left,
+                top: top,
+                width: panelWidth,
+                child: Transform.scale(scale: 0.96 + 0.04 * t, child: child),
+              ),
+            ],
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: surface(widget.isDark),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: borderColor(widget.isDark)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(80),
+              blurRadius: 28,
+              offset: const Offset(0, 16),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: color.withAlpha(34),
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+                  child: const Icon(Icons.redeem, color: color, size: 21),
+                ),
+                const SizedBox(width: 11),
+                Expanded(
+                  child: Text(
+                    'Трофеи и эффекты',
+                    style: TextStyle(
+                      color: txt,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Это обратная связь после действий: сундуки, пассивные эффекты и сопротивление. Их не нужно обслуживать каждый день.',
+              style: TextStyle(
+                color: sub,
+                fontSize: 13.5,
+                height: 1.35,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: SmallBtn(
+                label: 'Дальше: профиль',
+                icon: Icons.arrow_forward_rounded,
+                color: color,
+                onTap: widget.onComplete,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RewardsTutorialSpotlightPainter extends CustomPainter {
+  final Rect? targetRect;
+  final Color color;
+
+  const _RewardsTutorialSpotlightPainter({
+    required this.targetRect,
+    required this.color,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final overlay = Paint()..color = Colors.black.withAlpha(184);
+    final base = Path()..addRect(Offset.zero & size);
+    final rect = targetRect?.inflate(10);
+    if (rect == null) {
+      canvas.drawRect(Offset.zero & size, overlay);
+      return;
+    }
+    final cutout = Path()
+      ..addRRect(RRect.fromRectAndRadius(rect, const Radius.circular(22)));
+    canvas.drawPath(
+      Path.combine(PathOperation.difference, base, cutout),
+      overlay,
+    );
+    final glow = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
+      ..color = color.withAlpha(210);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(rect, const Radius.circular(22)),
+      glow,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _RewardsTutorialSpotlightPainter oldDelegate) {
+    return oldDelegate.targetRect != targetRect || oldDelegate.color != color;
   }
 }
 

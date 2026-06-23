@@ -214,6 +214,7 @@ class _SkillTreeDialogState extends State<SkillTreeDialog> {
         onSave:
             (
               title,
+              description,
               xp,
               type,
               freq,
@@ -230,6 +231,7 @@ class _SkillTreeDialogState extends State<SkillTreeDialog> {
               Task(
                 id: uid(),
                 title: title,
+                description: description,
                 skillId: skill.id,
                 xpReward: xp,
                 type: type,

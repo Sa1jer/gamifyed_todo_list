@@ -26,7 +26,7 @@ class _MainPageState extends State<MainPage> {
   final GlobalKey _roadmapCanvasKey = GlobalKey();
   final GlobalKey _roadmapInspectorKey = GlobalKey();
   final GlobalKey _roadmapPracticeKey = GlobalKey();
-  final GlobalKey _tutorialFallbackKey = GlobalKey();
+  final GlobalKey _profileBarKey = GlobalKey();
   WorkspaceMode _mode = WorkspaceMode.act;
   _RewardNotice? _rewardNotice;
   Offset? _rewardNoticeAnchor;
@@ -34,6 +34,7 @@ class _MainPageState extends State<MainPage> {
   DateTime? _lastDebugAdminTapAt;
   bool _firstRunDialogOpen = false;
   bool _statsTutorialActive = false;
+  bool _rewardsTutorialActive = false;
   bool _tutorialStepPaused = false;
   String? _lastTutorialStepId;
   String? _pendingTutorialStepId;
@@ -126,13 +127,30 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
-  void _openRewardsDialog(AppState state) {
+  void _openRewardsDialog(AppState state, {bool showTutorialHint = false}) {
     AppFeedback.selection();
-    setState(() => _rewardNotice = null);
+    setState(() {
+      _rewardNotice = null;
+      if (showTutorialHint) _rewardsTutorialActive = true;
+    });
     showDialog(
       context: context,
-      builder: (_) => RewardsDialog(state: state),
-    );
+      builder: (dialogContext) => RewardsDialog(
+        state: state,
+        showTutorialHint: showTutorialHint,
+        onTutorialComplete: showTutorialHint
+            ? () {
+                _completeRewardsTutorial(state);
+                Navigator.of(dialogContext).maybePop();
+                if (mounted) setState(() => _rewardsTutorialActive = false);
+              }
+            : null,
+      ),
+    ).whenComplete(() {
+      if (showTutorialHint && mounted) {
+        setState(() => _rewardsTutorialActive = false);
+      }
+    });
   }
 
   void _openDailyVictoriesDialog(AppState state) {
@@ -246,6 +264,25 @@ class _MainPageState extends State<MainPage> {
         final latest = AppStateProvider.of(context);
         if (latest.activeTutorialModuleId == null) {
           latest.startTutorialModule(TutorialModuleIds.trophies);
+        }
+      });
+    }
+  }
+
+  void _completeRewardsTutorial(AppState state) {
+    final moduleId = state.activeTutorialModuleId;
+    final stepId =
+        state.activeTutorialStepId ?? TutorialStepIds.trophiesFeedback;
+
+    state.completeTutorialStep(stepId);
+
+    if (moduleId == TutorialModuleIds.trophies &&
+        stepId == TutorialStepIds.trophiesFeedback) {
+      Future<void>.delayed(const Duration(milliseconds: 180), () {
+        if (!mounted) return;
+        final latest = AppStateProvider.of(context);
+        if (latest.activeTutorialModuleId == null) {
+          latest.startTutorialModule(TutorialModuleIds.profile);
         }
       });
     }
@@ -467,19 +504,17 @@ class _MainPageState extends State<MainPage> {
               'Трофеи, эффекты и сопротивление — это отклик после действий. Их не нужно обслуживать каждый день.',
           primaryLabel: 'Открыть трофеи',
           primaryIcon: Icons.redeem_rounded,
-          onPrimaryAction: () {
-            state.completeTutorialStep(TutorialStepIds.trophiesFeedback);
-            _openRewardsDialog(state);
-          },
+          onPrimaryAction: () =>
+              _openRewardsDialog(state, showTutorialHint: true),
         );
       case TutorialStepIds.profileReplay:
         return _GuidedTutorialStep(
           id: stepId,
-          targetKey: _tutorialFallbackKey,
+          targetKey: _profileBarKey,
           title: 'Профиль и подсказки',
           body:
               'В профиле можно повторить обучение, выключить hover-подсказки, звук и настроить внешний вид.',
-          primaryLabel: 'Завершить тему',
+          primaryLabel: 'Завершить обучение',
           primaryIcon: Icons.check_rounded,
           onPrimaryAction: () =>
               state.completeTutorialStep(TutorialStepIds.profileReplay),
@@ -630,6 +665,7 @@ class _MainPageState extends State<MainPage> {
         onSave:
             (
               title,
+              description,
               xp,
               type,
               freq,
@@ -647,6 +683,7 @@ class _MainPageState extends State<MainPage> {
                 Task(
                   id: uid(),
                   title: title,
+                  description: description,
                   skillId: skill.id,
                   xpReward: xp,
                   type: type,
@@ -711,7 +748,10 @@ class _MainPageState extends State<MainPage> {
         final tutorialStep = _tutorialStepFor(s, mobileShell, openStatistics);
         final tutorialVisible = _shouldShowTutorialOverlay(
           tutorialStep?.id,
-          blocked: _firstRunDialogOpen || _statsTutorialActive,
+          blocked:
+              _firstRunDialogOpen ||
+              _statsTutorialActive ||
+              _rewardsTutorialActive,
         );
 
         return Scaffold(
@@ -739,7 +779,7 @@ class _MainPageState extends State<MainPage> {
                         : null,
                     showModeSwitch: !mobileShell,
                   ),
-                  ProfileBar(isDark: isDark),
+                  ProfileBar(key: _profileBarKey, isDark: isDark),
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),

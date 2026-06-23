@@ -704,7 +704,14 @@ class _StatCard extends StatelessWidget {
             children: [
               Icon(icon, color: color, size: 18),
               const SizedBox(width: 6),
-              Text(title, style: TextStyle(color: sub, fontSize: 11)),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(color: sub, fontSize: 11),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 6),

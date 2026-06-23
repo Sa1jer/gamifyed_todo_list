@@ -137,12 +137,13 @@ class SkillsPanel extends StatelessWidget {
     );
   }
 
-  void _addDialog(BuildContext ctx) => showDialog(
-    context: ctx,
-    builder: (_) {
-      final state = AppStateProvider.of(ctx);
-      return AddSkillDialog(
-        isDark: state.isDark,
+  void _addDialog(BuildContext ctx) {
+    final state = AppStateProvider.of(ctx);
+    final isDark = state.isDark;
+    showDialog(
+      context: ctx,
+      builder: (_) => AddSkillDialog(
+        isDark: isDark,
         onSave: (name, goal, checklist, color, icon, initialTreeNodes, _) {
           final skillId = uid();
           state.addSkill(
@@ -158,16 +159,17 @@ class SkillsPanel extends StatelessWidget {
           );
           state.selectSkill(skillId);
         },
-      );
-    },
-  );
+      ),
+    );
+  }
 
-  void _editDialog(BuildContext ctx, Skill sk) => showDialog(
-    context: ctx,
-    builder: (_) {
-      final state = AppStateProvider.of(ctx);
-      return AddSkillDialog(
-        isDark: state.isDark,
+  void _editDialog(BuildContext ctx, Skill sk) {
+    final state = AppStateProvider.of(ctx);
+    final isDark = state.isDark;
+    showDialog(
+      context: ctx,
+      builder: (_) => AddSkillDialog(
+        isDark: isDark,
         existing: sk,
         onSave: (name, goal, checklist, color, icon, _, _) => state.updateSkill(
           sk,
@@ -177,9 +179,9 @@ class SkillsPanel extends StatelessWidget {
           color: color,
           icon: icon,
         ),
-      );
-    },
-  );
+      ),
+    );
+  }
 
   void _confirmDeleteSkill(BuildContext ctx, Skill skill) {
     final state = AppStateProvider.of(ctx);

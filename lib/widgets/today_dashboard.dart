@@ -618,16 +618,16 @@ class _NextActionCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          Text(
-            task!.title,
-            style: TextStyle(
+          TaskTitleWithDescription(
+            task: task!,
+            maxLines: canStartMinimum ? 1 : 2,
+            titleStyle: TextStyle(
               color: txt,
               fontSize: 16.5,
               fontWeight: FontWeight.w900,
               height: 1.12,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            descriptionColor: sub,
           ),
           if (stage != null) ...[
             const SizedBox(height: 5),
@@ -957,16 +957,27 @@ class _QuestMiniRow extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: txt,
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                recommendsMinimum
+                    ? Text(
+                        title,
+                        style: TextStyle(
+                          color: txt,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      )
+                    : TaskTitleWithDescription(
+                        task: task,
+                        maxLines: 1,
+                        titleStyle: TextStyle(
+                          color: txt,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        descriptionColor: sub,
+                      ),
                 const SizedBox(height: 1),
                 Text(
                   subtitle,

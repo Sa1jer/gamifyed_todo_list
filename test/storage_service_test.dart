@@ -50,6 +50,7 @@ void main() {
       final task = Task(
         id: 'task-1',
         title: 'String enum task',
+        description: 'Keep this note with the quest',
         skillId: 'skill-1',
         xpReward: 25,
         type: TaskType.repeating,
@@ -60,12 +61,14 @@ void main() {
       final encoded = jsonDecode(storage.debugEncodeTask(task)) as Map;
 
       expect(encoded['type'], TaskType.repeating.name);
+      expect(encoded['description'], 'Keep this note with the quest');
       expect(encoded['repeatFrequency'], RepeatFrequency.weekly.name);
       expect(encoded['priority'], Priority.high.name);
 
       final decoded = storage.debugDecodeTask(jsonEncode(encoded));
 
       expect(decoded.type, TaskType.repeating);
+      expect(decoded.description, 'Keep this note with the quest');
       expect(decoded.repeatFrequency, RepeatFrequency.weekly);
       expect(decoded.priority, Priority.high);
     });

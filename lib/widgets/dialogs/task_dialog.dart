@@ -12,6 +12,7 @@ class AddTaskDialog extends StatefulWidget {
   final Task? existing;
   final Function(
     String title,
+    String description,
     int xp,
     TaskType type,
     RepeatFrequency freq,
@@ -45,6 +46,7 @@ class AddTaskDialog extends StatefulWidget {
 
 class _AddTaskDialogState extends State<AddTaskDialog> {
   final _titleCtrl = TextEditingController();
+  final _descriptionCtrl = TextEditingController();
   final _minimumActionCtrl = TextEditingController();
   final _minimumActionFocusNode = FocusNode();
   final _customCtrl = TextEditingController(text: '1');
@@ -118,7 +120,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
 
   bool get _hasMeasurableSignal {
     final haystack =
-        '${_titleCtrl.text.trim()} ${_minimumActionCtrl.text.trim()}';
+        '${_titleCtrl.text.trim()} ${_descriptionCtrl.text.trim()} ${_minimumActionCtrl.text.trim()}';
     return RegExp(r'\d').hasMatch(haystack) || _type == TaskType.repeating;
   }
 
@@ -160,6 +162,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     super.initState();
     if (widget.existing case final ex?) {
       _titleCtrl.text = ex.title;
+      _descriptionCtrl.text = ex.description;
       _minimumActionCtrl.text = ex.minimumAction;
       _minimumActionEnabled =
           ex.minimumAction.trim().isNotEmpty || widget.focusMinimumAction;
@@ -195,6 +198,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
           widget.focusMinimumAction;
     }
     _titleCtrl.addListener(_refreshDraft);
+    _descriptionCtrl.addListener(_refreshDraft);
     _minimumActionCtrl.addListener(_refreshDraft);
     if (widget.focusMinimumAction) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -206,6 +210,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   @override
   void dispose() {
     _titleCtrl.dispose();
+    _descriptionCtrl.dispose();
     _minimumActionCtrl.dispose();
     _minimumActionFocusNode.dispose();
     _customCtrl.dispose();
@@ -267,6 +272,8 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                 const SizedBox(height: 16),
               ],
               _buildXpSection(sub, bdr, c, isDark),
+              const SizedBox(height: 16),
+              _buildDescriptionSection(fBg, txt, sub, bdr, c),
               const SizedBox(height: 16),
               _buildMinimumActionSection(fBg, txt, sub, bdr, c),
               const SizedBox(height: 16),
@@ -619,6 +626,80 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                     ),
                   )
                 : const SizedBox.shrink(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDescriptionSection(
+    Color fBg,
+    Color txt,
+    Color sub,
+    Color bdr,
+    Color color,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: fBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: bdr),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.notes_rounded, color: color.withAlpha(220), size: 16),
+              const SizedBox(width: 8),
+              Text(
+                'Описание',
+                style: TextStyle(
+                  color: txt,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'опционально',
+                style: TextStyle(
+                  color: sub,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _descriptionCtrl,
+            style: TextStyle(color: txt, fontSize: 13),
+            minLines: 2,
+            maxLines: 4,
+            decoration: InputDecoration(
+              hintText: 'Что важно помнить про этот квест?',
+              hintStyle: TextStyle(color: sub, fontSize: 12),
+              filled: true,
+              fillColor: surface(widget.isDark),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 10,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(color: bdr),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(color: bdr),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(color: color.withAlpha(180)),
+              ),
+            ),
           ),
         ],
       ),
@@ -1381,6 +1462,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     if (_titleCtrl.text.trim().isEmpty) return;
     widget.onSave(
       _titleCtrl.text.trim(),
+      _descriptionCtrl.text.trim(),
       _xp,
       _type,
       _freq,

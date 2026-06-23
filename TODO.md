@@ -1,6 +1,6 @@
 # TODO / Living Backlog
 
-Last updated: 2026-06-22
+Last updated: 2026-06-23
 
 This file tracks technical details, completed work, open tasks, and remaining work sorted by priority. Update it after every meaningful code or design change, even when the change is small.
 
@@ -52,7 +52,7 @@ This file tracks technical details, completed work, open tasks, and remaining wo
 - Post-`1.3.42` debug fix: `Новый пользователь` scenario now resets first-run tutorial state so onboarding appears again after debug data reset.
 - Post-`1.3.42` skill form cleanup: SMARTER helper UI is frozen/hidden from `AddSkillDialog`; preview icon moved above the name field; first stage is optional.
 - Post-`1.3.42` quest form cleanup: behavior, contexts and manual focus controls are frozen/hidden; XP sits under the quest title; stage link is now `Этап в дорожной карте`.
-- Post-`1.3.42` RoadMap polish: stages can be renamed from desktop and mobile stage panels.
+- Post-`1.3.42` RoadMap polish: stages can be renamed from a compact pencil icon next to the stage title in desktop and mobile stage panels; the old separate `Переименовать` button is removed.
 - Post-`1.3.42` form polish: skill preview icon moved above the name field, palette expanded to 13 rainbow-ordered colors, and first-run dialog hints became inline.
 - Post-`1.3.42` quest settings correction: `Поведение квеста`, type, habit repeat rhythm and reminders returned to advanced settings; contexts and manual focus remain hidden.
 - Post-`1.3.42` onboarding correction: primary tutorial actions temporarily hide the overlay while creation dialogs are open, then continue to the next onboarding step.
@@ -69,6 +69,8 @@ This file tracks technical details, completed work, open tasks, and remaining wo
 - Post-`1.3.42` RoadMap polish: focused skill orb stays centered when there are no stages, then moves right as stages appear without changing camera scaling.
 - Post-`1.3.42` RoadMap polish: selected skills now show unlinked skill quests in the RoadMap inspector, with complete/minimum/edit/delete actions.
 - Post-`1.3.42` RoadMap polish: RoadMap skill/stage bubbles are 20% larger; selected skill details show the path goal as subtitle, then unlinked quests first and thin collapsible stage groups below; selected stage details show only that stage's quests without an extra group header.
+- Post-`1.3.43` tutorial polish: `Трофеи` now has its own orange spotlight inside the rewards dialog and closes into the profile/help tutorial step.
+- Post-`1.3.43` quest polish: quests now support an optional saved description in creation/edit flows; main quest widgets show it as quiet gray inline context, while RoadMap rows stay compact.
 
 ## Next Planned Batches
 
@@ -384,6 +386,8 @@ Implemented direction:
 - Keep skill creation light: icon preview near the top, optional first stage and no mandatory first quest.
 - Keep the skill color palette compact: rainbow order, 12 colors, gray last, no extra pink/magenta option.
 - Keep quest creation focused: title, XP, optional minimum step, then advanced behavior/RoadMap settings.
+- Add optional quest description below XP as lightweight context, not as a required planning field.
+- Show quest descriptions in action-oriented quest widgets, but keep RoadMap practice rows description-free unless the user opens edit.
 - Replace `Качество квеста` with quiet `SMARTER квеста` checks based only on data the form can actually know.
 - Disable the old `SkillTreeDialog` entry from skill cards; the route action should open the modern RoadMap focused on the selected skill.
 

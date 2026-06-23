@@ -555,6 +555,7 @@ class _MobileNodeMasteryPanel extends StatelessWidget {
           title: node.title,
           subtitle: 'этап RoadMap · ${skill.name}',
           isDark: isDark,
+          titleAction: _StageRenameIcon(color: statusColor, onTap: onRename),
           trailing: TaskBadge(
             icon: Icons.auto_awesome,
             label: '+${node.xpReward} XP',
@@ -599,12 +600,6 @@ class _MobileNodeMasteryPanel extends StatelessWidget {
           spacing: 8,
           runSpacing: 8,
           children: [
-            SmallBtn(
-              label: 'Переименовать',
-              icon: Icons.edit_note,
-              color: statusColor,
-              onTap: onRename,
-            ),
             SmallBtn(
               label: 'Создать квест',
               icon: Icons.add_task,

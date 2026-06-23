@@ -158,19 +158,19 @@ class _PlanningTaskRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  task.title,
+                TaskTitleWithDescription(
+                  task: task,
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
+                  titleStyle: TextStyle(
                     color: done ? sub : txt,
                     fontSize: 13,
                     height: 1.12,
                     fontWeight: FontWeight.w800,
-                    decoration: done
-                        ? TextDecoration.lineThrough
-                        : TextDecoration.none,
                   ),
+                  descriptionColor: sub,
+                  titleDecoration: done
+                      ? TextDecoration.lineThrough
+                      : TextDecoration.none,
                 ),
                 if (task.hasMinimumAction) ...[
                   const SizedBox(height: 5),

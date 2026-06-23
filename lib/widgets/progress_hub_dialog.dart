@@ -776,6 +776,7 @@ void _showTaskDialogForNudge(
       onSave:
           (
             title,
+            description,
             xp,
             type,
             freq,
@@ -794,6 +795,7 @@ void _showTaskDialogForNudge(
                 Task(
                   id: uid(),
                   title: title,
+                  description: description,
                   skillId: skill.id,
                   xpReward: xp,
                   type: type,
@@ -813,6 +815,7 @@ void _showTaskDialogForNudge(
               state.updateTask(
                 existing,
                 title: title,
+                description: description,
                 xpReward: xp,
                 type: type,
                 repeatFrequency: freq,

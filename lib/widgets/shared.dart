@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../models.dart';
 import '../utils.dart';
 
 const _kPanelRadius = 14.0;
@@ -695,6 +696,62 @@ class TaskBadge extends StatelessWidget {
       ],
     ),
   );
+}
+
+class TaskTitleWithDescription extends StatelessWidget {
+  final Task task;
+  final TextStyle titleStyle;
+  final Color descriptionColor;
+  final int maxLines;
+  final TextDecoration? titleDecoration;
+  final Color? decorationColor;
+
+  const TaskTitleWithDescription({
+    super.key,
+    required this.task,
+    required this.titleStyle,
+    required this.descriptionColor,
+    this.maxLines = 2,
+    this.titleDecoration,
+    this.decorationColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final description = task.description.trim();
+    final effectiveTitleStyle = titleStyle.copyWith(
+      decoration: titleDecoration,
+      decorationColor: decorationColor,
+    );
+    if (description.isEmpty) {
+      return Text(
+        task.title,
+        maxLines: maxLines,
+        overflow: TextOverflow.ellipsis,
+        style: effectiveTitleStyle,
+      );
+    }
+    return Text.rich(
+      TextSpan(
+        text: task.title,
+        style: effectiveTitleStyle,
+        children: [
+          TextSpan(
+            text: '  $description',
+            style: titleStyle.copyWith(
+              color: descriptionColor,
+              fontSize: (titleStyle.fontSize ?? 14) * 0.86,
+              fontWeight: FontWeight.w600,
+              decoration: TextDecoration.none,
+              height: titleStyle.height,
+            ),
+          ),
+        ],
+      ),
+      maxLines: maxLines,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

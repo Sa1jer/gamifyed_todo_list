@@ -403,6 +403,7 @@ const priorityColor = {
 class Task {
   final String id;
   String title;
+  String? _description;
   String skillId;
   int xpReward;
   TaskType type;
@@ -429,9 +430,13 @@ class Task {
   DateTime createdAt;
   DateTime updatedAt;
 
+  String get description => _description ?? '';
+  set description(String value) => _description = value.trim();
+
   Task({
     required this.id,
     required this.title,
+    String description = '',
     required this.skillId,
     required this.xpReward,
     required this.type,
@@ -457,7 +462,8 @@ class Task {
     this.notificationMinute,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) : subtasks = subtasks ?? [],
+  }) : _description = description.trim(),
+       subtasks = subtasks ?? [],
        consumedBuffIds = consumedBuffIds ?? [],
        subtaskDone = subtaskDone ?? List.filled((subtasks ?? []).length, false),
        tags = tags ?? [],

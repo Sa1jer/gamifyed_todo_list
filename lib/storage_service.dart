@@ -787,6 +787,7 @@ class StorageService {
   String _encodeTask(Task t) => jsonEncode({
     'id': t.id,
     'title': t.title,
+    'description': t.description,
     'skillId': t.skillId,
     'xpReward': t.xpReward,
     'type': t.type.name,
@@ -819,6 +820,7 @@ class StorageService {
     return Task(
       id: _readString(d, 'id', uid()),
       title: _readString(d, 'title', 'Квест'),
+      description: _readString(d, 'description'),
       skillId: _readString(d, 'skillId'),
       xpReward: _readInt(d, 'xpReward', 20),
       type: _readEnum(TaskType.values, d['type'], TaskType.shortTerm),

@@ -306,6 +306,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
         onSave:
             (
               title,
+              description,
               xp,
               type,
               freq,
@@ -324,6 +325,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
                 Task(
                   id: taskId,
                   title: title,
+                  description: description,
                   skillId: skill.id,
                   xpReward: xp,
                   type: type,
@@ -366,6 +368,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
         onSave:
             (
               title,
+              description,
               xp,
               type,
               freq,
@@ -382,6 +385,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
               state.updateTask(
                 task,
                 title: title,
+                description: description,
                 xpReward: xp,
                 type: type,
                 repeatFrequency: freq,

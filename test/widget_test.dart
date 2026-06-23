@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:todo_list_app/app_state.dart';
 import 'package:todo_list_app/debug/debug_admin_panel.dart';
 import 'package:todo_list_app/debug/debug_service.dart';
 import 'package:todo_list_app/main.dart';
@@ -9,6 +10,7 @@ import 'package:todo_list_app/models.dart';
 import 'package:todo_list_app/storage_service.dart';
 import 'package:todo_list_app/utils.dart';
 import 'package:todo_list_app/widgets/dialogs.dart';
+import 'package:todo_list_app/widgets/skills_panel.dart';
 
 class InMemoryStorageService extends StorageService {
   List<Skill> skills = [];
@@ -640,6 +642,18 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('Трофеи и эффекты'), findsOneWidget);
 
+    await tester.tap(find.text('Открыть трофеи'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Дальше: профиль'), findsOneWidget);
+
+    await tester.tap(find.text('Дальше: профиль'));
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.text('Профиль и подсказки'), findsOneWidget);
+
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
   });
@@ -912,6 +926,85 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('SkillsPanel add skill dialog opens without provider crash', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(900, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = InMemoryStorageService();
+    await storage.init();
+    final state = AppState(storage: storage);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AppStateProvider(
+          state: state,
+          child: const Scaffold(body: SizedBox.expand(child: SkillsPanel())),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Навык').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Новый навык'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    state.dispose();
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+
+  testWidgets('SkillsPanel edit skill dialog opens without provider crash', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(900, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = InMemoryStorageService();
+    await storage.init();
+    final state = AppState(storage: storage);
+    state.skills.add(
+      Skill(
+        id: 'skill-1',
+        name: 'Python',
+        goal: 'Собрать первый проект',
+        color: const Color(0xFF4A9EFF),
+        icon: Icons.code,
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AppStateProvider(
+          state: state,
+          child: const Scaffold(body: SizedBox.expand(child: SkillsPanel())),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: tester.getCenter(find.text('Python')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Редактировать навык'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Редактировать навык'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await mouse.removePointer();
+    state.dispose();
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+
   testWidgets('Selected skill does not expose Planning settings in Act', (
     WidgetTester tester,
   ) async {
@@ -1077,7 +1170,8 @@ void main() {
     expect(find.text('Минимум'), findsOneWidget);
     expect(find.text('Минимальный шаг: Открыть файл на 5 минут'), findsNothing);
 
-    await tester.tap(find.text('Переименовать'));
+    expect(find.text('Переименовать'), findsNothing);
+    await tester.tap(find.byTooltip('Переименовать этап'));
     await tester.pumpAndSettle();
     expect(find.text('Переименовать этап'), findsOneWidget);
 
@@ -1131,6 +1225,7 @@ void main() {
             onSave:
                 (
                   title,
+                  description,
                   xp,
                   type,
                   freq,
@@ -1176,6 +1271,7 @@ void main() {
             onSave:
                 (
                   title,
+                  description,
                   xp,
                   type,
                   freq,
@@ -1213,6 +1309,7 @@ void main() {
             onSave:
                 (
                   title,
+                  description,
                   xp,
                   type,
                   freq,
@@ -1264,6 +1361,7 @@ void main() {
               onSave:
                   (
                     title,
+                    description,
                     xp,
                     type,
                     freq,
@@ -1308,6 +1406,8 @@ void main() {
       expect(find.text('Ручной фокус'), findsNothing);
       expect(find.text('Повторяемость'), findsNothing);
 
+      await tester.ensureVisible(find.text('SMARTER квеста'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('SMARTER квеста'));
       await tester.pumpAndSettle();
 
@@ -1325,6 +1425,60 @@ void main() {
       expect(find.text('1 раз за 1 день'), findsOneWidget);
     },
   );
+
+  testWidgets('AddTaskDialog saves optional quest description', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(900, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    String? savedDescription;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AddTaskDialog(
+            isDark: true,
+            skillColor: const Color(0xFF4A9EFF),
+            onSave:
+                (
+                  title,
+                  description,
+                  xp,
+                  type,
+                  freq,
+                  customDays,
+                  priority,
+                  minimumAction,
+                  subtasks,
+                  tags,
+                  notificationsEnabled,
+                  notificationHour,
+                  notificationMinute,
+                  treeNodeId,
+                ) {
+                  savedDescription = description;
+                },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Описание'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField).at(0), 'Закрыть черновик');
+    await tester.enterText(
+      find.byType(TextField).at(1),
+      'Оставить короткую заметку к квесту',
+    );
+    await tester.tap(find.text('Создать'));
+    await tester.pumpAndSettle();
+
+    expect(savedDescription, 'Оставить короткую заметку к квесту');
+  });
 
   testWidgets('AddTaskDialog allows editing XP by typing the number', (
     WidgetTester tester,
@@ -1345,6 +1499,7 @@ void main() {
             onSave:
                 (
                   title,
+                  description,
                   xp,
                   type,
                   freq,
@@ -1405,6 +1560,7 @@ void main() {
             onSave:
                 (
                   title,
+                  description,
                   xp,
                   type,
                   freq,

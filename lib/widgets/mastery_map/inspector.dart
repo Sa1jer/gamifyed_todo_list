@@ -659,6 +659,7 @@ class _NodeInspector extends StatelessWidget {
           title: node.title,
           subtitle: skillTreeNodeStatusLabel[status]!,
           isDark: isDark,
+          titleAction: _StageRenameIcon(color: statusColor, onTap: onRename),
           trailing: TaskBadge(
             icon: Icons.auto_awesome,
             label: '+${node.xpReward} XP',
@@ -710,12 +711,6 @@ class _NodeInspector extends StatelessWidget {
           spacing: 8,
           runSpacing: 8,
           children: [
-            SmallBtn(
-              label: 'Переименовать',
-              icon: Icons.edit_note,
-              color: statusColor,
-              onTap: onRename,
-            ),
             SmallBtn(
               label: 'Создать квест',
               icon: Icons.add_task,
@@ -896,6 +891,7 @@ class _InspectorTitle extends StatelessWidget {
   final String subtitle;
   final bool isDark;
   final Widget? trailing;
+  final Widget? titleAction;
 
   const _InspectorTitle({
     required this.icon,
@@ -904,6 +900,7 @@ class _InspectorTitle extends StatelessWidget {
     required this.subtitle,
     required this.isDark,
     this.trailing,
+    this.titleAction,
   });
 
   @override
@@ -927,16 +924,27 @@ class _InspectorTitle extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: textColor(isDark),
-                  fontSize: titleFontSize,
-                  height: 1.08,
-                  fontWeight: FontWeight.w900,
-                ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Flexible(
+                    child: Text(
+                      title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: textColor(isDark),
+                        fontSize: titleFontSize,
+                        height: 1.08,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  if (titleAction != null) ...[
+                    const SizedBox(width: 6),
+                    titleAction!,
+                  ],
+                ],
               ),
               const SizedBox(height: 3),
               Text(
@@ -954,6 +962,35 @@ class _InspectorTitle extends StatelessWidget {
         ),
         if (trailing != null) ...[const SizedBox(width: 10), trailing!],
       ],
+    );
+  }
+}
+
+class _StageRenameIcon extends StatelessWidget {
+  final Color color;
+  final VoidCallback onTap;
+
+  const _StageRenameIcon({required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: 'Переименовать этап',
+      child: PressFeedback(
+        scale: 0.9,
+        onTap: onTap,
+        child: Container(
+          width: 28,
+          height: 28,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: color.withAlpha(18),
+            borderRadius: BorderRadius.circular(9),
+            border: Border.all(color: color.withAlpha(58)),
+          ),
+          child: Icon(Icons.edit_rounded, color: color, size: 15),
+        ),
+      ),
     );
   }
 }

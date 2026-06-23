@@ -944,6 +944,7 @@ void main() {
       state.updateTask(
         task,
         title: task.title,
+        description: task.description,
         xpReward: task.xpReward,
         type: task.type,
         repeatFrequency: task.repeatFrequency,
@@ -1130,6 +1131,7 @@ void main() {
       state.updateTask(
         task,
         title: task.title,
+        description: task.description,
         xpReward: task.xpReward,
         type: task.type,
         repeatFrequency: task.repeatFrequency,
