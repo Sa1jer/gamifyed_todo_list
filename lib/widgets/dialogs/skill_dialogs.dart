@@ -70,11 +70,14 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
 
     return Dialog(
       backgroundColor: bg,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: SizedBox(
         width: 480,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(
+            MediaQuery.sizeOf(context).width < 600 ? 18 : 24,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -129,10 +132,15 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
               Row(
                 children: [
                   SubLbl('Иконка', sub),
-                  const Spacer(),
-                  Text(
-                    '${_allIcons.length} иконок · прокрутите',
-                    style: TextStyle(color: sub, fontSize: 11),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '${_allIcons.length} иконок · прокрутите',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.right,
+                      style: TextStyle(color: sub, fontSize: 11),
+                    ),
                   ),
                 ],
               ),
@@ -144,24 +152,32 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: bdr),
                 ),
-                child: GridView.builder(
-                  padding: const EdgeInsets.all(_spacing),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: _crossAxisCount,
-                    mainAxisSpacing: _spacing,
-                    crossAxisSpacing: _spacing,
-                    childAspectRatio: 1,
-                  ),
-                  itemCount: _allIcons.length,
-                  itemBuilder: (_, i) {
-                    final ic = _allIcons[i];
-                    final sel = ic == _icon;
-                    return _IconChoiceButton(
-                      icon: ic,
-                      selected: sel,
-                      color: _color,
-                      inactiveColor: sub,
-                      onTap: () => setState(() => _icon = ic),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final crossAxisCount = constraints.maxWidth < 390
+                        ? 7
+                        : _crossAxisCount;
+                    return GridView.builder(
+                      key: const ValueKey('skill-icon-grid'),
+                      padding: const EdgeInsets.all(_spacing),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: crossAxisCount,
+                        mainAxisSpacing: _spacing,
+                        crossAxisSpacing: _spacing,
+                        childAspectRatio: 1,
+                      ),
+                      itemCount: _allIcons.length,
+                      itemBuilder: (_, i) {
+                        final ic = _allIcons[i];
+                        final sel = ic == _icon;
+                        return _IconChoiceButton(
+                          icon: ic,
+                          selected: sel,
+                          color: _color,
+                          inactiveColor: sub,
+                          onTap: () => setState(() => _icon = ic),
+                        );
+                      },
                     );
                   },
                 ),

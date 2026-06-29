@@ -73,6 +73,8 @@ class _SkillOrbButtonState extends State<_SkillOrbButton> {
             ? 0.48
             : 1,
         child: MouseRegion(
+          key: ValueKey('map-skill-hit-${widget.skill.id}'),
+          opaque: true,
           onEnter: (_) => setState(() => _hovered = true),
           onExit: (_) => setState(() => _hovered = false),
           cursor: SystemMouseCursors.click,
@@ -103,6 +105,7 @@ class _SkillOrbButtonState extends State<_SkillOrbButton> {
                       );
                     },
                     child: AnimatedContainer(
+                      key: ValueKey('map-skill-surface-${widget.skill.id}'),
                       duration: kMotionSlow,
                       curve: kMotionCurve,
                       width: orbSize,

@@ -64,19 +64,37 @@ class _CompactSkillSelector extends StatelessWidget {
                           ),
                         ),
                       )
-                    : ListView.separated(
+                    : ReorderableListView.builder(
+                        key: const ValueKey('compact-skill-list'),
                         scrollDirection: Axis.horizontal,
                         itemCount: state.skills.length,
-                        separatorBuilder: (_, _) => const SizedBox(width: 7),
+                        buildDefaultDragHandles: false,
+                        onReorderItem: state.reorderSkills,
                         itemBuilder: (_, index) {
                           final skill = state.skills[index];
                           final selected = state.selectedSkillId == skill.id;
-                          return _CompactSkillChip(
-                            skill: skill,
-                            selected: selected,
-                            isDark: isDark,
-                            taskCount: state.activeTaskCountForSkill(skill.id),
-                            onTap: () => state.selectSkill(skill.id),
+                          return Padding(
+                            key: ValueKey(
+                              'compact-skill-reorder-item-${skill.id}',
+                            ),
+                            padding: EdgeInsets.only(
+                              right: index == state.skills.length - 1 ? 0 : 7,
+                            ),
+                            child: ReorderableDelayedDragStartListener(
+                              key: ValueKey(
+                                'compact-skill-reorder-${skill.id}',
+                              ),
+                              index: index,
+                              child: _CompactSkillChip(
+                                skill: skill,
+                                selected: selected,
+                                isDark: isDark,
+                                taskCount: state.activeTaskCountForSkill(
+                                  skill.id,
+                                ),
+                                onTap: () => state.selectSkill(skill.id),
+                              ),
+                            ),
                           );
                         },
                       ),
@@ -146,7 +164,7 @@ class _CompactSkillChipState extends State<_CompactSkillChip> {
       child: AnimatedContainer(
         duration: kMotionStandard,
         curve: kMotionCurve,
-        constraints: const BoxConstraints(minWidth: 118, maxWidth: 162),
+        constraints: const BoxConstraints(minWidth: 118, maxWidth: 190),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
         decoration: BoxDecoration(
           color: widget.selected
@@ -183,6 +201,8 @@ class _CompactSkillChipState extends State<_CompactSkillChip> {
                 fontWeight: FontWeight.w800,
               ),
             ),
+            const SizedBox(width: 2),
+            Icon(Icons.drag_indicator_rounded, color: sub, size: 13),
           ],
         ),
       ),

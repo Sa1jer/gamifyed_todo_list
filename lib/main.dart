@@ -131,6 +131,7 @@ class _RPGAppState extends State<RPGApp>
 
   static ThemeData _buildTheme(bool dark) => ThemeData(
     brightness: dark ? Brightness.dark : Brightness.light,
+    splashFactory: InkRipple.splashFactory,
     scaffoldBackgroundColor: dark
         ? const Color(0xFF0F0F13)
         : const Color(0xFFF0F2F8),
@@ -148,9 +149,10 @@ class _RPGAppState extends State<RPGApp>
           _repaintKey.currentContext?.findRenderObject()
               as RenderRepaintBoundary?;
       if (boundary == null) return null;
-      return await boundary.toImage(
-        pixelRatio: View.of(context).devicePixelRatio,
-      );
+      final pixelRatio = View.of(
+        context,
+      ).devicePixelRatio.clamp(1.0, 2.0).toDouble();
+      return await boundary.toImage(pixelRatio: pixelRatio);
     } catch (_) {
       return null;
     }

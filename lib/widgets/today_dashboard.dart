@@ -157,7 +157,7 @@ class _TodayDashboardState extends State<TodayDashboard> {
         return AnimatedContainer(
           duration: kMotionSlow,
           curve: kMotionCurve,
-          height: _expanded ? (compactDashboard ? 236 : 258) : 76,
+          height: _expanded ? (compactDashboard ? 248 : 258) : 76,
           child: AppPanel(
             isDark: isDark,
             child: Padding(
@@ -200,6 +200,30 @@ class _TodayDashboardState extends State<TodayDashboard> {
                         labels: statusLabels,
                         compact: !_expanded,
                       );
+
+                      if (statusLabels.isEmpty) {
+                        return SizedBox(
+                          width: constraints.maxWidth,
+                          height: 52,
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.auto_awesome,
+                                color: Color(0xFFFFCC00),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(child: titleBlock),
+                              const SizedBox(width: 8),
+                              _CollapseButton(
+                                expanded: _expanded,
+                                color: sub,
+                                onTap: () =>
+                                    setState(() => _expanded = !_expanded),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
 
                       return SizedBox(
                         width: constraints.maxWidth,
@@ -486,6 +510,7 @@ class _NextActionCard extends StatelessWidget {
     final txt = textColor(isDark);
     final sub = subtext(isDark);
     final accent = skill?.color ?? const Color(0xFF4A9EFF);
+    final compact = MediaQuery.sizeOf(context).width < 600;
 
     if (task == null) {
       final hasSkills = state.skills.isNotEmpty;
@@ -607,7 +632,7 @@ class _NextActionCard extends StatelessWidget {
                 label: '+$displayedXp XP',
                 color: const Color(0xFF4A9EFF),
               ),
-              if (buffBonus > 0) ...[
+              if (!compact && buffBonus > 0) ...[
                 const SizedBox(width: 6),
                 TaskBadge(
                   icon: Icons.bolt,
@@ -620,7 +645,7 @@ class _NextActionCard extends StatelessWidget {
           const SizedBox(height: 8),
           TaskTitleWithDescription(
             task: task!,
-            maxLines: canStartMinimum ? 1 : 2,
+            maxLines: compact ? 2 : (canStartMinimum ? 1 : 2),
             titleStyle: TextStyle(
               color: txt,
               fontSize: 16.5,
@@ -651,20 +676,10 @@ class _NextActionCard extends StatelessWidget {
             ),
           ],
           const Spacer(),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  canStartMinimum
-                      ? 'Сделай самый маленький вход. Полное закрытие останется в списке.'
-                      : 'Один маленький квест — и поток запущен.',
-                  style: TextStyle(color: sub, fontSize: 11.5, height: 1.25),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 10),
-              _QuickActionButton(
+          if (compact)
+            Align(
+              alignment: Alignment.centerRight,
+              child: _QuickActionButton(
                 key: nextQuestActionKey,
                 task: task!,
                 color: accent,
@@ -675,8 +690,34 @@ class _NextActionCard extends StatelessWidget {
                 primary: true,
                 onTrigger: canStartMinimum ? onMinimumAction : onComplete,
               ),
-            ],
-          ),
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    canStartMinimum
+                        ? 'Сделай самый маленький вход. Полное закрытие останется в списке.'
+                        : 'Один маленький квест — и поток запущен.',
+                    style: TextStyle(color: sub, fontSize: 11.5, height: 1.25),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                _QuickActionButton(
+                  key: nextQuestActionKey,
+                  task: task!,
+                  color: accent,
+                  label: actionLabel,
+                  tooltip: actionTooltip,
+                  icon: canStartMinimum ? Icons.play_arrow : Icons.check,
+                  compact: false,
+                  primary: true,
+                  onTrigger: canStartMinimum ? onMinimumAction : onComplete,
+                ),
+              ],
+            ),
         ],
       ),
     );

@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:todo_list_app/engines/roadmap_engine.dart';
 import 'package:todo_list_app/models.dart';
 import 'package:todo_list_app/storage_service.dart';
 import 'package:todo_list_app/utils.dart';
@@ -320,6 +321,58 @@ void main() {
       expect(decoded.goal, 'Собрать backend roadmap');
       expect(decoded.goalSpec.metric, 'этапы');
       expect(decoded.goalSpec.reviews.single.nextFocus, 'Auth');
+    });
+
+    test('roadmap roads and linked task survive skill storage roundtrip', () {
+      final storage = StorageService();
+      const engine = RoadmapEngine();
+      final skill = Skill(
+        id: 'roadmap-roundtrip-skill',
+        name: 'RoadMap storage',
+        goal: 'Сохранить три дороги',
+        color: const Color(0xFF4A9EFF),
+        icon: Icons.route,
+        treeNodes: engine.buildTemplate(
+          const RoadmapTemplateConfig(
+            template: RoadmapTemplate.hard,
+            stagesPerPath: 2,
+          ),
+        ),
+      );
+      final before = engine.buildPathLayout(skill);
+      final linkedStageId = before.paths[1].nodes.last.id;
+      final task = Task(
+        id: 'roadmap-linked-task',
+        title: 'Практика второй дороги',
+        skillId: skill.id,
+        xpReward: 20,
+        type: TaskType.shortTerm,
+        treeNodeId: linkedStageId,
+      );
+
+      final decodedSkill = storage.debugDecodeSkill(
+        storage.debugEncodeSkill(skill),
+      );
+      final decodedTask = storage.debugDecodeTask(
+        storage.debugEncodeTask(task),
+      );
+      final after = engine.buildPathLayout(decodedSkill);
+
+      expect(after.paths, hasLength(3));
+      expect(after.paths.every((path) => path.nodes.length == 2), isTrue);
+      expect(
+        after.paths
+            .map((path) => path.nodes.map((node) => node.id).toList())
+            .toList(),
+        before.paths
+            .map((path) => path.nodes.map((node) => node.id).toList())
+            .toList(),
+      );
+      expect(decodedTask.treeNodeId, linkedStageId);
+      expect(
+        decodedSkill.treeNodes.any((node) => node.id == decodedTask.treeNodeId),
+        isTrue,
+      );
     });
 
     test('invalid or partial goalSpec falls back without crashing', () {

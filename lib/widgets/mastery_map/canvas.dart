@@ -36,7 +36,7 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
     with SingleTickerProviderStateMixin {
   static const _roadmapCameraMinScale = 0.04;
 
-  bool _templatePanelHidden = false;
+  bool _templatePanelHidden = true;
   final TransformationController _roadmapCameraController =
       TransformationController();
   late final AnimationController _roadmapCameraAnimationController =
@@ -58,7 +58,7 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
   void didUpdateWidget(covariant _OrbMasteryMapCanvas oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.selection?.skillId != oldWidget.selection?.skillId) {
-      _templatePanelHidden = false;
+      _templatePanelHidden = true;
     }
   }
 
@@ -86,9 +86,11 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final target = layout.selectedSkill == null
-          ? Matrix4.identity()
-          : _roadmapFitMatrix(layout, viewport, templatePanelCollapsed);
+      final target = _roadmapFitMatrix(
+        layout,
+        viewport,
+        templatePanelCollapsed,
+      );
       _animateRoadmapCameraTo(target);
     });
   }
@@ -100,7 +102,17 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
   ) {
     final selectedSkill = layout.selectedSkill;
     if (selectedSkill == null) {
-      return 'overview:${viewport.width.round()}x${viewport.height.round()}';
+      final skillShape = layout.skillPositions.keys
+          .map((skill) => skill.id)
+          .join(',');
+      return [
+        'overview',
+        viewport.width.round(),
+        viewport.height.round(),
+        layout.size.width.round(),
+        layout.size.height.round(),
+        skillShape,
+      ].join(':');
     }
     final pathShape = layout.pathLayout.paths
         .map((path) => path.nodes.map((node) => node.id).join(','))
@@ -135,9 +147,8 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
       ..forward();
   }
 
-  void _centerRoadmapOverviewCamera() {
-    _lastRoadmapCameraSignature = null;
-    _animateRoadmapCameraTo(Matrix4.identity());
+  void _centerRoadmapOverviewCamera(_OrbCanvasLayout layout, Size viewport) {
+    _animateRoadmapCameraTo(_roadmapFitMatrix(layout, viewport, true));
   }
 
   bool _matrixCloseTo(Matrix4 a, Matrix4 b) {
@@ -155,24 +166,37 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
     bool templatePanelCollapsed,
   ) {
     final bounds = _roadmapContentBounds(layout);
+    final selectedSkill = layout.selectedSkill;
     final hasStages = layout.selectedSkill?.treeNodes.isNotEmpty ?? false;
-    final target = _roadmapTargetViewport(
-      viewport,
-      hasStages ? templatePanelCollapsed : true,
-    );
+    final target = selectedSkill == null
+        ? _roadmapOverviewTargetViewport(viewport)
+        : _roadmapTargetViewport(
+            viewport,
+            hasStages ? templatePanelCollapsed : true,
+          );
     final scaleX = target.width / bounds.width;
     final scaleY = target.height / bounds.height;
     final scale = math
         .min(1.0, math.min(scaleX, scaleY))
         .clamp(_roadmapCameraMinScale, 1.0)
         .toDouble();
-    final dx = hasStages
+    final dx = selectedSkill != null && hasStages
         ? target.right - bounds.right * scale
         : target.center.dx - bounds.center.dx * scale;
     final dy = target.center.dy - bounds.center.dy * scale;
     return Matrix4.identity()
       ..translateByDouble(dx, dy, 0, 1)
       ..scaleByDouble(scale, scale, scale, 1);
+  }
+
+  Rect _roadmapOverviewTargetViewport(Size viewport) {
+    const padding = 28.0;
+    return Rect.fromLTRB(
+      padding,
+      padding,
+      math.max(padding, viewport.width - padding),
+      math.max(padding, viewport.height - padding),
+    );
   }
 
   Rect _roadmapTargetViewport(Size viewport, bool templatePanelCollapsed) {
@@ -188,7 +212,21 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
   Rect _roadmapContentBounds(_OrbCanvasLayout layout) {
     final selectedSkill = layout.selectedSkill;
     if (selectedSkill == null) {
-      return Offset.zero & layout.size;
+      var overviewBounds = Rect.zero;
+      var hasOverviewBounds = false;
+      for (final position in layout.skillPositions.values) {
+        final orbBounds = Rect.fromCenter(
+          center: position,
+          width: 216,
+          height: 170,
+        );
+        overviewBounds = hasOverviewBounds
+            ? overviewBounds.expandToInclude(orbBounds)
+            : orbBounds;
+        hasOverviewBounds = true;
+      }
+      return (hasOverviewBounds ? overviewBounds : (Offset.zero & layout.size))
+          .inflate(28);
     }
     final selectedCenter = layout.skillPositions[selectedSkill];
     var bounds = Rect.zero;
@@ -295,14 +333,19 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
                               selectedSkill.id == skill.id;
                           final hiddenInFocus =
                               selectedSkill != null && !roadFocus;
+                          final orbDiameter = roadFocus
+                              ? 149.0
+                              : selected
+                              ? 98.0
+                              : 89.0;
                           return AnimatedPositioned(
                             key: ValueKey('map-skill-orb-${skill.id}'),
                             duration: kMotionSlow,
                             curve: kMotionCurve,
                             left: position.dx - (roadFocus ? 132 : 108),
-                            top: position.dy - (roadFocus ? 74 : 84),
+                            top: position.dy - orbDiameter / 2,
                             width: roadFocus ? 264 : 216,
-                            height: roadFocus ? 221 : 187,
+                            height: orbDiameter + 55,
                             child: _SkillOrbButton(
                               skill: skill,
                               isDark: isDark,
@@ -426,7 +469,10 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
                     isDark: isDark,
                     label: 'Отцентровать',
                     icon: Icons.center_focus_strong,
-                    onTap: _centerRoadmapOverviewCamera,
+                    onTap: () => _centerRoadmapOverviewCamera(
+                      layout,
+                      Size(constraints.maxWidth, constraints.maxHeight),
+                    ),
                   ),
                 ),
               if (selectedSkill != null)

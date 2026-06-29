@@ -10,6 +10,8 @@ import 'package:todo_list_app/storage_service.dart';
 import 'package:todo_list_app/utils.dart';
 
 class _InMemoryStorageService extends StorageService {
+  List<Skill> _skills = [];
+  List<Task> _tasks = [];
   bool? _theme;
   bool? _tooltipsEnabled;
   bool? _onboardingSeen;
@@ -20,10 +22,10 @@ class _InMemoryStorageService extends StorageService {
   Future<void> init() async {}
 
   @override
-  Future<bool> hasSavedSkills() async => false;
+  Future<bool> hasSavedSkills() async => _skills.isNotEmpty;
 
   @override
-  Future<bool> hasSavedTasks() async => false;
+  Future<bool> hasSavedTasks() async => _tasks.isNotEmpty;
 
   @override
   Future<bool?> loadTheme() async => _theme;
@@ -72,16 +74,20 @@ class _InMemoryStorageService extends StorageService {
   }
 
   @override
-  Future<List<Skill>> loadSkills() async => [];
+  Future<List<Skill>> loadSkills() async => List.of(_skills);
 
   @override
-  Future<void> saveSkills(List<Skill> skills) async {}
+  Future<void> saveSkills(List<Skill> skills) async {
+    _skills = List.of(skills);
+  }
 
   @override
-  Future<List<Task>> loadTasks() async => [];
+  Future<List<Task>> loadTasks() async => List.of(_tasks);
 
   @override
-  Future<void> saveTasks(List<Task> tasks) async {}
+  Future<void> saveTasks(List<Task> tasks) async {
+    _tasks = List.of(tasks);
+  }
 
   @override
   Future<UserProfile> loadProfile() async => UserProfile(name: 'Your Name');
@@ -401,6 +407,114 @@ void main() {
         state.dispose();
       },
     );
+  });
+
+  group('skill ordering', () {
+    test(
+      'reorder preserves selection and associations across save and load',
+      () async {
+        final storage = _InMemoryStorageService();
+        final state = AppState(storage: storage, seedDefaults: false);
+        final foundation = SkillTreeNode(
+          id: 'foundation-stage',
+          title: 'Foundation',
+        );
+        final first = Skill(
+          id: 'skill-first',
+          name: 'First',
+          goal: 'First goal',
+          color: const Color(0xFF4A9EFF),
+          icon: Icons.looks_one,
+          treeNodes: [foundation],
+        );
+        final second = Skill(
+          id: 'skill-second',
+          name: 'Second',
+          goal: 'Second goal',
+          color: const Color(0xFF34C759),
+          icon: Icons.looks_two,
+        );
+        final third = Skill(
+          id: 'skill-third',
+          name: 'Third',
+          goal: 'Third goal',
+          color: const Color(0xFFFF9500),
+          icon: Icons.looks_3,
+        );
+        state.addSkill(first);
+        state.addSkill(second);
+        state.addSkill(third);
+        state.addTask(
+          Task(
+            id: 'linked-task',
+            title: 'Linked quest',
+            skillId: first.id,
+            treeNodeId: foundation.id,
+            xpReward: 20,
+            type: TaskType.shortTerm,
+          ),
+        );
+        state.selectSkill(second.id);
+
+        state.reorderSkills(0, 2);
+
+        expect(state.skills.map((skill) => skill.id), [
+          second.id,
+          third.id,
+          first.id,
+        ]);
+        expect(state.selectedSkillId, second.id);
+        expect(state.tasks.single.skillId, first.id);
+        expect(state.tasks.single.treeNodeId, foundation.id);
+        expect(first.treeNodes.single.id, foundation.id);
+
+        await state.flushSaves();
+        final restarted = AppState(storage: storage, seedDefaults: false);
+        await restarted.loadSavedData();
+
+        expect(restarted.skills.map((skill) => skill.id), [
+          second.id,
+          third.id,
+          first.id,
+        ]);
+        expect(restarted.tasks.single.skillId, first.id);
+        expect(restarted.tasks.single.treeNodeId, foundation.id);
+        expect(restarted.skills.last.treeNodes.single.id, foundation.id);
+
+        state.dispose();
+        restarted.dispose();
+      },
+    );
+
+    test('invalid and no-op reorder requests leave order unchanged', () {
+      final state = AppState(
+        storage: _InMemoryStorageService(),
+        seedDefaults: false,
+      );
+      state.skills.addAll([
+        Skill(
+          id: 'one',
+          name: 'One',
+          goal: 'One goal',
+          color: const Color(0xFF4A9EFF),
+          icon: Icons.looks_one,
+        ),
+        Skill(
+          id: 'two',
+          name: 'Two',
+          goal: 'Two goal',
+          color: const Color(0xFF34C759),
+          icon: Icons.looks_two,
+        ),
+      ]);
+
+      state.reorderSkills(-1, 1);
+      state.reorderSkills(0, 0);
+      state.reorderSkills(0, 2);
+
+      expect(state.skills.map((skill) => skill.id), ['one', 'two']);
+      state.dispose();
+    });
   });
 
   group('achievement engine integration', () {
@@ -777,6 +891,56 @@ void main() {
       for (final node in skill.treeNodes) {
         expect(node.prerequisiteIds.every(nodeIds.contains), isTrue);
       }
+    });
+
+    test('repeated template changes keep every road independent', () {
+      final skill = Skill(
+        id: 'roadmap-repeated-transitions',
+        name: 'RoadMap transitions',
+        goal: 'Проверить стабильность дорог',
+        color: const Color(0xFFFF9500),
+        icon: Icons.route,
+      );
+      state.addSkill(skill);
+
+      void applyAndExpect(
+        RoadmapTemplate template,
+        int pathCount,
+        int stagesPerPath,
+      ) {
+        state.applyRoadmapTemplate(
+          skill.id,
+          RoadmapTemplateConfig(
+            template: template,
+            stagesPerPath: stagesPerPath,
+          ),
+        );
+
+        final layout = const RoadmapEngine().buildPathLayout(skill);
+        expect(layout.paths, hasLength(pathCount));
+        expect(
+          layout.paths.every((path) => path.nodes.length == stagesPerPath),
+          isTrue,
+        );
+
+        final stageIds = <String>{};
+        for (final path in layout.paths) {
+          expect(path.nodes.first.prerequisiteIds, isEmpty);
+          for (var index = 0; index < path.nodes.length; index++) {
+            final node = path.nodes[index];
+            expect(stageIds.add(node.id), isTrue);
+            if (index > 0) {
+              expect(node.prerequisiteIds.first, path.nodes[index - 1].id);
+            }
+          }
+        }
+      }
+
+      applyAndExpect(RoadmapTemplate.simple, 1, 4);
+      applyAndExpect(RoadmapTemplate.normal, 2, 3);
+      applyAndExpect(RoadmapTemplate.hard, 3, 2);
+      applyAndExpect(RoadmapTemplate.normal, 2, 2);
+      applyAndExpect(RoadmapTemplate.simple, 1, 3);
     });
 
     test('preserves linked stages when applying a smaller template', () {

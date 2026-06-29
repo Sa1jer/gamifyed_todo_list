@@ -103,30 +103,80 @@ class SkillsPanel extends StatelessWidget {
                       isDark: isDark,
                       onAdd: () => _addDialog(context),
                     )
-                  : ListView.separated(
+                  : ReorderableListView.builder(
                       key: const ValueKey('skills-list'),
                       padding: const EdgeInsets.symmetric(vertical: 6),
                       itemCount: state.skills.length,
-                      separatorBuilder: (_, _) => Container(
-                        height: 1,
-                        margin: const EdgeInsets.symmetric(horizontal: 12),
-                        color: bdr,
-                      ),
+                      buildDefaultDragHandles: false,
+                      onReorderItem: state.reorderSkills,
                       itemBuilder: (ctx, i) {
                         final sk = state.skills[i];
-                        return MotionListItem(
-                          key: ValueKey('skill-${sk.id}'),
-                          index: i,
-                          child: SkillCard(
-                            skill: sk,
-                            taskCount: state.activeTaskCountForSkill(sk.id),
-                            isSelected: state.selectedSkillId == sk.id,
-                            isDark: isDark,
-                            onTap: () => state.selectSkill(sk.id),
-                            onRoadmap: () => onOpenRoadmap?.call(sk),
-                            onEdit: () => _editDialog(context, sk),
-                            onDelete: () => _confirmDeleteSkill(context, sk),
-                          ),
+                        return Column(
+                          key: ValueKey('skill-reorder-item-${sk.id}'),
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              child: Row(
+                                children: [
+                                  ReorderableDragStartListener(
+                                    key: ValueKey(
+                                      'skill-reorder-handle-${sk.id}',
+                                    ),
+                                    index: i,
+                                    child: Semantics(
+                                      label:
+                                          'Изменить порядок навыка ${sk.name}',
+                                      button: true,
+                                      child: Padding(
+                                        padding: const EdgeInsets.fromLTRB(
+                                          1,
+                                          12,
+                                          5,
+                                          12,
+                                        ),
+                                        child: Icon(
+                                          Icons.drag_indicator_rounded,
+                                          color: sub,
+                                          size: 20,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: MotionListItem(
+                                      key: ValueKey('skill-${sk.id}'),
+                                      index: i,
+                                      child: SkillCard(
+                                        skill: sk,
+                                        taskCount: state
+                                            .activeTaskCountForSkill(sk.id),
+                                        isSelected:
+                                            state.selectedSkillId == sk.id,
+                                        isDark: isDark,
+                                        onTap: () => state.selectSkill(sk.id),
+                                        onRoadmap: () =>
+                                            onOpenRoadmap?.call(sk),
+                                        onEdit: () => _editDialog(context, sk),
+                                        onDelete: () =>
+                                            _confirmDeleteSkill(context, sk),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (i < state.skills.length - 1)
+                              Container(
+                                height: 1,
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                ),
+                                color: bdr,
+                              ),
+                          ],
                         );
                       },
                     ),
@@ -389,8 +439,9 @@ class _SkillCardState extends State<SkillCard> {
         : Colors.transparent;
     final showActions = _h;
 
-    // FIX: wrap in ClipRect to prevent AnimatedContainer overflow error
     return MouseRegion(
+      key: ValueKey('skill-card-hit-${sk.id}'),
+      opaque: true,
       onEnter: (_) => setState(() => _h = true),
       onExit: (_) => setState(() => _h = false),
       child: AnimatedScale(
@@ -399,12 +450,13 @@ class _SkillCardState extends State<SkillCard> {
         duration: kMotionStandard,
         curve: kMotionCurve,
         child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onTap: widget.onTap,
           child: AnimatedContainer(
-            clipBehavior: Clip.hardEdge, // ← FIX overflow
+            key: ValueKey('skill-card-surface-${sk.id}'),
+            clipBehavior: Clip.hardEdge,
             duration: kMotionStandard,
             curve: kMotionCurve,
-            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
             decoration: BoxDecoration(
               color: bg,

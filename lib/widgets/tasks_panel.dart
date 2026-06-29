@@ -495,6 +495,70 @@ class _TaskTileState extends State<TaskTile> {
     final canStartMinimum =
         t.hasMinimumAction && !t.isDone && !t.isMinimumActionDone;
     final showStartedBadge = t.isMinimumActionDone && !t.isDone;
+    final compact = MediaQuery.sizeOf(context).width < 760;
+
+    Widget minimumControl() {
+      if (canStartMinimum) {
+        return Tooltip(
+          message: 'Сделать лёгкий старт: ${t.minimumAction}',
+          child: PressFeedback(
+            scale: 0.96,
+            onTap: () => _completeMinimum(_minKey.currentContext ?? context),
+            child: Container(
+              key: _minKey,
+              padding: EdgeInsets.symmetric(
+                horizontal: compact ? 8 : 9,
+                vertical: compact ? 5 : 6,
+              ),
+              decoration: BoxDecoration(
+                color: widget.skillColor.withAlpha(10),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: widget.skillColor.withAlpha(46)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.play_arrow_rounded,
+                    color: widget.skillColor.withAlpha(210),
+                    size: 14,
+                  ),
+                  const SizedBox(width: 2),
+                  Text(
+                    'Минимум',
+                    style: TextStyle(
+                      color: widget.skillColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }
+
+      return Tooltip(
+        message: 'Лёгкий старт уже сделан',
+        child: Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: compact ? 8 : 9,
+            vertical: compact ? 5 : 6,
+          ),
+          decoration: BoxDecoration(
+            color: const Color(0xFF34C759).withAlpha(16),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: const Color(0xFF34C759).withAlpha(76)),
+          ),
+          child: const Icon(
+            Icons.bolt_rounded,
+            color: Color(0xFF34C759),
+            size: 14,
+          ),
+        ),
+      );
+    }
 
     final tile = MouseRegion(
       onEnter: (_) => setState(() => _h = true),
@@ -518,7 +582,10 @@ class _TaskTileState extends State<TaskTile> {
             ),
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+            padding: EdgeInsets.symmetric(
+              horizontal: compact ? 10 : 14,
+              vertical: compact ? 9 : 11,
+            ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -567,76 +634,11 @@ class _TaskTileState extends State<TaskTile> {
                     ),
                   ),
                 ),
-                if (t.hasMinimumAction) ...[
+                if (t.hasMinimumAction && !compact) ...[
                   const SizedBox(width: 8),
-                  canStartMinimum
-                      ? Tooltip(
-                          message: 'Сделать лёгкий старт: ${t.minimumAction}',
-                          child: PressFeedback(
-                            scale: 0.96,
-                            onTap: () {
-                              _completeMinimum(
-                                _minKey.currentContext ?? context,
-                              );
-                            },
-                            child: Container(
-                              key: _minKey,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 9,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: widget.skillColor.withAlpha(10),
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(
-                                  color: widget.skillColor.withAlpha(46),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.play_arrow_rounded,
-                                    color: widget.skillColor.withAlpha(210),
-                                    size: 14,
-                                  ),
-                                  const SizedBox(width: 2),
-                                  Text(
-                                    'Минимум',
-                                    style: TextStyle(
-                                      color: widget.skillColor,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        )
-                      : Tooltip(
-                          message: 'Лёгкий старт уже сделан',
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 9,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF34C759).withAlpha(16),
-                              borderRadius: BorderRadius.circular(999),
-                              border: Border.all(
-                                color: const Color(0xFF34C759).withAlpha(76),
-                              ),
-                            ),
-                            child: const Icon(
-                              Icons.bolt_rounded,
-                              color: Color(0xFF34C759),
-                              size: 14,
-                            ),
-                          ),
-                        ),
+                  minimumControl(),
                 ],
-                const SizedBox(width: 12),
+                SizedBox(width: compact ? 10 : 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -668,6 +670,10 @@ class _TaskTileState extends State<TaskTile> {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
+                        if (compact) ...[
+                          const SizedBox(height: 6),
+                          minimumControl(),
+                        ],
                       ],
                       const SizedBox(height: 5),
                       Wrap(
@@ -681,13 +687,15 @@ class _TaskTileState extends State<TaskTile> {
                                 : '+${widget.previewEarnedXP} XP',
                             color: t.isDone ? sub : const Color(0xFF4A9EFF),
                           ),
-                          if (!t.isDone && widget.previewBuffBonus > 0)
+                          if (!compact &&
+                              !t.isDone &&
+                              widget.previewBuffBonus > 0)
                             TaskBadge(
                               icon: Icons.bolt,
                               label: 'эффект +${widget.previewBuffBonus}',
                               color: const Color(0xFF34C759),
                             ),
-                          if (t.isDone && t.bonusXpEarned > 0)
+                          if (!compact && t.isDone && t.bonusXpEarned > 0)
                             TaskBadge(
                               icon: Icons.bolt,
                               label: '+${t.bonusXpEarned} бонус',
@@ -733,34 +741,35 @@ class _TaskTileState extends State<TaskTile> {
                     ],
                   ),
                 ),
-                SizedBox(
-                  width: 50,
-                  child: AnimatedOpacity(
-                    duration: kMotionStandard,
-                    curve: kMotionCurve,
-                    opacity: _h ? 1 : 0,
-                    child: IgnorePointer(
-                      ignoring: !_h,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          MiniBtn(
-                            icon: Icons.edit,
-                            color: sub,
-                            tooltip: 'Редактировать квест',
-                            onTap: _edit,
-                          ),
-                          MiniBtn(
-                            icon: Icons.delete_outline,
-                            color: const Color(0xFFFF3B30),
-                            tooltip: 'Удалить квест',
-                            onTap: _delete,
-                          ),
-                        ],
+                if (!compact)
+                  SizedBox(
+                    width: 50,
+                    child: AnimatedOpacity(
+                      duration: kMotionStandard,
+                      curve: kMotionCurve,
+                      opacity: _h ? 1 : 0,
+                      child: IgnorePointer(
+                        ignoring: !_h,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            MiniBtn(
+                              icon: Icons.edit,
+                              color: sub,
+                              tooltip: 'Редактировать квест',
+                              onTap: _edit,
+                            ),
+                            MiniBtn(
+                              icon: Icons.delete_outline,
+                              color: const Color(0xFFFF3B30),
+                              tooltip: 'Удалить квест',
+                              onTap: _delete,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
               ],
             ),
           ),

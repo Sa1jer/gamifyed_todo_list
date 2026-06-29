@@ -1513,6 +1513,21 @@ class AppState extends ChangeNotifier {
     _saveAll();
   }
 
+  void reorderSkills(int oldIndex, int newIndex) {
+    if (oldIndex < 0 ||
+        oldIndex >= skills.length ||
+        newIndex < 0 ||
+        newIndex >= skills.length ||
+        newIndex == oldIndex) {
+      return;
+    }
+
+    final skill = skills.removeAt(oldIndex);
+    skills.insert(newIndex, skill);
+    notifyListeners();
+    _saveAll();
+  }
+
   void updateSkill(
     Skill skill, {
     required String name,

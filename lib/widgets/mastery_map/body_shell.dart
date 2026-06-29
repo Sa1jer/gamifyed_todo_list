@@ -9,6 +9,7 @@ class _MasteryMapHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const color = Color(0xFF4A9EFF);
+    final showFullscreen = MediaQuery.sizeOf(context).width >= 760;
     return AppPanel(
       isDark: isDark,
       child: Padding(
@@ -31,7 +32,7 @@ class _MasteryMapHero extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'RoadMap',
+                    'Дорожная карта',
                     style: TextStyle(
                       color: textColor(isDark),
                       fontSize: 18,
@@ -52,13 +53,15 @@ class _MasteryMapHero extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 12),
-            SmallBtn(
-              label: 'Развернуть',
-              icon: Icons.open_in_full,
-              color: color,
-              onTap: onFullscreen,
-            ),
+            if (showFullscreen) ...[
+              const SizedBox(width: 12),
+              SmallBtn(
+                label: 'Развернуть',
+                icon: Icons.open_in_full,
+                color: color,
+                onTap: onFullscreen,
+              ),
+            ],
           ],
         ),
       ),
