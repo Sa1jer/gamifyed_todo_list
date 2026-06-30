@@ -13,6 +13,16 @@ import 'package:todo_list_app/widgets/dialogs.dart';
 import 'package:todo_list_app/widgets/skills_panel.dart';
 import 'package:todo_list_app/widgets/tasks_panel.dart';
 
+Rect _roadmapVisibleInsertRect(WidgetTester tester, Finder finder) {
+  const visibleToHitRatio = 32 / 46;
+  final hitRect = tester.getRect(finder);
+  return Rect.fromCenter(
+    center: hitRect.center,
+    width: hitRect.width * visibleToHitRatio,
+    height: hitRect.height * visibleToHitRatio,
+  );
+}
+
 class InMemoryStorageService extends StorageService {
   List<Skill> skills = [];
   List<Task> tasks = [];
@@ -1470,6 +1480,53 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('QHD skill quest count stays centered in its badge', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(2560, 1440);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    const skillId = 'qhd-count-skill';
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 360,
+              child: SkillCard(
+                skill: Skill(
+                  id: skillId,
+                  name: 'QHD badge',
+                  goal: 'Проверить центрирование',
+                  color: const Color(0xFF4A9EFF),
+                  icon: Icons.center_focus_strong,
+                ),
+                taskCount: 8,
+                isSelected: false,
+                isDark: true,
+                onTap: () {},
+                onRoadmap: null,
+                onEdit: null,
+                onDelete: null,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final badge = tester.getRect(
+      find.byKey(const ValueKey('skill-task-count-$skillId')),
+    );
+    final count = tester.getRect(find.text('8'));
+    expect(count.center.dx, closeTo(badge.center.dx, 0.5));
+    expect(count.center.dy, closeTo(badge.center.dy, 0.5));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Selected skill does not expose Planning settings in Act', (
     WidgetTester tester,
   ) async {
@@ -1630,6 +1687,16 @@ void main() {
     expect(find.text('Квесты без этапа'), findsOneWidget);
     expect(find.text('Свободный квест навыка'), findsOneWidget);
 
+    await tester.tap(
+      find.byKey(const ValueKey('roadmap-delete-task-task-free')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Свободный квест навыка'), findsNothing);
+    expect(find.text('Назад к навыкам'), findsOneWidget);
+    expect(find.text('Python'), findsWidgets);
+    expect(find.text('Выберите навык'), findsNothing);
+
     await tester.tap(find.text('Основа').first);
     await tester.pumpAndSettle();
 
@@ -1727,18 +1794,43 @@ void main() {
       find.byKey(const ValueKey('roadmap-layout-vertical')),
       findsOneWidget,
     );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('roadmap-layout-horizontal')),
+        matching: find.byIcon(Icons.view_stream_outlined),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('roadmap-layout-vertical')),
+        matching: find.byIcon(Icons.view_week_outlined),
+      ),
+      findsOneWidget,
+    );
 
     await tester.tap(find.byKey(const ValueKey('map-skill-orb-layout-skill')));
     await tester.pumpAndSettle();
 
     Finder node(String id) => find.byKey(ValueKey('map-node-layout-skill-$id'));
+    Finder nodeSurface(String id) =>
+        find.byKey(ValueKey('map-node-surface-layout-skill-$id'));
+    Finder nodeLabel(String id) =>
+        find.byKey(ValueKey('map-node-label-layout-skill-$id'));
+    Finder insertion(String leftId, String rightId) =>
+        find.byKey(ValueKey('roadmap-insert-layout-skill-$leftId-$rightId'));
 
     final horizontalRoot = tester.getCenter(node(root.id));
     final horizontalMiddle = tester.getCenter(node(middle.id));
     final horizontalTerminal = tester.getCenter(node(terminal.id));
+    final horizontalInsertion = tester.getCenter(insertion(root.id, middle.id));
     expect(horizontalRoot.dx, lessThan(horizontalMiddle.dx));
     expect(horizontalMiddle.dx, lessThan(horizontalTerminal.dx));
     expect((horizontalRoot.dy - horizontalTerminal.dy).abs(), lessThan(2));
+    expect(
+      horizontalInsertion.dx,
+      closeTo((horizontalRoot.dx + horizontalMiddle.dx) / 2, 1),
+    );
 
     await tester.tap(find.byKey(const ValueKey('roadmap-layout-vertical')));
     await tester.pumpAndSettle();
@@ -1758,6 +1850,9 @@ void main() {
     );
     final verticalCanvasRect = tester.getRect(
       find.byKey(const ValueKey('roadmap-canvas-vertical')),
+    );
+    final skillLabelRect = tester.getRect(
+      find.byKey(const ValueKey('map-skill-label-layout-skill')),
     );
     final verticalViewer = tester.widget<InteractiveViewer>(
       find.descendant(
@@ -1787,9 +1882,54 @@ void main() {
       verticalViewer.transformationController!.value.getMaxScaleOnAxis(),
       greaterThan(0.6),
     );
+
+    void expectInsertionBetween({
+      required Finder insertionFinder,
+      required Rect upperLabel,
+      required Rect lowerSurface,
+    }) {
+      final center = tester.getCenter(insertionFinder);
+      final visibleCircleBounds = _roadmapVisibleInsertRect(
+        tester,
+        insertionFinder,
+      );
+      expect(center.dy, closeTo((upperLabel.bottom + lowerSurface.top) / 2, 1));
+      expect(visibleCircleBounds.overlaps(upperLabel), isFalse);
+      expect(visibleCircleBounds.overlaps(lowerSurface), isFalse);
+    }
+
+    expectInsertionBetween(
+      insertionFinder: insertion(root.id, middle.id),
+      upperLabel: tester.getRect(nodeLabel(middle.id)),
+      lowerSurface: tester.getRect(nodeSurface(root.id)),
+    );
+    expectInsertionBetween(
+      insertionFinder: insertion(middle.id, terminal.id),
+      upperLabel: tester.getRect(nodeLabel(terminal.id)),
+      lowerSurface: tester.getRect(nodeSurface(middle.id)),
+    );
+    expectInsertionBetween(
+      insertionFinder: insertion(terminal.id, 'skill'),
+      upperLabel: skillLabelRect,
+      lowerSurface: tester.getRect(nodeSurface(terminal.id)),
+    );
+    expect(
+      tester.getCenter(insertion(terminal.id, 'skill')).dy,
+      greaterThan(
+        (verticalSkillRect.center.dy +
+                tester.getRect(nodeSurface(terminal.id)).center.dy) /
+            2,
+      ),
+    );
     expect(
       find.byKey(
         const ValueKey('roadmap-insert-layout-skill-layout-root-layout-middle'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(
+        const ValueKey('roadmap-insert-layout-skill-layout-terminal-skill'),
       ),
       findsOneWidget,
     );
@@ -1815,6 +1955,150 @@ void main() {
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
+  });
+
+  testWidgets('RoadMap skill orb separates goal and level progress', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = InMemoryStorageService()
+      .._onboardingSeen = true
+      ..skills = [
+        Skill(
+          id: 'progress-orb',
+          name: 'Прогресс шара',
+          goal: 'Освоить два этапа',
+          color: const Color(0xFF4A9EFF),
+          icon: Icons.track_changes,
+          level: 3,
+          xp: 120,
+          treeNodes: [
+            SkillTreeNode(
+              id: 'progress-done',
+              title: 'Готово',
+              isMastered: true,
+            ),
+            SkillTreeNode(
+              id: 'progress-next',
+              title: 'Дальше',
+              prerequisiteIds: ['progress-done'],
+            ),
+          ],
+        ),
+      ];
+    await storage.init();
+
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(find.byIcon(Icons.account_tree).first);
+    await tester.pumpAndSettle();
+
+    final goalProgress = tester.widget<Semantics>(
+      find.byKey(const ValueKey('map-skill-goal-progress-progress-orb')),
+    );
+    final levelProgress = tester.widget<FractionallySizedBox>(
+      find.byKey(const ValueKey('map-skill-level-progress-progress-orb')),
+    );
+    expect(goalProgress.properties.value, '50%');
+    expect(levelProgress.widthFactor, closeTo(120 / xpForLevel(3), 0.001));
+    expect(find.text('3'), findsWidgets);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+
+  testWidgets('green RoadMap skill uses gray for mastered stages', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    Skill masteredSkill(String id, Color color) => Skill(
+      id: id,
+      name: id,
+      goal: 'Проверить цвет освоения',
+      color: color,
+      icon: Icons.palette_outlined,
+      treeNodes: [
+        SkillTreeNode(id: '$id-stage', title: 'Освоено', isMastered: true),
+      ],
+    );
+
+    final storage = InMemoryStorageService()
+      .._onboardingSeen = true
+      ..skills = [
+        masteredSkill('green-skill', const Color(0xFF34C759)),
+        masteredSkill('blue-skill', const Color(0xFF4A9EFF)),
+      ];
+    await storage.init();
+
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(find.byIcon(Icons.account_tree).first);
+    await tester.pumpAndSettle();
+
+    Future<Color?> masteredStageColor(String skillId) async {
+      await tester.tap(find.byKey(ValueKey('map-skill-orb-$skillId')));
+      await tester.pumpAndSettle();
+      final node = find.byKey(ValueKey('map-node-$skillId-$skillId-stage'));
+      return tester
+          .widget<Icon>(
+            find.descendant(
+              of: node,
+              matching: find.byIcon(Icons.workspace_premium),
+            ),
+          )
+          .color;
+    }
+
+    expect(await masteredStageColor('green-skill'), const Color(0xFF8E8E93));
+    await tester.tap(find.text('Назад к навыкам'));
+    await tester.pumpAndSettle();
+    expect(await masteredStageColor('blue-skill'), const Color(0xFF34C759));
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+
+  testWidgets('Rewards places one Effects section above chest list', (
+    WidgetTester tester,
+  ) async {
+    final storage = InMemoryStorageService().._onboardingSeen = true;
+    await storage.init();
+    final state = AppState(storage: storage, seedDefaults: false);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(child: RewardsDialog(state: state)),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Пассивные эффекты'), findsNothing);
+    expect(find.text('Эффекты'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('rewards-effects-section')),
+      findsOneWidget,
+    );
+    expect(
+      tester.getTopLeft(find.text('Эффекты')).dy,
+      lessThan(tester.getTopLeft(find.text('Новые сундуки')).dy),
+    );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    state.dispose();
   });
 
   testWidgets('vertical RoadMap auto-fits a ten-stage chain', (
@@ -1879,8 +2163,56 @@ void main() {
     expect(firstRect.center.dy, greaterThan(terminalRect.center.dy));
     expect(
       verticalViewer.transformationController!.value.getMaxScaleOnAxis(),
-      greaterThan(0.45),
+      greaterThan(0.25),
     );
+    for (var index = 0; index < stages.length - 1; index++) {
+      final upperLabel = tester.getRect(
+        find.byKey(
+          ValueKey('map-node-label-long-roadmap-long-stage-${index + 1}'),
+        ),
+      );
+      final lowerSurface = tester.getRect(
+        find.byKey(ValueKey('map-node-surface-long-roadmap-long-stage-$index')),
+      );
+      final insertionFinder = find.byKey(
+        ValueKey(
+          'roadmap-insert-long-roadmap-long-stage-$index-long-stage-${index + 1}',
+        ),
+      );
+      final insertionCenter = tester.getCenter(insertionFinder);
+      final visibleCircleBounds = _roadmapVisibleInsertRect(
+        tester,
+        insertionFinder,
+      );
+      expect(
+        insertionCenter.dy,
+        closeTo((upperLabel.bottom + lowerSurface.top) / 2, 1),
+      );
+      expect(visibleCircleBounds.overlaps(upperLabel), isFalse);
+      expect(visibleCircleBounds.overlaps(lowerSurface), isFalse);
+      expect(canvasRect.contains(visibleCircleBounds.topLeft), isTrue);
+      expect(canvasRect.contains(visibleCircleBounds.bottomRight), isTrue);
+    }
+    final skillLabel = tester.getRect(
+      find.byKey(const ValueKey('map-skill-label-long-roadmap')),
+    );
+    final terminalSurface = tester.getRect(
+      find.byKey(const ValueKey('map-node-surface-long-roadmap-long-stage-9')),
+    );
+    final terminalInsertionFinder = find.byKey(
+      const ValueKey('roadmap-insert-long-roadmap-long-stage-9-skill'),
+    );
+    final terminalInsertionCenter = tester.getCenter(terminalInsertionFinder);
+    final terminalVisibleCircle = _roadmapVisibleInsertRect(
+      tester,
+      terminalInsertionFinder,
+    );
+    expect(
+      terminalInsertionCenter.dy,
+      closeTo((skillLabel.bottom + terminalSurface.top) / 2, 1),
+    );
+    expect(terminalVisibleCircle.overlaps(skillLabel), isFalse);
+    expect(terminalVisibleCircle.overlaps(terminalSurface), isFalse);
     expect(tester.takeException(), isNull);
 
     await tester.pumpWidget(const SizedBox.shrink());
@@ -1948,6 +2280,24 @@ void main() {
       find.byKey(const ValueKey('roadmap-canvas-vertical')),
       findsOneWidget,
     );
+    final mobileInsertion = find.byKey(
+      const ValueKey('roadmap-insert-single-roadmap-single-stage-skill'),
+    );
+    expect(mobileInsertion, findsOneWidget);
+    final mobileInsertionCenter = tester.getCenter(mobileInsertion);
+    final mobileSkillLabel = tester.getRect(
+      find.byKey(const ValueKey('map-skill-label-single-roadmap')),
+    );
+    final mobileStageSurface = tester.getRect(
+      find.byKey(
+        const ValueKey('map-node-surface-single-roadmap-single-stage'),
+      ),
+    );
+    expect(
+      mobileInsertionCenter.dy,
+      closeTo((mobileSkillLabel.bottom + mobileStageSurface.top) / 2, 1),
+    );
+    expect(mobileInsertion.hitTestable(), findsOneWidget);
     expect(tester.takeException(), isNull);
 
     await tester.pumpWidget(const SizedBox.shrink());

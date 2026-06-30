@@ -87,28 +87,11 @@ class _RewardsDialogState extends State<RewardsDialog> {
                       children: [
                         KeyedSubtree(
                           key: tutorialTargetKey,
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: _StatCard(
-                                  title: 'Новые сундуки',
-                                  value: '${unopened.length}',
-                                  icon: Icons.inventory_2,
-                                  color: const Color(0xFFFFCC00),
-                                  isDark: isDark,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: _StatCard(
-                                  title: 'Пассивные эффекты',
-                                  value: '${buffs.length}',
-                                  icon: Icons.bolt,
-                                  color: const Color(0xFF34C759),
-                                  isDark: isDark,
-                                ),
-                              ),
-                            ],
+                          child: _buildEffectsSection(
+                            isDark: isDark,
+                            txt: txt,
+                            sub: sub,
+                            buffs: buffs,
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -182,103 +165,6 @@ class _RewardsDialogState extends State<RewardsDialog> {
                                   }).toList(),
                                 ),
                         ),
-                        const SizedBox(height: 18),
-                        GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: () =>
-                              setState(() => _buffsExpanded = !_buffsExpanded),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 2),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.bolt,
-                                  color: const Color(0xFF34C759).withAlpha(190),
-                                  size: 16,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    'Пассивные эффекты',
-                                    style: TextStyle(
-                                      color: txt,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                                TaskBadge(
-                                  label: '${buffs.length}',
-                                  color: const Color(0xFF34C759),
-                                ),
-                                const SizedBox(width: 8),
-                                Icon(
-                                  _buffsExpanded
-                                      ? Icons.expand_less
-                                      : Icons.expand_more,
-                                  color: sub,
-                                  size: 18,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        MotionExpandable(
-                          expanded: _buffsExpanded,
-                          collapsedChild: Padding(
-                            padding: const EdgeInsets.only(top: 8),
-                            child: Text(
-                              buffs.isEmpty
-                                  ? 'Эффектов сейчас нет. Они появятся после открытия сундуков.'
-                                  : 'Эффекты применятся сами, когда подойдут к квесту.',
-                              style: TextStyle(
-                                color: sub,
-                                fontSize: 11.5,
-                                height: 1.35,
-                              ),
-                            ),
-                          ),
-                          expandedChild: Padding(
-                            padding: const EdgeInsets.only(top: 10),
-                            child: MotionFadeSlideSwitcher(
-                              child: buffs.isEmpty
-                                  ? _RewardsEmptyState(
-                                      key: const ValueKey('empty-buffs'),
-                                      icon: Icons.bolt_outlined,
-                                      title: 'Нет пассивных эффектов',
-                                      subtitle:
-                                          'Открой сундук, и здесь появится временное усиление для следующих квестов.',
-                                      isDark: isDark,
-                                    )
-                                  : Column(
-                                      key: const ValueKey('buff-list'),
-                                      children: buffs.asMap().entries.map((
-                                        entry,
-                                      ) {
-                                        final buff = entry.value;
-                                        return MotionListItem(
-                                          key: ValueKey('buff-${buff.id}'),
-                                          index: entry.key,
-                                          slide: 5,
-                                          child: _ActiveBuffCard(
-                                            buff: buff,
-                                            skill: buff.skillId == null
-                                                ? null
-                                                : widget.state.skills
-                                                      .where(
-                                                        (skill) =>
-                                                            skill.id ==
-                                                            buff.skillId,
-                                                      )
-                                                      .firstOrNull,
-                                            isDark: isDark,
-                                          ),
-                                        );
-                                      }).toList(),
-                                    ),
-                            ),
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -296,6 +182,105 @@ class _RewardsDialogState extends State<RewardsDialog> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildEffectsSection({
+    required bool isDark,
+    required Color txt,
+    required Color sub,
+    required List<Buff> buffs,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          key: const ValueKey('rewards-effects-section'),
+          behavior: HitTestBehavior.opaque,
+          onTap: () => setState(() => _buffsExpanded = !_buffsExpanded),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.bolt,
+                  color: const Color(0xFF34C759).withAlpha(190),
+                  size: 16,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Эффекты',
+                    style: TextStyle(
+                      color: txt,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                TaskBadge(
+                  label: '${buffs.length}',
+                  color: const Color(0xFF34C759),
+                ),
+                const SizedBox(width: 8),
+                Icon(
+                  _buffsExpanded ? Icons.expand_less : Icons.expand_more,
+                  color: sub,
+                  size: 18,
+                ),
+              ],
+            ),
+          ),
+        ),
+        MotionExpandable(
+          expanded: _buffsExpanded,
+          collapsedChild: Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              buffs.isEmpty
+                  ? 'Эффектов сейчас нет. Они появятся после открытия сундуков.'
+                  : 'Эффекты применятся сами, когда подойдут к квесту.',
+              style: TextStyle(color: sub, fontSize: 11.5, height: 1.35),
+            ),
+          ),
+          expandedChild: Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: MotionFadeSlideSwitcher(
+              child: buffs.isEmpty
+                  ? _RewardsEmptyState(
+                      key: const ValueKey('empty-buffs'),
+                      icon: Icons.bolt_outlined,
+                      title: 'Нет эффектов',
+                      subtitle:
+                          'Открой сундук, и здесь появится временное усиление для следующих квестов.',
+                      isDark: isDark,
+                    )
+                  : Column(
+                      key: const ValueKey('buff-list'),
+                      children: buffs.asMap().entries.map((entry) {
+                        final buff = entry.value;
+                        return MotionListItem(
+                          key: ValueKey('buff-${buff.id}'),
+                          index: entry.key,
+                          slide: 5,
+                          child: _ActiveBuffCard(
+                            buff: buff,
+                            skill: buff.skillId == null
+                                ? null
+                                : widget.state.skills
+                                      .where(
+                                        (skill) => skill.id == buff.skillId,
+                                      )
+                                      .firstOrNull,
+                            isDark: isDark,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

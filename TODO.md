@@ -1,6 +1,6 @@
 # TODO / Living Backlog
 
-Last updated: 2026-06-30
+Last updated: 2026-07-01
 
 This file tracks the active implementation roadmap and completed project work. Update it after every meaningful code or design change.
 
@@ -14,8 +14,21 @@ This file tracks the active implementation roadmap and completed project work. U
 ## P0 — Bugs / Stabilization
 
 - [ ] Validate native Windows/macOS pointer tracking after skill-card hit-region alignment; capture a platform repro if compositor hover still differs.
-- [ ] Correct the QHD skill quest-count badge optical alignment.
 - [ ] Profile mobile theme switching after the `2x` snapshot cap and add a reduced-motion fallback only if frame timings still show jank.
+
+## Reminder — Product Follow-ups After Hardening
+
+Do not mix these product decisions into Release / Regression Hardening. Revisit them explicitly in the next product-planning pass:
+
+- [ ] Design a measurable numeric goal model; current goals remain text and percentages are derived visually from equal-weight RoadMap stages.
+- [ ] Decide whether confirming every next goal must always start a fresh `0%` RoadMap; the current flow resets only when the user chooses “Создать новую карту”.
+- [ ] Add a quiet recommendation during skill creation to create at least one recurring ritual/quest.
+- [ ] Decide whether milestone feedback should fire after every completed stage when it does not land exactly on `25/50/100%`.
+- [ ] Add optional sound for the `100%` milestone behind sound and reduced-motion/accessibility settings.
+- [ ] Decide whether mobile “Действовать сегодня” should be removed entirely; it currently remains collapsed below tasks.
+- [ ] Finish the mobile truncation audit and introduce a coherent `TextTheme`/responsive typography system for `360/393/430/760dp`.
+- [ ] Profile theme switching on real mobile hardware; the current `2x` snapshot cap is only a partial mitigation.
+- [ ] Extend stage reordering beyond isolated linear roads only after branching/shared-root/cross-road semantics and conflict handling are designed.
 
 ## P1 — Mobile Foundation
 
@@ -61,9 +74,10 @@ This file tracks the active implementation roadmap and completed project work. U
 
 ## P4 — Reordering
 
-- [ ] Add a list/editor stage reorder flow grouped by RoadMap road.
-- [ ] Initially allow stage reorder only inside a non-branching road; reject cross-road or ambiguous DAG moves safely.
-- [ ] Preserve stage IDs, linked quest `treeNodeId` values, external prerequisites, and cycle safety.
+- [x] Add a list/editor stage reorder flow grouped by RoadMap road.
+- [x] Allow stage reorder inside a non-branching road and reject cross-road or ambiguous DAG moves safely.
+- [x] Preserve stage IDs, linked quest `treeNodeId` values, prerequisites, persistence and cycle safety.
+- [ ] Design branching/shared-root/cross-road structure editing before allowing those moves.
 - [ ] Before cloud sync, replace local list-position persistence with an explicit conflict-resolvable skill ordering token and a compatibility plan.
 - [ ] Keep direct drag-and-drop on the RoadMap canvas out of this phase.
 
@@ -80,6 +94,7 @@ This file tracks the active implementation roadmap and completed project work. U
 
 ## P6 — Milestone Animations
 
+- [ ] Decide and test per-stage milestone feedback for percentages that do not land exactly on `25/50/100%`.
 - [ ] Add optional `100%` milestone sound behind interface sound settings.
 - [ ] Add a user setting to disable milestone animations if the feedback feels too busy.
 - [ ] Add reduced-motion behavior when the app has a motion accessibility setting.
@@ -101,12 +116,63 @@ This file tracks the active implementation roadmap and completed project work. U
 - [ ] Create `desktop-pointer-hover-audit` for MouseRegion, transforms, overlays, and native hit testing.
 - [ ] Create `animation-performance-audit` for frame timing, repaint boundaries, image capture, and reduced-motion fallbacks.
 
+## Release / Regression Hardening
+
+Automated baseline completed on 2026-06-30:
+
+- [x] Record Flutter `3.44.3`, Dart `3.12.2`, DevTools `2.57.0`, macOS `15.7.7` and Xcode `26.3` baseline.
+- [x] Run `dart format lib test`, `flutter analyze`, `dart fix --dry-run` and the full regression suite without analyzer/fix findings.
+- [x] Run coverage baseline: 10,200 of 16,458 lines, approximately `61.98%`.
+- [x] Verify RoadMap templates, goal progress/history, milestone idempotency, mobile full-screen forms, vertical mode and skill/stage reorder regression coverage.
+- [x] Verify debug admin runtime guards, isolated `__debug__` storage, Android backup prohibition, release signing guard and secret-scan configuration.
+- [x] Revalidate notification state after permission awaits and remove task titles from lock-screen notification payloads.
+- [x] Guard dialog/animation callbacks against running after widget disposal.
+- [x] Build the macOS release app successfully.
+- [x] Add QHD quest-count badge centering regression coverage.
+
+Release blockers and deferred maintenance:
+
+- [ ] Replace Android/iOS/macOS `com.example...` identifiers with final owned application and bundle identifiers before distribution.
+- [ ] Configure Android SDK/`ANDROID_HOME` in the release environment and provide a private `android/key.properties`; release Gradle intentionally refuses debug or missing signing.
+- [ ] Install the matching iOS platform in Xcode and configure distribution signing; the iOS no-codesign probe is currently blocked because iOS `26.2` is not installed.
+- [ ] Decide and document the iOS backup policy for local productivity data; Android backup is already disabled.
+- [ ] Decide whether local task/profile/goal text requires encrypted-at-rest storage and a key-management plan before public distribution.
+- [ ] Review whether `SCHEDULE_EXACT_ALARM` is required for store policy and every reminder mode.
+- [ ] Bump the release build number from `+1` and verify platform version metadata before shipping.
+- [ ] Migrate stale iOS/macOS CocoaPods integration to Swift Package Manager only in a dedicated build-system batch; do not accept automatic Flutter project churn blindly.
+- [ ] Track the `objective_c` code-asset framework-name warning with the package maintainer or a vetted dependency update.
+- [ ] Run dependency upgrades separately: `file_picker 8 -> 11`, `flutter_local_notifications 21 -> 22` and `build_runner` ecosystem changes require migration review; smaller updates should also be tested as one dependency-only batch.
+- [ ] Install/run Gitleaks in CI or the release workstation; `.gitleaks.toml` and static checks exist, but the binary is not installed locally.
+- [ ] Add integration/e2e setup for restart persistence and native notification behavior; keep broad AppState decomposition separate.
+
+Manual mobile checklist (`~360dp`, real device preferred):
+
+- [ ] Home opens; expanded/compact skill panel and selected-skill view remain readable.
+- [ ] AddSkill/AddTask full-screen routes survive keyboard open/close and save/cancel.
+- [ ] Quick task attaches to `Задачник`; skill-local task attaches to the selected stable skill ID and no random stage.
+- [ ] RoadMap opens vertical-only; fullscreen/orientation toggle stay hidden; centering and stage reorder controls remain usable.
+- [ ] Next Goal, goal history and `25/50/100%` milestone banner fit without clipping or duplicate replay.
+- [ ] Theme transition and skill-panel animations remain smooth with reduced-motion platform settings.
+
+Manual desktop/QHD checklist:
+
+- [ ] Home, skill hover region, drag handles and quest-count badge look correct on macOS and Windows at QHD scaling.
+- [ ] AddSkill/AddTask remain dialogs; RoadMap defaults horizontal, toggles vertical and opens fullscreen correctly.
+- [ ] Skill/stage reorder persists after restart and keeps selection by stable ID.
+- [ ] Complete task/stage, inspect progress/milestone once, set next goal and verify archived goal history after restart.
+- [ ] Verify release build has no debug-admin entry, debug logs or debug storage access.
+
 ## Recently Completed
 
+- RoadMap vertical insertion polish: add-stage actions now sit between the upper label and lower orb, use a shared visual-geometry contract, and keep long and mobile paths auto-fitted without changing horizontal layout or persistence.
+- RoadMap interaction polish: deleting a quest keeps its skill selected, every terminal-stage-to-skill connection exposes the existing safe extend-path action, and desktop orientation icons now match their resulting layouts.
+- RoadMap progress polish: skill-orb rings now visualize derived goal completion while a separate compact bar under the level number shows XP progress toward the next level.
+- Rewards polish: removed duplicate chest/effect summary cards and moved the existing expandable buffs section to the top under the simpler “Эффекты” title.
+- Desktop skill-list polish: quest-count badges use explicit line-height and geometric centering for stable QHD rendering.
 - RoadMap Vertical Mode MVP: desktop now switches between horizontal and vertical canvas layouts from the toolbar and fullscreen, mobile always uses vertical roads, the skill anchors the top while terminal and earlier stages continue downward, vertical bezier links and insertion actions preserve the existing DAG, and adaptive camera auto-fit covers `0`, `1`, `3`, and `10` stage scenarios without model/storage changes.
 - Mobile Skill Experience MVP: mobile Act now starts with informative skill squircles showing level, active quest count and existing RoadMap goal progress; selecting by stable skill ID transitions to compact chips, while “Действовать сегодня” moves below tasks and starts collapsed. Desktop composition and data/storage models remain unchanged.
 - Mobile AddSkill/AddTask creation: routes below `760px` now reuse the existing forms in full-screen `SafeArea` pages with scroll/keyboard safety, visible validation, stable skill/stage context, cancel/save navigation, and desktop dialog preservation.
-- Task Inbox / “Задачник” MVP: added explicit `TaskScope.skill/inbox`, nullable skill identity for inbox tasks, title-only quick add, isolated completion/undo/delete UI in Act, storage compatibility for legacy tasks, and regression coverage proving inbox tasks do not affect skill XP, RoadMap progress, history, daily stats, achievements, rewards, resistance, or skill quest counts.
+- Task Inbox / “Задачник” MVP: added a permanent system skill with stable ID, title-only quick add, isolated completion/undo/delete UI in Act, storage compatibility for legacy tasks, and regression coverage proving quick tasks do not affect skill XP, RoadMap progress, history, daily stats, achievements, rewards, resistance, or normal skill quest counts.
 - Milestone Animations MVP: persisted `25%`, `50%`, and `100%` goal milestone thresholds per skill/current goal, detects progress crossings from stage mastery, marks all crossed thresholds while showing only the strongest non-blocking banner for one action, and keeps sound deferred.
 - Start New RoadMap MVP: after setting the next goal, users can keep the current map, add a manual stage, or explicitly create a new empty active RoadMap; the old completed map is stored as an append-only `CompletedRoadmap` snapshot and surfaced in the timeline. Template-based new RoadMap creation remains disabled pending `RoadMapRecord` / `activeRoadMapId` boundaries.
 - Goal History MVP: completed goals are archived as immutable per-skill snapshots during explicit Next Goal confirmation and appear in the existing growth timeline; legacy skills load with an empty archive.

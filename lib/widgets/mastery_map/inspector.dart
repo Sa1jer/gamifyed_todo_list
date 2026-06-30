@@ -667,9 +667,7 @@ class _NodeInspector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final status = skill.treeNodeStatus(node);
-    final statusColor = status == SkillTreeNodeStatus.active
-        ? skill.color
-        : skillTreeNodeStatusColor[status]!;
+    final statusColor = _roadmapStageStatusColor(skill, status);
     final completed = state.completedTasksForTreeNode(skill.id, node.id);
     final target = node.questTarget;
     final linkedTasks = state.tasksForTreeNode(skill.id, node.id);
@@ -1428,6 +1426,7 @@ class _InspectorQuestRow extends StatelessWidget {
               ),
               const SizedBox(width: 7),
               PressFeedback(
+                key: ValueKey('roadmap-delete-task-${task.id}'),
                 scale: 0.9,
                 tooltip: 'Удалить квест',
                 onTap: () {

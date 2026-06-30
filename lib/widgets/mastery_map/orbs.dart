@@ -28,8 +28,11 @@ class _SkillOrbButtonState extends State<_SkillOrbButton> {
 
   @override
   Widget build(BuildContext context) {
+    final goalProgress = const GoalProgressEngine().snapshotForSkill(
+      widget.skill,
+    );
     final orbSize = widget.roadFocus
-        ? 149.0
+        ? _roadmapFocusedSkillOrbDiameter
         : widget.selected
         ? 98.0
         : 89.0;
@@ -90,95 +93,141 @@ class _SkillOrbButtonState extends State<_SkillOrbButton> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  TweenAnimationBuilder<double>(
-                    tween: Tween(begin: 0, end: widget.skill.progress),
-                    duration: kMotionProgress,
-                    curve: kMotionCurve,
-                    builder: (context, progress, child) {
-                      return CustomPaint(
-                        painter: _SkillOrbProgressPainter(
-                          color: widget.skill.color,
-                          progress: progress,
-                          isDark: widget.isDark,
-                        ),
-                        child: child,
-                      );
-                    },
-                    child: AnimatedContainer(
-                      key: ValueKey('map-skill-surface-${widget.skill.id}'),
-                      duration: kMotionSlow,
+                  Semantics(
+                    key: ValueKey('map-skill-goal-progress-${widget.skill.id}'),
+                    label: 'Прогресс цели ${widget.skill.name}',
+                    value: goalProgress.percentLabel,
+                    child: TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0, end: goalProgress.value),
+                      duration: kMotionProgress,
                       curve: kMotionCurve,
-                      width: orbSize,
-                      height: orbSize,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: widget.skill.color.withAlpha(
-                          widget.isDark ? 36 : 28,
-                        ),
-                        border: Border.all(
-                          color: widget.selected
-                              ? Colors.white
-                              : widget.skill.color,
-                          width: widget.roadFocus
-                              ? 3.4
-                              : widget.selected
-                              ? 3
-                              : 2,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: widget.skill.color.withAlpha(glowAlpha),
-                            blurRadius: glowBlur,
-                            spreadRadius: _hovered
-                                ? 2
-                                : widget.roadFocus
-                                ? 1
+                      builder: (context, progress, child) {
+                        return CustomPaint(
+                          painter: _SkillOrbProgressPainter(
+                            color: widget.skill.color,
+                            progress: progress,
+                            isDark: widget.isDark,
+                          ),
+                          child: child,
+                        );
+                      },
+                      child: AnimatedContainer(
+                        key: ValueKey('map-skill-surface-${widget.skill.id}'),
+                        duration: kMotionSlow,
+                        curve: kMotionCurve,
+                        width: orbSize,
+                        height: orbSize,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: widget.skill.color.withAlpha(
+                            widget.isDark ? 36 : 28,
+                          ),
+                          border: Border.all(
+                            color: widget.selected
+                                ? Colors.white
+                                : widget.skill.color,
+                            width: widget.roadFocus
+                                ? 3.4
                                 : widget.selected
-                                ? 1
-                                : 0,
+                                ? 3
+                                : 2,
                           ),
-                        ],
-                      ),
-                      child: Stack(
-                        alignment: Alignment.center,
-                        clipBehavior: Clip.none,
-                        children: [
-                          Transform.translate(
-                            offset: Offset(0, widget.roadFocus ? -8 : -5),
-                            child: Icon(
-                              widget.skill.icon,
-                              color: widget.skill.color.withAlpha(
-                                widget.selected ? 245 : 220,
-                              ),
-                              size: iconSize,
+                          boxShadow: [
+                            BoxShadow(
+                              color: widget.skill.color.withAlpha(glowAlpha),
+                              blurRadius: glowBlur,
+                              spreadRadius: _hovered
+                                  ? 2
+                                  : widget.roadFocus
+                                  ? 1
+                                  : widget.selected
+                                  ? 1
+                                  : 0,
                             ),
-                          ),
-                          Positioned(
-                            bottom: widget.roadFocus ? 18 : 7,
-                            child: Text(
-                              '${widget.skill.level}',
-                              style: TextStyle(
-                                color: widget.skill.color,
-                                fontSize: levelSize,
-                                height: 1,
-                                fontWeight: FontWeight.w900,
-                                shadows: [
-                                  Shadow(
-                                    color: Colors.black.withAlpha(
-                                      widget.isDark ? 200 : 80,
+                          ],
+                        ),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          clipBehavior: Clip.none,
+                          children: [
+                            Transform.translate(
+                              offset: Offset(0, widget.roadFocus ? -8 : -5),
+                              child: Icon(
+                                widget.skill.icon,
+                                color: widget.skill.color.withAlpha(
+                                  widget.selected ? 245 : 220,
+                                ),
+                                size: iconSize,
+                              ),
+                            ),
+                            Positioned(
+                              bottom: widget.roadFocus
+                                  ? 24
+                                  : widget.selected
+                                  ? 15
+                                  : 14,
+                              child: Text(
+                                '${widget.skill.level}',
+                                style: TextStyle(
+                                  color: widget.skill.color,
+                                  fontSize: levelSize,
+                                  height: 1,
+                                  fontWeight: FontWeight.w900,
+                                  shadows: [
+                                    Shadow(
+                                      color: Colors.black.withAlpha(
+                                        widget.isDark ? 200 : 80,
+                                      ),
+                                      blurRadius: 8,
                                     ),
-                                    blurRadius: 8,
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                            Positioned(
+                              bottom: widget.roadFocus ? 11 : 6,
+                              child: Container(
+                                width: widget.roadFocus
+                                    ? 56
+                                    : widget.selected
+                                    ? 42
+                                    : 38,
+                                height: widget.roadFocus ? 5 : 4,
+                                clipBehavior: Clip.antiAlias,
+                                decoration: BoxDecoration(
+                                  color:
+                                      (widget.isDark
+                                              ? Colors.white
+                                              : Colors.black)
+                                          .withAlpha(28),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: FractionallySizedBox(
+                                    key: ValueKey(
+                                      'map-skill-level-progress-${widget.skill.id}',
+                                    ),
+                                    widthFactor: widget.skill.progress.clamp(
+                                      0.0,
+                                      1.0,
+                                    ),
+                                    heightFactor: 1,
+                                    child: ColoredBox(
+                                      color: widget.skill.color,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 9),
+                  const SizedBox(height: _roadmapSkillLabelGap),
                   _AdaptiveOrbLabel(
+                    key: ValueKey('map-skill-label-${widget.skill.id}'),
                     text: widget.skill.name,
                     isDark: widget.isDark,
                     selected: widget.selected || widget.roadFocus,
@@ -199,6 +248,7 @@ class _AdaptiveOrbLabel extends StatelessWidget {
   final bool selected;
 
   const _AdaptiveOrbLabel({
+    super.key,
     required this.text,
     required this.isDark,
     required this.selected,
@@ -208,7 +258,7 @@ class _AdaptiveOrbLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: selected ? 190 : 160,
-      height: 46,
+      height: _roadmapSkillLabelHeight,
       child: Center(
         child: Text(
           text,
@@ -344,19 +394,13 @@ class _MapNodeButtonState extends State<_MapNodeButton> {
   @override
   Widget build(BuildContext context) {
     final status = widget.skill.treeNodeStatus(widget.node);
-    final statusColor = status == SkillTreeNodeStatus.active
-        ? widget.skill.color
-        : skillTreeNodeStatusColor[status]!;
+    final statusColor = _roadmapStageStatusColor(widget.skill, status);
     final completed = widget.state.completedTasksForTreeNode(
       widget.skill.id,
       widget.node.id,
     );
     final target = widget.node.questTarget;
-    final diameter = switch (target) {
-      <= 1 => 62.0,
-      <= 3 => 74.0,
-      _ => 86.0,
-    };
+    final diameter = _roadmapNodeOrbDiameter(target);
     final icon = switch (status) {
       SkillTreeNodeStatus.locked => Icons.lock,
       SkillTreeNodeStatus.active => Icons.bolt_rounded,
@@ -378,6 +422,9 @@ class _MapNodeButtonState extends State<_MapNodeButton> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               AnimatedContainer(
+                key: ValueKey(
+                  'map-node-surface-${widget.skill.id}-${widget.node.id}',
+                ),
                 duration: kMotionStandard,
                 curve: kMotionCurve,
                 width: diameter,
@@ -447,8 +494,11 @@ class _MapNodeButtonState extends State<_MapNodeButton> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.only(top: 13),
+                padding: const EdgeInsets.only(top: _roadmapNodeLabelGap),
                 child: _AdaptiveNodeLabel(
+                  key: ValueKey(
+                    'map-node-label-${widget.skill.id}-${widget.node.id}',
+                  ),
                   text: widget.node.title,
                   color: status == SkillTreeNodeStatus.locked
                       ? subtext(widget.isDark)
@@ -467,13 +517,17 @@ class _AdaptiveNodeLabel extends StatelessWidget {
   final String text;
   final Color color;
 
-  const _AdaptiveNodeLabel({required this.text, required this.color});
+  const _AdaptiveNodeLabel({
+    super.key,
+    required this.text,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 108,
-      height: 30,
+      width: _roadmapNodeLabelWidth,
+      height: _roadmapNodeLabelHeight,
       child: Text(
         text,
         maxLines: 2,
@@ -530,8 +584,8 @@ class _RoadmapInsertStageButtonState extends State<_RoadmapInsertStageButton> {
                 curve: kMotionCurve,
                 scale: _hovered ? 1 : 0.72,
                 child: Container(
-                  width: 32,
-                  height: 32,
+                  width: _roadmapInsertVisibleDiameter,
+                  height: _roadmapInsertVisibleDiameter,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: widget.isDark

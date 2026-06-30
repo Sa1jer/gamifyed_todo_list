@@ -211,6 +211,19 @@ void main() {
       expect(source, contains('repeat mode'));
     });
 
+    test(
+      'notification scheduling revalidates state and hides quest titles',
+      () {
+        final state = _read('lib/app_state.dart');
+
+        expect(state, contains('_scheduleTaskNotificationIfCurrent'));
+        expect(state, contains('final task = _taskById(taskId);'));
+        expect(state, contains('!task.notificationsEnabled'));
+        expect(state, isNot(contains("title: 'Напоминание: \${task.title}'")));
+        expect(state, contains("title: 'Напоминание о квесте'"));
+      },
+    );
+
     test('Gitleaks config exists and uses default rules', () {
       final config = _read('.gitleaks.toml');
 

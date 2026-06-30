@@ -11,5 +11,12 @@ void main() {
 
       expect(service.debugCachedPermissions, isNull);
     });
+
+    test('cancellation before initialization is a safe no-op', () async {
+      final service = NotificationService();
+
+      await service.cancelNotification(42);
+      await service.cancelAllNotifications();
+    });
   });
 }

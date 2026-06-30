@@ -152,8 +152,9 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
             onMinimumAction: _minimumActionFromMap,
             onEditQuest: (skill, task) => _editQuest(context, skill, task),
             onDeleteQuest: (task) {
+              final skillId = task.skillId;
               state.removeTask(task.id);
-              setState(() => _selection = null);
+              setState(() => _selection = _MasterySelection.skill(skillId));
             },
             onMasterNode: (skill, node) =>
                 state.masterSkillTreeNode(skill.id, node.id),
@@ -589,8 +590,11 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
                                 onSaved: updateSelection,
                               ),
                               onDeleteQuest: (task) {
+                                final skillId = task.skillId;
                                 state.removeTask(task.id);
-                                updateSelection(null);
+                                updateSelection(
+                                  _MasterySelection.skill(skillId),
+                                );
                               },
                               onMasterNode: (skill, node) =>
                                   state.masterSkillTreeNode(skill.id, node.id),

@@ -219,10 +219,12 @@ class NotificationService {
   }
 
   Future<void> cancelNotification(int id) async {
+    if (!_initialized) return;
     await _notifications.cancel(id: id);
   }
 
   Future<void> cancelAllNotifications() async {
+    if (!_initialized) return;
     await _notifications.cancelAll();
   }
 

@@ -249,7 +249,9 @@ class _SkillTreeDialogState extends State<SkillTreeDialog> {
               ),
             ),
       ),
-    ).then((_) => setState(() {}));
+    ).then((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   void _masterNode(BuildContext context, Skill skill, SkillTreeNode node) {

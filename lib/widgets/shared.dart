@@ -809,7 +809,9 @@ class _XPBubbleState extends State<XPBubble>
       TweenSequenceItem(tween: Tween<double>(begin: 1.04, end: 1), weight: 22),
       TweenSequenceItem(tween: ConstantTween<double>(1), weight: 60),
     ]).animate(curved);
-    _c.forward().then((_) => widget.onDone(widget.key));
+    _c.forward().then((_) {
+      if (mounted) widget.onDone(widget.key);
+    });
   }
 
   @override

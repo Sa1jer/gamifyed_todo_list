@@ -4,6 +4,57 @@ enum _MasterySelectionType { skill, node, quest }
 
 enum _RoadmapLayoutAxis { horizontal, vertical }
 
+const _roadmapFocusedSkillOrbDiameter = 149.0;
+const _roadmapSkillLabelGap = 9.0;
+const _roadmapSkillLabelHeight = 46.0;
+const _roadmapNodeItemWidth = 154.0;
+const _roadmapNodeItemHeight = 151.0;
+const _roadmapNodeItemTopOffset = 50.0;
+const _roadmapNodeLabelGap = 13.0;
+const _roadmapNodeLabelWidth = 108.0;
+const _roadmapNodeLabelHeight = 30.0;
+const _roadmapInsertHitSize = 46.0;
+const _roadmapInsertVisibleDiameter = 32.0;
+const _roadmapMinimumVerticalStageStep = 170.0;
+
+double _roadmapNodeOrbDiameter(int questTarget) => switch (questTarget) {
+  <= 1 => 62.0,
+  <= 3 => 74.0,
+  _ => 86.0,
+};
+
+double _roadmapNodeContentHeight(SkillTreeNode node) =>
+    _roadmapNodeOrbDiameter(node.questTarget) +
+    _roadmapNodeLabelGap +
+    _roadmapNodeLabelHeight;
+
+double _roadmapNodeContentTopOffset(SkillTreeNode node) =>
+    -_roadmapNodeItemTopOffset +
+    (_roadmapNodeItemHeight - _roadmapNodeContentHeight(node)) / 2;
+
+double _roadmapNodeOrbTopOffset(SkillTreeNode node) =>
+    _roadmapNodeContentTopOffset(node);
+
+double _roadmapNodeLabelBottomOffset(SkillTreeNode node) =>
+    _roadmapNodeContentTopOffset(node) + _roadmapNodeContentHeight(node);
+
+double get _roadmapFocusedSkillLabelBottomOffset =>
+    _roadmapFocusedSkillOrbDiameter / 2 +
+    _roadmapSkillLabelGap +
+    _roadmapSkillLabelHeight;
+
+Color _roadmapStageStatusColor(Skill skill, SkillTreeNodeStatus status) {
+  return switch (status) {
+    SkillTreeNodeStatus.active => skill.color,
+    SkillTreeNodeStatus.mastered =>
+      skill.color == const Color(0xFF34C759)
+          ? const Color(0xFF8E8E93)
+          : skillTreeNodeStatusColor[SkillTreeNodeStatus.mastered]!,
+    SkillTreeNodeStatus.locked =>
+      skillTreeNodeStatusColor[SkillTreeNodeStatus.locked]!,
+  };
+}
+
 class _MasterySelection {
   final _MasterySelectionType type;
   final String skillId;

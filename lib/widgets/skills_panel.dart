@@ -570,20 +570,26 @@ class _SkillCardState extends State<SkillCard> {
                             if (widget.taskCount > 0) ...[
                               const SizedBox(width: 6),
                               Container(
+                                key: ValueKey('skill-task-count-${sk.id}'),
                                 width: 15,
                                 height: 15,
+                                alignment: Alignment.center,
                                 decoration: const BoxDecoration(
                                   color: Color(0xFFDDDDEE),
                                   shape: BoxShape.circle,
                                 ),
-                                child: Center(
-                                  child: Text(
-                                    '${widget.taskCount}',
-                                    style: const TextStyle(
-                                      color: Color(0xFF2A2A40),
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                child: Text(
+                                  '${widget.taskCount}',
+                                  textAlign: TextAlign.center,
+                                  textHeightBehavior: const TextHeightBehavior(
+                                    applyHeightToFirstAscent: false,
+                                    applyHeightToLastDescent: false,
+                                  ),
+                                  style: const TextStyle(
+                                    color: Color(0xFF2A2A40),
+                                    fontSize: 9,
+                                    height: 1,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ),

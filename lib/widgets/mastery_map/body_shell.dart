@@ -111,7 +111,7 @@ class _RoadmapLayoutToggle extends StatelessWidget {
             _RoadmapLayoutButton(
               key: const ValueKey('roadmap-layout-horizontal'),
               selected: value == _RoadmapLayoutAxis.horizontal,
-              icon: Icons.view_week_outlined,
+              icon: Icons.view_stream_outlined,
               tooltip: 'Горизонтальная RoadMap',
               isDark: isDark,
               color: accent,
@@ -120,7 +120,7 @@ class _RoadmapLayoutToggle extends StatelessWidget {
             _RoadmapLayoutButton(
               key: const ValueKey('roadmap-layout-vertical'),
               selected: value == _RoadmapLayoutAxis.vertical,
-              icon: Icons.view_stream_outlined,
+              icon: Icons.view_week_outlined,
               tooltip: 'Вертикальная RoadMap',
               isDark: isDark,
               color: accent,
@@ -257,6 +257,7 @@ class _MasteryMapBody extends StatelessWidget {
           },
           onCollapse: () => onSelectionChanged(null),
           onApplyRoadmapTemplate: onApplyRoadmapTemplate,
+          onExtendPath: onExtendPath,
           onInsertStageAfter: onInsertStageAfter,
           onSelectNode: (skill, node) {
             if (selection?.type == _MasterySelectionType.node &&

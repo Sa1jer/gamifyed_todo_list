@@ -3154,32 +3154,49 @@ class AppState extends ChangeNotifier {
       return;
     }
 
-    _notifications.requestPermissions().then((granted) {
-      if (!granted) return;
+    unawaited(_scheduleTaskNotificationIfCurrent(task.id, notificationId));
+  }
 
-      final now = DateTime.now();
-      var scheduledTime = DateTime(now.year, now.month, now.day, hour, minute);
-      if (!scheduledTime.isAfter(now)) {
-        scheduledTime = scheduledTime.add(const Duration(days: 1));
-      }
+  Future<void> _scheduleTaskNotificationIfCurrent(
+    String taskId,
+    int notificationId,
+  ) async {
+    final granted = await _notifications.requestPermissions();
+    if (!granted) return;
 
-      if (task.type == TaskType.repeating) {
-        _notifications.scheduleRepeatingTask(
-          id: notificationId,
-          title: 'Напоминание: ${task.title}',
-          body: 'Пора выполнить повторяющийся квест.',
-          scheduledTime: scheduledTime,
-          repeatMode: _repeatNotificationMode(task),
-        );
-      } else {
-        _notifications.scheduleTaskReminder(
-          id: notificationId,
-          title: 'Напоминание: ${task.title}',
-          body: 'Не забудь выполнить квест.',
-          scheduledTime: scheduledTime,
-        );
-      }
-    });
+    final task = _taskById(taskId);
+    final hour = task?.notificationHour;
+    final minute = task?.notificationMinute;
+    if (task == null ||
+        !task.notificationsEnabled ||
+        task.isDone ||
+        hour == null ||
+        minute == null) {
+      return;
+    }
+
+    final now = DateTime.now();
+    var scheduledTime = DateTime(now.year, now.month, now.day, hour, minute);
+    if (!scheduledTime.isAfter(now)) {
+      scheduledTime = scheduledTime.add(const Duration(days: 1));
+    }
+
+    if (task.type == TaskType.repeating) {
+      await _notifications.scheduleRepeatingTask(
+        id: notificationId,
+        title: 'Напоминание о квесте',
+        body: 'Пора выполнить повторяющийся квест.',
+        scheduledTime: scheduledTime,
+        repeatMode: _repeatNotificationMode(task),
+      );
+    } else {
+      await _notifications.scheduleTaskReminder(
+        id: notificationId,
+        title: 'Напоминание о квесте',
+        body: 'Не забудь выполнить квест.',
+        scheduledTime: scheduledTime,
+      );
+    }
   }
 
   void _syncAllTaskNotifications() {

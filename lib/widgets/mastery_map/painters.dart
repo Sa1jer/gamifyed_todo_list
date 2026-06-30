@@ -86,9 +86,7 @@ class _OrbMasteryMapPainter extends CustomPainter {
   }) {
     final start = _edgePoint(from, to, fromRadius);
     final end = _edgePoint(to, from, toRadius);
-    final color = status == SkillTreeNodeStatus.active
-        ? skill.color
-        : skillTreeNodeStatusColor[status]!;
+    final color = _roadmapStageStatusColor(skill, status);
     final alpha = switch (status) {
       SkillTreeNodeStatus.locked => 50,
       SkillTreeNodeStatus.active => 140,
@@ -156,7 +154,7 @@ class _MasteryVectorGridPainter extends CustomPainter {
     const minorCell = 42.0;
     const majorEvery = 5;
     const majorCell = minorCell * majorEvery;
-    final gridColor = isDark ? Colors.white : const Color(0xFF182033);
+    final gridColor = isDark ? Colors.white : const Color(0xFF756A58);
     final minorPaint = Paint()
       ..color = gridColor.withAlpha(isDark ? 13 : 10)
       ..style = PaintingStyle.stroke
