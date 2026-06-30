@@ -2,6 +2,7 @@ part of '../dialogs.dart';
 
 class AddTaskDialog extends StatefulWidget {
   final bool isDark;
+  final bool fullScreen;
   final Color skillColor;
   final Skill? skill;
   final String? initialTreeNodeId;
@@ -30,6 +31,7 @@ class AddTaskDialog extends StatefulWidget {
   const AddTaskDialog({
     super.key,
     required this.isDark,
+    this.fullScreen = false,
     required this.skillColor,
     this.skill,
     this.initialTreeNodeId,
@@ -64,6 +66,8 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   bool _advancedExpanded = false;
   bool _qualityExpanded = false;
   bool _subtasksExpanded = false;
+  bool _submitting = false;
+  String? _titleError;
 
   int get _softCap => typeSoftCap[_type]!;
   bool get _overCap => _xp > _softCap;
@@ -227,71 +231,99 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     final sub = subtext(isDark);
     final bdr = borderColor(isDark);
     final c = widget.skillColor;
+    final title = widget.existing != null
+        ? 'Редактировать квест'
+        : 'Новый квест';
+
+    final form = SingleChildScrollView(
+      key: const ValueKey('add-task-form-scroll'),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: EdgeInsets.all(MediaQuery.sizeOf(context).width < 600 ? 18 : 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (!widget.fullScreen) ...[
+            DlgHeader(title: title, txtColor: txt),
+            const SizedBox(height: 16),
+          ],
+          if (_initialStage case final stage?) ...[
+            _buildStageContextCard(stage, txt, sub, bdr, c, isDark),
+            const SizedBox(height: 14),
+          ] else if (_suggestedStage case final stage?) ...[
+            _buildStageSuggestionCard(stage, txt, sub, bdr, c, isDark),
+            const SizedBox(height: 14),
+          ],
+          DlgField(
+            label: 'Что сделать?',
+            ctrl: _titleCtrl,
+            fBg: fBg,
+            txt: txt,
+            sub: sub,
+            bdr: bdr,
+            fieldKey: const ValueKey('add-task-title-field'),
+            onChanged: (_) {
+              if (_titleError != null) setState(() => _titleError = null);
+            },
+          ),
+          if (_titleError != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              _titleError!,
+              key: const ValueKey('add-task-title-error'),
+              style: const TextStyle(
+                color: Color(0xFFFF453A),
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
+          if (widget.showFirstRunHints && widget.existing == null) ...[
+            FirstRunDialogHint(
+              text:
+                  'Квест — одно конкретное действие. Минимальный шаг можно включить вручную, если нужен лёгкий старт.',
+              color: c,
+              isDark: isDark,
+            ),
+            const SizedBox(height: 16),
+          ],
+          _buildXpSection(sub, bdr, c, isDark),
+          const SizedBox(height: 16),
+          _buildDescriptionSection(fBg, txt, sub, bdr, c),
+          const SizedBox(height: 16),
+          _buildMinimumActionSection(fBg, txt, sub, bdr, c),
+          const SizedBox(height: 16),
+          _buildAdvancedSection(fBg, txt, sub, bdr, c, isDark),
+          const SizedBox(height: 22),
+          if (!widget.fullScreen)
+            DlgActions(
+              onCancel: () => Navigator.pop(context),
+              onSave: _save,
+              saveLabel: widget.existing == null ? 'Создать' : 'Сохранить',
+              saveColor: c,
+            ),
+        ],
+      ),
+    );
+
+    if (widget.fullScreen) {
+      return MobileFormPage(
+        pageKey: const ValueKey('mobile-add-task-page'),
+        saveKey: const ValueKey('mobile-add-task-save'),
+        title: title,
+        backgroundColor: bg,
+        accentColor: c,
+        onSave: _submitting ? null : _save,
+        child: form,
+      );
+    }
 
     return Dialog(
       backgroundColor: bg,
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: SizedBox(
-        width: 460,
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(
-            MediaQuery.sizeOf(context).width < 600 ? 18 : 24,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DlgHeader(
-                title: widget.existing != null
-                    ? 'Редактировать квест'
-                    : 'Новый квест',
-                txtColor: txt,
-              ),
-              const SizedBox(height: 16),
-              if (_initialStage case final stage?) ...[
-                _buildStageContextCard(stage, txt, sub, bdr, c, isDark),
-                const SizedBox(height: 14),
-              ] else if (_suggestedStage case final stage?) ...[
-                _buildStageSuggestionCard(stage, txt, sub, bdr, c, isDark),
-                const SizedBox(height: 14),
-              ],
-              DlgField(
-                label: 'Что сделать?',
-                ctrl: _titleCtrl,
-                fBg: fBg,
-                txt: txt,
-                sub: sub,
-                bdr: bdr,
-              ),
-              const SizedBox(height: 16),
-              if (widget.showFirstRunHints && widget.existing == null) ...[
-                FirstRunDialogHint(
-                  text:
-                      'Квест — одно конкретное действие. Минимальный шаг можно включить вручную, если нужен лёгкий старт.',
-                  color: c,
-                  isDark: isDark,
-                ),
-                const SizedBox(height: 16),
-              ],
-              _buildXpSection(sub, bdr, c, isDark),
-              const SizedBox(height: 16),
-              _buildDescriptionSection(fBg, txt, sub, bdr, c),
-              const SizedBox(height: 16),
-              _buildMinimumActionSection(fBg, txt, sub, bdr, c),
-              const SizedBox(height: 16),
-              _buildAdvancedSection(fBg, txt, sub, bdr, c, isDark),
-              const SizedBox(height: 22),
-              DlgActions(
-                onCancel: () => Navigator.pop(context),
-                onSave: _save,
-                saveLabel: widget.existing == null ? 'Создать' : 'Сохранить',
-                saveColor: c,
-              ),
-            ],
-          ),
-        ),
-      ),
+      child: SizedBox(width: 460, child: form),
     );
   }
 
@@ -1461,8 +1493,18 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     return '$h:$m';
   }
 
-  void _save() {
-    if (_titleCtrl.text.trim().isEmpty) return;
+  Future<void> _save() async {
+    if (_submitting) return;
+    if (_titleCtrl.text.trim().isEmpty) {
+      setState(() => _titleError = 'Введите название квеста');
+      return;
+    }
+    setState(() => _submitting = true);
+    if (widget.fullScreen) {
+      FocusManager.instance.primaryFocus?.unfocus();
+      await Future<void>.delayed(const Duration(milliseconds: 120));
+      if (!mounted) return;
+    }
     widget.onSave(
       _titleCtrl.text.trim(),
       _descriptionCtrl.text.trim(),
@@ -1479,7 +1521,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
       _notificationsEnabled ? _notificationTime.minute : null,
       _treeNodeId,
     );
-    Navigator.pop(context);
+    if (mounted) Navigator.pop(context);
   }
 }
 

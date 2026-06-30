@@ -644,10 +644,11 @@ class _MainPageState extends State<MainPage> {
     if (showTutorialHints) {
       _setFirstRunDialogOpen(true);
     }
-    showDialog(
+    showAdaptiveCreationForm<void>(
       context: context,
-      builder: (_) => AddSkillDialog(
+      builder: (_, fullScreen) => AddSkillDialog(
         isDark: state.isDark,
+        fullScreen: fullScreen,
         showFirstRunHints: showTutorialHints,
         onSave: (name, goal, checklist, color, icon, initialTreeNodes, _) {
           final skillId = uid();
@@ -693,10 +694,11 @@ class _MainPageState extends State<MainPage> {
     if (showTutorialHints) {
       _setFirstRunDialogOpen(true);
     }
-    showDialog(
+    showAdaptiveCreationForm<void>(
       context: context,
-      builder: (_) => AddTaskDialog(
+      builder: (_, fullScreen) => AddTaskDialog(
         isDark: state.isDark,
+        fullScreen: fullScreen,
         skillColor: skill.color,
         skill: skill,
         initialTreeNodeId: skill.treeNodes.firstOrNull?.id,

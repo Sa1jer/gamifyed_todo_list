@@ -173,10 +173,11 @@ class _PlanningWorkspaceState extends State<PlanningWorkspace> {
 
   void _addSkill(BuildContext context) {
     final state = AppStateProvider.of(context);
-    showDialog(
+    showAdaptiveCreationForm<void>(
       context: context,
-      builder: (_) => AddSkillDialog(
+      builder: (_, fullScreen) => AddSkillDialog(
         isDark: state.isDark,
+        fullScreen: fullScreen,
         onSave: (name, goal, checklist, color, icon, initialTreeNodes, _) {
           final skillId = uid();
           state.addSkill(
@@ -248,10 +249,11 @@ class _PlanningWorkspaceState extends State<PlanningWorkspace> {
     String? treeNodeId,
   }) {
     final state = AppStateProvider.of(context);
-    showDialog(
+    showAdaptiveCreationForm<void>(
       context: context,
-      builder: (_) => AddTaskDialog(
+      builder: (_, fullScreen) => AddTaskDialog(
         isDark: state.isDark,
+        fullScreen: fullScreen,
         skillColor: skill.color,
         skill: skill,
         initialTreeNodeId: treeNodeId,

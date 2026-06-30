@@ -70,6 +70,7 @@ class MasteryMapWorkspace extends StatefulWidget {
 
 class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
   _MasterySelection? _selection;
+  _RoadmapLayoutAxis _desktopLayoutAxis = _RoadmapLayoutAxis.horizontal;
   String? _lastAppliedFocusSkillId;
 
   @override
@@ -97,6 +98,10 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
     final state = AppStateProvider.of(context);
     final selection = _validSelection(state);
     final isDark = widget.isDark;
+    final mobile = MediaQuery.sizeOf(context).width < 760;
+    final layoutAxis = mobile
+        ? _RoadmapLayoutAxis.vertical
+        : _desktopLayoutAxis;
 
     if (state.roadmapSkills.isEmpty) {
       return AppPanel(
@@ -115,6 +120,11 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
       children: [
         _MasteryMapHero(
           isDark: isDark,
+          layoutAxis: layoutAxis,
+          onLayoutAxisChanged: (next) {
+            if (mobile || next == _desktopLayoutAxis) return;
+            setState(() => _desktopLayoutAxis = next);
+          },
           onFullscreen: () => _openFullscreen(context, selection),
         ),
         const SizedBox(height: 10),
@@ -123,6 +133,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
             state: state,
             isDark: isDark,
             selection: selection,
+            layoutAxis: layoutAxis,
             canvasTutorialKey: widget.canvasTutorialKey,
             inspectorTutorialKey: widget.inspectorTutorialKey,
             practiceTutorialKey: widget.practiceTutorialKey,
@@ -340,10 +351,11 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
     ValueChanged<_MasterySelection?>? onCreated,
   }) {
     final state = AppStateProvider.of(context);
-    showDialog(
+    showAdaptiveCreationForm<void>(
       context: context,
-      builder: (_) => AddTaskDialog(
+      builder: (_, fullScreen) => AddTaskDialog(
         isDark: state.isDark,
+        fullScreen: fullScreen,
         skillColor: skill.color,
         skill: skill,
         initialTreeNodeId: node?.id,
@@ -468,6 +480,12 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
               setState(() => _selection = next);
             }
 
+            void updateLayoutAxis(_RoadmapLayoutAxis next) {
+              if (next == _desktopLayoutAxis) return;
+              setState(() => _desktopLayoutAxis = next);
+              setDialogState(() {});
+            }
+
             return AnimatedBuilder(
               animation: state,
               builder: (context, _) {
@@ -498,6 +516,12 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
                                   ),
                                 ),
                               ),
+                              _RoadmapLayoutToggle(
+                                isDark: isDark,
+                                value: _desktopLayoutAxis,
+                                onChanged: updateLayoutAxis,
+                              ),
+                              const SizedBox(width: 8),
                               HoverIconBtn(
                                 icon: Icons.close,
                                 color: subtext(isDark),
@@ -512,6 +536,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
                               state: state,
                               isDark: isDark,
                               selection: fullscreenSelection,
+                              layoutAxis: _desktopLayoutAxis,
                               fullscreen: true,
                               canvasTutorialKey: null,
                               inspectorTutorialKey: null,

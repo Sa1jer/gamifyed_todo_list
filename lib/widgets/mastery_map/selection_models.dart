@@ -2,6 +2,8 @@ part of '../mastery_map_workspace.dart';
 
 enum _MasterySelectionType { skill, node, quest }
 
+enum _RoadmapLayoutAxis { horizontal, vertical }
+
 class _MasterySelection {
   final _MasterySelectionType type;
   final String skillId;

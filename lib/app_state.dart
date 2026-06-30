@@ -1829,6 +1829,93 @@ class AppState extends ChangeNotifier {
     _saveAll();
   }
 
+  bool canReorderRoadmapPath(String skillId, Iterable<String> nodeIds) {
+    final skill = _skillById(skillId);
+    if (skill == null) return false;
+    return _validatedLinearRoadmapPath(skill, nodeIds) != null;
+  }
+
+  bool reorderRoadmapPath(String skillId, List<String> orderedNodeIds) {
+    final skill = _skillById(skillId);
+    if (skill == null || orderedNodeIds.length < 2) return false;
+    final currentPath = _validatedLinearRoadmapPath(skill, orderedNodeIds);
+    if (currentPath == null) return false;
+
+    final nodesById = {for (final node in currentPath) node.id: node};
+    final reordered = orderedNodeIds.map((id) => nodesById[id]!).toList();
+    for (var index = 0; index < reordered.length; index++) {
+      reordered[index].prerequisiteIds = index == 0
+          ? <String>[]
+          : <String>[reordered[index - 1].id];
+    }
+
+    final pathIds = orderedNodeIds.toSet();
+    final insertionIndex = skill.treeNodes
+        .asMap()
+        .entries
+        .where((entry) => pathIds.contains(entry.value.id))
+        .map((entry) => entry.key)
+        .reduce(math.min);
+    skill.treeNodes.removeWhere((node) => pathIds.contains(node.id));
+    skill.treeNodes.insertAll(insertionIndex, reordered);
+    skill.syncTreeNodes();
+    _syncBossesForSkill(skillId);
+    notifyListeners();
+    _saveAll();
+    return true;
+  }
+
+  List<SkillTreeNode>? _validatedLinearRoadmapPath(
+    Skill skill,
+    Iterable<String> requestedNodeIds,
+  ) {
+    final requested = requestedNodeIds.toList(growable: false);
+    final requestedIds = requested.toSet();
+    if (requested.length < 2 || requestedIds.length != requested.length) {
+      return null;
+    }
+
+    final layout = const RoadmapEngine().buildPathLayout(skill);
+    final matchingPaths = layout.paths
+        .where((path) {
+          final ids = path.nodes.map((node) => node.id).toSet();
+          return ids.length == requestedIds.length &&
+              ids.containsAll(requestedIds);
+        })
+        .toList(growable: false);
+    if (matchingPaths.length != 1) return null;
+    final path = matchingPaths.single.nodes;
+
+    for (final node in path) {
+      final appearances = layout.paths
+          .where(
+            (candidate) => candidate.nodes.any((item) => item.id == node.id),
+          )
+          .length;
+      if (appearances != 1) return null;
+    }
+
+    final skillNodeIds = skill.treeNodes.map((node) => node.id).toSet();
+    for (var index = 0; index < path.length; index++) {
+      final validPrerequisites = path[index].prerequisiteIds
+          .where(skillNodeIds.contains)
+          .toList(growable: false);
+      if (index == 0) {
+        if (validPrerequisites.isNotEmpty) return null;
+      } else if (validPrerequisites.length != 1 ||
+          validPrerequisites.single != path[index - 1].id) {
+        return null;
+      }
+    }
+
+    final hasExternalDependent = skill.treeNodes.any(
+      (node) =>
+          !requestedIds.contains(node.id) &&
+          node.prerequisiteIds.any(requestedIds.contains),
+    );
+    return hasExternalDependent ? null : path;
+  }
+
   void addRoadmapTemplate(String skillId, RoadmapTemplateConfig config) {
     applyRoadmapTemplate(skillId, config);
   }

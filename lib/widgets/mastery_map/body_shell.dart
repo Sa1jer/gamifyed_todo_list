@@ -2,9 +2,16 @@ part of '../mastery_map_workspace.dart';
 
 class _MasteryMapHero extends StatelessWidget {
   final bool isDark;
+  final _RoadmapLayoutAxis layoutAxis;
+  final ValueChanged<_RoadmapLayoutAxis> onLayoutAxisChanged;
   final VoidCallback onFullscreen;
 
-  const _MasteryMapHero({required this.isDark, required this.onFullscreen});
+  const _MasteryMapHero({
+    required this.isDark,
+    required this.layoutAxis,
+    required this.onLayoutAxisChanged,
+    required this.onFullscreen,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -55,6 +62,12 @@ class _MasteryMapHero extends StatelessWidget {
             ),
             if (showFullscreen) ...[
               const SizedBox(width: 12),
+              _RoadmapLayoutToggle(
+                isDark: isDark,
+                value: layoutAxis,
+                onChanged: onLayoutAxisChanged,
+              ),
+              const SizedBox(width: 8),
               SmallBtn(
                 label: 'Развернуть',
                 icon: Icons.open_in_full,
@@ -69,10 +82,112 @@ class _MasteryMapHero extends StatelessWidget {
   }
 }
 
+class _RoadmapLayoutToggle extends StatelessWidget {
+  final bool isDark;
+  final _RoadmapLayoutAxis value;
+  final ValueChanged<_RoadmapLayoutAxis> onChanged;
+
+  const _RoadmapLayoutToggle({
+    required this.isDark,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const accent = Color(0xFF4A9EFF);
+    return Semantics(
+      label: 'Ориентация RoadMap',
+      child: Container(
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          color: isDark ? Colors.white.withAlpha(8) : Colors.black.withAlpha(5),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: borderColor(isDark)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _RoadmapLayoutButton(
+              key: const ValueKey('roadmap-layout-horizontal'),
+              selected: value == _RoadmapLayoutAxis.horizontal,
+              icon: Icons.view_week_outlined,
+              tooltip: 'Горизонтальная RoadMap',
+              isDark: isDark,
+              color: accent,
+              onTap: () => onChanged(_RoadmapLayoutAxis.horizontal),
+            ),
+            _RoadmapLayoutButton(
+              key: const ValueKey('roadmap-layout-vertical'),
+              selected: value == _RoadmapLayoutAxis.vertical,
+              icon: Icons.view_stream_outlined,
+              tooltip: 'Вертикальная RoadMap',
+              isDark: isDark,
+              color: accent,
+              onTap: () => onChanged(_RoadmapLayoutAxis.vertical),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RoadmapLayoutButton extends StatelessWidget {
+  final bool selected;
+  final IconData icon;
+  final String tooltip;
+  final bool isDark;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _RoadmapLayoutButton({
+    super.key,
+    required this.selected,
+    required this.icon,
+    required this.tooltip,
+    required this.isDark,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Semantics(
+        button: true,
+        selected: selected,
+        label: tooltip,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(7),
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: kMotionFast,
+            curve: kMotionCurve,
+            width: 34,
+            height: 32,
+            decoration: BoxDecoration(
+              color: selected ? color.withAlpha(isDark ? 38 : 24) : null,
+              borderRadius: BorderRadius.circular(7),
+            ),
+            child: Icon(
+              icon,
+              size: 18,
+              color: selected ? color : subtext(isDark),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _MasteryMapBody extends StatelessWidget {
   final AppState state;
   final bool isDark;
   final _MasterySelection? selection;
+  final _RoadmapLayoutAxis layoutAxis;
   final bool fullscreen;
   final GlobalKey? canvasTutorialKey;
   final GlobalKey? inspectorTutorialKey;
@@ -101,6 +216,7 @@ class _MasteryMapBody extends StatelessWidget {
     required this.state,
     required this.isDark,
     required this.selection,
+    required this.layoutAxis,
     this.canvasTutorialKey,
     this.inspectorTutorialKey,
     this.practiceTutorialKey,
@@ -130,6 +246,7 @@ class _MasteryMapBody extends StatelessWidget {
           state: state,
           isDark: isDark,
           selection: selection,
+          layoutAxis: layoutAxis,
           onSelectSkill: (skill) {
             if (selection?.type == _MasterySelectionType.skill &&
                 selection?.skillId == skill.id) {

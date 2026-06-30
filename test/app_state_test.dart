@@ -861,6 +861,129 @@ void main() {
     });
   });
 
+  group('roadmap stage ordering', () {
+    test(
+      'rewires one linear road without changing stage or quest identity',
+      () async {
+        final storage = _InMemoryStorageService();
+        final state = AppState(storage: storage, seedDefaults: false);
+        final masteredAt = DateTime(2026, 6, 1);
+        final first = SkillTreeNode(id: 'first', title: 'First');
+        final second = SkillTreeNode(
+          id: 'second',
+          title: 'Second',
+          prerequisiteIds: [first.id],
+          isMastered: true,
+          masteredAt: masteredAt,
+        );
+        final third = SkillTreeNode(
+          id: 'third',
+          title: 'Third',
+          prerequisiteIds: [second.id],
+        );
+        final skill = Skill(
+          id: 'ordered-road',
+          name: 'Ordered road',
+          goal: 'Keep progress',
+          color: const Color(0xFF4A9EFF),
+          icon: Icons.route,
+          level: 4,
+          xp: 120,
+          treeNodes: [first, second, third],
+        );
+        state.addSkill(skill);
+        state.addTask(
+          Task(
+            id: 'linked-quest',
+            title: 'Linked quest',
+            skillId: skill.id,
+            treeNodeId: second.id,
+            xpReward: 30,
+            type: TaskType.shortTerm,
+          ),
+        );
+
+        final changed = state.reorderRoadmapPath(skill.id, [
+          third.id,
+          first.id,
+          second.id,
+        ]);
+
+        expect(changed, isTrue);
+        final path = const RoadmapEngine().buildPathLayout(skill).paths.single;
+        expect(path.nodes.map((node) => node.id), ['third', 'first', 'second']);
+        expect(third.prerequisiteIds, isEmpty);
+        expect(first.prerequisiteIds, ['third']);
+        expect(second.prerequisiteIds, ['first']);
+        expect(second.isMastered, isTrue);
+        expect(second.masteredAt, masteredAt);
+        expect(state.tasks.single.treeNodeId, second.id);
+        expect(skill.level, 4);
+        expect(skill.xp, 120);
+        expect(state.consumeGoalMilestoneNotifications(), isEmpty);
+
+        await state.flushSaves();
+        final restarted = AppState(storage: storage, seedDefaults: false);
+        await restarted.loadSavedData();
+        final savedSkill = restarted.roadmapSkills.single;
+        final savedPath = const RoadmapEngine()
+            .buildPathLayout(savedSkill)
+            .paths
+            .single;
+        expect(savedPath.nodes.map((node) => node.id), [
+          'third',
+          'first',
+          'second',
+        ]);
+        expect(restarted.tasks.single.treeNodeId, 'second');
+
+        state.dispose();
+        restarted.dispose();
+      },
+    );
+
+    test('rejects branching and cross-road reorder requests', () {
+      final state = AppState(
+        storage: _InMemoryStorageService(),
+        seedDefaults: false,
+      );
+      final root = SkillTreeNode(id: 'root', title: 'Root');
+      final left = SkillTreeNode(
+        id: 'left',
+        title: 'Left',
+        prerequisiteIds: [root.id],
+      );
+      final right = SkillTreeNode(
+        id: 'right',
+        title: 'Right',
+        prerequisiteIds: [root.id],
+      );
+      final other = SkillTreeNode(id: 'other', title: 'Other road');
+      final skill = Skill(
+        id: 'branching-road',
+        name: 'Branching road',
+        goal: 'Stay safe',
+        color: const Color(0xFFFF9500),
+        icon: Icons.account_tree,
+        treeNodes: [root, left, right, other],
+      );
+      state.addSkill(skill);
+      final originalOrder = skill.treeNodes.map((node) => node.id).toList();
+      final originalLinks = {
+        for (final node in skill.treeNodes)
+          node.id: List<String>.from(node.prerequisiteIds),
+      };
+
+      expect(state.reorderRoadmapPath(skill.id, ['left', 'root']), isFalse);
+      expect(state.reorderRoadmapPath(skill.id, ['other', 'left']), isFalse);
+      expect(skill.treeNodes.map((node) => node.id), originalOrder);
+      for (final node in skill.treeNodes) {
+        expect(node.prerequisiteIds, originalLinks[node.id]);
+      }
+      state.dispose();
+    });
+  });
+
   group('achievement engine integration', () {
     test(
       'AppState keeps achievement unlock notifications as side effects',

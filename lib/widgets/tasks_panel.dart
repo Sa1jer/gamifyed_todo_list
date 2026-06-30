@@ -158,6 +158,7 @@ class _TasksPanelState extends State<TasksPanel> {
                 ],
                 HoverScale(
                   child: SmallBtn(
+                    key: ValueKey('add-task-button-${skill.id}'),
                     label: 'Новый квест',
                     icon: Icons.add,
                     color: skill.color,
@@ -288,10 +289,11 @@ class _TasksPanelState extends State<TasksPanel> {
 
   void _addTask(BuildContext ctx, Skill skill) {
     final s = AppStateProvider.of(ctx);
-    showDialog(
+    showAdaptiveCreationForm<void>(
       context: ctx,
-      builder: (_) => AddTaskDialog(
+      builder: (_, fullScreen) => AddTaskDialog(
         isDark: s.isDark,
+        fullScreen: fullScreen,
         skillColor: skill.color,
         skill: skill,
         onSave:
@@ -402,43 +404,54 @@ class _EmptyTasksState extends StatelessWidget {
     final txt = textColor(isDark);
     final sub = subtext(isDark);
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(22),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.task_alt, color: skillColor, size: 38),
-            const SizedBox(height: 12),
-            Text(
-              'Добавьте первый квест',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: txt,
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-              ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxHeight < 220;
+        return SingleChildScrollView(
+          padding: EdgeInsets.all(compact ? 10 : 22),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.task_alt,
+                  color: skillColor,
+                  size: compact ? 26 : 38,
+                ),
+                SizedBox(height: compact ? 6 : 12),
+                Text(
+                  'Добавьте первый квест',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: txt,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  'Для “$skillName” пока нет действий. Добавьте один маленький квест и минимальный шаг.',
+                  textAlign: TextAlign.center,
+                  maxLines: compact ? 2 : null,
+                  overflow: compact ? TextOverflow.ellipsis : null,
+                  style: TextStyle(color: sub, fontSize: 12, height: 1.3),
+                ),
+                SizedBox(height: compact ? 8 : 14),
+                HoverScale(
+                  child: SmallBtn(
+                    key: createFirstQuestButtonKey,
+                    label: 'Первый квест',
+                    icon: Icons.add,
+                    color: skillColor,
+                    tooltip: 'Создать первый квест для навыка “$skillName”',
+                    onTap: onAdd,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 5),
-            Text(
-              'Для “$skillName” пока нет действий. Добавьте один маленький квест и минимальный шаг.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: sub, fontSize: 12, height: 1.3),
-            ),
-            const SizedBox(height: 14),
-            HoverScale(
-              child: SmallBtn(
-                key: createFirstQuestButtonKey,
-                label: 'Первый квест',
-                icon: Icons.add,
-                color: skillColor,
-                tooltip: 'Создать первый квест для навыка “$skillName”',
-                onTap: onAdd,
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

@@ -308,12 +308,14 @@ class _NextGoalDialogState extends State<NextGoalDialog> {
 
 class AddSkillDialog extends StatefulWidget {
   final bool isDark;
+  final bool fullScreen;
   final Skill? existing;
   final bool showFirstRunHints;
   final SkillSaveCallback onSave;
   const AddSkillDialog({
     super.key,
     required this.isDark,
+    this.fullScreen = false,
     this.existing,
     this.showFirstRunHints = false,
     required this.onSave,
@@ -329,6 +331,8 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
   final List<String> _items = [];
   Color _color = const Color(0xFF4A9EFF);
   IconData _icon = Icons.fitness_center;
+  bool _submitting = false;
+  String? _nameError;
 
   // All icons in a single flat list
   static final _allIcons = [...kIconsPrimary, ...kIconsExtra];
@@ -373,182 +377,221 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
     final txt = textColor(isDark);
     final sub = subtext(isDark);
     final bdr = borderColor(isDark);
+    final title = widget.existing != null
+        ? 'Редактировать навык'
+        : 'Новый навык';
+
+    final form = SingleChildScrollView(
+      key: const ValueKey('add-skill-form-scroll'),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: EdgeInsets.all(MediaQuery.sizeOf(context).width < 600 ? 18 : 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (!widget.fullScreen) ...[
+            DlgHeader(title: title, txtColor: txt),
+            const SizedBox(height: 16),
+          ],
+          Center(
+            child: Container(
+              key: const ValueKey('skill-preview-icon'),
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: _color.withAlpha(35),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(_icon, color: _color, size: 30),
+            ),
+          ),
+          const SizedBox(height: 16),
+          DlgField(
+            label: 'Название навыка',
+            ctrl: _nameCtrl,
+            fBg: fBg,
+            txt: txt,
+            sub: sub,
+            bdr: bdr,
+            fieldKey: const ValueKey('add-skill-name-field'),
+            onChanged: (_) {
+              if (_nameError != null) setState(() => _nameError = null);
+            },
+          ),
+          if (_nameError != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              _nameError!,
+              key: const ValueKey('add-skill-name-error'),
+              style: const TextStyle(
+                color: Color(0xFFFF453A),
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+          const SizedBox(height: 10),
+          DlgField(
+            label: 'Цель',
+            ctrl: _goalCtrl,
+            fBg: fBg,
+            txt: txt,
+            sub: sub,
+            bdr: bdr,
+            min: 2,
+            fieldKey: const ValueKey('add-skill-goal-field'),
+          ),
+          const SizedBox(height: 14),
+          if (widget.showFirstRunHints && widget.existing == null) ...[
+            FirstRunDialogHint(
+              text:
+                  'Достаточно названия и цели. Этап можно добавить сейчас или позже.',
+              color: _color,
+              isDark: isDark,
+            ),
+            const SizedBox(height: 14),
+          ],
+          Row(
+            children: [
+              SubLbl('Иконка', sub),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '${_allIcons.length} иконок · прокрутите',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
+                  style: TextStyle(color: sub, fontSize: 11),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Container(
+            height: _gridHeight,
+            decoration: BoxDecoration(
+              color: fBg,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: bdr),
+            ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final crossAxisCount = constraints.maxWidth < 390
+                    ? 7
+                    : _crossAxisCount;
+                return GridView.builder(
+                  key: const ValueKey('skill-icon-grid'),
+                  padding: const EdgeInsets.all(_spacing),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    mainAxisSpacing: _spacing,
+                    crossAxisSpacing: _spacing,
+                    childAspectRatio: 1,
+                  ),
+                  itemCount: _allIcons.length,
+                  itemBuilder: (_, i) {
+                    final ic = _allIcons[i];
+                    final sel = ic == _icon;
+                    return _IconChoiceButton(
+                      icon: ic,
+                      selected: sel,
+                      color: _color,
+                      inactiveColor: sub,
+                      onTap: () => setState(() => _icon = ic),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          SubLbl('Цвет', sub),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: kColors.asMap().entries.map((entry) {
+              final i = entry.key;
+              final c = entry.value;
+              final sel = c == _color;
+              return KeyedSubtree(
+                key: ValueKey('skill-color-$i'),
+                child: _ColorChoiceButton(
+                  color: c,
+                  selected: sel,
+                  isDark: isDark,
+                  onTap: () => setState(() => _color = c),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 14),
+
+          if (widget.existing == null) ...[
+            DlgField(
+              label: 'Первый этап (опционально)',
+              ctrl: _firstStageCtrl,
+              fBg: fBg,
+              txt: txt,
+              sub: sub,
+              bdr: bdr,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Например: «Основа». Можно оставить пустым и собрать дорожную карту позже.',
+              style: TextStyle(
+                color: sub,
+                fontSize: 11.5,
+                height: 1.3,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 14),
+          ],
+
+          const SizedBox(height: 8),
+          if (!widget.fullScreen)
+            DlgActions(
+              onCancel: () => Navigator.pop(context),
+              onSave: _save,
+              saveLabel: widget.existing == null ? 'Создать' : 'Сохранить',
+            ),
+        ],
+      ),
+    );
+
+    if (widget.fullScreen) {
+      return MobileFormPage(
+        pageKey: const ValueKey('mobile-add-skill-page'),
+        saveKey: const ValueKey('mobile-add-skill-save'),
+        title: title,
+        backgroundColor: bg,
+        accentColor: _color,
+        onSave: _submitting ? null : _save,
+        child: form,
+      );
+    }
 
     return Dialog(
       backgroundColor: bg,
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: SizedBox(
-        width: 480,
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(
-            MediaQuery.sizeOf(context).width < 600 ? 18 : 24,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              DlgHeader(
-                title: widget.existing != null
-                    ? 'Редактировать навык'
-                    : 'Новый навык',
-                txtColor: txt,
-              ),
-              const SizedBox(height: 16),
-              Center(
-                child: Container(
-                  key: const ValueKey('skill-preview-icon'),
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: _color.withAlpha(35),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Icon(_icon, color: _color, size: 30),
-                ),
-              ),
-              const SizedBox(height: 16),
-              DlgField(
-                label: 'Название навыка',
-                ctrl: _nameCtrl,
-                fBg: fBg,
-                txt: txt,
-                sub: sub,
-                bdr: bdr,
-              ),
-              const SizedBox(height: 10),
-              DlgField(
-                label: 'Цель',
-                ctrl: _goalCtrl,
-                fBg: fBg,
-                txt: txt,
-                sub: sub,
-                bdr: bdr,
-                min: 2,
-              ),
-              const SizedBox(height: 14),
-              if (widget.showFirstRunHints && widget.existing == null) ...[
-                FirstRunDialogHint(
-                  text:
-                      'Достаточно названия и цели. Этап можно добавить сейчас или позже.',
-                  color: _color,
-                  isDark: isDark,
-                ),
-                const SizedBox(height: 14),
-              ],
-              Row(
-                children: [
-                  SubLbl('Иконка', sub),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      '${_allIcons.length} иконок · прокрутите',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.right,
-                      style: TextStyle(color: sub, fontSize: 11),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Container(
-                height: _gridHeight,
-                decoration: BoxDecoration(
-                  color: fBg,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: bdr),
-                ),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final crossAxisCount = constraints.maxWidth < 390
-                        ? 7
-                        : _crossAxisCount;
-                    return GridView.builder(
-                      key: const ValueKey('skill-icon-grid'),
-                      padding: const EdgeInsets.all(_spacing),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: crossAxisCount,
-                        mainAxisSpacing: _spacing,
-                        crossAxisSpacing: _spacing,
-                        childAspectRatio: 1,
-                      ),
-                      itemCount: _allIcons.length,
-                      itemBuilder: (_, i) {
-                        final ic = _allIcons[i];
-                        final sel = ic == _icon;
-                        return _IconChoiceButton(
-                          icon: ic,
-                          selected: sel,
-                          color: _color,
-                          inactiveColor: sub,
-                          onTap: () => setState(() => _icon = ic),
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              SubLbl('Цвет', sub),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: kColors.asMap().entries.map((entry) {
-                  final i = entry.key;
-                  final c = entry.value;
-                  final sel = c == _color;
-                  return KeyedSubtree(
-                    key: ValueKey('skill-color-$i'),
-                    child: _ColorChoiceButton(
-                      color: c,
-                      selected: sel,
-                      isDark: isDark,
-                      onTap: () => setState(() => _color = c),
-                    ),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 14),
-
-              if (widget.existing == null) ...[
-                DlgField(
-                  label: 'Первый этап (опционально)',
-                  ctrl: _firstStageCtrl,
-                  fBg: fBg,
-                  txt: txt,
-                  sub: sub,
-                  bdr: bdr,
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Например: «Основа». Можно оставить пустым и собрать дорожную карту позже.',
-                  style: TextStyle(
-                    color: sub,
-                    fontSize: 11.5,
-                    height: 1.3,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 14),
-              ],
-
-              const SizedBox(height: 8),
-              DlgActions(
-                onCancel: () => Navigator.pop(context),
-                onSave: _save,
-                saveLabel: widget.existing == null ? 'Создать' : 'Сохранить',
-              ),
-            ],
-          ),
-        ),
-      ),
+      child: SizedBox(width: 480, child: form),
     );
   }
 
-  void _save() {
-    if (_nameCtrl.text.trim().isEmpty) return;
+  Future<void> _save() async {
+    if (_submitting) return;
+    if (_nameCtrl.text.trim().isEmpty) {
+      setState(() => _nameError = 'Введите название навыка');
+      return;
+    }
+    setState(() => _submitting = true);
+    if (widget.fullScreen) {
+      FocusManager.instance.primaryFocus?.unfocus();
+      await Future<void>.delayed(const Duration(milliseconds: 120));
+      if (!mounted) return;
+    }
     final initialTreeNodes = _initialTreeNodes();
     widget.onSave(
       _nameCtrl.text.trim(),
@@ -559,7 +602,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
       initialTreeNodes,
       null,
     );
-    Navigator.pop(context);
+    if (mounted) Navigator.pop(context);
   }
 
   List<SkillTreeNode> _initialTreeNodes() {

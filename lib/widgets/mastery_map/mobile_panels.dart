@@ -481,6 +481,19 @@ class _MobileSkillMasteryPanel extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         SkillGoalProgress(skill: skill, isDark: isDark),
+        if (skill.treeNodes.length > 1) ...[
+          const SizedBox(height: 10),
+          SmallBtn(
+            label: 'Порядок этапов',
+            icon: Icons.swap_vert,
+            color: skill.color,
+            onTap: () => _showRoadmapStageOrderDialog(
+              context,
+              state: state,
+              skill: skill,
+            ),
+          ),
+        ],
         const SizedBox(height: 12),
         if (hasFreeTasks || stageGroups.isEmpty) ...[
           _MobileStagePracticeList(

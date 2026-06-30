@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../debug/debug_admin_panel.dart';
 import '../app_state.dart';
 import '../feedback_service.dart';
+import '../engines/goal_progress_engine.dart';
 import '../models.dart';
 import '../utils.dart';
 import 'shared.dart';

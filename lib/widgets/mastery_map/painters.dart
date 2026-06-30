@@ -99,7 +99,7 @@ class _OrbMasteryMapPainter extends CustomPainter {
       SkillTreeNodeStatus.active => 2.4,
       SkillTreeNodeStatus.mastered => 2.05,
     };
-    final path = _roadConnectionPath(start, end);
+    final path = _roadConnectionPath(start, end, layout.layoutAxis);
     final glowPaint = Paint()
       ..color = color.withAlpha(status == SkillTreeNodeStatus.active ? 24 : 12)
       ..style = PaintingStyle.stroke
@@ -115,14 +115,22 @@ class _OrbMasteryMapPainter extends CustomPainter {
     canvas.drawPath(path, paint);
   }
 
-  Path _roadConnectionPath(Offset start, Offset end) {
+  Path _roadConnectionPath(
+    Offset start,
+    Offset end,
+    _RoadmapLayoutAxis layoutAxis,
+  ) {
     final delta = end - start;
     final distance = delta.distance;
     if (distance == 0) {
       return Path()..moveTo(start.dx, start.dy);
     }
-    final c1 = Offset(start.dx + distance * 0.38, start.dy);
-    final c2 = Offset(end.dx - distance * 0.38, end.dy);
+    final c1 = layoutAxis == _RoadmapLayoutAxis.vertical
+        ? Offset(start.dx, start.dy + delta.dy * 0.38)
+        : Offset(start.dx + distance * 0.38, start.dy);
+    final c2 = layoutAxis == _RoadmapLayoutAxis.vertical
+        ? Offset(end.dx, end.dy - delta.dy * 0.38)
+        : Offset(end.dx - distance * 0.38, end.dy);
     return Path()
       ..moveTo(start.dx, start.dy)
       ..cubicTo(c1.dx, c1.dy, c2.dx, c2.dy, end.dx, end.dy);

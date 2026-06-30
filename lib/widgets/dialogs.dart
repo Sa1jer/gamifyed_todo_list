@@ -17,3 +17,28 @@ part 'dialogs/skill_tree_dialogs.dart';
 part 'dialogs/task_dialog.dart';
 part 'dialogs/stats_calendar_dialogs.dart';
 part 'dialogs/rewards_bosses_dialogs.dart';
+
+const double kMobileFormBreakpoint = 760;
+
+typedef AdaptiveCreationFormBuilder =
+    Widget Function(BuildContext context, bool fullScreen);
+
+Future<T?> showAdaptiveCreationForm<T>({
+  required BuildContext context,
+  required AdaptiveCreationFormBuilder builder,
+}) {
+  final useFullScreen =
+      MediaQuery.sizeOf(context).width < kMobileFormBreakpoint;
+  if (useFullScreen) {
+    return Navigator.of(context, rootNavigator: true).push<T>(
+      MaterialPageRoute<T>(
+        fullscreenDialog: true,
+        builder: (routeContext) => builder(routeContext, true),
+      ),
+    );
+  }
+  return showDialog<T>(
+    context: context,
+    builder: (dialogContext) => builder(dialogContext, false),
+  );
+}

@@ -10,6 +10,7 @@ class TodayDashboard extends StatefulWidget {
   final VoidCallback? onCreateFirstSkill;
   final Key? createFirstSkillButtonKey;
   final Key? nextQuestActionKey;
+  final bool initiallyExpanded;
 
   const TodayDashboard({
     super.key,
@@ -18,6 +19,7 @@ class TodayDashboard extends StatefulWidget {
     this.onCreateFirstSkill,
     this.createFirstSkillButtonKey,
     this.nextQuestActionKey,
+    this.initiallyExpanded = true,
   });
 
   static Skill? _skillFor(AppState state, Task task) {
@@ -134,7 +136,13 @@ class TodayDashboard extends StatefulWidget {
 }
 
 class _TodayDashboardState extends State<TodayDashboard> {
-  bool _expanded = true;
+  late bool _expanded;
+
+  @override
+  void initState() {
+    super.initState();
+    _expanded = widget.initiallyExpanded;
+  }
 
   @override
   Widget build(BuildContext context) {

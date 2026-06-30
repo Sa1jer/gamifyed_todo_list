@@ -1,6 +1,6 @@
 # TODO / Living Backlog
 
-Last updated: 2026-06-29
+Last updated: 2026-06-30
 
 This file tracks the active implementation roadmap and completed project work. Update it after every meaningful code or design change.
 
@@ -20,20 +20,22 @@ This file tracks the active implementation roadmap and completed project work. U
 ## P1 — Mobile Foundation
 
 - [ ] Add a TextTheme-based mobile typography scale and responsive constants for `360`, `393`, `430`, and `760` widths.
-- [ ] Replace the mobile Today Dashboard with a trial compact next-quest card; keep a clean rollback path to skills-and-list only.
-- [ ] Expand the mobile skill rail into informative squircles with level, quest count, and progress.
-- [ ] Smoothly collapse mobile skill cards after a skill is selected.
-- [ ] Open AddSkill and AddTask as full-screen routes below `760px`, while desktop keeps dialogs.
 - [ ] Add widget coverage for overflow, truncation, navigation, and dark/light rendering at mobile widths.
+- [ ] Polish mobile skill squircles with richer density options and optional circular progress after usage feedback.
+- [ ] Add explicit accessibility labels for remaining mobile skill-panel controls.
+- [ ] Add an app-level reduced-motion setting; the mobile panel currently respects the platform disable-animations flag.
+- [ ] Decide the final mobile placement/content density for the collapsed “Действовать сегодня” block after usage feedback.
+- [ ] Revisit desktop/mobile skill-panel visual parity only if the mobile direction proves useful.
+- [ ] Move mobile edit-skill and edit-task flows to full-screen routes after creation routes have usage feedback.
+- [ ] Consolidate remaining non-form breakpoint checks around shared responsive constants.
+- [ ] Polish mobile keyboard focus traversal and accessibility labels for icon/color form controls.
+- [ ] Extract shared field validation only if more creation forms adopt the same rules.
 
 ## P2 — RoadMap Layout
 
-- [ ] Add desktop `horizontal / vertical` RoadMap layout modes with a toggle near fullscreen.
 - [ ] Persist the desktop layout preference as a local per-device UI setting.
-- [ ] Force vertical RoadMap layout on mobile.
-- [ ] Place vertical roads symmetrically: early stages above, terminal stages nearest the skill below.
-- [ ] Preserve existing camera auto-fit, stage links, template behavior, and mastery logic in both orientations.
-- [ ] Validate `0`, `1`, `3`, and `10+` stages across mobile, desktop, and QHD widths.
+- [ ] Add keyboard shortcuts for desktop RoadMap orientation only if the toolbar toggle proves insufficient.
+- [ ] Profile orientation transitions with very large multi-road maps and add a reduced-motion fallback if needed.
 
 ## P3 — Skill Goal Progress
 
@@ -101,6 +103,9 @@ This file tracks the active implementation roadmap and completed project work. U
 
 ## Recently Completed
 
+- RoadMap Vertical Mode MVP: desktop now switches between horizontal and vertical canvas layouts from the toolbar and fullscreen, mobile always uses vertical roads, the skill anchors the top while terminal and earlier stages continue downward, vertical bezier links and insertion actions preserve the existing DAG, and adaptive camera auto-fit covers `0`, `1`, `3`, and `10` stage scenarios without model/storage changes.
+- Mobile Skill Experience MVP: mobile Act now starts with informative skill squircles showing level, active quest count and existing RoadMap goal progress; selecting by stable skill ID transitions to compact chips, while “Действовать сегодня” moves below tasks and starts collapsed. Desktop composition and data/storage models remain unchanged.
+- Mobile AddSkill/AddTask creation: routes below `760px` now reuse the existing forms in full-screen `SafeArea` pages with scroll/keyboard safety, visible validation, stable skill/stage context, cancel/save navigation, and desktop dialog preservation.
 - Task Inbox / “Задачник” MVP: added explicit `TaskScope.skill/inbox`, nullable skill identity for inbox tasks, title-only quick add, isolated completion/undo/delete UI in Act, storage compatibility for legacy tasks, and regression coverage proving inbox tasks do not affect skill XP, RoadMap progress, history, daily stats, achievements, rewards, resistance, or skill quest counts.
 - Milestone Animations MVP: persisted `25%`, `50%`, and `100%` goal milestone thresholds per skill/current goal, detects progress crossings from stage mastery, marks all crossed thresholds while showing only the strongest non-blocking banner for one action, and keeps sound deferred.
 - Start New RoadMap MVP: after setting the next goal, users can keep the current map, add a manual stage, or explicitly create a new empty active RoadMap; the old completed map is stored as an append-only `CompletedRoadmap` snapshot and surfaced in the timeline. Template-based new RoadMap creation remains disabled pending `RoadMapRecord` / `activeRoadMapId` boundaries.
@@ -111,6 +116,8 @@ This file tracks the active implementation roadmap and completed project work. U
 - `1.3.47`: added centralized skill reordering that preserves selection, quests, RoadMap links, XP and stable skill IDs.
 - `1.3.47`: added desktop drag handles and mobile long-press reordering with stable item keys; current local order survives save/load through the existing skill-list persistence order.
 - `1.3.47`: audited stage ordering and deferred it because RoadMap rendering, template reuse and next-stage tie-breaking still depend on DAG topology plus raw `treeNodes` order.
+- Reorder & Structure Editing MVP: linear RoadMap roads can now be reordered from a dedicated list editor; the operation rewires prerequisites while preserving stable stage IDs, linked quests, mastery, XP and persisted order.
+- Reorder follow-up: canvas drag/drop, branching/shared-root edits, cross-road moves, keyboard reordering and sync-friendly explicit order tokens remain deferred.
 - Mobile UX stabilization: fixed the empty status-row width reservation that truncated the `Действовать сегодня` header at narrow widths.
 - Mobile UX stabilization: simplified quest rows at `<760px`, keeping title, minimum action and primary metadata while moving edit/delete to existing swipe actions.
 - Mobile UX stabilization: widened compact skill chips and added a responsive seven-column AddSkill icon grid at narrow widths.

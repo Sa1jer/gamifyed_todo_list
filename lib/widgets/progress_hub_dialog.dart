@@ -762,60 +762,40 @@ void _showTaskDialogForNudge(
   String? initialMinimumAction,
   bool focusMinimumAction = false,
 }) {
-  showDialog(
-    context: context,
-    builder: (_) => AddTaskDialog(
-      isDark: state.isDark,
-      skillColor: skill.color,
-      skill: skill,
-      existing: existing,
-      initialTreeNodeId: initialTreeNodeId,
-      initialTitle: initialTitle,
-      initialMinimumAction: initialMinimumAction,
-      focusMinimumAction: focusMinimumAction,
-      onSave:
-          (
-            title,
-            description,
-            xp,
-            type,
-            freq,
-            customDays,
-            priority,
-            minimumAction,
-            subtasks,
-            tags,
-            notificationsEnabled,
-            notificationHour,
-            notificationMinute,
-            treeNodeId,
-          ) {
-            if (existing == null) {
-              state.addTask(
-                Task(
-                  id: uid(),
-                  title: title,
-                  description: description,
-                  skillId: skill.id,
-                  xpReward: xp,
-                  type: type,
-                  repeatFrequency: freq,
-                  repeatCustomDays: customDays,
-                  priority: priority,
-                  minimumAction: minimumAction,
-                  subtasks: subtasks,
-                  tags: tags,
-                  treeNodeId: treeNodeId,
-                  notificationsEnabled: notificationsEnabled,
-                  notificationHour: notificationHour,
-                  notificationMinute: notificationMinute,
-                ),
-              );
-            } else {
-              state.updateTask(
-                existing,
+  Widget buildForm(bool fullScreen) => AddTaskDialog(
+    isDark: state.isDark,
+    fullScreen: fullScreen,
+    skillColor: skill.color,
+    skill: skill,
+    existing: existing,
+    initialTreeNodeId: initialTreeNodeId,
+    initialTitle: initialTitle,
+    initialMinimumAction: initialMinimumAction,
+    focusMinimumAction: focusMinimumAction,
+    onSave:
+        (
+          title,
+          description,
+          xp,
+          type,
+          freq,
+          customDays,
+          priority,
+          minimumAction,
+          subtasks,
+          tags,
+          notificationsEnabled,
+          notificationHour,
+          notificationMinute,
+          treeNodeId,
+        ) {
+          if (existing == null) {
+            state.addTask(
+              Task(
+                id: uid(),
                 title: title,
                 description: description,
+                skillId: skill.id,
                 xpReward: xp,
                 type: type,
                 repeatFrequency: freq,
@@ -824,15 +804,42 @@ void _showTaskDialogForNudge(
                 minimumAction: minimumAction,
                 subtasks: subtasks,
                 tags: tags,
+                treeNodeId: treeNodeId,
                 notificationsEnabled: notificationsEnabled,
                 notificationHour: notificationHour,
                 notificationMinute: notificationMinute,
-                treeNodeId: treeNodeId,
-              );
-            }
-          },
-    ),
+              ),
+            );
+          } else {
+            state.updateTask(
+              existing,
+              title: title,
+              description: description,
+              xpReward: xp,
+              type: type,
+              repeatFrequency: freq,
+              repeatCustomDays: customDays,
+              priority: priority,
+              minimumAction: minimumAction,
+              subtasks: subtasks,
+              tags: tags,
+              notificationsEnabled: notificationsEnabled,
+              notificationHour: notificationHour,
+              notificationMinute: notificationMinute,
+              treeNodeId: treeNodeId,
+            );
+          }
+        },
   );
+
+  if (existing == null) {
+    showAdaptiveCreationForm<void>(
+      context: context,
+      builder: (_, fullScreen) => buildForm(fullScreen),
+    );
+  } else {
+    showDialog<void>(context: context, builder: (_) => buildForm(false));
+  }
 }
 
 void _showSkillGoalDialogForNudge(

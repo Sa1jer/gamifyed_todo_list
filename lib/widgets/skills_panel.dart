@@ -167,10 +167,11 @@ class SkillsPanel extends StatelessWidget {
   void _addDialog(BuildContext ctx) {
     final state = AppStateProvider.of(ctx);
     final isDark = state.isDark;
-    showDialog(
+    showAdaptiveCreationForm<void>(
       context: ctx,
-      builder: (_) => AddSkillDialog(
+      builder: (_, fullScreen) => AddSkillDialog(
         isDark: isDark,
+        fullScreen: fullScreen,
         onSave: (name, goal, checklist, color, icon, initialTreeNodes, _) {
           final skillId = uid();
           state.addSkill(

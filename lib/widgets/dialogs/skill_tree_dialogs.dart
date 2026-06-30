@@ -204,10 +204,11 @@ class _SkillTreeDialogState extends State<SkillTreeDialog> {
     Skill skill,
     SkillTreeNode node,
   ) {
-    showDialog(
+    showAdaptiveCreationForm<void>(
       context: context,
-      builder: (_) => AddTaskDialog(
+      builder: (_, fullScreen) => AddTaskDialog(
         isDark: widget.state.isDark,
+        fullScreen: fullScreen,
         skillColor: skill.color,
         skill: skill,
         initialTreeNodeId: node.id,

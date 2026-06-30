@@ -22,25 +22,54 @@ class _ActWorkspace extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        TodayDashboard(
-          onComplete: onComplete,
-          onMinimumAction: onMinimumAction,
-          onCreateFirstSkill: onCreateFirstSkill,
-          createFirstSkillButtonKey: createFirstSkillButtonKey,
-          nextQuestActionKey: nextQuestActionKey,
-        ),
-        const SizedBox(height: 8),
-        Expanded(
-          child: _SkillTaskWorkspace(
-            onComplete: onComplete,
-            onMinimumAction: onMinimumAction,
-            onOpenRoadmap: onOpenRoadmap,
-            createFirstQuestButtonKey: createFirstQuestButtonKey,
-          ),
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < kMobileFormBreakpoint) {
+          return Column(
+            children: [
+              const _CompactSkillSelector(),
+              const SizedBox(height: 8),
+              Expanded(
+                child: TasksPanel(
+                  onComplete: onComplete,
+                  onMinimumAction: onMinimumAction,
+                  createFirstQuestButtonKey: createFirstQuestButtonKey,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TodayDashboard(
+                initiallyExpanded: false,
+                onComplete: onComplete,
+                onMinimumAction: onMinimumAction,
+                onCreateFirstSkill: onCreateFirstSkill,
+                createFirstSkillButtonKey: createFirstSkillButtonKey,
+                nextQuestActionKey: nextQuestActionKey,
+              ),
+            ],
+          );
+        }
+
+        return Column(
+          children: [
+            TodayDashboard(
+              onComplete: onComplete,
+              onMinimumAction: onMinimumAction,
+              onCreateFirstSkill: onCreateFirstSkill,
+              createFirstSkillButtonKey: createFirstSkillButtonKey,
+              nextQuestActionKey: nextQuestActionKey,
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: _SkillTaskWorkspace(
+                onComplete: onComplete,
+                onMinimumAction: onMinimumAction,
+                onOpenRoadmap: onOpenRoadmap,
+                createFirstQuestButtonKey: createFirstQuestButtonKey,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

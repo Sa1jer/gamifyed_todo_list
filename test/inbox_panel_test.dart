@@ -196,4 +196,32 @@ void main() {
     state.dispose();
     await tester.pumpWidget(const SizedBox.shrink());
   });
+
+  testWidgets('inbox panel shows every completed quick task', (tester) async {
+    final state = await pumpInboxPanel(tester);
+
+    for (var i = 0; i < 5; i++) {
+      state.addInboxTask('Готовая задача $i');
+      state.completeTask(state.inboxTasks.last.id);
+    }
+    await tester.pumpAndSettle();
+
+    expect(find.text('Готово (5)'), findsOneWidget);
+    final inboxScroll = find.descendant(
+      of: find.byKey(const ValueKey('inbox-list')),
+      matching: find.byType(Scrollable),
+    );
+    for (var i = 4; i >= 0; i--) {
+      await tester.scrollUntilVisible(
+        find.text('Готовая задача $i'),
+        60,
+        scrollable: inboxScroll,
+      );
+      expect(find.text('Готовая задача $i'), findsOneWidget);
+    }
+
+    state.dispose();
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
 }

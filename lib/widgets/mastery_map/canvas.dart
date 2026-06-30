@@ -4,6 +4,7 @@ class _OrbMasteryMapCanvas extends StatefulWidget {
   final AppState state;
   final bool isDark;
   final _MasterySelection? selection;
+  final _RoadmapLayoutAxis layoutAxis;
   final ValueChanged<Skill> onSelectSkill;
   final VoidCallback onCollapse;
   final void Function(Skill skill, RoadmapTemplateConfig config)
@@ -21,6 +22,7 @@ class _OrbMasteryMapCanvas extends StatefulWidget {
     required this.state,
     required this.isDark,
     required this.selection,
+    required this.layoutAxis,
     required this.onSelectSkill,
     required this.onCollapse,
     required this.onApplyRoadmapTemplate,
@@ -123,6 +125,7 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
       viewport.height.round(),
       layout.size.width.round(),
       layout.size.height.round(),
+      layout.layoutAxis.name,
       templatePanelCollapsed ? 'panel-collapsed' : 'panel-open',
       selectedSkill.goal.trim().isEmpty ? 'no-goal' : 'goal',
       pathShape,
@@ -173,6 +176,7 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
         : _roadmapTargetViewport(
             viewport,
             hasStages ? templatePanelCollapsed : true,
+            layout.layoutAxis,
           );
     final scaleX = target.width / bounds.width;
     final scaleY = target.height / bounds.height;
@@ -180,10 +184,33 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
         .min(1.0, math.min(scaleX, scaleY))
         .clamp(_roadmapCameraMinScale, 1.0)
         .toDouble();
-    final dx = selectedSkill != null && hasStages
+    final selectedCenter = selectedSkill == null
+        ? null
+        : layout.skillPositions[selectedSkill];
+
+    final dx =
+        selectedSkill != null &&
+            hasStages &&
+            layout.layoutAxis == _RoadmapLayoutAxis.horizontal
         ? target.right - bounds.right * scale
+        : selectedCenter != null &&
+              layout.layoutAxis == _RoadmapLayoutAxis.vertical
+        ? target.center.dx - selectedCenter.dx * scale
         : target.center.dx - bounds.center.dx * scale;
-    final dy = target.center.dy - bounds.center.dy * scale;
+    final horizontalYOffset =
+        selectedSkill != null &&
+            layout.layoutAxis == _RoadmapLayoutAxis.horizontal
+        ? -60.0
+        : 0.0;
+
+    final dy =
+        (selectedSkill != null &&
+                hasStages &&
+                layout.layoutAxis == _RoadmapLayoutAxis.vertical
+            ? target.top - bounds.top * scale
+            : target.center.dy - bounds.center.dy * scale) +
+        horizontalYOffset;
+
     return Matrix4.identity()
       ..translateByDouble(dx, dy, 0, 1)
       ..scaleByDouble(scale, scale, scale, 1);
@@ -199,12 +226,22 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
     );
   }
 
-  Rect _roadmapTargetViewport(Size viewport, bool templatePanelCollapsed) {
+  Rect _roadmapTargetViewport(
+    Size viewport,
+    bool templatePanelCollapsed,
+    _RoadmapLayoutAxis layoutAxis,
+  ) {
     final isNarrow = viewport.width < 760;
-    final left = !isNarrow && !templatePanelCollapsed ? 284.0 : 28.0;
-    final top = 86.0;
-    final right = math.max(left + 160, viewport.width - 44);
-    final bottomPadding = isNarrow && !templatePanelCollapsed ? 238.0 : 48.0;
+    final vertical = layoutAxis == _RoadmapLayoutAxis.vertical;
+    final edgePadding = vertical ? 16.0 : 28.0;
+    final left = !isNarrow && !templatePanelCollapsed ? 284.0 : edgePadding;
+    final top = vertical ? 16.0 : 86.0;
+    final right = math.max(left + 160, viewport.width - edgePadding);
+    final bottomPadding = isNarrow && !templatePanelCollapsed
+        ? 238.0
+        : vertical
+        ? 12.0
+        : 48.0;
     final bottom = math.max(top + 160, viewport.height - bottomPadding);
     return Rect.fromLTRB(left, top, right, bottom);
   }
@@ -238,32 +275,34 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
     }
 
     if (selectedCenter != null) {
-      include(Rect.fromCenter(center: selectedCenter, width: 284, height: 264));
+      include(
+        layout.layoutAxis == _RoadmapLayoutAxis.vertical
+            ? Rect.fromLTWH(
+                selectedCenter.dx - 132,
+                selectedCenter.dy - 74.5,
+                264,
+                204,
+              )
+            : Rect.fromCenter(center: selectedCenter, width: 284, height: 264),
+      );
       if (selectedSkill.goal.trim().isNotEmpty) {
-        final goalWidth = _roadmapGoalAnchorWidth(selectedSkill.goal);
-        include(
-          Rect.fromCenter(
-            center:
-                selectedCenter +
-                const Offset(
-                  0,
-                  -_roadmapGoalAnchorTopOffset +
-                      _roadmapGoalAnchorEstimatedHeight / 2,
-                ),
-            width: goalWidth,
-            height: _roadmapGoalAnchorEstimatedHeight,
-          ),
-        );
+        include(_roadmapGoalAnchorRect(layout, selectedCenter));
       }
     }
     for (final position in layout.nodePositions.values) {
-      include(Rect.fromCenter(center: position, width: 202, height: 182));
+      include(
+        layout.layoutAxis == _RoadmapLayoutAxis.vertical
+            ? Rect.fromLTWH(position.dx - 77, position.dy - 50, 154, 151)
+            : Rect.fromCenter(center: position, width: 202, height: 182),
+      );
     }
     for (final point in layout.pathInsertionPoints) {
       include(Rect.fromCircle(center: point.position, radius: 30));
     }
 
-    return (hasBounds ? bounds : (Offset.zero & layout.size)).inflate(38);
+    return (hasBounds ? bounds : (Offset.zero & layout.size)).inflate(
+      layout.layoutAxis == _RoadmapLayoutAxis.vertical ? 8 : 38,
+    );
   }
 
   @override
@@ -274,6 +313,7 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
     final baseBg = isDark ? const Color(0xFF0D0D12) : const Color(0xFFF7F8FC);
     final bg = Color.lerp(baseBg, Colors.black, 0.75)!;
     return Container(
+      key: ValueKey('roadmap-canvas-${widget.layoutAxis.name}'),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(14),
@@ -435,13 +475,17 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
                               final center =
                                   layout.skillPositions[selectedSkill] ??
                                   Offset.zero;
-                              final width = _roadmapGoalAnchorWidth(
-                                selectedSkill.goal,
+                              final rect = _roadmapGoalAnchorRect(
+                                layout,
+                                center,
                               );
                               return Positioned(
-                                left: center.dx - width / 2,
-                                top: center.dy - _roadmapGoalAnchorTopOffset,
-                                width: width,
+                                key: ValueKey(
+                                  'roadmap-goal-anchor-${selectedSkill.id}',
+                                ),
+                                left: rect.left,
+                                top: rect.top,
+                                width: rect.width,
                                 child: _RoadmapGoalAnchor(
                                   skill: selectedSkill,
                                   isDark: isDark,
@@ -569,18 +613,30 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
     final pathCount = math.max(1, pathLayout.paths.length);
     final maxStagesInPath = math.max(1, pathLayout.maxStagesInPath);
     final stageCount = selectedSkill?.treeNodes.length ?? 0;
+    final vertical = widget.layoutAxis == _RoadmapLayoutAxis.vertical;
+    final verticalStageStep = _verticalStageStep(maxStagesInPath);
     const stageStep = 170.0;
     const terminalGap = 208.0;
     final focusLeftSafe = minSize.width < 760 ? 88.0 : 338.0;
     final visualSpan = stageCount == 0
         ? 0.0
+        : vertical
+        ? 210.0 + (maxStagesInPath - 1) * verticalStageStep
         : terminalGap + (maxStagesInPath - 1) * stageStep;
-    final roadWidth = focusLeftSafe + visualSpan + 360.0;
-    final roadHeight = 250.0 + pathCount * 132.0;
+    final roadWidth = vertical
+        ? 500.0 + (pathCount - 1) * 180.0
+        : focusLeftSafe + visualSpan + 360.0;
+    final roadHeight = vertical
+        ? visualSpan + 380.0
+        : 250.0 + pathCount * 132.0;
     final double width = math
         .max(
           minSize.width,
-          selectedSkill == null ? 720 : math.max(1060.0, roadWidth),
+          selectedSkill == null
+              ? 720
+              : vertical
+              ? math.max(900.0, roadWidth)
+              : math.max(1060.0, roadWidth),
         )
         .toDouble();
     final double height = math
@@ -592,6 +648,8 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
     final center = Offset(width / 2, height / 2);
     final selectedCenter = selectedSkill == null
         ? null
+        : vertical
+        ? _verticalRoadmapSkillCenter(Size(width, height))
         : _roadmapSkillCenter(Size(width, height), focusLeftSafe, visualSpan);
     final skillPositions = <Skill, Offset>{};
 
@@ -608,7 +666,12 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
 
     final nodePositions = selectedSkill == null || selectedCenter == null
         ? <String, Offset>{}
-        : _placeRoadmapNodes(pathLayout, selectedCenter);
+        : _placeRoadmapNodes(
+            pathLayout,
+            selectedCenter,
+            widget.layoutAxis,
+            verticalStageStep: verticalStageStep,
+          );
     final pathInsertionPoints = selectedSkill == null || selectedCenter == null
         ? const <_RoadmapInsertionPoint>[]
         : _placeRoadmapInsertionActions(pathLayout, nodePositions);
@@ -616,11 +679,43 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
     return _OrbCanvasLayout(
       size: Size(width, height),
       center: center,
+      layoutAxis: widget.layoutAxis,
       selectedSkill: selectedSkill,
       pathLayout: pathLayout,
       skillPositions: skillPositions,
       nodePositions: nodePositions,
       pathInsertionPoints: pathInsertionPoints,
+    );
+  }
+
+  Offset _verticalRoadmapSkillCenter(Size size) => Offset(size.width / 2, 180);
+
+  double _verticalStageStep(int stageCount) => switch (stageCount) {
+    <= 3 => 155.0,
+    <= 5 => 135.0,
+    <= 7 => 120.0,
+    <= 10 => 105.0,
+    _ => 92.0,
+  };
+
+  Rect _roadmapGoalAnchorRect(_OrbCanvasLayout layout, Offset skillCenter) {
+    final skill = layout.selectedSkill;
+    if (skill == null) return Rect.zero;
+    final measuredWidth = _roadmapGoalAnchorWidth(skill.goal);
+    if (layout.layoutAxis == _RoadmapLayoutAxis.vertical) {
+      final width = math.min(measuredWidth, 260.0);
+      return Rect.fromLTWH(
+        skillCenter.dx + 108,
+        skillCenter.dy - _roadmapGoalAnchorEstimatedHeight / 2,
+        width,
+        _roadmapGoalAnchorEstimatedHeight,
+      );
+    }
+    return Rect.fromLTWH(
+      skillCenter.dx - measuredWidth / 2,
+      skillCenter.dy - _roadmapGoalAnchorTopOffset,
+      measuredWidth,
+      _roadmapGoalAnchorEstimatedHeight,
     );
   }
 
@@ -660,13 +755,39 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
   Map<String, Offset> _placeRoadmapNodes(
     RoadmapPathLayout pathLayout,
     Offset skillCenter,
-  ) {
+    _RoadmapLayoutAxis layoutAxis, {
+    required double verticalStageStep,
+  }) {
     if (pathLayout.paths.isEmpty) return {};
     final positions = <String, Offset>{};
     final pathCount = pathLayout.paths.length;
     const terminalGap = 208.0;
     const stageStep = 170.0;
     const pathStep = 132.0;
+    if (layoutAxis == _RoadmapLayoutAxis.vertical) {
+      const verticalTerminalGap = 210.0;
+      const verticalPathStep = 180.0;
+      for (
+        var pathIndex = 0;
+        pathIndex < pathLayout.paths.length;
+        pathIndex++
+      ) {
+        final path = pathLayout.paths[pathIndex];
+        final x =
+            skillCenter.dx +
+            (pathIndex - (pathCount - 1) / 2) * verticalPathStep;
+        for (var stageIndex = 0; stageIndex < path.nodes.length; stageIndex++) {
+          final node = path.nodes[stageIndex];
+          final y =
+              skillCenter.dy +
+              verticalTerminalGap +
+              (path.nodes.length - 1 - stageIndex) * verticalStageStep;
+          positions.putIfAbsent(node.id, () => Offset(x, y));
+        }
+      }
+      return positions;
+    }
+
     for (var pathIndex = 0; pathIndex < pathLayout.paths.length; pathIndex++) {
       final path = pathLayout.paths[pathIndex];
       final y = skillCenter.dy + (pathIndex - (pathCount - 1) / 2) * pathStep;
@@ -722,6 +843,7 @@ class _RoadmapInsertionPoint {
 class _OrbCanvasLayout {
   final Size size;
   final Offset center;
+  final _RoadmapLayoutAxis layoutAxis;
   final Skill? selectedSkill;
   final RoadmapPathLayout pathLayout;
   final Map<Skill, Offset> skillPositions;
@@ -731,6 +853,7 @@ class _OrbCanvasLayout {
   const _OrbCanvasLayout({
     required this.size,
     required this.center,
+    required this.layoutAxis,
     required this.selectedSkill,
     required this.pathLayout,
     required this.skillPositions,

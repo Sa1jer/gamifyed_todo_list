@@ -1061,6 +1061,8 @@ class DlgField extends StatelessWidget {
   final TextEditingController ctrl;
   final Color fBg, txt, sub, bdr;
   final int min;
+  final Key? fieldKey;
+  final ValueChanged<String>? onChanged;
   const DlgField({
     super.key,
     required this.label,
@@ -1070,6 +1072,8 @@ class DlgField extends StatelessWidget {
     required this.sub,
     required this.bdr,
     this.min = 1,
+    this.fieldKey,
+    this.onChanged,
   });
   @override
   Widget build(BuildContext context) => Column(
@@ -1084,7 +1088,9 @@ class DlgField extends StatelessWidget {
           border: Border.all(color: bdr),
         ),
         child: TextField(
+          key: fieldKey,
           controller: ctrl,
+          onChanged: onChanged,
           style: TextStyle(color: txt, fontSize: 14),
           minLines: min,
           maxLines: min == 1 ? 1 : 4,
@@ -1096,6 +1102,60 @@ class DlgField extends StatelessWidget {
       ),
     ],
   );
+}
+
+class MobileFormPage extends StatelessWidget {
+  final Key pageKey;
+  final Key saveKey;
+  final String title;
+  final Color backgroundColor;
+  final Color accentColor;
+  final VoidCallback? onSave;
+  final Widget child;
+
+  const MobileFormPage({
+    super.key,
+    required this.pageKey,
+    required this.saveKey,
+    required this.title,
+    required this.backgroundColor,
+    required this.accentColor,
+    required this.onSave,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      key: pageKey,
+      backgroundColor: backgroundColor,
+      resizeToAvoidBottomInset: true,
+      appBar: AppBar(
+        backgroundColor: backgroundColor,
+        surfaceTintColor: Colors.transparent,
+        leading: IconButton(
+          key: const ValueKey('mobile-form-cancel'),
+          tooltip: 'Отмена',
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.close_rounded),
+        ),
+        title: Text(title),
+        actions: [
+          TextButton(
+            key: saveKey,
+            onPressed: onSave,
+            style: TextButton.styleFrom(foregroundColor: accentColor),
+            child: const Text(
+              'Создать',
+              style: TextStyle(fontWeight: FontWeight.w900),
+            ),
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
+      body: SafeArea(top: false, child: child),
+    );
+  }
 }
 
 class DlgActions extends StatelessWidget {

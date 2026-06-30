@@ -11,6 +11,7 @@ import 'package:todo_list_app/storage_service.dart';
 import 'package:todo_list_app/utils.dart';
 import 'package:todo_list_app/widgets/dialogs.dart';
 import 'package:todo_list_app/widgets/skills_panel.dart';
+import 'package:todo_list_app/widgets/tasks_panel.dart';
 
 class InMemoryStorageService extends StorageService {
   List<Skill> skills = [];
@@ -1234,10 +1235,31 @@ void main() {
       find.byKey(const ValueKey('compact-skill-reorder-mobile-long')),
       findsOneWidget,
     );
-
-    final list = tester.widget<ReorderableListView>(
-      find.byKey(const ValueKey('compact-skill-list')),
+    expect(
+      find.byKey(ValueKey('compact-skill-reorder-$kInboxSkillId')),
+      findsNothing,
     );
+
+    final listFinder = find.byKey(const ValueKey('compact-skill-list'));
+    await tester.drag(listFinder, const Offset(-320, 0));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Задачник'), findsOneWidget);
+    expect(
+      find.byKey(ValueKey('compact-skill-reorder-$kInboxSkillId')),
+      findsNothing,
+    );
+    await tester.tap(find.text('Задачник'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Быстрые To-do без XP'), findsOneWidget);
+
+    await tester.tap(find.text('Задачник').first);
+    await tester.pumpAndSettle();
+    await tester.drag(listFinder, const Offset(320, 0));
+    await tester.pumpAndSettle();
+
+    final list = tester.widget<ReorderableListView>(listFinder);
     list.onReorderItem!.call(0, 1);
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
@@ -1251,6 +1273,144 @@ void main() {
     expect(
       find.text('Очень длинное название мобильного навыка'),
       findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+
+  testWidgets(
+    'mobile skill experience expands, reports progress, and collapses',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      const skillId = 'mobile-experience';
+      const skillName = 'Очень длинное название навыка для мобильного экрана';
+      final storage = InMemoryStorageService()
+        .._onboardingSeen = true
+        ..skills = [
+          Skill(
+            id: skillId,
+            name: skillName,
+            goal: 'Дойти до уверенного результата',
+            color: const Color(0xFF4A9EFF),
+            icon: Icons.auto_stories_rounded,
+            level: 4,
+            treeNodes: [
+              SkillTreeNode(
+                id: 'stage-done',
+                title: 'Основа',
+                isMastered: true,
+              ),
+              SkillTreeNode(id: 'stage-next', title: 'Практика'),
+            ],
+          ),
+        ]
+        ..tasks = [
+          Task(
+            id: 'mobile-active-1',
+            title: 'Первый квест',
+            skillId: skillId,
+            xpReward: 20,
+            type: TaskType.shortTerm,
+          ),
+          Task(
+            id: 'mobile-active-2',
+            title: 'Второй квест',
+            skillId: skillId,
+            xpReward: 20,
+            type: TaskType.shortTerm,
+          ),
+          Task(
+            id: 'mobile-completed',
+            title: 'Завершённый квест',
+            skillId: skillId,
+            xpReward: 20,
+            type: TaskType.shortTerm,
+            isDone: true,
+          ),
+        ];
+      await storage.init();
+
+      await tester.pumpWidget(RPGApp(storage: storage));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      final expandedPanel = find.byKey(
+        const ValueKey('mobile-skill-panel-expanded'),
+      );
+      final skillCard = find.byKey(
+        const ValueKey('mobile-expanded-skill-mobile-experience'),
+      );
+      expect(expandedPanel, findsOneWidget);
+      expect(skillCard, findsOneWidget);
+      expect(find.text(skillName), findsOneWidget);
+      expect(find.text('Ур. 4'), findsOneWidget);
+      expect(find.text('2 квеста'), findsOneWidget);
+      expect(find.text('50%'), findsOneWidget);
+      expect(
+        tester.getTopLeft(expandedPanel).dy,
+        lessThan(tester.getTopLeft(find.text('Действовать сегодня')).dy),
+      );
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(skillCard);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('mobile-skill-panel-compact')),
+        findsOneWidget,
+      );
+      expect(find.text('Фокус: $skillName'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('mobile-skill-list-compact')),
+        findsOneWidget,
+      );
+
+      tester.view.physicalSize = const Size(700, 800);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Фокус: $skillName'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    },
+  );
+
+  testWidgets('mobile skill without RoadMap stages has neutral progress', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = InMemoryStorageService()
+      .._onboardingSeen = true
+      ..skills = [
+        Skill(
+          id: 'mobile-empty-roadmap',
+          name: 'Навык без этапов',
+          goal: 'Добавить этапы позже',
+          color: const Color(0xFFFF9500),
+          icon: Icons.lightbulb_outline_rounded,
+        ),
+      ];
+    await storage.init();
+
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.text('Этапы не добавлены'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('mobile-skill-progress-mobile-empty-roadmap')),
+      findsNothing,
     );
     expect(tester.takeException(), isNull);
 
@@ -1516,6 +1676,284 @@ void main() {
     await tester.pump();
   });
 
+  testWidgets('desktop RoadMap toggles horizontal and vertical layouts', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final root = SkillTreeNode(id: 'layout-root', title: 'Старт');
+    final middle = SkillTreeNode(
+      id: 'layout-middle',
+      title: 'Практика',
+      prerequisiteIds: [root.id],
+    );
+    final terminal = SkillTreeNode(
+      id: 'layout-terminal',
+      title: 'Результат',
+      prerequisiteIds: [middle.id],
+    );
+    final storage = InMemoryStorageService()
+      .._onboardingSeen = true
+      ..skills = [
+        Skill(
+          id: 'layout-skill',
+          name: 'Ориентация RoadMap',
+          goal: 'Проверить обе раскладки',
+          color: const Color(0xFF4A9EFF),
+          icon: Icons.route_rounded,
+          treeNodes: [root, middle, terminal],
+        ),
+      ];
+    await storage.init();
+
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(find.byIcon(Icons.account_tree).first);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('roadmap-canvas-horizontal')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('roadmap-layout-horizontal')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('roadmap-layout-vertical')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('map-skill-orb-layout-skill')));
+    await tester.pumpAndSettle();
+
+    Finder node(String id) => find.byKey(ValueKey('map-node-layout-skill-$id'));
+
+    final horizontalRoot = tester.getCenter(node(root.id));
+    final horizontalMiddle = tester.getCenter(node(middle.id));
+    final horizontalTerminal = tester.getCenter(node(terminal.id));
+    expect(horizontalRoot.dx, lessThan(horizontalMiddle.dx));
+    expect(horizontalMiddle.dx, lessThan(horizontalTerminal.dx));
+    expect((horizontalRoot.dy - horizontalTerminal.dy).abs(), lessThan(2));
+
+    await tester.tap(find.byKey(const ValueKey('roadmap-layout-vertical')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('roadmap-canvas-vertical')),
+      findsOneWidget,
+    );
+    final verticalRoot = tester.getCenter(node(root.id));
+    final verticalMiddle = tester.getCenter(node(middle.id));
+    final verticalTerminal = tester.getCenter(node(terminal.id));
+    final verticalSkillRect = tester.getRect(
+      find.byKey(const ValueKey('map-skill-surface-layout-skill')),
+    );
+    final verticalGoalRect = tester.getRect(
+      find.byKey(const ValueKey('roadmap-goal-anchor-layout-skill')),
+    );
+    final verticalCanvasRect = tester.getRect(
+      find.byKey(const ValueKey('roadmap-canvas-vertical')),
+    );
+    final verticalViewer = tester.widget<InteractiveViewer>(
+      find.descendant(
+        of: find.byKey(const ValueKey('roadmap-canvas-vertical')),
+        matching: find.byType(InteractiveViewer),
+      ),
+    );
+    expect(verticalSkillRect.center.dy, lessThan(verticalTerminal.dy));
+    expect(verticalTerminal.dy, lessThan(verticalMiddle.dy));
+    expect(verticalMiddle.dy, lessThan(verticalRoot.dy));
+    expect((verticalRoot.dx - verticalTerminal.dx).abs(), lessThan(2));
+    expect(verticalGoalRect.left, greaterThan(verticalSkillRect.center.dx));
+    expect(
+      verticalSkillRect.center.dy,
+      lessThan(verticalCanvasRect.top + verticalCanvasRect.height * 0.35),
+    );
+    expect(
+      verticalRoot.dy,
+      greaterThan(verticalCanvasRect.top + verticalCanvasRect.height * 0.65),
+    );
+    expect(verticalSkillRect.top, lessThan(verticalCanvasRect.top + 48));
+    expect(
+      tester.getRect(node(root.id)).bottom,
+      greaterThan(verticalCanvasRect.bottom - 48),
+    );
+    expect(
+      verticalViewer.transformationController!.value.getMaxScaleOnAxis(),
+      greaterThan(0.6),
+    );
+    expect(
+      find.byKey(
+        const ValueKey('roadmap-insert-layout-skill-layout-root-layout-middle'),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Развернуть'));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('roadmap-canvas-vertical')),
+      findsNWidgets(2),
+    );
+    expect(find.byTooltip('Закрыть полноэкранную карту'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.byTooltip('Закрыть полноэкранную карту'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('roadmap-layout-horizontal')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('roadmap-canvas-horizontal')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+
+  testWidgets('vertical RoadMap auto-fits a ten-stage chain', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1920, 1080);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final stages = <SkillTreeNode>[];
+    for (var index = 0; index < 10; index++) {
+      stages.add(
+        SkillTreeNode(
+          id: 'long-stage-$index',
+          title: 'Этап ${index + 1}',
+          prerequisiteIds: index == 0 ? [] : ['long-stage-${index - 1}'],
+        ),
+      );
+    }
+    final storage = InMemoryStorageService()
+      .._onboardingSeen = true
+      ..skills = [
+        Skill(
+          id: 'long-roadmap',
+          name: 'Длинная RoadMap',
+          goal: 'Пройти десять этапов',
+          color: const Color(0xFF34C759),
+          icon: Icons.stairs_rounded,
+          treeNodes: stages,
+        ),
+      ];
+    await storage.init();
+
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(find.byIcon(Icons.account_tree).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('map-skill-orb-long-roadmap')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('roadmap-layout-vertical')));
+    await tester.pumpAndSettle();
+
+    final canvasRect = tester.getRect(
+      find.byKey(const ValueKey('roadmap-canvas-vertical')),
+    );
+    final firstRect = tester.getRect(
+      find.byKey(const ValueKey('map-node-long-roadmap-long-stage-0')),
+    );
+    final terminalRect = tester.getRect(
+      find.byKey(const ValueKey('map-node-long-roadmap-long-stage-9')),
+    );
+    final verticalViewer = tester.widget<InteractiveViewer>(
+      find.descendant(
+        of: find.byKey(const ValueKey('roadmap-canvas-vertical')),
+        matching: find.byType(InteractiveViewer),
+      ),
+    );
+    expect(canvasRect.overlaps(firstRect), isTrue);
+    expect(canvasRect.overlaps(terminalRect), isTrue);
+    expect(firstRect.center.dy, greaterThan(terminalRect.center.dy));
+    expect(
+      verticalViewer.transformationController!.value.getMaxScaleOnAxis(),
+      greaterThan(0.45),
+    );
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+
+  testWidgets('mobile vertical RoadMap handles zero and one stages', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = InMemoryStorageService()
+      .._onboardingSeen = true
+      ..skills = [
+        Skill(
+          id: 'empty-roadmap',
+          name: 'Без этапов',
+          goal: 'Добавить путь позже',
+          color: const Color(0xFFFF9500),
+          icon: Icons.hourglass_empty_rounded,
+        ),
+        Skill(
+          id: 'single-roadmap',
+          name: 'Один этап',
+          goal: 'Пройти первый шаг',
+          color: const Color(0xFF4A9EFF),
+          icon: Icons.looks_one_rounded,
+          treeNodes: [SkillTreeNode(id: 'single-stage', title: 'Первый шаг')],
+        ),
+      ];
+    await storage.init();
+
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(find.text('Карта').last);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('roadmap-canvas-vertical')),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const ValueKey('map-skill-orb-empty-roadmap')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('map-node-empty-roadmap-single-stage')),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.text('Назад к навыкам'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('map-skill-orb-single-roadmap')),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('map-node-single-roadmap-single-stage')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('roadmap-canvas-vertical')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+
   testWidgets('mobile Act and RoadMap stay readable at 360dp', (
     WidgetTester tester,
   ) async {
@@ -1536,7 +1974,19 @@ void main() {
           goal: 'Выпустить устойчивую мобильную версию',
           color: const Color(0xFF4A9EFF),
           icon: Icons.phone_android,
-          treeNodes: [SkillTreeNode(id: 'mobile-stage', title: 'Основа')],
+          treeNodes: [
+            SkillTreeNode(id: 'mobile-stage', title: 'Основа'),
+            SkillTreeNode(
+              id: 'mobile-stage-middle',
+              title: 'Практика',
+              prerequisiteIds: ['mobile-stage'],
+            ),
+            SkillTreeNode(
+              id: 'mobile-stage-terminal',
+              title: 'Результат',
+              prerequisiteIds: ['mobile-stage-middle'],
+            ),
+          ],
         ),
       ]
       ..tasks = [
@@ -1559,6 +2009,16 @@ void main() {
     expect(find.text('Действовать сегодня'), findsOneWidget);
     expect(find.text('Быстрая задача'), findsNothing);
     expect(find.textContaining('Быстрые To-do'), findsNothing);
+    expect(
+      find.byKey(const ValueKey('mobile-skill-panel-expanded')),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey('mobile-expanded-skill-mobile-skill')),
+    );
+    await tester.pumpAndSettle();
+
     expect(find.textContaining(taskTitle), findsWidgets);
     expect(find.textContaining('Минимум:'), findsWidgets);
     expect(tester.takeException(), isNull);
@@ -1597,6 +2057,35 @@ void main() {
     await tester.tap(mobileSkillChip);
     await tester.pumpAndSettle();
 
+    expect(
+      find.byKey(const ValueKey('roadmap-canvas-vertical')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('roadmap-layout-horizontal')),
+      findsNothing,
+    );
+    expect(find.byKey(const ValueKey('roadmap-layout-vertical')), findsNothing);
+    final mobileRoot = tester.getCenter(
+      find.byKey(const ValueKey('map-node-mobile-skill-mobile-stage')),
+    );
+    final mobileMiddle = tester.getCenter(
+      find.byKey(const ValueKey('map-node-mobile-skill-mobile-stage-middle')),
+    );
+    final mobileTerminal = tester.getCenter(
+      find.byKey(const ValueKey('map-node-mobile-skill-mobile-stage-terminal')),
+    );
+    final mobileSkill = tester.getCenter(
+      find.byKey(const ValueKey('map-skill-surface-mobile-skill')),
+    );
+    final mobileGoal = tester.getRect(
+      find.byKey(const ValueKey('roadmap-goal-anchor-mobile-skill')),
+    );
+    expect(mobileSkill.dy, lessThan(mobileTerminal.dy));
+    expect(mobileTerminal.dy, lessThan(mobileMiddle.dy));
+    expect(mobileMiddle.dy, lessThan(mobileRoot.dy));
+    expect((mobileRoot.dx - mobileTerminal.dx).abs(), lessThan(2));
+    expect(mobileGoal.left, greaterThan(mobileSkill.dx));
     expect(find.text('Шаблон RoadMap'), findsNothing);
     expect(find.text('Шаблоны'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -1628,6 +2117,212 @@ void main() {
     final delegate =
         grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
     expect(delegate.crossAxisCount, 7);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('mobile AddSkill opens full-screen and validates save/cancel', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = InMemoryStorageService().._onboardingSeen = true;
+    await storage.init();
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    await tester.tap(find.byKey(const ValueKey('mobile-add-skill-open')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('mobile-add-skill-page')), findsOneWidget);
+    expect(find.byType(Dialog), findsNothing);
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.byKey(const ValueKey('mobile-add-skill-save')));
+    await tester.pump();
+    expect(find.text('Введите название навыка'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.byKey(const ValueKey('mobile-form-cancel')));
+    await tester.pumpAndSettle();
+    expect(storage.skills.where((skill) => skill.id != kInboxSkillId), isEmpty);
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.byKey(const ValueKey('mobile-add-skill-open')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('add-skill-name-field')),
+      '  Мобильная разработка  ',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('add-skill-goal-field')),
+      'Собрать приложение',
+    );
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.byKey(const ValueKey('mobile-add-skill-save')));
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
+
+    final userSkills = storage.skills
+        .where((skill) => skill.id != kInboxSkillId)
+        .toList();
+    expect(userSkills, hasLength(1));
+    expect(userSkills.single.name, 'Мобильная разработка');
+    expect(userSkills.single.goal, 'Собрать приложение');
+    expect(find.byKey(const ValueKey('mobile-add-skill-page')), findsNothing);
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+
+  testWidgets('mobile AddTask keeps original stable skill id', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = InMemoryStorageService();
+    await storage.init();
+    final state = AppState(storage: storage, seedDefaults: false);
+    final firstSkill = Skill(
+      id: 'mobile-task-a',
+      name: 'Flutter',
+      goal: 'Создать квест',
+      color: const Color(0xFF4A9EFF),
+      icon: Icons.code,
+      treeNodes: [SkillTreeNode(id: 'stage-a', title: 'Основа')],
+    );
+    final secondSkill = Skill(
+      id: 'mobile-task-b',
+      name: 'Фитнес',
+      goal: 'Не получить чужой квест',
+      color: const Color(0xFFFF9500),
+      icon: Icons.fitness_center,
+    );
+    state.addSkill(firstSkill);
+    state.addSkill(secondSkill);
+    state.selectSkill(firstSkill.id);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AnimatedBuilder(
+          animation: state,
+          builder: (context, _) => AppStateProvider(
+            state: state,
+            child: Scaffold(
+              body: TasksPanel(
+                onComplete: (_, _) {},
+                onMinimumAction: (_, _) {},
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final openButton = find.byKey(
+      const ValueKey('add-task-button-mobile-task-a'),
+    );
+    await tester.tap(openButton);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('mobile-add-task-page')), findsOneWidget);
+    expect(find.byType(Dialog), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('mobile-add-task-save')));
+    await tester.pump();
+    expect(find.text('Введите название квеста'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('mobile-form-cancel')));
+    await tester.pumpAndSettle();
+    expect(state.tasks, isEmpty);
+
+    await tester.tap(openButton);
+    await tester.pumpAndSettle();
+    state.selectSkill(secondSkill.id);
+    await tester.enterText(
+      find.byKey(const ValueKey('add-task-title-field')),
+      '  Проверить stable id  ',
+    );
+    await tester.tap(find.byKey(const ValueKey('mobile-add-task-save')));
+    await tester.pumpAndSettle();
+
+    expect(state.tasks, hasLength(1));
+    expect(state.tasks.single.title, 'Проверить stable id');
+    expect(state.tasks.single.skillId, firstSkill.id);
+    expect(state.tasks.single.treeNodeId, isNull);
+    expect(find.byKey(const ValueKey('mobile-add-task-page')), findsNothing);
+    expect(tester.takeException(), isNull);
+
+    state.dispose();
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+
+  testWidgets('mobile AddTask preserves explicit RoadMap stage id', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final stage = SkillTreeNode(id: 'mobile-stage', title: 'Основа');
+    final skill = Skill(
+      id: 'mobile-stage-skill',
+      name: 'Flutter',
+      goal: 'Проверить контекст этапа',
+      color: const Color(0xFF4A9EFF),
+      icon: Icons.code,
+      treeNodes: [stage],
+    );
+    String? savedTreeNodeId;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: FilledButton(
+                key: const ValueKey('open-stage-task-form'),
+                onPressed: () => showAdaptiveCreationForm<void>(
+                  context: context,
+                  builder: (_, fullScreen) => AddTaskDialog(
+                    isDark: true,
+                    fullScreen: fullScreen,
+                    skillColor: skill.color,
+                    skill: skill,
+                    initialTreeNodeId: stage.id,
+                    onSave:
+                        (_, _, _, _, _, _, _, _, _, _, _, _, _, treeNodeId) =>
+                            savedTreeNodeId = treeNodeId,
+                  ),
+                ),
+                child: const Text('Открыть'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('open-stage-task-form')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('mobile-add-task-page')), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const ValueKey('add-task-title-field')),
+      'Квест этапа',
+    );
+    await tester.tap(find.byKey(const ValueKey('mobile-add-task-save')));
+    await tester.pumpAndSettle();
+
+    expect(savedTreeNodeId, stage.id);
     expect(tester.takeException(), isNull);
   });
 

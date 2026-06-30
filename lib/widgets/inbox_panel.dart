@@ -241,20 +241,17 @@ class _InboxPanelState extends State<InboxPanel> {
                                     ),
                                   ),
                                 ),
-                              ...done
-                                  .take(3)
-                                  .map(
-                                    (task) => _InboxTaskRow(
-                                      key: ValueKey('inbox-done-${task.id}'),
-                                      task: task,
-                                      isDark: isDark,
-                                      color: accent,
-                                      onComplete: widget.onComplete,
-                                      onUndo: () =>
-                                          state.uncompleteTask(task.id),
-                                      onDelete: () => state.removeTask(task.id),
-                                    ),
-                                  ),
+                              ...done.map(
+                                (task) => _InboxTaskRow(
+                                  key: ValueKey('inbox-done-${task.id}'),
+                                  task: task,
+                                  isDark: isDark,
+                                  color: accent,
+                                  onComplete: widget.onComplete,
+                                  onUndo: () => state.uncompleteTask(task.id),
+                                  onDelete: () => state.removeTask(task.id),
+                                ),
+                              ),
                             ],
                           ),
                   ),
