@@ -212,7 +212,7 @@ class _MobilePlanningSkillSelector extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Expanded(
-                child: state.skills.isEmpty
+                child: state.roadmapSkills.isEmpty
                     ? Align(
                         alignment: Alignment.centerLeft,
                         child: Text(

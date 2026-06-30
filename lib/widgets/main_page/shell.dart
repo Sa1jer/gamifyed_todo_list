@@ -29,6 +29,8 @@ class _MainPageState extends State<MainPage> {
   final GlobalKey _profileBarKey = GlobalKey();
   WorkspaceMode _mode = WorkspaceMode.act;
   _RewardNotice? _rewardNotice;
+  GoalMilestoneEvent? _goalMilestoneNotice;
+  AppState? _eventState;
   Offset? _rewardNoticeAnchor;
   int _debugAdminTapCount = 0;
   DateTime? _lastDebugAdminTapAt;
@@ -42,7 +44,18 @@ class _MainPageState extends State<MainPage> {
   String? _roadmapFocusSkillId;
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final state = AppStateProvider.of(context);
+    if (_eventState == state) return;
+    _eventState?.removeListener(_handleStateEvents);
+    _eventState = state;
+    _eventState?.addListener(_handleStateEvents);
+  }
+
+  @override
   void dispose() {
+    _eventState?.removeListener(_handleStateEvents);
     _tutorialStepDelayTimer?.cancel();
     super.dispose();
   }
@@ -108,6 +121,26 @@ class _MainPageState extends State<MainPage> {
       );
       _rewardNoticeAnchor = _resolveRewardsButtonAnchor();
     });
+  }
+
+  void _handleStateEvents() {
+    final state = _eventState;
+    if (state == null || !mounted) return;
+    _showGoalMilestoneNotifications(state);
+  }
+
+  void _showGoalMilestoneNotifications(AppState state) {
+    final events = state.consumeGoalMilestoneNotifications();
+    if (events.isEmpty || !mounted) return;
+    setState(() => _goalMilestoneNotice = events.last);
+  }
+
+  void _openMilestoneRoadmap(AppState state, GoalMilestoneEvent event) {
+    final skill = state.roadmapSkills
+        .where((item) => item.id == event.skillId)
+        .firstOrNull;
+    if (skill == null) return;
+    _openRoadmapForSkill(state, skill);
   }
 
   Offset? _resolveRewardsButtonAnchor() {
@@ -317,7 +350,10 @@ class _MainPageState extends State<MainPage> {
   }
 
   void _openRoadmapTutorialTarget(AppState state) {
-    final skill = state.selectedSkill ?? state.skills.firstOrNull;
+    final selected = state.selectedSkill;
+    final skill = selected?.id == kInboxSkillId
+        ? state.roadmapSkills.firstOrNull
+        : selected ?? state.roadmapSkills.firstOrNull;
     if (skill != null) {
       _openRoadmapForSkill(state, skill);
     } else {
@@ -645,7 +681,10 @@ class _MainPageState extends State<MainPage> {
     AppState state, {
     bool showTutorialHints = false,
   }) {
-    final skill = state.selectedSkill ?? state.skills.firstOrNull;
+    final selected = state.selectedSkill;
+    final skill = selected?.id == kInboxSkillId
+        ? state.roadmapSkills.firstOrNull
+        : selected ?? state.roadmapSkills.firstOrNull;
     if (skill == null) return;
     if (state.selectedSkillId != skill.id) {
       state.selectSkill(skill.id);
@@ -831,6 +870,22 @@ class _MainPageState extends State<MainPage> {
                   isDark: isDark,
                   onShow: () => _openRewardsDialog(s),
                   onHide: () => setState(() => _rewardNotice = null),
+                ),
+              if (_goalMilestoneNotice != null)
+                GoalMilestoneBanner(
+                  key: ValueKey('goal-milestone-${_goalMilestoneNotice!.id}'),
+                  event: _goalMilestoneNotice!,
+                  isDark: isDark,
+                  onDismiss: () => setState(() => _goalMilestoneNotice = null),
+                  onOpenRoadmap:
+                      _goalMilestoneNotice!.milestone == GoalMilestone.complete
+                      ? () {
+                          final event = _goalMilestoneNotice;
+                          if (event == null) return;
+                          setState(() => _goalMilestoneNotice = null);
+                          _openMilestoneRoadmap(s, event);
+                        }
+                      : null,
                 ),
               if (tutorialStep != null)
                 _FirstRunTutorialOverlay(

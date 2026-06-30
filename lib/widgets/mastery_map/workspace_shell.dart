@@ -1,5 +1,49 @@
 part of '../mastery_map_workspace.dart';
 
+Future<NextRoadmapChoice?> _showNextGoalFlow(
+  BuildContext context, {
+  required AppState state,
+  required Skill skill,
+}) async {
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  final nextGoal = await showDialog<String>(
+    context: context,
+    useRootNavigator: true,
+    builder: (_) => NextGoalDialog(
+      isDark: state.isDark,
+      color: skill.color,
+      currentGoal: skill.goal,
+    ),
+  );
+  if (nextGoal == null) return null;
+
+  final result = state.setNextSkillGoal(skill.id, nextGoal);
+  if (result != NextGoalUpdateResult.updated || !context.mounted) return null;
+  final choice = await showDialog<NextRoadmapChoice>(
+    context: context,
+    useRootNavigator: true,
+    builder: (_) =>
+        NextRoadmapPromptDialog(isDark: state.isDark, color: skill.color),
+  );
+  if (!context.mounted) return choice;
+  final message = switch (choice) {
+    NextRoadmapChoice.createNew =>
+      state.startNewRoadmapForNextGoal(skill.id) ==
+              StartNewRoadmapResult.created
+          ? 'Новая RoadMap создана. Старая карта сохранена в архиве.'
+          : 'Не удалось создать новую RoadMap. Текущая карта не изменена.',
+    NextRoadmapChoice.addStage => 'Добавьте первый этап для следующей цели.',
+    NextRoadmapChoice.keepCurrent => 'Текущая RoadMap сохранена без изменений.',
+    null => 'Текущая RoadMap сохранена без изменений.',
+  };
+  messenger
+    ?..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+    );
+  return choice;
+}
+
 class MasteryMapWorkspace extends StatefulWidget {
   final bool isDark;
   final String? focusSkillId;
@@ -54,7 +98,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
     final selection = _validSelection(state);
     final isDark = widget.isDark;
 
-    if (state.skills.isEmpty) {
+    if (state.roadmapSkills.isEmpty) {
       return AppPanel(
         isDark: isDark,
         child: EmptyStateMessage(
@@ -144,7 +188,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
   }
 
   Skill? _skillById(AppState state, String id) =>
-      state.skills.where((skill) => skill.id == id).firstOrNull;
+      state.roadmapSkills.where((skill) => skill.id == id).firstOrNull;
 
   void _toggleQuestFromMap(Task task, Offset position) {
     if (task.isDone) {

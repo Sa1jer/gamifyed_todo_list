@@ -303,6 +303,104 @@ class GoalSpec {
   }
 }
 
+class CompletedGoal {
+  final String id;
+  final String skillId;
+  final String goalText;
+  final DateTime completedAt;
+  final double progressAtCompletion;
+  final int completedStages;
+  final int totalStages;
+
+  const CompletedGoal({
+    required this.id,
+    required this.skillId,
+    required this.goalText,
+    required this.completedAt,
+    required this.progressAtCompletion,
+    required this.completedStages,
+    required this.totalStages,
+  });
+}
+
+enum GoalMilestone {
+  quarter(25, 0.25),
+  half(50, 0.50),
+  complete(100, 1.0);
+
+  final int percent;
+  final double threshold;
+
+  const GoalMilestone(this.percent, this.threshold);
+}
+
+class RoadmapStageSnapshot {
+  final String id;
+  final String title;
+  final String description;
+  final int xpReward;
+  final int requiredQuestCompletions;
+  final List<String> prerequisiteIds;
+  final List<String> checklist;
+  final List<bool> checklistDone;
+  final bool isMastered;
+  final DateTime? masteredAt;
+
+  RoadmapStageSnapshot({
+    required this.id,
+    required this.title,
+    this.description = '',
+    this.xpReward = 20,
+    this.requiredQuestCompletions = 3,
+    Iterable<String> prerequisiteIds = const [],
+    Iterable<String> checklist = const [],
+    Iterable<bool> checklistDone = const [],
+    this.isMastered = false,
+    this.masteredAt,
+  }) : prerequisiteIds = List.unmodifiable(prerequisiteIds),
+       checklist = List.unmodifiable(checklist),
+       checklistDone = List.unmodifiable(checklistDone);
+
+  factory RoadmapStageSnapshot.fromNode(SkillTreeNode node) {
+    return RoadmapStageSnapshot(
+      id: node.id,
+      title: node.title,
+      description: node.description,
+      xpReward: node.xpReward,
+      requiredQuestCompletions: node.requiredQuestCompletions,
+      prerequisiteIds: node.prerequisiteIds,
+      checklist: node.checklist,
+      checklistDone: node.checklistDone,
+      isMastered: node.isMastered,
+      masteredAt: node.masteredAt,
+    );
+  }
+}
+
+class CompletedRoadmap {
+  final String id;
+  final String skillId;
+  final String? completedGoalId;
+  final String goalText;
+  final DateTime completedAt;
+  final double progressAtCompletion;
+  final int completedStages;
+  final int totalStages;
+  final List<RoadmapStageSnapshot> stages;
+
+  CompletedRoadmap({
+    required this.id,
+    required this.skillId,
+    this.completedGoalId,
+    required this.goalText,
+    required this.completedAt,
+    required this.progressAtCompletion,
+    required this.completedStages,
+    required this.totalStages,
+    Iterable<RoadmapStageSnapshot> stages = const [],
+  }) : stages = List.unmodifiable(stages);
+}
+
 class Skill with XPOwner {
   final String id;
   String name;
@@ -310,6 +408,9 @@ class Skill with XPOwner {
   List<String> checklist;
   List<bool> checklistDone;
   List<SkillTreeNode> treeNodes;
+  final List<CompletedGoal> completedGoals;
+  final List<CompletedRoadmap> completedRoadmaps;
+  final List<int> triggeredGoalMilestones;
   Color color;
   IconData icon;
   @override
@@ -325,11 +426,17 @@ class Skill with XPOwner {
     List<String>? checklist,
     List<bool>? checklistDone,
     List<SkillTreeNode>? treeNodes,
+    List<CompletedGoal>? completedGoals,
+    List<CompletedRoadmap>? completedRoadmaps,
+    List<int>? triggeredGoalMilestones,
     this.level = 1,
     this.xp = 0,
   }) : goalSpec = goalSpec ?? GoalSpec(text: goal),
        checklist = checklist ?? [],
        treeNodes = treeNodes ?? [],
+       completedGoals = completedGoals ?? [],
+       completedRoadmaps = completedRoadmaps ?? [],
+       triggeredGoalMilestones = triggeredGoalMilestones ?? [],
        checklistDone =
            checklistDone ?? List.filled((checklist ?? []).length, false);
 
@@ -400,11 +507,13 @@ const priorityColor = {
 
 // ─── Task ─────────────────────────────────────────────────────────────────────
 
+const String kInboxSkillId = '__system_inbox_skill__';
+
 class Task {
   final String id;
   String title;
   String? _description;
-  String skillId;
+  String? _skillId;
   int xpReward;
   TaskType type;
   bool isDone;
@@ -433,11 +542,20 @@ class Task {
   String get description => _description ?? '';
   set description(String value) => _description = value.trim();
 
+  String get skillId {
+    final normalized = _skillId?.trim();
+    return normalized == null || normalized.isEmpty
+        ? kInboxSkillId
+        : normalized;
+  }
+
+  set skillId(String value) => _skillId = value;
+
   Task({
     required this.id,
     required this.title,
     String description = '',
-    required this.skillId,
+    required String skillId,
     required this.xpReward,
     required this.type,
     this.isDone = false,
@@ -463,12 +581,40 @@ class Task {
     DateTime? createdAt,
     DateTime? updatedAt,
   }) : _description = description.trim(),
+       _skillId = skillId,
        subtasks = subtasks ?? [],
        consumedBuffIds = consumedBuffIds ?? [],
        subtaskDone = subtaskDone ?? List.filled((subtasks ?? []).length, false),
        tags = tags ?? [],
        createdAt = createdAt ?? DateTime.now(),
-       updatedAt = updatedAt ?? createdAt ?? DateTime.now();
+       updatedAt = updatedAt ?? createdAt ?? DateTime.now() {
+    normalizeScope();
+  }
+
+  bool get isInbox => skillId == kInboxSkillId;
+
+  bool get isSkillTask => skillId.trim().isNotEmpty && !isInbox;
+
+  void normalizeScope() {
+    if ((_skillId?.trim().isEmpty ?? true)) {
+      skillId = kInboxSkillId;
+    }
+    if (isInbox) {
+      treeNodeId = null;
+      xpReward = 0;
+      type = TaskType.shortTerm;
+      repeatFrequency = RepeatFrequency.daily;
+      repeatCustomDays = 1;
+      minimumAction = '';
+      minimumActionDoneAt = null;
+      minimumActionEarnedXP = 0;
+      bonusXpEarned = 0;
+      consumedBuffIds = const <String>[];
+      notificationsEnabled = false;
+      notificationHour = null;
+      notificationMinute = null;
+    }
+  }
 
   int get activeMultiplier {
     if (type != TaskType.repeating) return 1;

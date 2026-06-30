@@ -194,7 +194,9 @@ class StatsDialog extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         ...s.skills.map((sk) {
-          final skillTasks = s.tasks.where((t) => t.skillId == sk.id).toList();
+          final skillTasks = s.tasks
+              .where((t) => t.isSkillTask && t.skillId == sk.id)
+              .toList();
           final completed = skillTasks.where((t) => t.isDone).length;
           final total = skillTasks.length;
           final percent = total > 0 ? (completed / total * 100).round() : 0;

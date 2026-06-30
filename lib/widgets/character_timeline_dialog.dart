@@ -72,7 +72,7 @@ class CharacterTimelineDialog extends StatelessWidget {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          'Уровни, этапы мастерства, сопротивление и важные недели',
+                          'Цели, уровни, этапы мастерства и важные недели',
                           style: TextStyle(color: sub, fontSize: 12.5),
                         ),
                       ],
@@ -119,7 +119,16 @@ class CharacterTimelineDialog extends StatelessWidget {
   }
 }
 
-enum _TimelineKind { profile, skill, tree, boss, week, achievement }
+enum _TimelineKind {
+  profile,
+  skill,
+  goal,
+  roadmap,
+  tree,
+  boss,
+  week,
+  achievement,
+}
 
 class _CharacterTimelineSummary {
   final AppState state;
@@ -161,6 +170,36 @@ class _CharacterTimelineSummary {
     }
 
     for (final skill in state.skills) {
+      for (final goal in skill.completedGoals) {
+        events.add(
+          _TimelineEvent(
+            kind: _TimelineKind.goal,
+            at: goal.completedAt,
+            title: 'Цель достигнута: «${goal.goalText}»',
+            subtitle:
+                '${skill.name} • Этапы: ${goal.completedStages}/${goal.totalStages} • ${(goal.progressAtCompletion * 100).round()}%',
+            icon: Icons.flag_rounded,
+            color: skill.color,
+            importance: 82,
+          ),
+        );
+      }
+
+      for (final roadmap in skill.completedRoadmaps) {
+        events.add(
+          _TimelineEvent(
+            kind: _TimelineKind.roadmap,
+            at: roadmap.completedAt,
+            title: 'RoadMap сохранена: «${roadmap.goalText}»',
+            subtitle:
+                '${skill.name} • Архив этапов: ${roadmap.completedStages}/${roadmap.totalStages}',
+            icon: Icons.route_rounded,
+            color: skill.color,
+            importance: 78,
+          ),
+        );
+      }
+
       for (final node in skill.treeNodes.where((node) => node.isMastered)) {
         final masteredAt = node.masteredAt;
         if (masteredAt == null) continue;
@@ -284,6 +323,8 @@ class _TimelineEvent {
   String get kindLabel => switch (kind) {
     _TimelineKind.profile => 'Персонаж',
     _TimelineKind.skill => 'Навык',
+    _TimelineKind.goal => 'Цель',
+    _TimelineKind.roadmap => 'RoadMap',
     _TimelineKind.tree => 'Этап',
     _TimelineKind.boss => 'Сопротивление',
     _TimelineKind.week => 'Неделя',

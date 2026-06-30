@@ -7,6 +7,7 @@ import '../utils.dart';
 import 'shared.dart';
 import 'dialogs.dart';
 import 'goal_header.dart';
+import 'inbox_panel.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TASKS PANEL
@@ -40,7 +41,7 @@ class _TasksPanelState extends State<TasksPanel> {
     final skill = s.selectedSkill;
 
     if (skill == null) {
-      final hasSkills = s.skills.isNotEmpty;
+      final hasSkills = s.roadmapSkills.isNotEmpty;
       return Container(
         decoration: BoxDecoration(
           color: sfc,
@@ -79,6 +80,10 @@ class _TasksPanelState extends State<TasksPanel> {
           ),
         ),
       );
+    }
+
+    if (skill.id == kInboxSkillId) {
+      return InboxPanel(onComplete: widget.onComplete);
     }
 
     final allTasks = s.tasksForSkill(skill.id);

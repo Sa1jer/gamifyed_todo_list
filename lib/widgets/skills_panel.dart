@@ -97,7 +97,7 @@ class SkillsPanel extends StatelessWidget {
           Container(height: 1, color: bdr),
           Expanded(
             child: MotionFadeSlideSwitcher(
-              child: state.skills.isEmpty
+              child: state.roadmapSkills.isEmpty
                   ? _EmptySkillsState(
                       key: const ValueKey('skills-empty-state'),
                       isDark: isDark,
@@ -115,57 +115,34 @@ class SkillsPanel extends StatelessWidget {
                           key: ValueKey('skill-reorder-item-${sk.id}'),
                           children: [
                             Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              child: Row(
-                                children: [
-                                  ReorderableDragStartListener(
-                                    key: ValueKey(
-                                      'skill-reorder-handle-${sk.id}',
+                              padding: const EdgeInsets.fromLTRB(0, 4, 8, 4),
+                              child: _SkillReorderItem(
+                                index: i,
+                                skill: sk,
+                                handleColor: sub,
+                                child: MotionListItem(
+                                  key: ValueKey('skill-${sk.id}'),
+                                  index: i,
+                                  child: SkillCard(
+                                    skill: sk,
+                                    taskCount: state.activeTaskCountForSkill(
+                                      sk.id,
                                     ),
-                                    index: i,
-                                    child: Semantics(
-                                      label:
-                                          'Изменить порядок навыка ${sk.name}',
-                                      button: true,
-                                      child: Padding(
-                                        padding: const EdgeInsets.fromLTRB(
-                                          1,
-                                          12,
-                                          5,
-                                          12,
-                                        ),
-                                        child: Icon(
-                                          Icons.drag_indicator_rounded,
-                                          color: sub,
-                                          size: 20,
-                                        ),
-                                      ),
-                                    ),
+                                    isSelected: state.selectedSkillId == sk.id,
+                                    isDark: isDark,
+                                    onTap: () => state.selectSkill(sk.id),
+                                    onRoadmap: sk.id == kInboxSkillId
+                                        ? null
+                                        : () => onOpenRoadmap?.call(sk),
+                                    onEdit: sk.id == kInboxSkillId
+                                        ? null
+                                        : () => _editDialog(context, sk),
+                                    onDelete: sk.id == kInboxSkillId
+                                        ? null
+                                        : () =>
+                                              _confirmDeleteSkill(context, sk),
                                   ),
-                                  Expanded(
-                                    child: MotionListItem(
-                                      key: ValueKey('skill-${sk.id}'),
-                                      index: i,
-                                      child: SkillCard(
-                                        skill: sk,
-                                        taskCount: state
-                                            .activeTaskCountForSkill(sk.id),
-                                        isSelected:
-                                            state.selectedSkillId == sk.id,
-                                        isDark: isDark,
-                                        onTap: () => state.selectSkill(sk.id),
-                                        onRoadmap: () =>
-                                            onOpenRoadmap?.call(sk),
-                                        onEdit: () => _editDialog(context, sk),
-                                        onDelete: () =>
-                                            _confirmDeleteSkill(context, sk),
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                                ),
                               ),
                             ),
                             if (i < state.skills.length - 1)
@@ -237,7 +214,7 @@ class SkillsPanel extends StatelessWidget {
     final state = AppStateProvider.of(ctx);
     final isDark = state.isDark;
     final taskCount = state.tasks
-        .where((task) => task.skillId == skill.id)
+        .where((task) => task.isSkillTask && task.skillId == skill.id)
         .length;
     final txt = textColor(isDark);
     final sub = subtext(isDark);
@@ -344,6 +321,85 @@ class SkillsPanel extends StatelessWidget {
   }
 }
 
+class _SkillReorderItem extends StatefulWidget {
+  final int index;
+  final Skill skill;
+  final Color handleColor;
+  final Widget child;
+
+  const _SkillReorderItem({
+    required this.index,
+    required this.skill,
+    required this.handleColor,
+    required this.child,
+  });
+
+  @override
+  State<_SkillReorderItem> createState() => _SkillReorderItemState();
+}
+
+class _SkillReorderItemState extends State<_SkillReorderItem> {
+  bool _isHovered = false;
+
+  void _setHovered(bool value) {
+    if (_isHovered == value) return;
+    setState(() => _isHovered = value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final canReorder = widget.skill.id != kInboxSkillId;
+    final showHandle = canReorder && _isHovered;
+
+    return MouseRegion(
+      key: ValueKey('skill-reorder-region-${widget.skill.id}'),
+      onEnter: (_) => _setHovered(true),
+      onExit: (_) => _setHovered(false),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 20,
+            child: AnimatedSlide(
+              duration: kMotionStandard,
+              curve: kMotionCurve,
+              offset: showHandle ? Offset.zero : const Offset(-0.3, 0),
+              child: AnimatedOpacity(
+                key: ValueKey(
+                  'skill-reorder-handle-visibility-${widget.skill.id}',
+                ),
+                duration: kMotionFast,
+                curve: kMotionCurve,
+                opacity: showHandle ? 1 : 0,
+                child: canReorder
+                    ? ReorderableDragStartListener(
+                        key: ValueKey(
+                          'skill-reorder-handle-${widget.skill.id}',
+                        ),
+                        index: widget.index,
+                        child: Semantics(
+                          label: 'Изменить порядок навыка ${widget.skill.name}',
+                          button: true,
+                          child: SizedBox(
+                            height: 48,
+                            child: Icon(
+                              Icons.drag_indicator_rounded,
+                              color: widget.handleColor,
+                              size: 18,
+                            ),
+                          ),
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+              ),
+            ),
+          ),
+          Expanded(child: widget.child),
+        ],
+      ),
+    );
+  }
+}
+
 class _EmptySkillsState extends StatelessWidget {
   final bool isDark;
   final VoidCallback onAdd;
@@ -406,7 +462,8 @@ class SkillCard extends StatefulWidget {
   final Skill skill;
   final int taskCount;
   final bool isSelected, isDark;
-  final VoidCallback onTap, onRoadmap, onEdit, onDelete;
+  final VoidCallback onTap;
+  final VoidCallback? onRoadmap, onEdit, onDelete;
   const SkillCard({
     super.key,
     required this.skill,
@@ -428,6 +485,7 @@ class _SkillCardState extends State<SkillCard> {
   @override
   Widget build(BuildContext context) {
     final sk = widget.skill;
+    final isInboxSkill = sk.id == kInboxSkillId;
     final isDark = widget.isDark;
     final txt = textColor(isDark);
     final sub = subtext(isDark);
@@ -437,7 +495,11 @@ class _SkillCardState extends State<SkillCard> {
         : _h
         ? sk.color.withAlpha(isDark ? 10 : 8)
         : Colors.transparent;
-    final showActions = _h;
+    final showActions =
+        _h &&
+        (widget.onRoadmap != null ||
+            widget.onEdit != null ||
+            widget.onDelete != null);
 
     return MouseRegion(
       key: ValueKey('skill-card-hit-${sk.id}'),
@@ -500,8 +562,10 @@ class _SkillCardState extends State<SkillCard> {
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                            const SizedBox(width: 6),
-                            LvlBadge(level: sk.level, color: sk.color),
+                            if (!isInboxSkill) ...[
+                              const SizedBox(width: 6),
+                              LvlBadge(level: sk.level, color: sk.color),
+                            ],
                             if (widget.taskCount > 0) ...[
                               const SizedBox(width: 6),
                               Container(
@@ -528,6 +592,18 @@ class _SkillCardState extends State<SkillCard> {
                         const SizedBox(height: 5),
                         LayoutBuilder(
                           builder: (context, constraints) {
+                            if (isInboxSkill) {
+                              return Text(
+                                'Быстрые задачи без XP и RoadMap',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: sub,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              );
+                            }
                             final showMapProgress = constraints.maxWidth >= 190;
                             final showXpText = constraints.maxWidth >= 150;
 
@@ -590,31 +666,40 @@ class _SkillCardState extends State<SkillCard> {
                   alignment: Alignment.centerRight,
                   child: showActions
                       ? SizedBox(
-                          width: 75,
+                          width:
+                              25.0 *
+                              [
+                                widget.onRoadmap,
+                                widget.onEdit,
+                                widget.onDelete,
+                              ].whereType<VoidCallback>().length,
                           child: AnimatedOpacity(
                             duration: kMotionFast,
                             curve: kMotionCurve,
                             opacity: 1,
                             child: Row(
                               children: [
-                                MiniBtn(
-                                  icon: Icons.route_rounded,
-                                  color: sk.color,
-                                  tooltip: 'Открыть путь навыка в RoadMap',
-                                  onTap: widget.onRoadmap,
-                                ),
-                                MiniBtn(
-                                  icon: Icons.edit,
-                                  color: sub,
-                                  tooltip: 'Редактировать навык',
-                                  onTap: widget.onEdit,
-                                ),
-                                MiniBtn(
-                                  icon: Icons.delete_outline,
-                                  color: const Color(0xFFFF3B30),
-                                  tooltip: 'Удалить навык',
-                                  onTap: widget.onDelete,
-                                ),
+                                if (widget.onRoadmap != null)
+                                  MiniBtn(
+                                    icon: Icons.route_rounded,
+                                    color: sk.color,
+                                    tooltip: 'Открыть путь навыка в RoadMap',
+                                    onTap: widget.onRoadmap!,
+                                  ),
+                                if (widget.onEdit != null)
+                                  MiniBtn(
+                                    icon: Icons.edit,
+                                    color: sub,
+                                    tooltip: 'Редактировать навык',
+                                    onTap: widget.onEdit!,
+                                  ),
+                                if (widget.onDelete != null)
+                                  MiniBtn(
+                                    icon: Icons.delete_outline,
+                                    color: const Color(0xFFFF3B30),
+                                    tooltip: 'Удалить навык',
+                                    onTap: widget.onDelete!,
+                                  ),
                               ],
                             ),
                           ),

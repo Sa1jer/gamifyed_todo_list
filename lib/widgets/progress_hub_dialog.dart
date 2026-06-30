@@ -303,7 +303,7 @@ class ProgressHubContent extends StatelessWidget {
                             ? onOpenWeekly
                             : onOpenCharacterTimeline,
                       ),
-                      if (state.skills.isNotEmpty) ...[
+                      if (state.roadmapSkills.isNotEmpty) ...[
                         const SizedBox(height: 14),
                         _ProgressReviewBlock(
                           isDark: isDark,
@@ -1346,7 +1346,7 @@ _ProgressContinuation _buildContinuation(
     );
   }
 
-  final firstSkill = state.skills.firstOrNull;
+  final firstSkill = state.roadmapSkills.firstOrNull;
   if (firstSkill != null) {
     final activeStage = firstSkill.treeNodes
         .where(

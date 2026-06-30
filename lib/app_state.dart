@@ -9,9 +9,43 @@ import 'notification_service.dart';
 import 'sfx_service.dart';
 import 'engines/achievement_engine.dart';
 import 'engines/boss_engine.dart';
+import 'engines/goal_milestone_engine.dart';
+import 'engines/goal_progress_engine.dart';
 import 'engines/roadmap_engine.dart';
 
 part 'app_state/provider.dart';
+
+enum NextGoalUpdateResult {
+  updated,
+  invalid,
+  unchanged,
+  notCompleted,
+  notFound,
+}
+
+enum StartNewRoadmapResult {
+  created,
+  notFound,
+  noCompletedGoal,
+  noStages,
+  notCompleted,
+}
+
+class GoalMilestoneEvent {
+  final String id;
+  final String skillId;
+  final String skillName;
+  final Color skillColor;
+  final GoalMilestone milestone;
+
+  const GoalMilestoneEvent({
+    required this.id,
+    required this.skillId,
+    required this.skillName,
+    required this.skillColor,
+    required this.milestone,
+  });
+}
 
 class AppState extends ChangeNotifier {
   static const double _minimumActionRatio = 0.3;
@@ -35,6 +69,7 @@ class AppState extends ChangeNotifier {
   final math.Random _random;
   final AchievementEngine _achievementEngine = const AchievementEngine();
   final BossEngine _bossEngine = const BossEngine();
+  final GoalMilestoneEngine _goalMilestoneEngine = const GoalMilestoneEngine();
   Timer? _resetTimer;
   Timer? _saveDebounceTimer;
   Future<void>? _saveInFlight;
@@ -91,6 +126,7 @@ class AppState extends ChangeNotifier {
   final List<RewardChest> _pendingRewardNotifications = [];
   final List<Buff> _pendingBuffNotifications = [];
   final List<Achievement> _pendingAchievementNotifications = [];
+  final List<GoalMilestoneEvent> _pendingGoalMilestoneNotifications = [];
   final Set<String> _dismissedCourseNudgeKeys = {};
   DailyStats? todayStats;
 
@@ -110,6 +146,7 @@ class AppState extends ChangeNotifier {
     if (seedDefaults) {
       _initDefaults();
     }
+    _ensureInboxSkill();
     _startResetTimer();
   }
 
@@ -290,8 +327,69 @@ class AppState extends ChangeNotifier {
       t.syncSubtaskDone();
     }
 
+    _ensureInboxSkill();
     _initAchievements();
     _recalculateBestStreakFromTasks();
+  }
+
+  Skill _createInboxSkill() {
+    return Skill(
+      id: kInboxSkillId,
+      name: 'Задачник',
+      goal: 'Быстрые задачи без XP и RoadMap',
+      color: const Color(0xFF34C759),
+      icon: Icons.inbox_rounded,
+    );
+  }
+
+  bool _ensureInboxSkill() {
+    final existingIndex = skills.indexWhere(
+      (skill) => skill.id == kInboxSkillId,
+    );
+    if (existingIndex == -1) {
+      skills.add(_createInboxSkill());
+      return true;
+    }
+
+    final inbox = skills[existingIndex];
+    var changed = false;
+    if (inbox.name != 'Задачник') {
+      inbox.name = 'Задачник';
+      changed = true;
+    }
+    if (inbox.goal != 'Быстрые задачи без XP и RoadMap') {
+      inbox.goal = 'Быстрые задачи без XP и RoadMap';
+      changed = true;
+    }
+    if (inbox.color != const Color(0xFF34C759)) {
+      inbox.color = const Color(0xFF34C759);
+      changed = true;
+    }
+    if (inbox.icon != Icons.inbox_rounded) {
+      inbox.icon = Icons.inbox_rounded;
+      changed = true;
+    }
+    if (inbox.level != 1) {
+      inbox.level = 1;
+      changed = true;
+    }
+    if (inbox.xp != 0) {
+      inbox.xp = 0;
+      changed = true;
+    }
+    if (inbox.checklist.isNotEmpty) {
+      inbox.checklist.clear();
+      changed = true;
+    }
+    if (inbox.checklistDone.isNotEmpty) {
+      inbox.checklistDone.clear();
+      changed = true;
+    }
+    if (inbox.treeNodes.isNotEmpty) {
+      inbox.treeNodes.clear();
+      changed = true;
+    }
+    return changed;
   }
 
   void _initAchievements() {
@@ -353,8 +451,10 @@ class AppState extends ChangeNotifier {
     }
     for (final t in tasks) {
       t.syncSubtaskDone();
+      t.normalizeScope();
       if (t.repeatCustomDays < 1) t.repeatCustomDays = 1;
     }
+    final inboxSkillChanged = _ensureInboxSkill();
 
     profile = loadedProfile;
     final protectionChanged = _refillStreakProtectionIfNeeded();
@@ -398,7 +498,7 @@ class AppState extends ChangeNotifier {
     final changed = _resetExpiredTasks();
     _syncAllBosses();
     _checkAchievements();
-    if (changed || protectionChanged) {
+    if (changed || protectionChanged || inboxSkillChanged) {
       await _saveAll(immediate: true);
     }
 
@@ -667,16 +767,17 @@ class AppState extends ChangeNotifier {
     return steps.firstOrNull ?? TutorialStepIds.coreCreateSkill;
   }
 
-  bool get _hasActiveTutorialQuest => tasks.any((task) => !task.isDone);
+  bool get _hasActiveTutorialQuest =>
+      tasks.any((task) => task.isSkillTask && !task.isDone);
 
   String _defaultCoreTutorialStep() {
-    if (skills.isEmpty) return TutorialStepIds.coreCreateSkill;
+    if (roadmapSkills.isEmpty) return TutorialStepIds.coreCreateSkill;
     if (_hasActiveTutorialQuest) return TutorialStepIds.coreCompleteQuest;
     return TutorialStepIds.coreCreateQuest;
   }
 
   String _normalizedCoreTutorialStep(String stepId) {
-    if (stepId == TutorialStepIds.coreCreateSkill && skills.isNotEmpty) {
+    if (stepId == TutorialStepIds.coreCreateSkill && roadmapSkills.isNotEmpty) {
       return _defaultCoreTutorialStep();
     }
     if (stepId == TutorialStepIds.coreCreateQuest && _hasActiveTutorialQuest) {
@@ -836,11 +937,22 @@ class AppState extends ChangeNotifier {
 
   // ── Queries ──────────────────────────────────────────────────────────────────
 
-  List<Task> tasksForSkill(String id) =>
-      tasks.where((t) => t.skillId == id).toList();
+  List<Task> get inboxTasks => tasks.where((task) => task.isInbox).toList();
+
+  List<Skill> get roadmapSkills =>
+      skills.where((skill) => skill.id != kInboxSkillId).toList();
+
+  List<Task> tasksForSkill(String id) => id == kInboxSkillId
+      ? inboxTasks
+      : tasks.where((t) => t.isSkillTask && t.skillId == id).toList();
 
   List<Task> tasksForTreeNode(String skillId, String nodeId) => tasks
-      .where((task) => task.skillId == skillId && task.treeNodeId == nodeId)
+      .where(
+        (task) =>
+            task.isSkillTask &&
+            task.skillId == skillId &&
+            task.treeNodeId == nodeId,
+      )
       .toList();
 
   int completedTasksForTreeNode(String skillId, String nodeId) =>
@@ -851,14 +963,15 @@ class AppState extends ChangeNotifier {
   ) {
     final active = <Task>[], completed = <Task>[];
     for (final t in tasks) {
-      if (t.skillId != skillId) continue;
+      if (!t.isSkillTask || t.skillId != skillId) continue;
       (t.isDone ? completed : active).add(t);
     }
     return (active: active, completed: completed);
   }
 
-  int activeTaskCountForSkill(String skillId) =>
-      tasks.where((t) => t.skillId == skillId && !t.isDone).length;
+  int activeTaskCountForSkill(String skillId) => tasks
+      .where((t) => t.isSkillTask && t.skillId == skillId && !t.isDone)
+      .length;
 
   Map<DateTime, List<HistoryEntry>> get completionHistoryByDate {
     assert(_historyCachesAreFreshForDebug());
@@ -1079,6 +1192,14 @@ class AppState extends ChangeNotifier {
     return result;
   }
 
+  List<GoalMilestoneEvent> consumeGoalMilestoneNotifications() {
+    final result = List<GoalMilestoneEvent>.of(
+      _pendingGoalMilestoneNotifications,
+    );
+    _pendingGoalMilestoneNotifications.clear();
+    return result;
+  }
+
   Skill? get selectedSkill {
     if (selectedSkillId == null) return null;
     return _skillById(selectedSkillId!);
@@ -1087,6 +1208,7 @@ class AppState extends ChangeNotifier {
   int get activeSkillCount => skills.length;
 
   int previewEarnedXP(Task task) {
+    if (task.isInbox) return 0;
     final totalReward = _totalRewardFor(task);
     if (task.type == TaskType.repeating) {
       return totalReward;
@@ -1101,6 +1223,7 @@ class AppState extends ChangeNotifier {
   }
 
   int previewMinimumActionXP(Task task) {
+    if (task.isInbox) return 0;
     if (!task.hasMinimumAction || task.isMinimumActionDone || task.isDone) {
       return 0;
     }
@@ -1108,6 +1231,7 @@ class AppState extends ChangeNotifier {
   }
 
   bool canCompleteMinimumAction(Task task) {
+    if (task.isInbox) return false;
     return task.hasMinimumAction && !task.isDone && !task.isMinimumActionDone;
   }
 
@@ -1137,10 +1261,12 @@ class AppState extends ChangeNotifier {
       }
       return null;
     }
+    if (task.isInbox) return _completeInboxTask(task);
 
     final now = DateTime.now();
-    final skill = _skillById(task.skillId);
-    final bossMomentsBefore = _bossMomentsForSkill(task.skillId);
+    final skillId = task.skillId;
+    final skill = _skillById(skillId);
+    final bossMomentsBefore = _bossMomentsForSkill(skillId);
     final nextStreak = task.type == TaskType.repeating
         ? task.streak + 1
         : task.streak;
@@ -1184,7 +1310,7 @@ class AppState extends ChangeNotifier {
     _checkAchievements();
     _checkBosses(task);
     _completeCoreTutorialAfterFirstAction();
-    final bossFeedback = _bossFeedbackForSkill(task.skillId, bossMomentsBefore);
+    final bossFeedback = _bossFeedbackForSkill(skillId, bossMomentsBefore);
     _syncTaskNotification(task);
     notifyListeners();
     _saveAll();
@@ -1199,6 +1325,21 @@ class AppState extends ChangeNotifier {
     );
   }
 
+  String _completeInboxTask(Task task) {
+    final now = DateTime.now();
+    task.isDone = true;
+    task.earnedXP = 0;
+    task.bonusXpEarned = 0;
+    task.consumedBuffIds = const <String>[];
+    task.lastCompletedAt = now;
+    task.updatedAt = now;
+    _completeCoreTutorialAfterFirstAction();
+    _syncTaskNotification(task);
+    notifyListeners();
+    _saveAll();
+    return 'Задача закрыта';
+  }
+
   String? completeMinimumAction(String taskId) {
     final hadResetChanges = _resetExpiredTasks();
     final task = _taskById(taskId);
@@ -1211,8 +1352,9 @@ class AppState extends ChangeNotifier {
     }
 
     final now = DateTime.now();
-    final skill = _skillById(task.skillId);
-    final bossMomentsBefore = _bossMomentsForSkill(task.skillId);
+    final skillId = task.skillId;
+    final skill = _skillById(skillId);
+    final bossMomentsBefore = _bossMomentsForSkill(skillId);
     final earned = previewMinimumActionXP(task);
     final nextStreak = task.type == TaskType.repeating
         ? task.streak + 1
@@ -1256,7 +1398,7 @@ class AppState extends ChangeNotifier {
     }
 
     _checkBosses(task);
-    final bossFeedback = _bossFeedbackForSkill(task.skillId, bossMomentsBefore);
+    final bossFeedback = _bossFeedbackForSkill(skillId, bossMomentsBefore);
     _checkAchievements();
     _completeCoreTutorialAfterFirstAction();
     _syncTaskNotification(task);
@@ -1333,6 +1475,7 @@ class AppState extends ChangeNotifier {
   }
 
   void _checkBosses(Task task) {
+    if (!task.isSkillTask) return;
     _syncBossesForSkill(task.skillId);
   }
 
@@ -1395,6 +1538,18 @@ class AppState extends ChangeNotifier {
   void uncompleteTask(String taskId) {
     final task = _taskById(taskId);
     if (task == null || !task.isDone) return;
+    if (task.isInbox) {
+      task.isDone = false;
+      task.earnedXP = 0;
+      task.bonusXpEarned = 0;
+      task.consumedBuffIds = const <String>[];
+      task.lastCompletedAt = null;
+      task.updatedAt = DateTime.now();
+      _syncTaskNotification(task);
+      notifyListeners();
+      _saveAll();
+      return;
+    }
 
     final completedAt = task.lastCompletedAt;
     final previousStreak = task.streak;
@@ -1408,7 +1563,8 @@ class AppState extends ChangeNotifier {
     final completedToday =
         task.lastCompletedAt != null &&
         isSameDate(task.lastCompletedAt!, DateTime.now());
-    final skill = _skillById(task.skillId);
+    final skillId = task.skillId;
+    final skill = _skillById(skillId);
     final skillLevelBefore = skill?.level ?? 1;
 
     task.isDone = false;
@@ -1435,7 +1591,7 @@ class AppState extends ChangeNotifier {
       _decrementDailyStats(earned, skillLevelsLost);
     }
     _addHistory(task, skill, earned, isCompletion: false);
-    _syncBossesForSkill(task.skillId);
+    _syncBossesForSkill(skillId);
     _rollbackInvalidRewardsAfterUndo(
       task,
       completedAt: completedAt,
@@ -1507,7 +1663,13 @@ class AppState extends ChangeNotifier {
   void addSkill(Skill s) {
     s.syncChecklistDone();
     s.syncTreeNodes();
-    skills.add(s);
+    final inboxIndex = skills.indexWhere((skill) => skill.id == kInboxSkillId);
+    if (inboxIndex == -1) {
+      skills.add(s);
+      _ensureInboxSkill();
+    } else {
+      skills.insert(inboxIndex, s);
+    }
     _checkAchievements();
     notifyListeners();
     _saveAll();
@@ -1521,9 +1683,15 @@ class AppState extends ChangeNotifier {
         newIndex == oldIndex) {
       return;
     }
+    if (skills[oldIndex].id == kInboxSkillId) return;
 
     final skill = skills.removeAt(oldIndex);
     skills.insert(newIndex, skill);
+    final inboxIndex = skills.indexWhere((item) => item.id == kInboxSkillId);
+    if (inboxIndex != -1 && inboxIndex != skills.length - 1) {
+      final inbox = skills.removeAt(inboxIndex);
+      skills.add(inbox);
+    }
     notifyListeners();
     _saveAll();
   }
@@ -1536,6 +1704,7 @@ class AppState extends ChangeNotifier {
     required Color color,
     required IconData icon,
   }) {
+    if (skill.id == kInboxSkillId) return;
     skill.name = name;
     skill.goal = goal;
     skill.checklist = checklist;
@@ -1546,6 +1715,95 @@ class AppState extends ChangeNotifier {
     _checkAchievements();
     notifyListeners();
     _saveAll();
+  }
+
+  NextGoalUpdateResult setNextSkillGoal(
+    String skillId,
+    String nextGoal, {
+    DateTime? completedAt,
+  }) {
+    final normalizedGoal = nextGoal.trim();
+    if (normalizedGoal.isEmpty) return NextGoalUpdateResult.invalid;
+
+    final skill = _skillById(skillId);
+    if (skill == null) return NextGoalUpdateResult.notFound;
+    final progress = const GoalProgressEngine().snapshotForSkill(skill);
+    if (!progress.isComplete) {
+      return NextGoalUpdateResult.notCompleted;
+    }
+    if (normalizedGoal == skill.goal.trim()) {
+      return NextGoalUpdateResult.unchanged;
+    }
+
+    final previousGoal = skill.goal.trim();
+    if (previousGoal.isNotEmpty) {
+      skill.completedGoals.insert(
+        0,
+        CompletedGoal(
+          id: uid(),
+          skillId: skill.id,
+          goalText: previousGoal,
+          completedAt: completedAt ?? DateTime.now(),
+          progressAtCompletion: progress.value,
+          completedStages: progress.completedStages,
+          totalStages: progress.totalStages,
+        ),
+      );
+    }
+    skill.goal = normalizedGoal;
+    skill.triggeredGoalMilestones.clear();
+    notifyListeners();
+    _saveAll();
+    return NextGoalUpdateResult.updated;
+  }
+
+  StartNewRoadmapResult startNewRoadmapForNextGoal(String skillId) {
+    final skill = _skillById(skillId);
+    if (skill == null) return StartNewRoadmapResult.notFound;
+    if (skill.treeNodes.isEmpty) return StartNewRoadmapResult.noStages;
+
+    final progress = const GoalProgressEngine().snapshotForSkill(skill);
+    if (!progress.isComplete) return StartNewRoadmapResult.notCompleted;
+
+    final completedGoal = skill.completedGoals.firstOrNull;
+    if (completedGoal == null) {
+      return StartNewRoadmapResult.noCompletedGoal;
+    }
+
+    final archivedNodeIds = skill.treeNodes.map((node) => node.id).toSet();
+    skill.completedRoadmaps.insert(
+      0,
+      CompletedRoadmap(
+        id: uid(),
+        skillId: skill.id,
+        completedGoalId: completedGoal.id,
+        goalText: completedGoal.goalText,
+        completedAt: completedGoal.completedAt,
+        progressAtCompletion: progress.value,
+        completedStages: progress.completedStages,
+        totalStages: progress.totalStages,
+        stages: skill.treeNodes.map(RoadmapStageSnapshot.fromNode),
+      ),
+    );
+
+    final now = DateTime.now();
+    for (final task in tasks.where(
+      (task) =>
+          task.isSkillTask &&
+          task.skillId == skill.id &&
+          task.treeNodeId != null &&
+          archivedNodeIds.contains(task.treeNodeId),
+    )) {
+      task.treeNodeId = null;
+      task.updatedAt = now;
+    }
+
+    skill.treeNodes.clear();
+    skill.syncTreeNodes();
+    _syncBossesForSkill(skillId);
+    notifyListeners();
+    _saveAll();
+    return StartNewRoadmapResult.created;
   }
 
   void addGoalReview(String skillId, GoalReviewEntry review) {
@@ -1583,7 +1841,12 @@ class AppState extends ChangeNotifier {
     if (templatePaths.isEmpty) return;
 
     final linkedNodeIds = tasks
-        .where((task) => task.skillId == skill.id && task.treeNodeId != null)
+        .where(
+          (task) =>
+              task.isSkillTask &&
+              task.skillId == skill.id &&
+              task.treeNodeId != null,
+        )
         .map((task) => task.treeNodeId!)
         .toSet();
     final orderedExisting = engine.orderedUniqueStages(skill);
@@ -1642,8 +1905,17 @@ class AppState extends ChangeNotifier {
           !isTemplateRoot &&
           (reusedNodeIds.contains(node.id) ||
               preservedExtraNodes.any((extra) => extra.id == node.id));
+      final originalPrerequisites =
+          originalPrerequisitesByNodeId[node.id] ?? const <String>[];
       final existingPrerequisites = shouldMergeExistingPrerequisites
-          ? originalPrerequisitesByNodeId[node.id] ?? const <String>[]
+          ? _roadmapPrerequisitesToPreserve(
+              originalPrerequisites: originalPrerequisites,
+              requiredPrerequisiteId: requiredPrerequisite,
+              templateNodeIds: requiredPrerequisiteByNodeId.keys.toSet(),
+              isPreservedExtraNode: preservedExtraNodes.any(
+                (extra) => extra.id == node.id,
+              ),
+            )
           : const <String>[];
       final mergedPrerequisites = _mergeRoadmapPrerequisites(
         nodeId: node.id,
@@ -1663,6 +1935,21 @@ class AppState extends ChangeNotifier {
     _syncBossesForSkill(skillId);
     notifyListeners();
     _saveAll();
+  }
+
+  List<String> _roadmapPrerequisitesToPreserve({
+    required Iterable<String> originalPrerequisites,
+    required String? requiredPrerequisiteId,
+    required Set<String> templateNodeIds,
+    required bool isPreservedExtraNode,
+  }) {
+    if (isPreservedExtraNode) return List<String>.from(originalPrerequisites);
+
+    return originalPrerequisites
+        .where(
+          (id) => id == requiredPrerequisiteId || !templateNodeIds.contains(id),
+        )
+        .toList(growable: false);
   }
 
   List<String> _mergeRoadmapPrerequisites({
@@ -1884,6 +2171,36 @@ class AppState extends ChangeNotifier {
         completedTasksForTreeNode(skillId, nodeId) >= node.questTarget;
   }
 
+  void _queueGoalMilestones({
+    required Skill skill,
+    required double oldProgress,
+    required double newProgress,
+  }) {
+    final crossed = _goalMilestoneEngine.crossedMilestones(
+      oldProgress: oldProgress,
+      newProgress: newProgress,
+      alreadyTriggered: skill.triggeredGoalMilestones,
+    );
+    if (crossed.isEmpty) return;
+
+    for (final milestone in crossed) {
+      if (!skill.triggeredGoalMilestones.contains(milestone.percent)) {
+        skill.triggeredGoalMilestones.add(milestone.percent);
+      }
+    }
+
+    final strongest = crossed.last;
+    _pendingGoalMilestoneNotifications.add(
+      GoalMilestoneEvent(
+        id: uid(),
+        skillId: skill.id,
+        skillName: skill.name,
+        skillColor: skill.color,
+        milestone: strongest,
+      ),
+    );
+  }
+
   String? masterSkillTreeNode(String skillId, String nodeId) {
     final skill = _skillById(skillId);
     final node = skill?.treeNodes
@@ -1897,9 +2214,20 @@ class AppState extends ChangeNotifier {
 
     final bossMomentsBefore = _bossMomentsForSkill(skillId);
     final earned = node.xpReward;
+    final oldProgress = const GoalProgressEngine()
+        .snapshotForSkill(skill)
+        .value;
 
     node.isMastered = true;
     node.masteredAt = DateTime.now();
+    final newProgress = const GoalProgressEngine()
+        .snapshotForSkill(skill)
+        .value;
+    _queueGoalMilestones(
+      skill: skill,
+      oldProgress: oldProgress,
+      newProgress: newProgress,
+    );
 
     profile.totalXpEarned += earned;
     final globalUp = profile.addXP(earned);
@@ -1924,8 +2252,9 @@ class AppState extends ChangeNotifier {
   }
 
   void removeSkill(String id) {
+    if (id == kInboxSkillId) return;
     final removedTaskIds = tasks
-        .where((t) => t.skillId == id)
+        .where((t) => t.isSkillTask && t.skillId == id)
         .map((t) => t.id)
         .toList();
     for (final taskId in removedTaskIds) {
@@ -1933,7 +2262,7 @@ class AppState extends ChangeNotifier {
     }
 
     skills.removeWhere((s) => s.id == id);
-    tasks.removeWhere((t) => t.skillId == id);
+    tasks.removeWhere((t) => t.isSkillTask && t.skillId == id);
     bosses.removeWhere((b) => b.skillId == id);
     rewardChests.removeWhere((chest) => chest.skillId == id);
     buffs.removeWhere((buff) => buff.skillId == id);
@@ -1944,7 +2273,10 @@ class AppState extends ChangeNotifier {
 
   void addTask(Task t) {
     t.syncSubtaskDone();
-    t.treeNodeId = _normalizedTreeNodeId(t.skillId, t.treeNodeId);
+    t.normalizeScope();
+    t.treeNodeId = t.isSkillTask
+        ? _normalizedTreeNodeId(t.skillId, t.treeNodeId)
+        : null;
     if (t.repeatCustomDays < 1) t.repeatCustomDays = 1;
     t.createdAt = DateTime.now();
     t.updatedAt = t.createdAt;
@@ -1953,6 +2285,24 @@ class AppState extends ChangeNotifier {
     _syncTaskNotification(t);
     notifyListeners();
     _saveAll();
+  }
+
+  bool addInboxTask(String title, {String description = ''}) {
+    final normalizedTitle = title.trim();
+    if (normalizedTitle.isEmpty) return false;
+    _ensureInboxSkill();
+    addTask(
+      Task(
+        id: uid(),
+        title: normalizedTitle,
+        description: description,
+        skillId: kInboxSkillId,
+        xpReward: 0,
+        type: TaskType.shortTerm,
+        priority: Priority.medium,
+      ),
+    );
+    return true;
   }
 
   void updateTask(
@@ -1975,6 +2325,20 @@ class AppState extends ChangeNotifier {
     final oldType = task.type;
     final hadNotification = task.notificationsEnabled;
     final oldMinimumAction = task.minimumAction;
+    if (task.isInbox) {
+      task.title = title;
+      task.description = description.trim();
+      task.priority = priority;
+      task.subtasks = subtasks;
+      task.syncSubtaskDone();
+      task.tags = tags;
+      task.updatedAt = DateTime.now();
+      task.normalizeScope();
+      _syncTaskNotification(task);
+      notifyListeners();
+      _saveAll();
+      return;
+    }
     task.title = title;
     task.description = description.trim();
     task.xpReward = xpReward;
@@ -2032,7 +2396,9 @@ class AppState extends ChangeNotifier {
       _notifications.cancelNotification(_notificationId(task.id));
     }
     tasks.removeWhere((t) => t.id == id);
-    if (task != null) _syncBossesForSkill(task.skillId);
+    if (task != null && task.isSkillTask) {
+      _syncBossesForSkill(task.skillId);
+    }
     notifyListeners();
     _saveAll();
   }
@@ -2075,6 +2441,7 @@ class AppState extends ChangeNotifier {
   int get bestStreak => _bestStreak;
 
   void normalizeAfterBulkStateChange({bool resetBestStreak = false}) {
+    _ensureInboxSkill();
     for (final skill in skills) {
       skill.syncChecklistDone();
       skill.syncTreeNodes();
@@ -2082,7 +2449,12 @@ class AppState extends ChangeNotifier {
     final validSkillIds = skills.map((skill) => skill.id).toSet();
     for (final task in tasks) {
       task.syncSubtaskDone();
-      if (!validSkillIds.contains(task.skillId)) {
+      task.normalizeScope();
+      if (task.isInbox) {
+        task.treeNodeId = null;
+      } else if (!task.isSkillTask || !validSkillIds.contains(task.skillId)) {
+        task.skillId = kInboxSkillId;
+        task.normalizeScope();
         task.treeNodeId = null;
       } else if (task.treeNodeId != null) {
         final skill = _skillById(task.skillId);
@@ -2173,6 +2545,7 @@ class AppState extends ChangeNotifier {
   }
 
   bool _buffAppliesToTask(Buff buff, Task task) {
+    if (task.isInbox) return false;
     return switch (buff.type) {
       BuffType.nextQuestXpBoost => true,
       BuffType.questRushXpBoost => true,
@@ -2210,6 +2583,7 @@ class AppState extends ChangeNotifier {
   }
 
   void _maybeUnlockStreakRewardChest(Task task, {bool notify = true}) {
+    if (!task.isSkillTask) return;
     if (task.type != TaskType.repeating) return;
 
     final milestone = switch (task.streak) {
@@ -2231,6 +2605,7 @@ class AppState extends ChangeNotifier {
   }
 
   void _maybeGrantBehaviorBuffs(Task task) {
+    if (!task.isSkillTask) return;
     final stats = todayStats;
     if (stats == null) return;
 
@@ -2255,19 +2630,20 @@ class AppState extends ChangeNotifier {
 
     final last = completions.last;
     final previous = completions[completions.length - 2];
-    if (last.skillId != task.skillId || previous.skillId != task.skillId) {
+    final skillId = task.skillId;
+    if (last.skillId != skillId || previous.skillId != skillId) {
       return;
     }
 
     _grantBehaviorBuff(
-      sourceKey: 'focus:$dayKey:${task.skillId}',
+      sourceKey: 'focus:$dayKey:$skillId',
       type: BuffType.skillFocusXpBoost,
       title: 'Фокус',
       description:
           'Два квеста одного навыка подряд: следующий квест этого навыка даст +12% XP.',
       bonusPercent: 12,
       charges: 1,
-      skillId: task.skillId,
+      skillId: skillId,
       expiresAt: expiresAt,
     );
   }
@@ -2435,6 +2811,8 @@ class AppState extends ChangeNotifier {
     required DateTime? completedAt,
     required int previousStreak,
   }) {
+    if (!task.isSkillTask) return;
+    final skillId = task.skillId;
     final sourceKeys = <String>{};
 
     if (completedAt != null) {
@@ -2450,8 +2828,8 @@ class AppState extends ChangeNotifier {
       if (dayCompletions.length < 3) {
         sourceKeys.add('flow3:$dayKey');
       }
-      if (!_hasFocusRewardCondition(completedAt, task.skillId)) {
-        sourceKeys.add('focus:$dayKey:${task.skillId}');
+      if (!_hasFocusRewardCondition(completedAt, skillId)) {
+        sourceKeys.add('focus:$dayKey:$skillId');
       }
     }
 
@@ -2459,7 +2837,7 @@ class AppState extends ChangeNotifier {
       sourceKeys.add('streak:${task.id}:$previousStreak');
     }
 
-    for (final boss in bosses.where((boss) => boss.skillId == task.skillId)) {
+    for (final boss in bosses.where((boss) => boss.skillId == skillId)) {
       if (!boss.isDefeated) {
         sourceKeys.add('boss:${boss.id}');
       }

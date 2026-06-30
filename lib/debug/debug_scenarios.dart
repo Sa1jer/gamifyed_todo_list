@@ -226,7 +226,7 @@ void _clearWorld(AppState state) {
 }
 
 Skill _ensureDebugSkill(AppState state) {
-  if (state.skills.isNotEmpty) return state.skills.first;
+  if (state.roadmapSkills.isNotEmpty) return state.roadmapSkills.first;
   final stageId = uid();
   final skill = Skill(
     id: uid(),

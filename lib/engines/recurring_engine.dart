@@ -92,9 +92,9 @@ class RecurringEngine {
   }
 
   RecurringQuestInfo _infoFor(Task task, Iterable<Skill> skills, DateTime now) {
-    final skill = skills
-        .where((candidate) => candidate.id == task.skillId)
-        .firstOrNull;
+    final skill = task.isSkillTask
+        ? skills.where((candidate) => candidate.id == task.skillId).firstOrNull
+        : null;
     final stage = skill == null || task.treeNodeId == null
         ? null
         : skill.treeNodes

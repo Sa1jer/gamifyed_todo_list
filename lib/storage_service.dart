@@ -240,6 +240,15 @@ class StorageService {
     }).toList();
   }
 
+  List<int> _readIntList(Map<String, dynamic> data, String key) {
+    final value = data[key];
+    if (value is! List) return [];
+    return value
+        .map(_readNullableIntValue)
+        .whereType<int>()
+        .toList(growable: false);
+  }
+
   DateTime? _readDate(Map<String, dynamic> data, String key) {
     final value = data[key];
     if (value is! String || value.isEmpty) return null;
@@ -650,6 +659,11 @@ class StorageService {
     'checklist': s.checklist,
     'checklistDone': s.checklistDone,
     'treeNodes': s.treeNodes.map(_encodeSkillTreeNode).toList(),
+    'completedGoals': s.completedGoals.map(_encodeCompletedGoal).toList(),
+    'completedRoadmaps': s.completedRoadmaps
+        .map(_encodeCompletedRoadmap)
+        .toList(),
+    'triggeredGoalMilestones': s.triggeredGoalMilestones,
     'color': s.color.toARGB32(),
     'iconName': s.icon.codePoint.toString(),
     'level': s.level,
@@ -685,10 +699,34 @@ class StorageService {
               )
               .toList() ??
           [],
+      completedGoals:
+          (d['completedGoals'] as List?)
+              ?.whereType<Map>()
+              .map(_decodeCompletedGoal)
+              .whereType<CompletedGoal>()
+              .toList() ??
+          [],
+      completedRoadmaps:
+          ((d['completedRoadmaps'] ?? d['completedRoadMaps']) as List?)
+              ?.whereType<Map>()
+              .map(_decodeCompletedRoadmap)
+              .whereType<CompletedRoadmap>()
+              .toList() ??
+          [],
+      triggeredGoalMilestones: _readIntList(
+        d,
+        'triggeredGoalMilestones',
+      ).where(_isKnownGoalMilestonePercent).toSet().toList(),
       color: Color(_readInt(d, 'color', const Color(0xFF4A9EFF).toARGB32())),
       icon: _getIconFromCodePoint(iconName),
       level: _readInt(d, 'level', 1),
       xp: _readInt(d, 'xp'),
+    );
+  }
+
+  bool _isKnownGoalMilestonePercent(int percent) {
+    return GoalMilestone.values.any(
+      (milestone) => milestone.percent == percent,
     );
   }
 
@@ -756,6 +794,139 @@ class StorageService {
     );
   }
 
+  Map<String, dynamic> _encodeCompletedGoal(CompletedGoal goal) => {
+    'id': goal.id,
+    'skillId': goal.skillId,
+    'goalText': goal.goalText,
+    'completedAt': goal.completedAt.toIso8601String(),
+    'progressAtCompletion': goal.progressAtCompletion,
+    'completedStages': goal.completedStages,
+    'totalStages': goal.totalStages,
+  };
+
+  CompletedGoal? _decodeCompletedGoal(Map<dynamic, dynamic> raw) {
+    final data = Map<String, dynamic>.from(raw);
+    final id = _readString(data, 'id').trim();
+    final skillId = _readString(data, 'skillId').trim();
+    final goalText = _readString(data, 'goalText').trim();
+    final completedAt = _readDate(data, 'completedAt');
+    if (id.isEmpty ||
+        skillId.isEmpty ||
+        goalText.isEmpty ||
+        completedAt == null) {
+      return null;
+    }
+
+    final totalStages = _readInt(data, 'totalStages').clamp(0, 1 << 30);
+    final completedStages = _readInt(
+      data,
+      'completedStages',
+    ).clamp(0, totalStages);
+    final progress = (_readNullableDouble(data, 'progressAtCompletion') ?? 0.0)
+        .clamp(0.0, 1.0);
+    return CompletedGoal(
+      id: id,
+      skillId: skillId,
+      goalText: goalText,
+      completedAt: completedAt,
+      progressAtCompletion: progress,
+      completedStages: completedStages,
+      totalStages: totalStages,
+    );
+  }
+
+  Map<String, dynamic> _encodeCompletedRoadmap(CompletedRoadmap roadmap) => {
+    'id': roadmap.id,
+    'skillId': roadmap.skillId,
+    'completedGoalId': roadmap.completedGoalId,
+    'goalText': roadmap.goalText,
+    'completedAt': roadmap.completedAt.toIso8601String(),
+    'progressAtCompletion': roadmap.progressAtCompletion,
+    'completedStages': roadmap.completedStages,
+    'totalStages': roadmap.totalStages,
+    'stages': roadmap.stages.map(_encodeRoadmapStageSnapshot).toList(),
+  };
+
+  CompletedRoadmap? _decodeCompletedRoadmap(Map<dynamic, dynamic> raw) {
+    final data = Map<String, dynamic>.from(raw);
+    final id = _readString(data, 'id').trim();
+    final skillId = _readString(data, 'skillId').trim();
+    final goalText = _readString(data, 'goalText').trim();
+    final completedAt = _readDate(data, 'completedAt');
+    if (id.isEmpty ||
+        skillId.isEmpty ||
+        goalText.isEmpty ||
+        completedAt == null) {
+      return null;
+    }
+
+    final stages =
+        (data['stages'] as List?)
+            ?.whereType<Map>()
+            .map(_decodeRoadmapStageSnapshot)
+            .whereType<RoadmapStageSnapshot>()
+            .toList() ??
+        <RoadmapStageSnapshot>[];
+    final totalStages = _readInt(
+      data,
+      'totalStages',
+      stages.length,
+    ).clamp(0, 1 << 30);
+    final completedStages = _readInt(
+      data,
+      'completedStages',
+      stages.where((stage) => stage.isMastered).length,
+    ).clamp(0, totalStages);
+    final progress = (_readNullableDouble(data, 'progressAtCompletion') ?? 0.0)
+        .clamp(0.0, 1.0);
+
+    return CompletedRoadmap(
+      id: id,
+      skillId: skillId,
+      completedGoalId: _readNullableString(data, 'completedGoalId'),
+      goalText: goalText,
+      completedAt: completedAt,
+      progressAtCompletion: progress,
+      completedStages: completedStages,
+      totalStages: totalStages,
+      stages: stages,
+    );
+  }
+
+  Map<String, dynamic> _encodeRoadmapStageSnapshot(
+    RoadmapStageSnapshot stage,
+  ) => {
+    'id': stage.id,
+    'title': stage.title,
+    'description': stage.description,
+    'xpReward': stage.xpReward,
+    'requiredQuestCompletions': stage.requiredQuestCompletions,
+    'prerequisiteIds': stage.prerequisiteIds,
+    'checklist': stage.checklist,
+    'checklistDone': stage.checklistDone,
+    'isMastered': stage.isMastered,
+    'masteredAt': stage.masteredAt?.toIso8601String(),
+  };
+
+  RoadmapStageSnapshot? _decodeRoadmapStageSnapshot(Map<dynamic, dynamic> raw) {
+    final data = Map<String, dynamic>.from(raw);
+    final id = _readString(data, 'id').trim();
+    if (id.isEmpty) return null;
+
+    return RoadmapStageSnapshot(
+      id: id,
+      title: _readString(data, 'title', 'Этап RoadMap'),
+      description: _readString(data, 'description'),
+      xpReward: _readInt(data, 'xpReward', 20),
+      requiredQuestCompletions: _readInt(data, 'requiredQuestCompletions', 3),
+      prerequisiteIds: _readStringList(data, 'prerequisiteIds'),
+      checklist: _readStringList(data, 'checklist'),
+      checklistDone: _readBoolList(data, 'checklistDone'),
+      isMastered: _readBool(data, 'isMastered'),
+      masteredAt: _readDate(data, 'masteredAt'),
+    );
+  }
+
   Map<String, dynamic> _encodeSkillTreeNode(SkillTreeNode node) => {
     'id': node.id,
     'title': node.title,
@@ -817,11 +988,12 @@ class StorageService {
 
   Task _decodeTask(String json) {
     final d = _decodeMap(json);
+    final skillId = _readTaskSkillId(d);
     return Task(
       id: _readString(d, 'id', uid()),
       title: _readString(d, 'title', 'Квест'),
       description: _readString(d, 'description'),
-      skillId: _readString(d, 'skillId'),
+      skillId: skillId,
       xpReward: _readInt(d, 'xpReward', 20),
       type: _readEnum(TaskType.values, d['type'], TaskType.shortTerm),
       isDone: _readBool(d, 'isDone'),
@@ -851,6 +1023,15 @@ class StorageService {
       createdAt: _readDate(d, 'createdAt'),
       updatedAt: _readDate(d, 'updatedAt'),
     );
+  }
+
+  String _readTaskSkillId(Map<String, dynamic> data) {
+    final rawSkillId = _readNullableString(data, 'skillId');
+    final rawScope = data['scope'];
+    if (rawScope == 'inbox' || rawSkillId == null || rawSkillId.isEmpty) {
+      return kInboxSkillId;
+    }
+    return rawSkillId;
   }
 
   String _encodeHistoryEntry(HistoryEntry e) => jsonEncode({

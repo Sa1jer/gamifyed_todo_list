@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:todo_list_app/app_state.dart';
+import 'package:todo_list_app/engines/goal_progress_engine.dart';
 import 'package:todo_list_app/engines/roadmap_engine.dart';
 import 'package:todo_list_app/models.dart';
 import 'package:todo_list_app/storage_service.dart';
@@ -183,6 +184,348 @@ void main() {
     });
   });
 
+  group('task inbox', () {
+    late AppState state;
+    late Skill skill;
+
+    setUp(() {
+      state = AppState(storage: _InMemoryStorageService(), seedDefaults: false);
+      skill = Skill(
+        id: 'skill-inbox-boundary',
+        name: 'Flutter',
+        goal: 'Не смешивать Задачник',
+        color: Colors.blue,
+        icon: Icons.code,
+        treeNodes: [
+          SkillTreeNode(
+            id: 'stage-1',
+            title: 'Stage 1',
+            requiredQuestCompletions: 1,
+          ),
+        ],
+      );
+      state.addSkill(skill);
+    });
+
+    tearDown(() => state.dispose());
+
+    test('creates inbox task under the permanent inbox skill', () {
+      final created = state.addInboxTask('  Купить молоко  ');
+
+      expect(created, isTrue);
+      expect(state.tasks, hasLength(1));
+      final task = state.tasks.single;
+      expect(task.title, 'Купить молоко');
+      expect(task.isInbox, isTrue);
+      expect(task.skillId, kInboxSkillId);
+      expect(task.treeNodeId, isNull);
+      expect(task.xpReward, 0);
+      expect(state.inboxTasks, [task]);
+      expect(state.tasksForSkill(kInboxSkillId), [task]);
+      expect(state.tasksForSkill(skill.id), isEmpty);
+      expect(state.activeTaskCountForSkill(skill.id), 0);
+    });
+
+    test('rejects blank inbox task title', () {
+      expect(state.addInboxTask('   '), isFalse);
+      expect(state.inboxTasks, isEmpty);
+    });
+
+    test('inbox skill is permanent and excluded from roadmap skills', () {
+      expect(state.skills.any((skill) => skill.id == kInboxSkillId), isTrue);
+      expect(
+        state.roadmapSkills.any((skill) => skill.id == kInboxSkillId),
+        isFalse,
+      );
+
+      final inbox = state.skills.firstWhere(
+        (skill) => skill.id == kInboxSkillId,
+      );
+      state.updateSkill(
+        inbox,
+        name: 'Changed',
+        goal: 'Changed',
+        checklist: ['x'],
+        color: Colors.red,
+        icon: Icons.warning,
+      );
+      state.removeSkill(kInboxSkillId);
+
+      final restored = state.skills.firstWhere(
+        (skill) => skill.id == kInboxSkillId,
+      );
+      expect(restored.name, 'Задачник');
+      expect(restored.level, 1);
+      expect(restored.xp, 0);
+      expect(restored.treeNodes, isEmpty);
+    });
+
+    test(
+      'completing inbox task does not grant XP or affect skill progress',
+      () {
+        state.addInboxTask('Заплатить за интернет');
+        final task = state.inboxTasks.single;
+        final profileXp = state.profile.xp;
+        final totalXp = state.profile.totalXpEarned;
+        final skillXp = skill.xp;
+        final skillLevel = skill.level;
+        final progress = const GoalProgressEngine()
+            .snapshotForSkill(skill)
+            .value;
+
+        final message = state.completeTask(task.id);
+
+        expect(message, 'Задача закрыта');
+        expect(task.isDone, isTrue);
+        expect(task.earnedXP, 0);
+        expect(state.profile.xp, profileXp);
+        expect(state.profile.totalXpEarned, totalXp);
+        expect(skill.xp, skillXp);
+        expect(skill.level, skillLevel);
+        expect(
+          const GoalProgressEngine().snapshotForSkill(skill).value,
+          progress,
+        );
+        expect(state.todayStats, isNull);
+        expect(state.history, isEmpty);
+        expect(state.consumeGoalMilestoneNotifications(), isEmpty);
+        expect(state.canMasterSkillTreeNode(skill.id, 'stage-1'), isFalse);
+      },
+    );
+
+    test('inbox task undo does not roll back unrelated skill state', () {
+      state.addInboxTask('Разобрать почту');
+      final task = state.inboxTasks.single;
+      state.completeTask(task.id);
+
+      state.uncompleteTask(task.id);
+
+      expect(task.isDone, isFalse);
+      expect(task.earnedXP, 0);
+      expect(state.profile.xp, 0);
+      expect(skill.xp, 0);
+      expect(state.history, isEmpty);
+    });
+
+    test('normal skill quest still behaves as before', () {
+      final quest = Task(
+        id: 'skill-quest',
+        title: 'Собрать экран',
+        skillId: skill.id,
+        xpReward: 20,
+        type: TaskType.shortTerm,
+      );
+      state.addTask(quest);
+
+      final message = state.completeTask(quest.id);
+
+      expect(message, contains('+20 XP'));
+      expect(state.profile.totalXpEarned, 20);
+      expect(skill.xp, 20);
+      expect(state.history, hasLength(1));
+      expect(state.tasksForSkill(skill.id), [quest]);
+      expect(state.inboxTasks, isEmpty);
+    });
+  });
+
+  group('next skill goal', () {
+    late AppState state;
+    late Skill skill;
+
+    setUp(() {
+      state = AppState(storage: _InMemoryStorageService(), seedDefaults: false);
+      skill = Skill(
+        id: 'skill-next-goal',
+        name: 'Flutter',
+        goal: 'Закрыть первую цель',
+        goalSpec: GoalSpec(
+          text: 'Закрыть первую цель',
+          updatedAt: DateTime(2020),
+        ),
+        color: Colors.blue,
+        icon: Icons.code,
+        level: 4,
+        xp: 35,
+        treeNodes: [
+          SkillTreeNode(
+            id: 'completed-stage',
+            title: 'Готовый этап',
+            isMastered: true,
+            masteredAt: DateTime(2024),
+          ),
+        ],
+      );
+      state.addSkill(skill);
+    });
+
+    tearDown(() => state.dispose());
+
+    test('rejects empty, whitespace, and unchanged goal text', () {
+      final updatedAt = skill.goalSpec.updatedAt;
+
+      expect(
+        state.setNextSkillGoal(skill.id, ''),
+        NextGoalUpdateResult.invalid,
+      );
+      expect(
+        state.setNextSkillGoal(skill.id, '   '),
+        NextGoalUpdateResult.invalid,
+      );
+      expect(
+        state.setNextSkillGoal(skill.id, '  Закрыть первую цель  '),
+        NextGoalUpdateResult.unchanged,
+      );
+      expect(skill.goal, 'Закрыть первую цель');
+      expect(skill.goalSpec.updatedAt, updatedAt);
+      expect(skill.completedGoals, isEmpty);
+    });
+
+    test('requires completed RoadMap progress', () {
+      skill.treeNodes.single.isMastered = false;
+
+      expect(
+        state.setNextSkillGoal(skill.id, 'Новая цель'),
+        NextGoalUpdateResult.notCompleted,
+      );
+      expect(skill.goal, 'Закрыть первую цель');
+      expect(skill.completedGoals, isEmpty);
+    });
+
+    test(
+      'updates only goal text and timestamp after explicit confirmation',
+      () {
+        final stage = skill.treeNodes.single;
+        final stageMasteredAt = stage.masteredAt;
+        final skillId = skill.id;
+        final level = skill.level;
+        final xp = skill.xp;
+        final profileXp = state.profile.xp;
+        final oldUpdatedAt = skill.goalSpec.updatedAt;
+        final completedAt = DateTime(2026, 6, 29, 12, 30);
+
+        final result = state.setNextSkillGoal(
+          skill.id,
+          '  Выпустить следующее приложение  ',
+          completedAt: completedAt,
+        );
+
+        expect(result, NextGoalUpdateResult.updated);
+        expect(skill.goal, 'Выпустить следующее приложение');
+        expect(skill.goalSpec.updatedAt.isAfter(oldUpdatedAt), isTrue);
+        expect(skill.id, skillId);
+        expect(skill.level, level);
+        expect(skill.xp, xp);
+        expect(state.profile.xp, profileXp);
+        expect(skill.treeNodes, hasLength(1));
+        expect(stage.isMastered, isTrue);
+        expect(stage.masteredAt, stageMasteredAt);
+        expect(skill.completedGoals, hasLength(1));
+        expect(skill.completedRoadmaps, isEmpty);
+        final archived = skill.completedGoals.single;
+        expect(archived.id, isNotEmpty);
+        expect(archived.skillId, skillId);
+        expect(archived.goalText, 'Закрыть первую цель');
+        expect(archived.completedAt, completedAt);
+        expect(archived.progressAtCompletion, 1.0);
+        expect(archived.completedStages, 1);
+        expect(archived.totalStages, 1);
+      },
+    );
+
+    test('setNextSkillGoal resets triggered goal milestones', () {
+      skill.triggeredGoalMilestones.addAll([25, 50, 100]);
+
+      expect(
+        state.setNextSkillGoal(skill.id, 'Следующая цель'),
+        NextGoalUpdateResult.updated,
+      );
+      expect(skill.triggeredGoalMilestones, isEmpty);
+    });
+
+    test('double save does not duplicate completed goal history', () {
+      final completedAt = DateTime(2026, 6, 29, 13);
+
+      expect(
+        state.setNextSkillGoal(
+          skill.id,
+          'Следующая цель',
+          completedAt: completedAt,
+        ),
+        NextGoalUpdateResult.updated,
+      );
+      expect(
+        state.setNextSkillGoal(
+          skill.id,
+          'Следующая цель',
+          completedAt: completedAt,
+        ),
+        NextGoalUpdateResult.unchanged,
+      );
+      expect(skill.completedGoals, hasLength(1));
+    });
+
+    test(
+      'start new roadmap archives completed stages and clears active map',
+      () {
+        final stage = skill.treeNodes.single;
+        final linkedQuest = Task(
+          id: 'old-stage-quest',
+          title: 'Сделать старый этап',
+          skillId: skill.id,
+          xpReward: 20,
+          type: TaskType.shortTerm,
+          treeNodeId: stage.id,
+        );
+        state.addTask(linkedQuest);
+
+        final completedAt = DateTime(2026, 6, 29, 14);
+        expect(
+          state.setNextSkillGoal(
+            skill.id,
+            'Следующая цель',
+            completedAt: completedAt,
+          ),
+          NextGoalUpdateResult.updated,
+        );
+
+        final result = state.startNewRoadmapForNextGoal(skill.id);
+
+        expect(result, StartNewRoadmapResult.created);
+        expect(skill.treeNodes, isEmpty);
+        expect(linkedQuest.treeNodeId, isNull);
+        expect(skill.completedRoadmaps, hasLength(1));
+        final roadmap = skill.completedRoadmaps.single;
+        expect(roadmap.completedGoalId, skill.completedGoals.single.id);
+        expect(roadmap.goalText, 'Закрыть первую цель');
+        expect(roadmap.completedAt, completedAt);
+        expect(roadmap.progressAtCompletion, 1.0);
+        expect(roadmap.completedStages, 1);
+        expect(roadmap.totalStages, 1);
+        expect(roadmap.stages, hasLength(1));
+        expect(roadmap.stages.single.id, stage.id);
+        expect(roadmap.stages.single.title, 'Готовый этап');
+
+        state.addSkillTreeNode(
+          skill.id,
+          SkillTreeNode(id: 'new-active-stage', title: 'Новый этап'),
+        );
+
+        expect(skill.treeNodes.single.id, 'new-active-stage');
+        expect(roadmap.stages.single.id, stage.id);
+        expect(roadmap.stages.single.title, 'Готовый этап');
+      },
+    );
+
+    test('start new roadmap requires an archived completed goal', () {
+      expect(
+        state.startNewRoadmapForNextGoal(skill.id),
+        StartNewRoadmapResult.noCompletedGoal,
+      );
+      expect(skill.treeNodes, hasLength(1));
+      expect(skill.completedRoadmaps, isEmpty);
+    });
+  });
+
   group('profile image hardening', () {
     late AppState state;
 
@@ -230,7 +573,8 @@ void main() {
 
       await state.loadSavedData();
 
-      expect(state.skills, isEmpty);
+      expect(state.skills.map((skill) => skill.id), [kInboxSkillId]);
+      expect(state.roadmapSkills, isEmpty);
       expect(state.tasks, isEmpty);
       expect(state.history, isEmpty);
       expect(state.rewardChests, isEmpty);
@@ -458,7 +802,7 @@ void main() {
 
         state.reorderSkills(0, 2);
 
-        expect(state.skills.map((skill) => skill.id), [
+        expect(state.roadmapSkills.map((skill) => skill.id), [
           second.id,
           third.id,
           first.id,
@@ -472,14 +816,14 @@ void main() {
         final restarted = AppState(storage: storage, seedDefaults: false);
         await restarted.loadSavedData();
 
-        expect(restarted.skills.map((skill) => skill.id), [
+        expect(restarted.roadmapSkills.map((skill) => skill.id), [
           second.id,
           third.id,
           first.id,
         ]);
         expect(restarted.tasks.single.skillId, first.id);
         expect(restarted.tasks.single.treeNodeId, foundation.id);
-        expect(restarted.skills.last.treeNodes.single.id, foundation.id);
+        expect(restarted.roadmapSkills.last.treeNodes.single.id, foundation.id);
 
         state.dispose();
         restarted.dispose();
@@ -512,7 +856,7 @@ void main() {
       state.reorderSkills(0, 0);
       state.reorderSkills(0, 2);
 
-      expect(state.skills.map((skill) => skill.id), ['one', 'two']);
+      expect(state.roadmapSkills.map((skill) => skill.id), ['one', 'two']);
       state.dispose();
     });
   });
@@ -1038,6 +1382,56 @@ void main() {
       expect(linkedQuest.treeNodeId, 'terminal-stage');
     });
 
+    test(
+      'drops stale template-stage prerequisites when roads are reassigned',
+      () {
+        final skill = Skill(
+          id: 'stale-road-prerequisite-skill',
+          name: 'RoadMap stale parent',
+          goal: 'Не склеивать дороги',
+          color: const Color(0xFFFF9500),
+          icon: Icons.route,
+          treeNodes: [
+            SkillTreeNode(id: 'road-1-root', title: 'Road 1 root'),
+            SkillTreeNode(
+              id: 'road-1-child',
+              title: 'Road 1 child',
+              prerequisiteIds: ['road-1-root'],
+            ),
+            SkillTreeNode(id: 'road-2-root', title: 'Road 2 root'),
+            SkillTreeNode(
+              id: 'road-2-child',
+              title: 'Road 2 child',
+              prerequisiteIds: ['road-2-root', 'road-1-child'],
+            ),
+          ],
+        );
+        state.addSkill(skill);
+
+        state.applyRoadmapTemplate(
+          skill.id,
+          const RoadmapTemplateConfig(
+            template: RoadmapTemplate.normal,
+            stagesPerPath: 2,
+          ),
+        );
+
+        final layout = const RoadmapEngine().buildPathLayout(skill);
+        final roadTwoChild = skill.treeNodes.firstWhere(
+          (node) => node.id == 'road-2-child',
+        );
+
+        expect(layout.paths, hasLength(2));
+        expect(roadTwoChild.prerequisiteIds, ['road-2-root']);
+        expect(
+          layout.paths.map(
+            (path) => path.nodes.map((node) => node.id).toList(),
+          ),
+          contains(equals(['road-2-root', 'road-2-child'])),
+        );
+      },
+    );
+
     test('extends a roadmap path after its terminal stage', () {
       final skill = state.skills.first;
       final root = SkillTreeNode(id: 'root-stage', title: 'Основа');
@@ -1422,6 +1816,113 @@ void main() {
       );
       expect(boss.hp, lessThan(100));
     });
+
+    test('mastering stages queues milestone notifications once', () {
+      final milestoneSkill = Skill(
+        id: 'milestone-skill',
+        name: 'Milestones',
+        goal: 'Master four stages',
+        color: Colors.amber,
+        icon: Icons.flag,
+        treeNodes: List.generate(
+          4,
+          (index) => SkillTreeNode(
+            id: 'milestone-stage-$index',
+            title: 'Stage $index',
+            requiredQuestCompletions: 1,
+          ),
+        ),
+      );
+      state.addSkill(milestoneSkill);
+
+      for (final stage in milestoneSkill.treeNodes) {
+        state.addTask(
+          Task(
+            id: 'task-${stage.id}',
+            title: 'Practice ${stage.title}',
+            skillId: milestoneSkill.id,
+            xpReward: 10,
+            type: TaskType.shortTerm,
+            isDone: true,
+            treeNodeId: stage.id,
+          ),
+        );
+      }
+
+      state.masterSkillTreeNode(
+        milestoneSkill.id,
+        milestoneSkill.treeNodes[0].id,
+      );
+      var events = state.consumeGoalMilestoneNotifications();
+      expect(events, hasLength(1));
+      expect(events.single.milestone, GoalMilestone.quarter);
+      expect(milestoneSkill.triggeredGoalMilestones, [25]);
+      expect(state.consumeGoalMilestoneNotifications(), isEmpty);
+
+      state.masterSkillTreeNode(
+        milestoneSkill.id,
+        milestoneSkill.treeNodes[1].id,
+      );
+      events = state.consumeGoalMilestoneNotifications();
+      expect(events, hasLength(1));
+      expect(events.single.milestone, GoalMilestone.half);
+      expect(milestoneSkill.triggeredGoalMilestones, [25, 50]);
+
+      state.masterSkillTreeNode(
+        milestoneSkill.id,
+        milestoneSkill.treeNodes[2].id,
+      );
+      expect(state.consumeGoalMilestoneNotifications(), isEmpty);
+      expect(milestoneSkill.triggeredGoalMilestones, [25, 50]);
+
+      state.masterSkillTreeNode(
+        milestoneSkill.id,
+        milestoneSkill.treeNodes[3].id,
+      );
+      events = state.consumeGoalMilestoneNotifications();
+      expect(events, hasLength(1));
+      expect(events.single.milestone, GoalMilestone.complete);
+      expect(milestoneSkill.triggeredGoalMilestones, [25, 50, 100]);
+    });
+
+    test(
+      'single mastery jump stores all crossed milestones but queues strongest event',
+      () {
+        final jumpSkill = Skill(
+          id: 'jump-skill',
+          name: 'Jump',
+          goal: 'Master one stage',
+          color: Colors.green,
+          icon: Icons.rocket_launch,
+          treeNodes: [
+            SkillTreeNode(
+              id: 'only-stage',
+              title: 'Only stage',
+              requiredQuestCompletions: 1,
+            ),
+          ],
+        );
+        state.addSkill(jumpSkill);
+        state.addTask(
+          Task(
+            id: 'jump-task',
+            title: 'Practice only stage',
+            skillId: jumpSkill.id,
+            xpReward: 10,
+            type: TaskType.shortTerm,
+            isDone: true,
+            treeNodeId: 'only-stage',
+          ),
+        );
+
+        state.masterSkillTreeNode(jumpSkill.id, 'only-stage');
+
+        final events = state.consumeGoalMilestoneNotifications();
+        expect(events, hasLength(1));
+        expect(events.single.milestone, GoalMilestone.complete);
+        expect(jumpSkill.triggeredGoalMilestones, [25, 50, 100]);
+      },
+    );
 
     test(
       'links tasks to mastery map nodes and clears link on node removal',

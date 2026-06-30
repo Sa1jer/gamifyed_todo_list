@@ -6,11 +6,13 @@ import 'package:flutter/material.dart';
 
 import '../app_state.dart';
 import '../engines/roadmap_engine.dart';
+import '../engines/goal_progress_engine.dart';
 import '../feedback_service.dart';
 import '../models.dart';
 import '../utils.dart';
 import 'dialogs.dart';
 import 'shared.dart';
+import 'skill_goal_progress.dart';
 
 part 'mastery_map/selection_models.dart';
 part 'mastery_map/workspace_shell.dart';

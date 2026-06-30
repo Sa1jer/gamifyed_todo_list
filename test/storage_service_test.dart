@@ -92,6 +92,7 @@ void main() {
       );
 
       expect(decoded.type, TaskType.midTerm);
+      expect(decoded.skillId, 'skill-1');
       expect(decoded.repeatFrequency, RepeatFrequency.every3Days);
       expect(decoded.priority, Priority.low);
     });
@@ -116,6 +117,73 @@ void main() {
       expect(decoded.type, TaskType.longTerm);
       expect(decoded.repeatFrequency, RepeatFrequency.monthly);
       expect(decoded.priority, Priority.high);
+    });
+
+    test('inbox task roundtrip stores system skill id without scope', () {
+      final storage = StorageService();
+      final task = Task(
+        id: 'inbox-task',
+        title: 'Купить молоко',
+        skillId: kInboxSkillId,
+        xpReward: 50,
+        type: TaskType.longTerm,
+        treeNodeId: 'stale-node',
+      );
+
+      final encoded = jsonDecode(storage.debugEncodeTask(task)) as Map;
+      expect(encoded.containsKey('scope'), isFalse);
+      expect(encoded['skillId'], kInboxSkillId);
+      expect(encoded['xpReward'], 0);
+      expect(encoded['treeNodeId'], isNull);
+
+      final decoded = storage.debugDecodeTask(jsonEncode(encoded));
+
+      expect(decoded.isInbox, isTrue);
+      expect(decoded.skillId, kInboxSkillId);
+      expect(decoded.treeNodeId, isNull);
+      expect(decoded.xpReward, 0);
+      expect(decoded.type, TaskType.shortTerm);
+    });
+
+    test('legacy task without skill id decodes as inbox task safely', () {
+      final storage = StorageService();
+      final now = DateTime.now().toIso8601String();
+      final decoded = storage.debugDecodeTask(
+        jsonEncode({
+          'id': 'legacy-floating-task',
+          'title': 'Floating legacy task',
+          'xpReward': 20,
+          'type': TaskType.shortTerm.name,
+          'createdAt': now,
+          'updatedAt': now,
+        }),
+      );
+
+      expect(decoded.isInbox, isTrue);
+      expect(decoded.skillId, kInboxSkillId);
+      expect(decoded.xpReward, 0);
+    });
+
+    test('legacy scope inbox decodes into system inbox skill', () {
+      final storage = StorageService();
+      final now = DateTime.now().toIso8601String();
+      final decoded = storage.debugDecodeTask(
+        jsonEncode({
+          'id': 'legacy-scoped-inbox-task',
+          'title': 'Scoped legacy task',
+          'scope': 'inbox',
+          'skillId': null,
+          'xpReward': 20,
+          'type': TaskType.longTerm.name,
+          'createdAt': now,
+          'updatedAt': now,
+        }),
+      );
+
+      expect(decoded.isInbox, isTrue);
+      expect(decoded.skillId, kInboxSkillId);
+      expect(decoded.xpReward, 0);
+      expect(decoded.type, TaskType.shortTerm);
     });
   });
 
@@ -202,6 +270,9 @@ void main() {
       expect(decoded.goal, 'Подтягиваться 20 раз');
       expect(decoded.goalSpec.text, 'Подтягиваться 20 раз');
       expect(decoded.goalSpec.reviews, isEmpty);
+      expect(decoded.completedGoals, isEmpty);
+      expect(decoded.completedRoadmaps, isEmpty);
+      expect(decoded.triggeredGoalMilestones, isEmpty);
       expect(decoded.level, 2);
       expect(decoded.xp, 15);
     });
@@ -308,6 +379,52 @@ void main() {
         ),
         color: const Color(0xFF4A9EFF),
         icon: Icons.code,
+        completedGoals: [
+          CompletedGoal(
+            id: 'goal-history-1',
+            skillId: 'roundtrip-skill',
+            goalText: 'Собрать первый backend',
+            completedAt: DateTime(2026, 6, 20, 18),
+            progressAtCompletion: 1.0,
+            completedStages: 4,
+            totalStages: 4,
+          ),
+        ],
+        completedRoadmaps: [
+          CompletedRoadmap(
+            id: 'roadmap-history-1',
+            skillId: 'roundtrip-skill',
+            completedGoalId: 'goal-history-1',
+            goalText: 'Собрать первый backend',
+            completedAt: DateTime(2026, 6, 20, 18),
+            progressAtCompletion: 1.0,
+            completedStages: 2,
+            totalStages: 2,
+            stages: [
+              RoadmapStageSnapshot(
+                id: 'archive-stage-1',
+                title: 'API',
+                description: 'Собрать endpoint',
+                xpReward: 30,
+                requiredQuestCompletions: 2,
+                checklist: ['Контракт'],
+                checklistDone: [true],
+                isMastered: true,
+                masteredAt: DateTime(2026, 6, 18),
+              ),
+              RoadmapStageSnapshot(
+                id: 'archive-stage-2',
+                title: 'Auth',
+                xpReward: 35,
+                requiredQuestCompletions: 3,
+                prerequisiteIds: ['archive-stage-1'],
+                isMastered: true,
+                masteredAt: DateTime(2026, 6, 20),
+              ),
+            ],
+          ),
+        ],
+        triggeredGoalMilestones: [25, 50],
       );
 
       final encoded = jsonDecode(storage.debugEncodeSkill(skill)) as Map;
@@ -321,6 +438,28 @@ void main() {
       expect(decoded.goal, 'Собрать backend roadmap');
       expect(decoded.goalSpec.metric, 'этапы');
       expect(decoded.goalSpec.reviews.single.nextFocus, 'Auth');
+      expect(decoded.triggeredGoalMilestones, [25, 50]);
+      expect(decoded.completedGoals, hasLength(1));
+      expect(decoded.completedGoals.single.id, 'goal-history-1');
+      expect(decoded.completedGoals.single.skillId, 'roundtrip-skill');
+      expect(decoded.completedGoals.single.goalText, 'Собрать первый backend');
+      expect(
+        decoded.completedGoals.single.completedAt,
+        DateTime(2026, 6, 20, 18),
+      );
+      expect(decoded.completedGoals.single.progressAtCompletion, 1.0);
+      expect(decoded.completedGoals.single.completedStages, 4);
+      expect(decoded.completedGoals.single.totalStages, 4);
+      expect(decoded.completedRoadmaps, hasLength(1));
+      final archivedRoadmap = decoded.completedRoadmaps.single;
+      expect(archivedRoadmap.id, 'roadmap-history-1');
+      expect(archivedRoadmap.completedGoalId, 'goal-history-1');
+      expect(archivedRoadmap.goalText, 'Собрать первый backend');
+      expect(archivedRoadmap.stages, hasLength(2));
+      expect(archivedRoadmap.stages.first.id, 'archive-stage-1');
+      expect(archivedRoadmap.stages.first.checklist, ['Контракт']);
+      expect(archivedRoadmap.stages.first.checklistDone, [true]);
+      expect(archivedRoadmap.stages.last.prerequisiteIds, ['archive-stage-1']);
     });
 
     test('roadmap roads and linked task survive skill storage roundtrip', () {
@@ -407,6 +546,20 @@ void main() {
       expect(storage.debugVersionAfterMigration('1'), 2);
       expect(storage.debugVersionAfterMigration(2), 2);
       expect(storage.debugVersionAfterMigration('9'), 9);
+    });
+
+    test('triggered goal milestone payload keeps only known thresholds', () {
+      final storage = StorageService();
+      final decoded = storage.debugDecodeSkill(
+        jsonEncode({
+          'id': 'milestone-skill',
+          'name': 'Milestones',
+          'goal': 'Cross thresholds',
+          'triggeredGoalMilestones': [25, 33, '50', 'bad', 100],
+        }),
+      );
+
+      expect(decoded.triggeredGoalMilestones, [25, 50, 100]);
     });
   });
 }

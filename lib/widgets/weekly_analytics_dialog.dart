@@ -2239,7 +2239,9 @@ class _ProcrastinationInsights {
 
   static _ProcrastinationInsights fromState(AppState state) {
     final now = DateTime.now();
-    final activeTasks = state.tasks.where((task) => !task.isDone).toList();
+    final activeTasks = state.tasks
+        .where((task) => task.isSkillTask && !task.isDone)
+        .toList();
     final skillsById = {for (final skill in state.skills) skill.id: skill};
 
     final stalled =

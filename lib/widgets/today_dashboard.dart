@@ -21,6 +21,7 @@ class TodayDashboard extends StatefulWidget {
   });
 
   static Skill? _skillFor(AppState state, Task task) {
+    if (!task.isSkillTask) return null;
     return state.skills.where((skill) => skill.id == task.skillId).firstOrNull;
   }
 
@@ -141,7 +142,9 @@ class _TodayDashboardState extends State<TodayDashboard> {
     final isDark = state.isDark;
     final txt = textColor(isDark);
     final sub = subtext(isDark);
-    final activeTasks = state.tasks.where((task) => !task.isDone).toList();
+    final activeTasks = state.tasks
+        .where((task) => task.isSkillTask && !task.isDone)
+        .toList();
     final dailyTasks = activeTasks
         .where((task) => task.type == TaskType.repeating)
         .toList();
@@ -513,7 +516,7 @@ class _NextActionCard extends StatelessWidget {
     final compact = MediaQuery.sizeOf(context).width < 600;
 
     if (task == null) {
-      final hasSkills = state.skills.isNotEmpty;
+      final hasSkills = state.roadmapSkills.isNotEmpty;
       final isFreshStart = !hasSkills && state.tasks.isEmpty;
       return _SoftCard(
         isDark: isDark,

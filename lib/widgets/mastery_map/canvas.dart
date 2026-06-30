@@ -560,7 +560,7 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
   _OrbCanvasLayout _buildOrbLayout(AppState state, Size minSize) {
     final selectedSkill = widget.selection == null
         ? null
-        : state.skills
+        : state.roadmapSkills
               .where((skill) => skill.id == widget.selection!.skillId)
               .firstOrNull;
     final pathLayout = selectedSkill == null
@@ -595,14 +595,15 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
         : _roadmapSkillCenter(Size(width, height), focusLeftSafe, visualSpan);
     final skillPositions = <Skill, Offset>{};
 
-    for (var index = 0; index < state.skills.length; index++) {
-      final skill = state.skills[index];
+    final skills = state.roadmapSkills;
+    for (var index = 0; index < skills.length; index++) {
+      final skill = skills[index];
       skillPositions[skill] =
           selectedSkill != null &&
               selectedCenter != null &&
               skill.id == selectedSkill.id
           ? selectedCenter
-          : _clusterSkillOrbPosition(center, index, state.skills.length);
+          : _clusterSkillOrbPosition(center, index, skills.length);
     }
 
     final nodePositions = selectedSkill == null || selectedCenter == null

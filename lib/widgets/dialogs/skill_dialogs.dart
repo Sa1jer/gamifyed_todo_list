@@ -1,5 +1,311 @@
 part of '../dialogs.dart';
 
+enum NextRoadmapChoice { keepCurrent, createNew, addStage }
+
+class NextRoadmapPromptDialog extends StatelessWidget {
+  final bool isDark;
+  final Color color;
+
+  const NextRoadmapPromptDialog({
+    super.key,
+    required this.isDark,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final text = textColor(isDark);
+    final secondary = subtext(isDark);
+
+    return Dialog(
+      backgroundColor: surface(isDark),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 460),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Следующая цель задана',
+                      style: TextStyle(
+                        color: text,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Закрыть',
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(
+                      Icons.close,
+                      color: Color(0xFF8E8E93),
+                      size: 22,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Начать новую карту? Старая карта не будет удалена. Что сделать дальше?',
+                style: TextStyle(
+                  color: secondary,
+                  fontSize: 12.5,
+                  height: 1.4,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: color.withAlpha(isDark ? 18 : 12),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: color.withAlpha(42)),
+                ),
+                child: Text(
+                  '“Создать новую карту” сохранит текущие этапы в архив RoadMap и очистит активную карту для следующей цели.',
+                  style: TextStyle(
+                    color: text,
+                    fontSize: 11.5,
+                    height: 1.35,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Wrap(
+                alignment: WrapAlignment.end,
+                spacing: 10,
+                runSpacing: 8,
+                children: [
+                  OutlinedButton(
+                    onPressed: () =>
+                        Navigator.pop(context, NextRoadmapChoice.keepCurrent),
+                    child: const Text('Оставить текущую карту'),
+                  ),
+                  FilledButton.icon(
+                    onPressed: () =>
+                        Navigator.pop(context, NextRoadmapChoice.createNew),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: color,
+                      foregroundColor: Colors.white,
+                    ),
+                    icon: const Icon(Icons.add_road, size: 18),
+                    label: const Text('Создать новую карту'),
+                  ),
+                  FilledButton.icon(
+                    onPressed: () =>
+                        Navigator.pop(context, NextRoadmapChoice.addStage),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: color.withAlpha(isDark ? 80 : 36),
+                      foregroundColor: isDark ? Colors.white : color,
+                    ),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Добавить этап'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class NextGoalDialog extends StatefulWidget {
+  final bool isDark;
+  final Color color;
+  final String currentGoal;
+
+  const NextGoalDialog({
+    super.key,
+    required this.isDark,
+    required this.color,
+    required this.currentGoal,
+  });
+
+  @override
+  State<NextGoalDialog> createState() => _NextGoalDialogState();
+}
+
+class _NextGoalDialogState extends State<NextGoalDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _goalController = TextEditingController();
+  bool _submitting = false;
+
+  @override
+  void dispose() {
+    _goalController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = widget.isDark;
+    final background = surface(isDark);
+    final fieldBackground = isDark
+        ? const Color(0xFF13131A)
+        : const Color(0xFFF5F5F7);
+    final text = textColor(isDark);
+    final secondary = subtext(isDark);
+    final border = borderColor(isDark);
+
+    return Dialog(
+      backgroundColor: background,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 460),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Следующая цель',
+                        style: TextStyle(
+                          color: text,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Закрыть',
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(
+                        Icons.close,
+                        color: Color(0xFF8E8E93),
+                        size: 22,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'Текущая цель',
+                  style: TextStyle(
+                    color: secondary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  widget.currentGoal.trim().isEmpty
+                      ? 'Цель не была описана'
+                      : widget.currentGoal,
+                  key: const ValueKey('current-goal-copy'),
+                  style: TextStyle(
+                    color: text,
+                    fontSize: 13,
+                    height: 1.3,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                TextFormField(
+                  key: const ValueKey('next-goal-field'),
+                  controller: _goalController,
+                  autofocus: true,
+                  minLines: 2,
+                  maxLines: 4,
+                  textInputAction: TextInputAction.done,
+                  style: TextStyle(color: text, fontSize: 14),
+                  decoration: InputDecoration(
+                    labelText: 'Новая цель',
+                    labelStyle: TextStyle(color: secondary),
+                    filled: true,
+                    fillColor: fieldBackground,
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: border),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: widget.color, width: 1.4),
+                    ),
+                    errorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Color(0xFFFF453A)),
+                    ),
+                    focusedErrorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Color(0xFFFF453A)),
+                    ),
+                  ),
+                  validator: (value) {
+                    final normalized = value?.trim() ?? '';
+                    if (normalized.isEmpty) return 'Введите следующую цель';
+                    if (normalized == widget.currentGoal.trim()) {
+                      return 'Новая цель должна отличаться от текущей';
+                    }
+                    return null;
+                  },
+                  onFieldSubmitted: (_) => _save(),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Текущая цель сохранится в истории. Этапы и квесты не будут удалены.',
+                  style: TextStyle(
+                    color: secondary,
+                    fontSize: 11.5,
+                    height: 1.3,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Wrap(
+                  alignment: WrapAlignment.end,
+                  spacing: 10,
+                  runSpacing: 8,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Отмена'),
+                    ),
+                    FilledButton(
+                      onPressed: _save,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: widget.color,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Задать цель'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _save() {
+    if (_submitting) return;
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    _submitting = true;
+    Navigator.pop(context, _goalController.text.trim());
+  }
+}
+
 class AddSkillDialog extends StatefulWidget {
   final bool isDark;
   final Skill? existing;

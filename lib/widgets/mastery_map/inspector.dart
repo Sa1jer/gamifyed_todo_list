@@ -303,7 +303,7 @@ class _MasteryMapInspector extends StatelessWidget {
       );
     }
 
-    final skill = state.skills
+    final skill = state.roadmapSkills
         .where((candidate) => candidate.id == currentSelection.skillId)
         .firstOrNull;
     if (skill == null) {
@@ -361,6 +361,7 @@ class _MasteryMapInspector extends StatelessWidget {
             state: state,
             isDark: isDark,
             skill: skill,
+            onAddStage: onAddRoot,
             onToggleQuest: onToggleQuest,
             onMinimumAction: onMinimumAction,
             onEditQuest: (task) => onEditQuest(skill, task),
@@ -404,10 +405,10 @@ class _EmptyMapInspector extends StatelessWidget {
         const SizedBox(height: 16),
         Expanded(
           child: ListView.separated(
-            itemCount: state.skills.length,
+            itemCount: state.roadmapSkills.length,
             separatorBuilder: (_, _) => const SizedBox(height: 7),
             itemBuilder: (context, index) {
-              final skill = state.skills[index];
+              final skill = state.roadmapSkills[index];
               return PressFeedback(
                 scale: 0.98,
                 onTap: () => onSelectSkill(skill),
@@ -461,6 +462,7 @@ class _SkillInspector extends StatelessWidget {
   final AppState state;
   final bool isDark;
   final Skill skill;
+  final ValueChanged<Skill> onAddStage;
   final void Function(Task task, Offset position) onToggleQuest;
   final void Function(Task task, Offset position) onMinimumAction;
   final ValueChanged<Task> onEditQuest;
@@ -470,6 +472,7 @@ class _SkillInspector extends StatelessWidget {
     required this.state,
     required this.isDark,
     required this.skill,
+    required this.onAddStage,
     required this.onToggleQuest,
     required this.onMinimumAction,
     required this.onEditQuest,
@@ -479,7 +482,12 @@ class _SkillInspector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final freeTasks = state.tasks
-        .where((task) => task.skillId == skill.id && task.treeNodeId == null)
+        .where(
+          (task) =>
+              task.isSkillTask &&
+              task.skillId == skill.id &&
+              task.treeNodeId == null,
+        )
         .toList();
     final activeFreeTasks = _sortedActiveQuests(
       freeTasks.where((task) => !task.isDone),
@@ -517,6 +525,21 @@ class _SkillInspector extends StatelessWidget {
               ? 'Цель пути пока не задана'
               : 'Цель пути: ${skill.goal}',
           isDark: isDark,
+        ),
+        const SizedBox(height: 12),
+        SkillGoalProgress(
+          skill: skill,
+          isDark: isDark,
+          onSetNextGoal: () async {
+            final choice = await _showNextGoalFlow(
+              context,
+              state: state,
+              skill: skill,
+            );
+            if (choice == NextRoadmapChoice.addStage && context.mounted) {
+              onAddStage(skill);
+            }
+          },
         ),
         const SizedBox(height: 14),
         Expanded(

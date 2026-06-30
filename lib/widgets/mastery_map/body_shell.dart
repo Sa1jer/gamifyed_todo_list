@@ -215,6 +215,7 @@ class _MasteryMapBody extends StatelessWidget {
                   selection: selection,
                   onSelectSkill: (skill) =>
                       onSelectionChanged(_MasterySelection.skill(skill.id)),
+                  onAddStage: onAddRoot,
                   onOpenDetails: selection == null ? null : openDetails,
                 ),
               ],

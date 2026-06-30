@@ -186,7 +186,8 @@ void main() {
       );
       addTearDown(result.state.dispose);
 
-      expect(result.state.skills, isEmpty);
+      expect(result.state.roadmapSkills, isEmpty);
+      expect(result.state.skills.map((skill) => skill.id), [kInboxSkillId]);
       expect(result.state.tasks, isEmpty);
       expect(result.state.history, isEmpty);
       expect(result.state.rewardChests, isEmpty);
@@ -231,7 +232,7 @@ void main() {
         final result = await applyScenario(debugScenarioStreak7);
         addTearDown(result.state.dispose);
 
-        expect(result.state.skills, hasLength(1));
+        expect(result.state.roadmapSkills, hasLength(1));
         expect(result.state.tasks, hasLength(1));
         expect(result.state.tasks.single.type, TaskType.repeating);
         expect(result.state.tasks.single.streak, 7);

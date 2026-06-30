@@ -37,13 +37,24 @@ This file tracks the active implementation roadmap and completed project work. U
 
 ## P3 — Skill Goal Progress
 
-- [ ] Add a pure `GoalProgressEngine` with equal stage weighting; no stages means `0%`.
-- [ ] Use RoadMap stage completion as the current goal-progress basis; keep measurable goal UI deferred.
+- [ ] Design measurable numeric goals without replacing RoadMap stage progress implicitly.
+- [ ] Explore weighted stages only after equal weighting has real usage feedback.
 - [ ] Add a persisted goal-cycle state with stable ID, start time, baseline mastered stages, and completion time.
 - [ ] Add a tested storage migration for legacy GoalSpec payloads.
-- [ ] Allow a new goal only after `100%` progress and require confirmation before resetting the percentage.
+- [ ] Introduce a persisted `RoadMapRecord` with stable ID, skill ID, goal-history link, status and timestamps.
+- [ ] Add `activeRoadMapId` to Skill and migrate legacy `treeNodes` into one active RoadMap without changing node IDs.
+- [ ] Move stage mutations, task links and progress calculation to the active RoadMap boundary.
+- [ ] Add completed RoadMap detail UI that renders archived `CompletedRoadmap.stages` rather than only timeline summaries.
+- [ ] Add template-based new RoadMap creation only after `RoadMapRecord` / `activeRoadMapId` boundaries exist.
+- [ ] Keep template-based new RoadMap creation disabled until it targets only the active RoadMap instead of reusing and clearing `Skill.treeNodes`.
+- [ ] Add multi-RoadMap migration, restart, task-link, template and cloud-conflict regression coverage.
 - [ ] Preserve old mastered stages as history; count only unmastered or newly added stages in the new cycle.
 - [ ] Show the same goal percentage consistently in skill, RoadMap, and Statistics surfaces.
+- [ ] Revisit the deeper goal editor only with the measurable-goal model.
+- [ ] Add an optional review prompt after goal completion.
+- [ ] Add optional notes and richer filtering/sorting to completed goal history.
+- [ ] Define export and future sync conflict rules for completed goal entries.
+- [ ] Replace the compact mobile dialog with a full-screen goal editor if the flow grows.
 - [ ] Add one quiet, non-blocking recommendation during skill creation to create a recurring ritual later.
 
 ## P4 — Reordering
@@ -56,23 +67,23 @@ This file tracks the active implementation roadmap and completed project work. U
 
 ## P5 — Task Inbox / “Задачник”
 
-- [ ] Add `TaskScope.skill / inbox` and nullable `skillId` through a dedicated tested schema migration.
-- [ ] Migrate every legacy task to `TaskScope.skill` without changing existing quest behavior.
-- [ ] Add a synthetic `Задачник` entry before skills without modeling it as an empty skill.
-- [ ] Keep Inbox creation title-only and optimized for immediate To-do capture.
-- [ ] Award exactly `5 XP` to the profile when an Inbox task is completed; undo must remove exactly `5 XP`.
-- [ ] Exclude Inbox tasks from skill XP, RoadMap, history, daily statistics, achievements, rewards, effects, resistance, streaks, and notifications.
-- [ ] Add completion, undo, reload, migration, and isolation regression tests.
+- [ ] Add recurring inbox tasks only after the plain To-do flow has usage feedback.
+- [ ] Add inbox tags/categories without mixing them into skill tags.
+- [ ] Add “convert inbox task to skill quest” with explicit skill selection.
+- [ ] Add inbox-specific stats if users need a lightweight done count.
+- [ ] Add inbox search/filter once the list can grow.
+- [ ] Consider a dedicated mobile inbox page if the compact Act card becomes crowded.
+- [ ] Add notification/reminder support with explicit inbox-safe settings.
+- [ ] Define cloud sync conflict rules for scoped tasks before adding sync.
 
 ## P6 — Milestone Animations
 
-- [ ] Persist reached `25%`, `50%`, and `100%` thresholds per goal cycle.
-- [ ] Detect threshold crossing from progress before and after stage mastery.
-- [ ] If one stage crosses multiple thresholds, emit only the highest feedback and mark all crossed thresholds handled.
-- [ ] Use restrained feedback for `25%` and `50%`; make `100%` the strongest animation.
-- [ ] Play the existing milestone sound at `100%` only when interface sounds are enabled.
-- [ ] Prevent milestone feedback from replaying after rebuild, restart, or reopening RoadMap.
-- [ ] Reset milestone state only when a confirmed new goal cycle starts.
+- [ ] Add optional `100%` milestone sound behind interface sound settings.
+- [ ] Add a user setting to disable milestone animations if the feedback feels too busy.
+- [ ] Add reduced-motion behavior when the app has a motion accessibility setting.
+- [ ] Explore a richer but still lightweight `100%` celebration after MVP feedback.
+- [ ] Persist or surface milestone history only if users need an audit trail.
+- [ ] Consider achievement integration separately from milestone feedback.
 
 ## Skills to use
 
@@ -90,6 +101,13 @@ This file tracks the active implementation roadmap and completed project work. U
 
 ## Recently Completed
 
+- Task Inbox / “Задачник” MVP: added explicit `TaskScope.skill/inbox`, nullable skill identity for inbox tasks, title-only quick add, isolated completion/undo/delete UI in Act, storage compatibility for legacy tasks, and regression coverage proving inbox tasks do not affect skill XP, RoadMap progress, history, daily stats, achievements, rewards, resistance, or skill quest counts.
+- Milestone Animations MVP: persisted `25%`, `50%`, and `100%` goal milestone thresholds per skill/current goal, detects progress crossings from stage mastery, marks all crossed thresholds while showing only the strongest non-blocking banner for one action, and keeps sound deferred.
+- Start New RoadMap MVP: after setting the next goal, users can keep the current map, add a manual stage, or explicitly create a new empty active RoadMap; the old completed map is stored as an append-only `CompletedRoadmap` snapshot and surfaced in the timeline. Template-based new RoadMap creation remains disabled pending `RoadMapRecord` / `activeRoadMapId` boundaries.
+- Goal History MVP: completed goals are archived as immutable per-skill snapshots during explicit Next Goal confirmation and appear in the existing growth timeline; legacy skills load with an empty archive.
+- Next Goal Flow MVP: added an explicit `100%` CTA and validated goal input; updating the goal keeps all RoadMap stages, mastery, quests, XP and IDs intact, with no schema migration or automatic reset.
+- Skill Goal Progress MVP: added derived equal-weight RoadMap stage progress, neutral empty state, `100%` completion copy, skill-card and RoadMap detail UI, plus unit/widget coverage without storage changes.
+- Skill Goal Progress MVP follow-up: keep `25/50/100` animations, `100%` sound, and progress in future mobile bubbles/squircles deferred to their existing P1/P6 batches.
 - `1.3.47`: added centralized skill reordering that preserves selection, quests, RoadMap links, XP and stable skill IDs.
 - `1.3.47`: added desktop drag handles and mobile long-press reordering with stable item keys; current local order survives save/load through the existing skill-list persistence order.
 - `1.3.47`: audited stage ordering and deferred it because RoadMap rendering, template reuse and next-stage tie-breaking still depend on DAG topology plus raw `treeNodes` order.

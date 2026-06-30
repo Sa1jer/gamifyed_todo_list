@@ -19,6 +19,7 @@ import 'progress_hub_dialog.dart';
 import 'mastery_map_workspace.dart';
 import 'character_timeline_dialog.dart';
 import 'daily_victories_dialog.dart';
+import 'goal_milestone_banner.dart';
 import 'reward_animations.dart';
 import 'weekly_analytics_dialog.dart';
 

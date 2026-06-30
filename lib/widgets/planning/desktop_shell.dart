@@ -127,7 +127,7 @@ class _PlanningSkillRail extends StatelessWidget {
           ),
           PanelDivider(isDark: isDark),
           Expanded(
-            child: state.skills.isEmpty
+            child: state.roadmapSkills.isEmpty
                 ? EmptyStateMessage(
                     isDark: isDark,
                     icon: Icons.bolt,

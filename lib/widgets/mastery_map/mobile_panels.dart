@@ -5,6 +5,7 @@ class _MasteryMobileSelectionSummary extends StatelessWidget {
   final bool isDark;
   final _MasterySelection? selection;
   final ValueChanged<Skill> onSelectSkill;
+  final ValueChanged<Skill> onAddStage;
   final VoidCallback? onOpenDetails;
 
   const _MasteryMobileSelectionSummary({
@@ -12,6 +13,7 @@ class _MasteryMobileSelectionSummary extends StatelessWidget {
     required this.isDark,
     required this.selection,
     required this.onSelectSkill,
+    required this.onAddStage,
     required this.onOpenDetails,
   });
 
@@ -20,7 +22,7 @@ class _MasteryMobileSelectionSummary extends StatelessWidget {
     final currentSelection = selection;
     final skill = currentSelection == null
         ? null
-        : state.skills
+        : state.roadmapSkills
               .where((candidate) => candidate.id == currentSelection.skillId)
               .firstOrNull;
     final node = skill == null || currentSelection?.nodeId == null
@@ -34,6 +36,9 @@ class _MasteryMobileSelectionSummary extends StatelessWidget {
               .where((candidate) => candidate.id == currentSelection!.taskId)
               .firstOrNull;
     final sub = subtext(isDark);
+    final goalProgress = skill == null
+        ? null
+        : const GoalProgressEngine().snapshotForSkill(skill);
 
     if (skill == null) {
       return AppPanel(
@@ -64,7 +69,7 @@ class _MasteryMobileSelectionSummary extends StatelessWidget {
               Wrap(
                 spacing: 7,
                 runSpacing: 7,
-                children: state.skills
+                children: state.roadmapSkills
                     .map(
                       (skill) => _MobileMasterySkillChip(
                         skill: skill,
@@ -95,70 +100,93 @@ class _MasteryMobileSelectionSummary extends StatelessWidget {
             : 'выполнять лучше в «Действовать»',
       _ =>
         skill.goal.trim().isEmpty
-            ? 'Цель пути пока не задана'
-            : 'Цель пути: ${skill.goal}',
+            ? 'Цель пути пока не задана · ${goalProgress!.percentLabel}'
+            : 'Цель пути: ${skill.goal} · ${goalProgress!.percentLabel}',
     };
 
     return AppPanel(
       isDark: isDark,
       child: Padding(
         padding: const EdgeInsets.all(14),
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: skill.color.withAlpha(isDark ? 32 : 22),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                currentSelection?.type == _MasterySelectionType.node
-                    ? Icons.bolt_rounded
-                    : currentSelection?.type == _MasterySelectionType.quest
-                    ? Icons.flag
-                    : skill.icon,
-                color: skill.color,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: textColor(isDark),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w900,
-                    ),
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: skill.color.withAlpha(isDark ? 32 : 22),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  const SizedBox(height: 3),
-                  Text(
-                    subtitle,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: sub,
-                      fontSize: 11.5,
-                      height: 1.25,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  child: Icon(
+                    currentSelection?.type == _MasterySelectionType.node
+                        ? Icons.bolt_rounded
+                        : currentSelection?.type == _MasterySelectionType.quest
+                        ? Icons.flag
+                        : skill.icon,
+                    color: skill.color,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: textColor(isDark),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        subtitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: sub,
+                          fontSize: 11.5,
+                          height: 1.25,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (onOpenDetails != null) ...[
+                  const SizedBox(width: 8),
+                  SmallBtn(
+                    label: 'Детали',
+                    icon: Icons.expand_less,
+                    color: const Color(0xFF4A9EFF),
+                    onTap: onOpenDetails!,
                   ),
                 ],
-              ),
+              ],
             ),
-            if (onOpenDetails != null) ...[
-              const SizedBox(width: 8),
-              SmallBtn(
-                label: 'Детали',
-                icon: Icons.expand_less,
-                color: const Color(0xFF4A9EFF),
-                onTap: onOpenDetails!,
+            if (currentSelection?.type == _MasterySelectionType.skill) ...[
+              const SizedBox(height: 10),
+              SkillGoalProgress(
+                skill: skill,
+                isDark: isDark,
+                compact: true,
+                onSetNextGoal: () async {
+                  final choice = await _showNextGoalFlow(
+                    context,
+                    state: state,
+                    skill: skill,
+                  );
+                  if (choice == NextRoadmapChoice.addStage && context.mounted) {
+                    onAddStage(skill);
+                  }
+                },
               ),
             ],
           ],
@@ -208,7 +236,7 @@ class _MobileMasterySelectionPanel extends StatelessWidget {
     final currentSelection = selection;
     final skill = currentSelection == null
         ? null
-        : state.skills
+        : state.roadmapSkills
               .where((candidate) => candidate.id == currentSelection.skillId)
               .firstOrNull;
     final nodeId = currentSelection?.nodeId;
@@ -313,7 +341,7 @@ class _MobileEmptyMasteryPanel extends StatelessWidget {
         Wrap(
           spacing: 7,
           runSpacing: 7,
-          children: state.skills
+          children: state.roadmapSkills
               .map(
                 (skill) => _MobileMasterySkillChip(
                   skill: skill,
@@ -371,7 +399,7 @@ class _MobileMasterySkillChip extends StatelessWidget {
             ),
             const SizedBox(width: 6),
             Text(
-              '${skill.masteredTreeNodeCount}/${skill.treeNodes.length}',
+              const GoalProgressEngine().snapshotForSkill(skill).percentLabel,
               style: TextStyle(
                 color: skill.color,
                 fontSize: 11,
@@ -407,7 +435,12 @@ class _MobileSkillMasteryPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final freeTasks = state.tasks
-        .where((task) => task.skillId == skill.id && task.treeNodeId == null)
+        .where(
+          (task) =>
+              task.isSkillTask &&
+              task.skillId == skill.id &&
+              task.treeNodeId == null,
+        )
         .toList();
     final activeFreeTasks = _sortedActiveQuests(
       freeTasks.where((task) => !task.isDone),
@@ -446,6 +479,8 @@ class _MobileSkillMasteryPanel extends StatelessWidget {
               : 'Цель пути: ${skill.goal}',
           isDark: isDark,
         ),
+        const SizedBox(height: 10),
+        SkillGoalProgress(skill: skill, isDark: isDark),
         const SizedBox(height: 12),
         if (hasFreeTasks || stageGroups.isEmpty) ...[
           _MobileStagePracticeList(

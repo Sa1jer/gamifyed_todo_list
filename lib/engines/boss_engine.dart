@@ -35,7 +35,7 @@ class BossEngine {
     final targetStreak = boss.targetStreak < 1 ? 1 : boss.targetStreak;
 
     final skillTasks = tasks
-        .where((task) => task.skillId == boss.skillId)
+        .where((task) => task.isSkillTask && task.skillId == boss.skillId)
         .toList();
     final repeatingTasks = skillTasks
         .where((task) => task.type == TaskType.repeating)

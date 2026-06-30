@@ -369,8 +369,11 @@ void main() {
     await tester.pump(const Duration(seconds: 2));
     await tester.pump(const Duration(milliseconds: 500));
 
-    expect(storage.skills, hasLength(1));
-    expect(storage.skills.single.treeNodes, isEmpty);
+    final savedUserSkills = storage.skills
+        .where((skill) => skill.id != kInboxSkillId)
+        .toList();
+    expect(savedUserSkills, hasLength(1));
+    expect(savedUserSkills.single.treeNodes, isEmpty);
     expect(storage.tasks, isEmpty);
     expect(storage._onboardingSeen, isFalse);
     expect(find.text('Первый квест'), findsWidgets);
@@ -899,7 +902,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 250));
 
     expect(find.text('Применить сценарий?'), findsNothing);
-    expect(storage.skills, isEmpty);
+    expect(storage.skills.where((skill) => skill.id != kInboxSkillId), isEmpty);
     expect(fakeDebugService.draft.selectedScenarioId, 'epic_chest_pending');
 
     await tester.tap(find.text('Стрик 7 дней'));
@@ -910,7 +913,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 350));
 
     expect(fakeDebugService.draft.selectedScenarioId, 'streak_7');
-    expect(storage.skills, hasLength(1));
+    expect(
+      storage.skills.where((skill) => skill.id != kInboxSkillId),
+      hasLength(1),
+    );
     expect(storage.tasks, hasLength(1));
 
     await tester.tap(find.text('Очистить'));
@@ -924,7 +930,10 @@ void main() {
 
     expect(find.text('Очистить debug state?'), findsNothing);
     expect(fakeDebugService.cleared, isFalse);
-    expect(storage.skills, hasLength(1));
+    expect(
+      storage.skills.where((skill) => skill.id != kInboxSkillId),
+      hasLength(1),
+    );
 
     await tester.tap(find.byIcon(Icons.close).last);
     await tester.pump();
@@ -1082,14 +1091,17 @@ void main() {
     final storage = InMemoryStorageService();
     await storage.init();
     final state = AppState(storage: storage);
-    state.skills.addAll([
+    state.addSkill(
       Skill(
         id: 'skill-long',
         name: 'Очень длинное название навыка для проверки перестановки',
         goal: 'Проверить читаемость',
         color: const Color(0xFF4A9EFF),
         icon: Icons.code,
+        treeNodes: [SkillTreeNode(id: 'stage-1', title: 'Первый этап')],
       ),
+    );
+    state.addSkill(
       Skill(
         id: 'skill-short',
         name: 'Короткий',
@@ -1097,7 +1109,7 @@ void main() {
         color: const Color(0xFF34C759),
         icon: Icons.check,
       ),
-    ]);
+    );
     state.selectSkill('skill-long');
 
     await tester.pumpWidget(
@@ -1118,6 +1130,46 @@ void main() {
       find.byKey(const ValueKey('skill-reorder-handle-skill-short')),
       findsOneWidget,
     );
+    expect(
+      find.byKey(ValueKey('skill-reorder-handle-$kInboxSkillId')),
+      findsNothing,
+    );
+    final handleVisibility = find.byKey(
+      const ValueKey('skill-reorder-handle-visibility-skill-long'),
+    );
+    expect(tester.widget<AnimatedOpacity>(handleVisibility).opacity, 0);
+    expect(
+      find.byKey(const ValueKey('skill-goal-percent-skill-long')),
+      findsNothing,
+    );
+
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: const Offset(1, 1));
+    addTearDown(mouse.removePointer);
+    await mouse.moveTo(tester.getCenter(find.text('Короткий')));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<AnimatedOpacity>(
+            find.byKey(
+              const ValueKey('skill-reorder-handle-visibility-skill-short'),
+            ),
+          )
+          .opacity,
+      1,
+    );
+    expect(
+      tester
+          .getTopLeft(
+            find.byKey(const ValueKey('skill-reorder-handle-skill-short')),
+          )
+          .dx,
+      closeTo(
+        tester.getTopLeft(find.byKey(const ValueKey('skills-list'))).dx,
+        1,
+      ),
+    );
 
     final list = tester.widget<ReorderableListView>(
       find.byKey(const ValueKey('skills-list')),
@@ -1125,7 +1177,7 @@ void main() {
     list.onReorderItem!.call(0, 1);
     await tester.pumpAndSettle();
 
-    expect(state.skills.map((skill) => skill.id), [
+    expect(state.roadmapSkills.map((skill) => skill.id), [
       'skill-short',
       'skill-long',
     ]);
@@ -1190,10 +1242,12 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    expect(storage.skills.map((skill) => skill.id), [
-      'mobile-short',
-      'mobile-long',
-    ]);
+    expect(
+      storage.skills
+          .where((skill) => skill.id != kInboxSkillId)
+          .map((skill) => skill.id),
+      ['mobile-short', 'mobile-long'],
+    );
     expect(
       find.text('Очень длинное название мобильного навыка'),
       findsOneWidget,
@@ -1503,6 +1557,8 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
 
     expect(find.text('Действовать сегодня'), findsOneWidget);
+    expect(find.text('Быстрая задача'), findsNothing);
+    expect(find.textContaining('Быстрые To-do'), findsNothing);
     expect(find.textContaining(taskTitle), findsWidgets);
     expect(find.textContaining('Минимум:'), findsWidgets);
     expect(tester.takeException(), isNull);

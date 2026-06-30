@@ -60,7 +60,9 @@ class CourseNudgeEngine {
   }
 
   CourseNudge? suggestForSkill(Skill skill, Iterable<Task> tasks) {
-    final skillTasks = tasks.where((task) => task.skillId == skill.id).toList();
+    final skillTasks = tasks
+        .where((task) => task.isSkillTask && task.skillId == skill.id)
+        .toList();
     final latestReview = _latestReview(skill);
     final reviewFocus = _reviewFocus(latestReview);
 
