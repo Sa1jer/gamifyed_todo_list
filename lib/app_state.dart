@@ -969,9 +969,8 @@ class AppState extends ChangeNotifier {
     return (active: active, completed: completed);
   }
 
-  int activeTaskCountForSkill(String skillId) => tasks
-      .where((t) => t.isSkillTask && t.skillId == skillId && !t.isDone)
-      .length;
+  int activeTaskCountForSkill(String skillId) =>
+      tasksForSkill(skillId).where((task) => !task.isDone).length;
 
   Map<DateTime, List<HistoryEntry>> get completionHistoryByDate {
     assert(_historyCachesAreFreshForDebug());

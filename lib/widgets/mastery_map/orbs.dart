@@ -228,6 +228,9 @@ class _SkillOrbButtonState extends State<_SkillOrbButton> {
                   const SizedBox(height: _roadmapSkillLabelGap),
                   _AdaptiveOrbLabel(
                     key: ValueKey('map-skill-label-${widget.skill.id}'),
+                    textKey: ValueKey(
+                      'map-skill-label-text-${widget.skill.id}',
+                    ),
                     text: widget.skill.name,
                     isDark: widget.isDark,
                     selected: widget.selected || widget.roadFocus,
@@ -244,12 +247,14 @@ class _SkillOrbButtonState extends State<_SkillOrbButton> {
 
 class _AdaptiveOrbLabel extends StatelessWidget {
   final String text;
+  final Key? textKey;
   final bool isDark;
   final bool selected;
 
   const _AdaptiveOrbLabel({
     super.key,
     required this.text,
+    this.textKey,
     required this.isDark,
     required this.selected,
   });
@@ -261,6 +266,7 @@ class _AdaptiveOrbLabel extends StatelessWidget {
       height: _roadmapSkillLabelHeight,
       child: Center(
         child: Text(
+          key: textKey,
           text,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
@@ -499,6 +505,9 @@ class _MapNodeButtonState extends State<_MapNodeButton> {
                   key: ValueKey(
                     'map-node-label-${widget.skill.id}-${widget.node.id}',
                   ),
+                  textKey: ValueKey(
+                    'map-node-label-text-${widget.skill.id}-${widget.node.id}',
+                  ),
                   text: widget.node.title,
                   color: status == SkillTreeNodeStatus.locked
                       ? subtext(widget.isDark)
@@ -515,11 +524,13 @@ class _MapNodeButtonState extends State<_MapNodeButton> {
 
 class _AdaptiveNodeLabel extends StatelessWidget {
   final String text;
+  final Key? textKey;
   final Color color;
 
   const _AdaptiveNodeLabel({
     super.key,
     required this.text,
+    this.textKey,
     required this.color,
   });
 
@@ -528,17 +539,21 @@ class _AdaptiveNodeLabel extends StatelessWidget {
     return SizedBox(
       width: _roadmapNodeLabelWidth,
       height: _roadmapNodeLabelHeight,
-      child: Text(
-        text,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        softWrap: true,
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          color: color,
-          fontSize: _adaptiveNodeLabelFontSize(text),
-          height: 1.05,
-          fontWeight: FontWeight.w600,
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: Text(
+          text,
+          key: textKey,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          softWrap: true,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: color,
+            fontSize: _adaptiveNodeLabelFontSize(text),
+            height: 1.05,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
     );

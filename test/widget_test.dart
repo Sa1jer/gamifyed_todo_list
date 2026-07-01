@@ -1122,6 +1122,7 @@ void main() {
       ),
     );
     state.selectSkill('skill-long');
+    state.addInboxTask('Проверить счётчик Задачника');
 
     await tester.pumpWidget(
       MaterialApp(
@@ -1144,6 +1145,14 @@ void main() {
     expect(
       find.byKey(ValueKey('skill-reorder-handle-$kInboxSkillId')),
       findsNothing,
+    );
+    final inboxCount = find.byKey(
+      ValueKey('skill-inbox-task-count-$kInboxSkillId'),
+    );
+    expect(inboxCount, findsOneWidget);
+    expect(
+      find.descendant(of: inboxCount, matching: find.text('1')),
+      findsOneWidget,
     );
     final handleVisibility = find.byKey(
       const ValueKey('skill-reorder-handle-visibility-skill-long'),
@@ -1256,6 +1265,10 @@ void main() {
 
     expect(find.text('Задачник'), findsOneWidget);
     expect(
+      find.byKey(const ValueKey('mobile-inbox-task-count')),
+      findsOneWidget,
+    );
+    expect(
       find.byKey(ValueKey('compact-skill-reorder-$kInboxSkillId')),
       findsNothing,
     );
@@ -1263,6 +1276,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Быстрые To-do без XP'), findsOneWidget);
+    await tester.drag(listFinder, const Offset(-320, 0));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('mobile-compact-inbox-task-count')),
+      findsOneWidget,
+    );
 
     await tester.tap(find.text('Задачник').first);
     await tester.pumpAndSettle();
@@ -1816,7 +1835,7 @@ void main() {
     Finder nodeSurface(String id) =>
         find.byKey(ValueKey('map-node-surface-layout-skill-$id'));
     Finder nodeLabel(String id) =>
-        find.byKey(ValueKey('map-node-label-layout-skill-$id'));
+        find.byKey(ValueKey('map-node-label-text-layout-skill-$id'));
     Finder insertion(String leftId, String rightId) =>
         find.byKey(ValueKey('roadmap-insert-layout-skill-$leftId-$rightId'));
 
@@ -1824,12 +1843,36 @@ void main() {
     final horizontalMiddle = tester.getCenter(node(middle.id));
     final horizontalTerminal = tester.getCenter(node(terminal.id));
     final horizontalInsertion = tester.getCenter(insertion(root.id, middle.id));
+    final horizontalTerminalInsertion = insertion(terminal.id, 'skill');
+    final horizontalSkillSurface = tester.getRect(
+      find.byKey(const ValueKey('map-skill-surface-layout-skill')),
+    );
+    final horizontalTerminalSurface = tester.getRect(nodeSurface(terminal.id));
     expect(horizontalRoot.dx, lessThan(horizontalMiddle.dx));
     expect(horizontalMiddle.dx, lessThan(horizontalTerminal.dx));
     expect((horizontalRoot.dy - horizontalTerminal.dy).abs(), lessThan(2));
     expect(
       horizontalInsertion.dx,
       closeTo((horizontalRoot.dx + horizontalMiddle.dx) / 2, 1),
+    );
+    expect(
+      tester.getCenter(horizontalTerminalInsertion).dx,
+      closeTo(
+        (horizontalTerminalSurface.right + horizontalSkillSurface.left) / 2,
+        1,
+      ),
+    );
+    final horizontalVisibleInsertion = _roadmapVisibleInsertRect(
+      tester,
+      horizontalTerminalInsertion,
+    );
+    expect(
+      horizontalVisibleInsertion.overlaps(horizontalTerminalSurface),
+      isFalse,
+    );
+    expect(
+      horizontalVisibleInsertion.overlaps(horizontalSkillSurface),
+      isFalse,
     );
 
     await tester.tap(find.byKey(const ValueKey('roadmap-layout-vertical')));
@@ -1852,7 +1895,19 @@ void main() {
       find.byKey(const ValueKey('roadmap-canvas-vertical')),
     );
     final skillLabelRect = tester.getRect(
-      find.byKey(const ValueKey('map-skill-label-layout-skill')),
+      find.byKey(const ValueKey('map-skill-label-text-layout-skill')),
+    );
+    expect(
+      tester.getRect(nodeLabel(middle.id)).bottom,
+      lessThan(
+        tester
+            .getRect(
+              find.byKey(
+                const ValueKey('map-node-label-layout-skill-layout-middle'),
+              ),
+            )
+            .bottom,
+      ),
     );
     final verticalViewer = tester.widget<InteractiveViewer>(
       find.descendant(
@@ -2095,6 +2150,13 @@ void main() {
       tester.getTopLeft(find.text('Эффекты')).dy,
       lessThan(tester.getTopLeft(find.text('Новые сундуки')).dy),
     );
+    expect(find.byKey(const ValueKey('empty-buffs')), findsOneWidget);
+    expect(find.byIcon(Icons.expand_less), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('rewards-effects-section')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('empty-buffs')), findsNothing);
+    expect(find.byIcon(Icons.expand_more), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
@@ -2168,7 +2230,7 @@ void main() {
     for (var index = 0; index < stages.length - 1; index++) {
       final upperLabel = tester.getRect(
         find.byKey(
-          ValueKey('map-node-label-long-roadmap-long-stage-${index + 1}'),
+          ValueKey('map-node-label-text-long-roadmap-long-stage-${index + 1}'),
         ),
       );
       final lowerSurface = tester.getRect(
@@ -2194,7 +2256,7 @@ void main() {
       expect(canvasRect.contains(visibleCircleBounds.bottomRight), isTrue);
     }
     final skillLabel = tester.getRect(
-      find.byKey(const ValueKey('map-skill-label-long-roadmap')),
+      find.byKey(const ValueKey('map-skill-label-text-long-roadmap')),
     );
     final terminalSurface = tester.getRect(
       find.byKey(const ValueKey('map-node-surface-long-roadmap-long-stage-9')),
@@ -2286,7 +2348,7 @@ void main() {
     expect(mobileInsertion, findsOneWidget);
     final mobileInsertionCenter = tester.getCenter(mobileInsertion);
     final mobileSkillLabel = tester.getRect(
-      find.byKey(const ValueKey('map-skill-label-single-roadmap')),
+      find.byKey(const ValueKey('map-skill-label-text-single-roadmap')),
     );
     final mobileStageSurface = tester.getRect(
       find.byKey(

@@ -567,7 +567,18 @@ class _SkillCardState extends State<SkillCard> {
                               const SizedBox(width: 6),
                               LvlBadge(level: sk.level, color: sk.color),
                             ],
-                            if (widget.taskCount > 0) ...[
+                            if (isInboxSkill) ...[
+                              const SizedBox(width: 6),
+                              InboxTaskCountBubble(
+                                key: ValueKey(
+                                  'skill-inbox-task-count-${sk.id}',
+                                ),
+                                count: widget.taskCount,
+                                color: sk.color,
+                                isDark: isDark,
+                                size: 20,
+                              ),
+                            ] else if (widget.taskCount > 0) ...[
                               const SizedBox(width: 6),
                               Container(
                                 key: ValueKey('skill-task-count-${sk.id}'),

@@ -702,6 +702,53 @@ class TaskBadge extends StatelessWidget {
   );
 }
 
+class InboxTaskCountBubble extends StatelessWidget {
+  final int count;
+  final Color color;
+  final bool isDark;
+  final double size;
+
+  const InboxTaskCountBubble({
+    super.key,
+    required this.count,
+    required this.color,
+    required this.isDark,
+    this.size = 24,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'Активных быстрых задач',
+      value: '$count',
+      child: Container(
+        width: size,
+        height: size,
+        padding: const EdgeInsets.all(3),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: color.withAlpha(isDark ? 34 : 22),
+          shape: BoxShape.circle,
+          border: Border.all(color: color.withAlpha(isDark ? 105 : 82)),
+        ),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            '$count',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: color,
+              fontSize: size * 0.46,
+              height: 1,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class TaskTitleWithDescription extends StatelessWidget {
   final Task task;
   final TextStyle titleStyle;

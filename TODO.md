@@ -164,7 +164,8 @@ Manual desktop/QHD checklist:
 
 ## Recently Completed
 
-- RoadMap vertical insertion polish: add-stage actions now sit between the upper label and lower orb, use a shared visual-geometry contract, and keep long and mobile paths auto-fitted without changing horizontal layout or persistence.
+- RoadMap/Rewards/Inbox polish: horizontal terminal insertion now centers between orb edges, Effects opens expanded by default, and active quick-task counts use the same compact circular badge in the Inbox panel and skill lists.
+- RoadMap vertical insertion polish: add-stage actions now sit between the visible upper label text and lower orb, use a fixed `170dp` spread plus shared visual geometry, and keep long and mobile paths auto-fitted without changing horizontal layout or persistence.
 - RoadMap interaction polish: deleting a quest keeps its skill selected, every terminal-stage-to-skill connection exposes the existing safe extend-path action, and desktop orientation icons now match their resulting layouts.
 - RoadMap progress polish: skill-orb rings now visualize derived goal completion while a separate compact bar under the level number shows XP progress toward the next level.
 - Rewards polish: removed duplicate chest/effect summary cards and moved the existing expandable buffs section to the top under the simpler “Эффекты” title.

@@ -222,6 +222,7 @@ void main() {
       expect(task.xpReward, 0);
       expect(state.inboxTasks, [task]);
       expect(state.tasksForSkill(kInboxSkillId), [task]);
+      expect(state.activeTaskCountForSkill(kInboxSkillId), 1);
       expect(state.tasksForSkill(skill.id), isEmpty);
       expect(state.activeTaskCountForSkill(skill.id), 0);
     });

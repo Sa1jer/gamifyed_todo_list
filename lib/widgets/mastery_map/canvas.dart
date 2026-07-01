@@ -335,6 +335,9 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
           final layout = _buildOrbLayout(
             state,
             Size(constraints.maxWidth, constraints.maxHeight),
+            baseTextStyle: DefaultTextStyle.of(context).style,
+            textScaler: MediaQuery.textScalerOf(context),
+            textDirection: Directionality.of(context),
           );
           final selectedSkill = layout.selectedSkill;
           final templatePanelCollapsed =
@@ -625,7 +628,13 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
     );
   }
 
-  _OrbCanvasLayout _buildOrbLayout(AppState state, Size minSize) {
+  _OrbCanvasLayout _buildOrbLayout(
+    AppState state,
+    Size minSize, {
+    required TextStyle baseTextStyle,
+    required TextScaler textScaler,
+    required TextDirection textDirection,
+  }) {
     final selectedSkill = widget.selection == null
         ? null
         : state.roadmapSkills
@@ -638,7 +647,7 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
     final maxStagesInPath = math.max(1, pathLayout.maxStagesInPath);
     final stageCount = selectedSkill?.treeNodes.length ?? 0;
     final vertical = widget.layoutAxis == _RoadmapLayoutAxis.vertical;
-    final verticalStageStep = _verticalStageStep(maxStagesInPath);
+    const verticalStageStep = _roadmapVerticalStageStep;
     const stageStep = 170.0;
     const terminalGap = 208.0;
     final focusLeftSafe = minSize.width < 760 ? 88.0 : 338.0;
@@ -699,10 +708,14 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
     final pathInsertionPoints = selectedSkill == null || selectedCenter == null
         ? const <_RoadmapInsertionPoint>[]
         : _placeRoadmapInsertionActions(
+            selectedSkill,
             pathLayout,
             nodePositions,
             selectedCenter,
             widget.layoutAxis,
+            baseTextStyle: baseTextStyle,
+            textScaler: textScaler,
+            textDirection: textDirection,
           );
 
     return _OrbCanvasLayout(
@@ -718,17 +731,6 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
   }
 
   Offset _verticalRoadmapSkillCenter(Size size) => Offset(size.width / 2, 180);
-
-  double _verticalStageStep(int stageCount) {
-    final adaptiveStep = switch (stageCount) {
-      <= 3 => 155.0,
-      <= 5 => 135.0,
-      <= 7 => 120.0,
-      <= 10 => 105.0,
-      _ => 92.0,
-    };
-    return math.max(_roadmapMinimumVerticalStageStep, adaptiveStep).toDouble();
-  }
 
   Rect _roadmapGoalAnchorRect(_OrbCanvasLayout layout, Offset skillCenter) {
     final skill = layout.selectedSkill;
@@ -836,11 +838,15 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
   }
 
   List<_RoadmapInsertionPoint> _placeRoadmapInsertionActions(
+    Skill skill,
     RoadmapPathLayout pathLayout,
     Map<String, Offset> nodePositions,
     Offset skillCenter,
-    _RoadmapLayoutAxis layoutAxis,
-  ) {
+    _RoadmapLayoutAxis layoutAxis, {
+    required TextStyle baseTextStyle,
+    required TextScaler textScaler,
+    required TextDirection textDirection,
+  }) {
     final points = <_RoadmapInsertionPoint>[];
     for (final path in pathLayout.paths) {
       for (var index = 0; index < path.nodes.length - 1; index++) {
@@ -852,7 +858,12 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
         final position = layoutAxis == _RoadmapLayoutAxis.vertical
             ? _verticalRoadmapInsertionPosition(
                 upperPosition: rightPosition,
-                upperBottomOffset: _roadmapNodeLabelBottomOffset(rightNode),
+                upperBottomOffset: _roadmapNodeLabelTextBottomOffset(
+                  rightNode,
+                  baseTextStyle,
+                  textScaler,
+                  textDirection,
+                ),
                 lowerPosition: leftPosition,
                 lowerTopOffset: _roadmapNodeOrbTopOffset(leftNode),
               )
@@ -873,11 +884,20 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
         final position = layoutAxis == _RoadmapLayoutAxis.vertical
             ? _verticalRoadmapInsertionPosition(
                 upperPosition: skillCenter,
-                upperBottomOffset: _roadmapFocusedSkillLabelBottomOffset,
+                upperBottomOffset: _roadmapFocusedSkillLabelTextBottomOffset(
+                  skill,
+                  baseTextStyle,
+                  textScaler,
+                  textDirection,
+                ),
                 lowerPosition: terminalPosition,
                 lowerTopOffset: _roadmapNodeOrbTopOffset(terminal),
               )
-            : Offset.lerp(terminalPosition, skillCenter, 0.5)!;
+            : _horizontalTerminalInsertionPosition(
+                terminalPosition: terminalPosition,
+                terminalNode: terminal,
+                skillCenter: skillCenter,
+              );
         points.add(
           _RoadmapInsertionPoint(
             leftNodeId: terminal.id,
@@ -901,6 +921,21 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
     return Offset(
       (upperPosition.dx + lowerPosition.dx) / 2,
       (upperBottom + lowerTop) / 2,
+    );
+  }
+
+  Offset _horizontalTerminalInsertionPosition({
+    required Offset terminalPosition,
+    required SkillTreeNode terminalNode,
+    required Offset skillCenter,
+  }) {
+    final terminalRight =
+        terminalPosition.dx +
+        _roadmapNodeOrbDiameter(terminalNode.questTarget) / 2;
+    final skillLeft = skillCenter.dx - _roadmapFocusedSkillOrbDiameter / 2;
+    return Offset(
+      (terminalRight + skillLeft) / 2,
+      (terminalPosition.dy + skillCenter.dy) / 2,
     );
   }
 }

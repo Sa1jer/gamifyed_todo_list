@@ -255,14 +255,12 @@ class _ExpandedMobileSkillCard extends StatelessWidget {
               ),
               const Spacer(),
               if (isInbox)
-                Text(
-                  '$taskCount $inboxLabel',
+                InboxTaskCountBubble(
                   key: const ValueKey('mobile-inbox-task-count'),
-                  style: TextStyle(
-                    color: sub,
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w800,
-                  ),
+                  count: taskCount,
+                  color: color,
+                  isDark: isDark,
+                  size: 24,
                 )
               else ...[
                 Row(
@@ -437,14 +435,23 @@ class _CompactSkillChipState extends State<_CompactSkillChip> {
               ),
             ),
             const SizedBox(width: 6),
-            Text(
-              '${widget.taskCount}',
-              style: TextStyle(
-                color: widget.selected ? color : sub,
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
+            if (skill.id == kInboxSkillId)
+              InboxTaskCountBubble(
+                key: const ValueKey('mobile-compact-inbox-task-count'),
+                count: widget.taskCount,
+                color: color,
+                isDark: widget.isDark,
+                size: 20,
+              )
+            else
+              Text(
+                '${widget.taskCount}',
+                style: TextStyle(
+                  color: widget.selected ? color : sub,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-            ),
             if (widget.canReorder) ...[
               const SizedBox(width: 2),
               Icon(Icons.drag_indicator_rounded, color: sub, size: 13),

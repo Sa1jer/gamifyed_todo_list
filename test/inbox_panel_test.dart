@@ -170,6 +170,8 @@ void main() {
 
     expect(find.text('Задачник'), findsOneWidget);
     expect(find.textContaining('без XP'), findsOneWidget);
+    expect(find.textContaining('активн.'), findsNothing);
+    expect(find.byKey(const ValueKey('inbox-active-count')), findsOneWidget);
     expect(tester.takeException(), isNull);
 
     await tester.enterText(find.byType(TextField), 'Позвонить врачу');
@@ -181,6 +183,13 @@ void main() {
     expect(state.inboxTasks.single.skillId, kInboxSkillId);
     expect(find.text('Позвонить врачу'), findsOneWidget);
     expect(find.text('без XP'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('inbox-active-count')),
+        matching: find.text('1'),
+      ),
+      findsOneWidget,
+    );
 
     await tester.tap(find.byTooltip('Закрыть задачу'));
     await tester.pump();
@@ -190,6 +199,13 @@ void main() {
     expect(state.profile.xp, 0);
     expect(state.history, isEmpty);
     expect(find.byTooltip('Вернуть в Задачник'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('inbox-active-count')),
+        matching: find.text('0'),
+      ),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
 
     await state.flushSaves();

@@ -108,13 +108,12 @@ class _InboxPanelState extends State<InboxPanel> {
                     icon: const Icon(Icons.add_rounded, size: 18),
                   ),
                   const SizedBox(width: 4),
-                  Text(
-                    '${active.length}',
-                    style: TextStyle(
-                      color: accent,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900,
-                    ),
+                  InboxTaskCountBubble(
+                    key: const ValueKey('inbox-active-count'),
+                    count: active.length,
+                    color: accent,
+                    isDark: isDark,
+                    size: 24,
                   ),
                 ],
               ),
@@ -169,7 +168,8 @@ class _InboxPanelState extends State<InboxPanel> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    _InboxCountPill(
+                    InboxTaskCountBubble(
+                      key: const ValueKey('inbox-active-count'),
                       count: active.length,
                       color: accent,
                       isDark: isDark,
@@ -260,38 +260,6 @@ class _InboxPanelState extends State<InboxPanel> {
             ),
           );
         },
-      ),
-    );
-  }
-}
-
-class _InboxCountPill extends StatelessWidget {
-  final int count;
-  final Color color;
-  final bool isDark;
-
-  const _InboxCountPill({
-    required this.count,
-    required this.color,
-    required this.isDark,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withAlpha(isDark ? 28 : 20),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withAlpha(72)),
-      ),
-      child: Text(
-        '$count активн.',
-        style: TextStyle(
-          color: color,
-          fontSize: 11,
-          fontWeight: FontWeight.w900,
-        ),
       ),
     );
   }

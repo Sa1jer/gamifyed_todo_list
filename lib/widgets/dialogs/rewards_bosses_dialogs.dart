@@ -17,7 +17,7 @@ class RewardsDialog extends StatefulWidget {
 
 class _RewardsDialogState extends State<RewardsDialog> {
   _RewardReveal? _lastReveal;
-  bool _buffsExpanded = false;
+  bool _buffsExpanded = true;
 
   @override
   Widget build(BuildContext context) {

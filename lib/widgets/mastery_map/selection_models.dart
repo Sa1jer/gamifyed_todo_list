@@ -15,7 +15,7 @@ const _roadmapNodeLabelWidth = 108.0;
 const _roadmapNodeLabelHeight = 30.0;
 const _roadmapInsertHitSize = 46.0;
 const _roadmapInsertVisibleDiameter = 32.0;
-const _roadmapMinimumVerticalStageStep = 170.0;
+const _roadmapVerticalStageStep = 170.0;
 
 double _roadmapNodeOrbDiameter(int questTarget) => switch (questTarget) {
   <= 1 => 62.0,
@@ -35,13 +35,76 @@ double _roadmapNodeContentTopOffset(SkillTreeNode node) =>
 double _roadmapNodeOrbTopOffset(SkillTreeNode node) =>
     _roadmapNodeContentTopOffset(node);
 
-double _roadmapNodeLabelBottomOffset(SkillTreeNode node) =>
-    _roadmapNodeContentTopOffset(node) + _roadmapNodeContentHeight(node);
+double _roadmapNodeLabelTextBottomOffset(
+  SkillTreeNode node,
+  TextStyle baseTextStyle,
+  TextScaler textScaler,
+  TextDirection textDirection,
+) {
+  final labelTop =
+      _roadmapNodeContentTopOffset(node) +
+      _roadmapNodeOrbDiameter(node.questTarget) +
+      _roadmapNodeLabelGap;
+  return labelTop +
+      _roadmapLabelTextHeight(
+        text: node.title,
+        maxWidth: _roadmapNodeLabelWidth,
+        maxLines: 2,
+        fontSize: _adaptiveNodeLabelFontSize(node.title),
+        fontWeight: FontWeight.w600,
+        baseTextStyle: baseTextStyle,
+        textScaler: textScaler,
+        textDirection: textDirection,
+      );
+}
 
-double get _roadmapFocusedSkillLabelBottomOffset =>
-    _roadmapFocusedSkillOrbDiameter / 2 +
-    _roadmapSkillLabelGap +
-    _roadmapSkillLabelHeight;
+double _roadmapFocusedSkillLabelTextBottomOffset(
+  Skill skill,
+  TextStyle baseTextStyle,
+  TextScaler textScaler,
+  TextDirection textDirection,
+) {
+  final textHeight = _roadmapLabelTextHeight(
+    text: skill.name,
+    maxWidth: 190,
+    maxLines: 2,
+    fontSize: _adaptiveSkillLabelFontSize(skill.name, true),
+    fontWeight: FontWeight.w900,
+    baseTextStyle: baseTextStyle,
+    textScaler: textScaler,
+    textDirection: textDirection,
+  );
+  return _roadmapFocusedSkillOrbDiameter / 2 +
+      _roadmapSkillLabelGap +
+      (_roadmapSkillLabelHeight + textHeight) / 2;
+}
+
+double _roadmapLabelTextHeight({
+  required String text,
+  required double maxWidth,
+  required int maxLines,
+  required double fontSize,
+  required FontWeight fontWeight,
+  required TextStyle baseTextStyle,
+  required TextScaler textScaler,
+  required TextDirection textDirection,
+}) {
+  final painter = TextPainter(
+    text: TextSpan(
+      text: text,
+      style: baseTextStyle.merge(
+        TextStyle(fontSize: fontSize, height: 1.05, fontWeight: fontWeight),
+      ),
+    ),
+    maxLines: maxLines,
+    ellipsis: '…',
+    textScaler: textScaler,
+    textDirection: textDirection,
+  )..layout(maxWidth: maxWidth);
+  final height = painter.height;
+  painter.dispose();
+  return height;
+}
 
 Color _roadmapStageStatusColor(Skill skill, SkillTreeNodeStatus status) {
   return switch (status) {
