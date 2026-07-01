@@ -727,6 +727,7 @@ void main() {
       expect(state.onboardingSeen, isFalse);
 
       state.dismissFirstRunTutorial();
+      await state.flushSaves();
 
       expect(state.shouldShowFirstRunTutorial, isFalse);
       expect(state.onboardingSeen, isTrue);
@@ -786,6 +787,7 @@ void main() {
         state.completeTutorialStep(TutorialStepIds.coreOpenRoadmap);
         state.completeTutorialStep(TutorialStepIds.coreRoadmapDetails);
         state.completeTutorialStep(TutorialStepIds.coreOpenStats);
+        await state.flushSaves();
 
         expect(state.shouldShowFirstRunTutorial, isFalse);
         expect(state.onboardingSeen, isTrue);

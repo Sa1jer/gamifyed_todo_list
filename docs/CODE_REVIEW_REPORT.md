@@ -1,6 +1,6 @@
 # Code Review / Crash Audit
 
-Дата: 2026-07-01
+Дата: 2026-07-01; Android/storage follow-up: 2026-07-02
 
 ## Итог
 
@@ -8,14 +8,14 @@
 
 Аудит нашёл дополнительные варианты исходного `UnsupportedError`: несколько изменяемых полей моделей всё ещё могли получить fixed-length список от вызывающего кода. Они исправлены без изменения persisted schema. Также добавлены нормализация повреждённого времени напоминания, fail-soft поведение optional notification plugin, защита file picker и отсутствовавший `dispose` контроллера.
 
-Главный оставшийся риск — crash-consistency локального хранения. Полная запись нескольких Hive boxes не атомарна, а ошибка фонового сохранения или стартовой загрузки сейчас не превращается в понятное recovery-состояние. Это требует отдельного storage-батча с fault-injection тестами; простое подавление исключений может скрыть потерю данных.
+Исходный главный риск crash-consistency локального хранения закрыт Storage Reliability MVP: добавлены наблюдаемый `PersistenceStatus`, startup/save recovery UX и snapshot/manifest с previous fallback. Протокол и оставшиеся native fault-injection риски описаны в `docs/STORAGE_RELIABILITY_PLAN.md` и `docs/STORAGE_SNAPSHOT_MANIFEST.md`.
 
 ## Среда
 
 - Flutter `3.44.3`, stable, revision `e1fd963c6f`.
 - Dart `3.12.2`, DevTools `2.57.0`.
 - macOS `15.7.7`, arm64; Xcode `26.3`; CocoaPods `1.16.2`.
-- Android SDK не обнаружен.
+- Android SDK/build-tools `36.1`, JDK `21`; лицензии приняты, Android 16 emulator доступен.
 - Xcode не видит установленные Simulator runtimes.
 - Проект использует Flutter/Material, локальный `AppState`, Hive, local notifications и desktop/mobile targets.
 
@@ -31,8 +31,9 @@
 | `dart fix --dry-run` | `Nothing to fix` |
 | `flutter pub outdated` | 24 locked updates; 6 зависимостей требуют изменения constraints |
 | `git diff --check` | Чисто |
-| `flutter build apk --release` | Заблокирован отсутствующим Android SDK |
-| `flutter build appbundle --release` | Runner не разрешил повторный build-вызов после исчерпания approval quota; тот же Android SDK blocker остаётся |
+| `flutter build apk --debug` | Успешно; APK собран, установлен и запущен на Android 16 emulator |
+| `flutter build apk --release` | Корректно остановлен release signing guard: приватный `android/key.properties` отсутствует |
+| Android runtime smoke | Процесс остался жив; свежие error-level AndroidRuntime/Flutter логи пусты |
 | macOS release | Успешно собирался в предыдущем hardening baseline; текущий повтор потребовал запись во внешний Flutter SDK cache и был заблокирован исчерпанной approval quota runner-а |
 | Gitleaks | Конфигурация и статические тесты есть, binary локально не установлен |
 
@@ -80,7 +81,7 @@
 ### P2 — Release / privacy
 
 1. Android/iOS/macOS всё ещё используют `com.example...` identifiers; Android release требует private signing config.
-2. Android SDK отсутствует, iOS runtime/signing не готовы, поэтому mobile release artifacts не подтверждены.
+2. Android debug artifact и emulator startup подтверждены; Android release требует private signing, iOS runtime/signing пока не готовы.
 3. Android backup отключён. Политика iOS backup и необходимость encrypted-at-rest хранения пользовательских задач/целей ещё не решены.
 4. `SCHEDULE_EXACT_ALARM` и `exactAllowWhileIdle` требуют отдельной store-policy проверки.
 5. Notification payload не содержит названия квестов; debug logs не печатают пользовательский текст; debug admin и `__debug__` storage имеют runtime release guards.

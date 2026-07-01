@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import 'models.dart';
 import 'utils.dart';
 import 'storage_service.dart';
+import 'storage_snapshot.dart';
 import 'notification_service.dart';
+import 'persistence_status.dart';
 import 'sfx_service.dart';
 import 'engines/achievement_engine.dart';
 import 'engines/boss_engine.dart';
@@ -63,6 +65,8 @@ class AppState extends ChangeNotifier {
   bool _onboardingReplayRequested = false;
   TutorialProgress _tutorialProgress = const TutorialProgress.empty();
   bool _hasLoadedSavedData = false;
+  PersistenceStatus _persistenceStatus = const PersistenceStatus();
+  bool _isDisposed = false;
   String? selectedSkillId;
   final StorageService _storage;
   final NotificationService _notifications;
@@ -83,6 +87,8 @@ class AppState extends ChangeNotifier {
   String? get activeTutorialModuleId => _effectiveTutorialModuleId;
   String? get activeTutorialStepId => _effectiveTutorialStepId;
   bool get hasLoadedSavedData => _hasLoadedSavedData;
+  PersistenceStatus get persistenceStatus => _persistenceStatus;
+  bool get hasPersistenceError => _persistenceStatus.hasError;
   bool get shouldShowFirstRunTutorial =>
       _hasLoadedSavedData &&
       (_effectiveTutorialModuleId != null || _shouldAutoShowCoreTutorial);
@@ -152,6 +158,7 @@ class AppState extends ChangeNotifier {
 
   @override
   void dispose() {
+    _isDisposed = true;
     pauseBackgroundWork();
     super.dispose();
   }
@@ -159,7 +166,11 @@ class AppState extends ChangeNotifier {
   void pauseBackgroundWork() {
     _resetTimer?.cancel();
     _resetTimer = null;
-    unawaited(flushSaves());
+    _saveDebounceTimer?.cancel();
+    _saveDebounceTimer = null;
+    if (_persistenceStatus.isDirty) {
+      unawaited(_runObservedSave());
+    }
   }
 
   void resumeBackgroundWork() {
@@ -400,24 +411,150 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> loadSavedData() async {
-    final loadedSkills = await _storage.loadSkills();
-    final loadedTasks = await _storage.loadTasks();
-    final loadedProfile = await _storage.loadProfile();
-    final loadedHistory = await _storage.loadHistory();
-    final loadedAchievements = await _storage.loadAchievements();
-    final loadedStats = await _storage.loadStats();
-    final loadedBosses = await _storage.loadBosses();
-    final loadedRewardChests = await _storage.loadRewardChests();
-    final loadedBuffs = await _storage.loadBuffs();
-    final loadedWeeklyGoals = await _storage.loadWeeklyGoals();
-    final loadedBestStreak = await _storage.loadBestStreak();
-    final hasSavedSkills = await _storage.hasSavedSkills();
-    final hasSavedTasks = await _storage.hasSavedTasks();
-    final savedTheme = await _storage.loadTheme();
-    final savedSfxEnabled = await _storage.loadSfxEnabled();
-    final savedTooltipsEnabled = await _storage.loadTooltipsEnabled();
-    final savedOnboardingSeen = await _storage.loadOnboardingSeen();
-    final savedTutorialProgress = await _storage.loadTutorialProgress();
+    await _loadSavedData(recovering: false);
+  }
+
+  Future<bool> retryLoadSavedData() async {
+    try {
+      await _loadSavedData(recovering: true);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  void reportStartupStorageFailure(Object error, StackTrace stackTrace) {
+    _hasLoadedSavedData = false;
+    _setPersistenceStatus(
+      _persistenceStatus.copyWith(
+        phase: PersistencePhase.loadFailed,
+        message: 'Не удалось загрузить данные',
+        errorType: error.runtimeType.toString(),
+        debugDetails: '$error\n$stackTrace',
+        lastFailureAt: DateTime.now(),
+        canRetry: true,
+        blocksSaving: true,
+      ),
+    );
+  }
+
+  Future<void> _loadSavedData({required bool recovering}) async {
+    _setPersistenceStatus(
+      _persistenceStatus.copyWith(
+        phase: recovering
+            ? PersistencePhase.recovering
+            : PersistencePhase.loading,
+        canRetry: false,
+        blocksSaving: true,
+        clearError: true,
+      ),
+    );
+
+    bool needsNormalizationSave;
+    try {
+      needsNormalizationSave = await _loadSavedDataUnlocked();
+    } catch (error, stackTrace) {
+      _hasLoadedSavedData = false;
+      _setPersistenceStatus(
+        _persistenceStatus.copyWith(
+          phase: PersistencePhase.loadFailed,
+          message: 'Не удалось загрузить данные',
+          errorType: error.runtimeType.toString(),
+          debugDetails: '$error\n$stackTrace',
+          lastFailureAt: DateTime.now(),
+          canRetry: true,
+          blocksSaving: true,
+        ),
+      );
+      rethrow;
+    }
+
+    _hasLoadedSavedData = true;
+    _setPersistenceStatus(
+      _persistenceStatus.copyWith(
+        phase: PersistencePhase.ready,
+        lastSuccessfulLoadAt: DateTime.now(),
+        canRetry: false,
+        isDirty: needsNormalizationSave,
+        blocksSaving: false,
+        clearError: true,
+      ),
+    );
+
+    if (needsNormalizationSave) {
+      try {
+        await flushSaves();
+      } catch (_) {
+        // Save status is already observable and retryable; loading succeeded.
+      }
+    }
+  }
+
+  Future<bool> _loadSavedDataUnlocked() async {
+    final committed = _storage.supportsSnapshots
+        ? await _storage.loadLatestSnapshot()
+        : null;
+    final snapshot = committed?.snapshot;
+    final usedLegacyStorage = snapshot == null;
+
+    late List<Skill> loadedSkills;
+    late List<Task> loadedTasks;
+    late UserProfile loadedProfile;
+    late List<HistoryEntry> loadedHistory;
+    late List<Achievement> loadedAchievements;
+    late DailyStats? loadedStats;
+    late List<Boss> loadedBosses;
+    late List<RewardChest> loadedRewardChests;
+    late List<Buff> loadedBuffs;
+    late List<WeeklyGoal> loadedWeeklyGoals;
+    late int? loadedBestStreak;
+    late bool hasSavedSkills;
+    late bool hasSavedTasks;
+    late bool? savedTheme;
+    late bool? savedSfxEnabled;
+    late bool? savedTooltipsEnabled;
+    late bool? savedOnboardingSeen;
+    late TutorialProgress? savedTutorialProgress;
+
+    if (snapshot != null) {
+      loadedSkills = snapshot.skills;
+      loadedTasks = snapshot.tasks;
+      loadedProfile = snapshot.profile;
+      loadedHistory = snapshot.history;
+      loadedAchievements = snapshot.achievements;
+      loadedStats = snapshot.stats;
+      loadedBosses = snapshot.bosses;
+      loadedRewardChests = snapshot.rewardChests;
+      loadedBuffs = snapshot.buffs;
+      loadedWeeklyGoals = snapshot.weeklyGoals;
+      loadedBestStreak = snapshot.bestStreak;
+      hasSavedSkills = true;
+      hasSavedTasks = true;
+      savedTheme = snapshot.isDark;
+      savedSfxEnabled = snapshot.sfxEnabled;
+      savedTooltipsEnabled = snapshot.tooltipsEnabled;
+      savedOnboardingSeen = snapshot.onboardingSeen;
+      savedTutorialProgress = snapshot.tutorialProgress;
+    } else {
+      loadedSkills = await _storage.loadSkills();
+      loadedTasks = await _storage.loadTasks();
+      loadedProfile = await _storage.loadProfile();
+      loadedHistory = await _storage.loadHistory();
+      loadedAchievements = await _storage.loadAchievements();
+      loadedStats = await _storage.loadStats();
+      loadedBosses = await _storage.loadBosses();
+      loadedRewardChests = await _storage.loadRewardChests();
+      loadedBuffs = await _storage.loadBuffs();
+      loadedWeeklyGoals = await _storage.loadWeeklyGoals();
+      loadedBestStreak = await _storage.loadBestStreak();
+      hasSavedSkills = await _storage.hasSavedSkills();
+      hasSavedTasks = await _storage.hasSavedTasks();
+      savedTheme = await _storage.loadTheme();
+      savedSfxEnabled = await _storage.loadSfxEnabled();
+      savedTooltipsEnabled = await _storage.loadTooltipsEnabled();
+      savedOnboardingSeen = await _storage.loadOnboardingSeen();
+      savedTutorialProgress = await _storage.loadTutorialProgress();
+    }
 
     if (savedTheme != null) {
       _isDark = savedTheme;
@@ -498,14 +635,11 @@ class AppState extends ChangeNotifier {
     final changed = _resetExpiredTasks();
     _syncAllBosses();
     _checkAchievements();
-    if (changed || protectionChanged || inboxSkillChanged) {
-      await _saveAll(immediate: true);
-    }
-
     _syncAllTaskNotifications();
-
-    _hasLoadedSavedData = true;
-    notifyListeners();
+    return changed ||
+        protectionChanged ||
+        inboxSkillChanged ||
+        (usedLegacyStorage && _storage.supportsSnapshots);
   }
 
   void _ensureAchievementDefinitions() {
@@ -520,12 +654,18 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> _saveAll({bool immediate = false}) {
+    _markPersistenceDirty();
+    if (_persistenceStatus.blocksSaving) return Future.value();
+    if (_saveInFlight != null) {
+      _saveAgainAfterInFlight = true;
+      return Future.value();
+    }
     if (immediate) return flushSaves();
 
     _saveDebounceTimer?.cancel();
     _saveDebounceTimer = Timer(_saveDebounceDuration, () {
       _saveDebounceTimer = null;
-      unawaited(_writeAll());
+      unawaited(_runObservedSave());
     });
     return Future.value();
   }
@@ -533,7 +673,32 @@ class AppState extends ChangeNotifier {
   Future<void> flushSaves() {
     _saveDebounceTimer?.cancel();
     _saveDebounceTimer = null;
+    if (_persistenceStatus.blocksSaving) return Future.value();
     return _writeAll();
+  }
+
+  Future<bool> retrySave() async {
+    if (_persistenceStatus.blocksSaving) return false;
+    try {
+      await flushSaves();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _runObservedSave() async {
+    try {
+      await flushSaves();
+    } catch (_) {
+      // _writeAll records the failure before this observed future completes.
+    }
+  }
+
+  void _requestObservedImmediateSave() {
+    _markPersistenceDirty();
+    if (_persistenceStatus.blocksSaving) return;
+    unawaited(_runObservedSave());
   }
 
   Future<void> _writeAll() {
@@ -545,6 +710,14 @@ class AppState extends ChangeNotifier {
 
     final completer = Completer<void>();
     _saveInFlight = completer.future;
+    _setPersistenceStatus(
+      _persistenceStatus.copyWith(
+        phase: PersistencePhase.saving,
+        canRetry: false,
+        blocksSaving: false,
+        clearError: true,
+      ),
+    );
 
     () async {
       try {
@@ -552,8 +725,30 @@ class AppState extends ChangeNotifier {
           _saveAgainAfterInFlight = false;
           await _writeAllUnlocked();
         } while (_saveAgainAfterInFlight);
+        _setPersistenceStatus(
+          _persistenceStatus.copyWith(
+            phase: PersistencePhase.ready,
+            lastSuccessfulSaveAt: DateTime.now(),
+            canRetry: false,
+            isDirty: false,
+            blocksSaving: false,
+            clearError: true,
+          ),
+        );
         completer.complete();
       } catch (error, stackTrace) {
+        _setPersistenceStatus(
+          _persistenceStatus.copyWith(
+            phase: PersistencePhase.saveFailed,
+            message: 'Не удалось сохранить изменения',
+            errorType: error.runtimeType.toString(),
+            debugDetails: '$error\n$stackTrace',
+            lastFailureAt: DateTime.now(),
+            canRetry: true,
+            isDirty: true,
+            blocksSaving: false,
+          ),
+        );
         completer.completeError(error, stackTrace);
       } finally {
         _saveInFlight = null;
@@ -564,6 +759,10 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> _writeAllUnlocked() async {
+    if (_storage.supportsSnapshots) {
+      await _storage.saveSnapshot(_createStorageSnapshot());
+      return;
+    }
     await _storage.saveTheme(_isDark);
     await _storage.saveSfxEnabled(_sfxEnabled);
     await _storage.saveTooltipsEnabled(_tooltipsEnabled);
@@ -582,19 +781,52 @@ class AppState extends ChangeNotifier {
     await _storage.saveBestStreak(_bestStreak);
   }
 
+  StorageSnapshot _createStorageSnapshot() {
+    return StorageSnapshot(
+      id: uid(),
+      createdAt: DateTime.now(),
+      skills: List<Skill>.of(skills),
+      tasks: List<Task>.of(tasks),
+      profile: profile,
+      history: List<HistoryEntry>.of(history),
+      achievements: List<Achievement>.of(achievements),
+      stats: todayStats ?? DailyStats(date: DateTime.now()),
+      bosses: List<Boss>.of(bosses),
+      rewardChests: List<RewardChest>.of(rewardChests),
+      buffs: List<Buff>.of(buffs),
+      weeklyGoals: List<WeeklyGoal>.of(weeklyGoals),
+      bestStreak: _bestStreak,
+      isDark: _isDark,
+      sfxEnabled: _sfxEnabled,
+      tooltipsEnabled: _tooltipsEnabled,
+      onboardingSeen: _onboardingSeen,
+      tutorialProgress: _tutorialProgress,
+    );
+  }
+
+  void _markPersistenceDirty() {
+    if (_persistenceStatus.isDirty) return;
+    _setPersistenceStatus(_persistenceStatus.copyWith(isDirty: true));
+  }
+
+  void _setPersistenceStatus(PersistenceStatus status) {
+    _persistenceStatus = status;
+    if (!_isDisposed) notifyListeners();
+  }
+
   // ── Theme ────────────────────────────────────────────────────────────────────
 
   void toggleTheme() {
     _isDark = !_isDark;
     notifyListeners();
-    _storage.saveTheme(_isDark);
+    _requestObservedImmediateSave();
   }
 
   void toggleSfxEnabled() {
     _sfxEnabled = !_sfxEnabled;
     _applySfxEnabled();
     notifyListeners();
-    _storage.saveSfxEnabled(_sfxEnabled);
+    _requestObservedImmediateSave();
   }
 
   void _applySfxEnabled() {
@@ -608,7 +840,7 @@ class AppState extends ChangeNotifier {
   void toggleTooltipsEnabled() {
     _tooltipsEnabled = !_tooltipsEnabled;
     notifyListeners();
-    _storage.saveTooltipsEnabled(_tooltipsEnabled);
+    _requestObservedImmediateSave();
   }
 
   bool isCourseNudgeDismissed(String key) =>
@@ -693,7 +925,6 @@ class AppState extends ChangeNotifier {
 
     if (id == TutorialModuleIds.core && !_onboardingSeen) {
       _onboardingSeen = true;
-      _storage.saveOnboardingSeen(true);
     }
     if (id == TutorialModuleIds.core) {
       _onboardingReplayRequested = false;
@@ -715,7 +946,6 @@ class AppState extends ChangeNotifier {
     final clearActive = _effectiveTutorialModuleId == id;
     if (id == TutorialModuleIds.core && !_onboardingSeen) {
       _onboardingSeen = true;
-      _storage.saveOnboardingSeen(true);
     }
     if (id == TutorialModuleIds.core) {
       _onboardingReplayRequested = false;
@@ -738,13 +968,12 @@ class AppState extends ChangeNotifier {
     _onboardingReplayRequested = false;
     _onboardingSeen = false;
     _tutorialProgress = const TutorialProgress.empty();
-    _storage.saveOnboardingSeen(false);
     _persistTutorialProgress();
     notifyListeners();
   }
 
   void _persistTutorialProgress() {
-    _storage.saveTutorialProgress(_tutorialProgress);
+    _requestObservedImmediateSave();
   }
 
   TutorialProgress _legacyTutorialProgress(bool onboardingSeen) {

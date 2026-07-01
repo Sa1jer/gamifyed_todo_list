@@ -1,6 +1,7 @@
 // To-Do List RPG 1.0.6
 // Entry point — kept minimal (~90 lines)
 
+import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -9,13 +10,13 @@ import 'notification_service.dart';
 import 'app_state.dart';
 import 'utils.dart';
 import 'widgets/main_page.dart';
+import 'widgets/persistence_recovery.dart';
 
 final _storage = StorageService();
 final _notifications = NotificationService();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await _storage.init();
   await _notifications.init();
   runApp(RPGApp(storage: _storage));
 }
@@ -77,7 +78,17 @@ class _RPGAppState extends State<RPGApp>
       parent: _revealCtrl,
       curve: Curves.easeInOutCubic,
     );
-    _state.loadSavedData();
+    unawaited(_initializeStorageAndLoad());
+  }
+
+  Future<void> _initializeStorageAndLoad() async {
+    try {
+      await widget.storage.init();
+    } catch (error, stackTrace) {
+      _state.reportStartupStorageFailure(error, stackTrace);
+      return;
+    }
+    await _state.retryLoadSavedData();
   }
 
   void _onStateChange() => setState(() {});
@@ -198,16 +209,20 @@ class _RPGAppState extends State<RPGApp>
       theme: _buildTheme(_state.isDark),
       home: AppStateProvider(
         state: _state,
-        child: TooltipVisibility(
-          visible: _state.tooltipsEnabled,
-          child: Stack(
-            children: [
-              RepaintBoundary(
-                key: _repaintKey,
-                child: MainPage(onToggleTheme: _handleThemeToggle),
-              ),
-              if (_overlayImage != null) _buildRevealOverlay(),
-            ],
+        child: PersistenceGate(
+          state: _state,
+          onRetryLoad: _initializeStorageAndLoad,
+          child: TooltipVisibility(
+            visible: _state.tooltipsEnabled,
+            child: Stack(
+              children: [
+                RepaintBoundary(
+                  key: _repaintKey,
+                  child: MainPage(onToggleTheme: _handleThemeToggle),
+                ),
+                if (_overlayImage != null) _buildRevealOverlay(),
+              ],
+            ),
           ),
         ),
       ),

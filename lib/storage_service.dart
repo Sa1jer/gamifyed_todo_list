@@ -4,7 +4,25 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'models.dart';
+import 'storage_snapshot.dart';
 import 'utils.dart';
+
+abstract class SnapshotBackend {
+  Future<String?> read(String key);
+  Future<void> write(String key, String value);
+}
+
+class _HiveSnapshotBackend implements SnapshotBackend {
+  const _HiveSnapshotBackend(this.box);
+
+  final Box<String> box;
+
+  @override
+  Future<String?> read(String key) async => box.get(key);
+
+  @override
+  Future<void> write(String key, String value) => box.put(key, value);
+}
 
 class StorageService {
   static const String _skillsBox = 'skills';
@@ -18,6 +36,10 @@ class StorageService {
   static const String _buffsBox = 'buffs';
   static const String _weeklyGoalsBox = 'weekly_goals';
   static const String _metaBox = 'meta';
+  static const String _snapshotsBox = 'storage_snapshots';
+  static const String _snapshotCurrentKey = 'manifest_current';
+  static const String _snapshotPreviousKey = 'manifest_previous';
+  static const String _snapshotPayloadPrefix = 'payload:';
 
   static const String _skillsSavedKey = 'skillsSaved';
   static const String _tasksSavedKey = 'tasksSaved';
@@ -43,8 +65,14 @@ class StorageService {
   late Box<String> _buffs;
   late Box<String> _weeklyGoals;
   late Box<String> _meta;
+  SnapshotBackend? _snapshotBackend;
 
   bool _initialized = false;
+
+  StorageService({SnapshotBackend? snapshotBackend})
+    : _snapshotBackend = snapshotBackend;
+
+  bool get supportsSnapshots => _snapshotBackend != null;
 
   Future<void> init() async {
     if (_initialized) return;
@@ -62,10 +90,91 @@ class StorageService {
     _buffs = await _openBox<String>(_buffsBox);
     _weeklyGoals = await _openBox<String>(_weeklyGoalsBox);
     _meta = await _openBox<String>(_metaBox);
+    final snapshots = await _openBox<String>(_snapshotsBox);
+    _snapshotBackend = _HiveSnapshotBackend(snapshots);
 
     await _migrateIfNeeded();
 
     _initialized = true;
+  }
+
+  Future<CommittedSnapshot?> loadLatestSnapshot() async {
+    final backend = _requireSnapshotBackend();
+    final currentId = await backend.read(_snapshotCurrentKey);
+    final previousId = await backend.read(_snapshotPreviousKey);
+    final candidates = <(String?, SnapshotLoadSource)>[
+      (currentId, SnapshotLoadSource.current),
+      (previousId, SnapshotLoadSource.previous),
+    ];
+    final visited = <String>{};
+
+    for (final candidate in candidates) {
+      final id = candidate.$1;
+      if (id == null || id.isEmpty || !visited.add(id)) continue;
+      final raw = await backend.read('$_snapshotPayloadPrefix$id');
+      if (raw == null) continue;
+      try {
+        final snapshot = _decodeSnapshot(raw);
+        if (snapshot.id != id) continue;
+        return CommittedSnapshot(snapshot: snapshot, source: candidate.$2);
+      } catch (_) {
+        // An invalid committed candidate is ignored in favor of previous/legacy.
+      }
+    }
+    return null;
+  }
+
+  Future<void> saveSnapshot(StorageSnapshot snapshot) async {
+    final backend = _requireSnapshotBackend();
+    final raw = _encodeSnapshot(snapshot);
+    _decodeSnapshot(raw);
+    final payloadKey = '$_snapshotPayloadPrefix${snapshot.id}';
+
+    await backend.write(payloadKey, raw);
+    final staged = await backend.read(payloadKey);
+    if (staged == null) {
+      throw StateError('Snapshot staging payload is unavailable.');
+    }
+    final validated = _decodeSnapshot(staged);
+    if (validated.id != snapshot.id) {
+      throw StateError('Snapshot staging id does not match.');
+    }
+
+    final currentId = await backend.read(_snapshotCurrentKey);
+    final previousId = await backend.read(_snapshotPreviousKey);
+    final rollbackId = await _firstValidSnapshotId(backend, <String?>[
+      currentId,
+      previousId,
+    ]);
+    if (rollbackId != null) {
+      await backend.write(_snapshotPreviousKey, rollbackId);
+    }
+    await backend.write(_snapshotCurrentKey, snapshot.id);
+  }
+
+  Future<String?> _firstValidSnapshotId(
+    SnapshotBackend backend,
+    List<String?> ids,
+  ) async {
+    for (final id in ids) {
+      if (id == null || id.isEmpty) continue;
+      final raw = await backend.read('$_snapshotPayloadPrefix$id');
+      if (raw == null) continue;
+      try {
+        if (_decodeSnapshot(raw).id == id) return id;
+      } catch (_) {
+        // Continue until a valid rollback snapshot is found.
+      }
+    }
+    return null;
+  }
+
+  SnapshotBackend _requireSnapshotBackend() {
+    final backend = _snapshotBackend;
+    if (backend == null) {
+      throw StateError('Snapshot storage is not initialized.');
+    }
+    return backend;
   }
 
   Future<void> _migrateIfNeeded() async {
@@ -390,6 +499,13 @@ class StorageService {
   String? debugMigrateSkillPayloadV1ToV2(String raw) =>
       _migrateSkillPayloadV1ToV2(raw);
 
+  @visibleForTesting
+  String debugEncodeSnapshot(StorageSnapshot snapshot) =>
+      _encodeSnapshot(snapshot);
+
+  @visibleForTesting
+  StorageSnapshot debugDecodeSnapshot(String raw) => _decodeSnapshot(raw);
+
   Future<int?> loadBestStreak() async {
     _ensureInit();
     return _readNullableIntValue(_meta.get(_bestStreakKey));
@@ -649,6 +765,160 @@ class StorageService {
       }
     }
     return result;
+  }
+
+  String _encodeSnapshot(StorageSnapshot snapshot) {
+    final domains = <String, dynamic>{
+      'skills': snapshot.skills.map(_encodeSkill).toList(growable: false),
+      'tasks': snapshot.tasks.map(_encodeTask).toList(growable: false),
+      'profile': _encodeProfile(snapshot.profile),
+      'history': snapshot.history
+          .map(_encodeHistoryEntry)
+          .toList(growable: false),
+      'achievements': snapshot.achievements
+          .map(_encodeAchievement)
+          .toList(growable: false),
+      'stats': snapshot.stats == null
+          ? null
+          : jsonEncode(_encodeDailyStats(snapshot.stats!)),
+      'bosses': snapshot.bosses.map(_encodeBoss).toList(growable: false),
+      'rewardChests': snapshot.rewardChests
+          .map(_encodeRewardChest)
+          .toList(growable: false),
+      'buffs': snapshot.buffs.map(_encodeBuff).toList(growable: false),
+      'weeklyGoals': snapshot.weeklyGoals
+          .map(_encodeWeeklyGoal)
+          .toList(growable: false),
+      'bestStreak': snapshot.bestStreak,
+      'isDark': snapshot.isDark,
+      'sfxEnabled': snapshot.sfxEnabled,
+      'tooltipsEnabled': snapshot.tooltipsEnabled,
+      'onboardingSeen': snapshot.onboardingSeen,
+      'tutorialProgress': jsonEncode(snapshot.tutorialProgress.toJson()),
+    };
+    return jsonEncode({
+      'id': snapshot.id,
+      'version': snapshot.version,
+      'createdAt': snapshot.createdAt.toUtc().toIso8601String(),
+      'counts': {
+        'skills': snapshot.skills.length,
+        'tasks': snapshot.tasks.length,
+        'history': snapshot.history.length,
+        'achievements': snapshot.achievements.length,
+        'bosses': snapshot.bosses.length,
+        'rewardChests': snapshot.rewardChests.length,
+        'buffs': snapshot.buffs.length,
+        'weeklyGoals': snapshot.weeklyGoals.length,
+      },
+      'domains': domains,
+    });
+  }
+
+  StorageSnapshot _decodeSnapshot(String raw) {
+    final root = _decodeMap(raw);
+    final id = root['id'];
+    final version = root['version'];
+    final createdAtRaw = root['createdAt'];
+    final domainsRaw = root['domains'];
+    final countsRaw = root['counts'];
+    if (id is! String || id.isEmpty) {
+      throw const FormatException('Snapshot id is missing.');
+    }
+    if (version != kStorageSnapshotVersion) {
+      throw FormatException('Unsupported snapshot version: $version');
+    }
+    if (createdAtRaw is! String || domainsRaw is! Map || countsRaw is! Map) {
+      throw const FormatException('Snapshot metadata is incomplete.');
+    }
+    final createdAt = DateTime.tryParse(createdAtRaw);
+    if (createdAt == null) {
+      throw const FormatException('Snapshot timestamp is invalid.');
+    }
+    final domains = Map<String, dynamic>.from(domainsRaw);
+    final counts = Map<String, dynamic>.from(countsRaw);
+
+    List<T> decodeList<T>(String key, T Function(String) decode) {
+      final encoded = domains[key];
+      if (encoded is! List) {
+        throw FormatException('Snapshot domain $key is missing.');
+      }
+      final result = <T>[];
+      for (final item in encoded) {
+        if (item is! String) {
+          throw FormatException('Snapshot domain $key is invalid.');
+        }
+        result.add(decode(item));
+      }
+      if (counts[key] != result.length) {
+        throw FormatException('Snapshot domain $key count does not match.');
+      }
+      return result;
+    }
+
+    String requiredString(String key) {
+      final value = domains[key];
+      if (value is! String) {
+        throw FormatException('Snapshot domain $key is missing.');
+      }
+      return value;
+    }
+
+    bool requiredBool(String key) {
+      final value = domains[key];
+      if (value is! bool) {
+        throw FormatException('Snapshot domain $key is missing.');
+      }
+      return value;
+    }
+
+    int requiredInt(String key) {
+      final value = domains[key];
+      if (value is! int) {
+        throw FormatException('Snapshot domain $key is missing.');
+      }
+      return value;
+    }
+
+    final skills = decodeList('skills', _decodeSkill);
+    final tasks = decodeList('tasks', _decodeTask);
+    _validateSnapshotIds(skills.map((item) => item.id), 'skills');
+    _validateSnapshotIds(tasks.map((item) => item.id), 'tasks');
+    final statsRaw = domains['stats'];
+
+    return StorageSnapshot(
+      id: id,
+      version: version,
+      createdAt: createdAt,
+      skills: skills,
+      tasks: tasks,
+      profile: _decodeProfile(requiredString('profile')),
+      history: decodeList('history', _decodeHistoryEntry),
+      achievements: decodeList('achievements', _decodeAchievement),
+      stats: statsRaw == null
+          ? null
+          : _decodeDailyStats(_decodeMap(requiredString('stats'))),
+      bosses: decodeList('bosses', _decodeBoss),
+      rewardChests: decodeList('rewardChests', _decodeRewardChest),
+      buffs: decodeList('buffs', _decodeBuff),
+      weeklyGoals: decodeList('weeklyGoals', _decodeWeeklyGoal),
+      bestStreak: requiredInt('bestStreak'),
+      isDark: requiredBool('isDark'),
+      sfxEnabled: requiredBool('sfxEnabled'),
+      tooltipsEnabled: requiredBool('tooltipsEnabled'),
+      onboardingSeen: requiredBool('onboardingSeen'),
+      tutorialProgress: TutorialProgress.fromJson(
+        _decodeMap(requiredString('tutorialProgress')),
+      ),
+    );
+  }
+
+  void _validateSnapshotIds(Iterable<String> ids, String domain) {
+    final unique = <String>{};
+    for (final id in ids) {
+      if (id.isEmpty || !unique.add(id)) {
+        throw FormatException('Snapshot $domain ids are invalid.');
+      }
+    }
   }
 
   String _encodeSkill(Skill s) => jsonEncode({

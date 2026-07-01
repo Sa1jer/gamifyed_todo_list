@@ -13,9 +13,16 @@ This file tracks the active implementation roadmap and completed project work. U
 
 ## P0 — Bugs / Stabilization
 
-- [ ] Add fault-injection tests and an explicit persistence error/retry state for debounced saves and startup loading; never hide a failed write as success.
-- [ ] Make multi-box Hive saves crash-consistent so `clear` plus interrupted sequential writes cannot leave partial skills/tasks/history snapshots.
-- [ ] Add startup storage recovery UI for I/O/open-box failures while preserving the last readable local snapshot.
+- [x] Add deterministic fault-injection characterization for load failure, partial domain replacement, interrupted multi-domain saves, and post-load-failure overwrite.
+- [x] **P1 Storage:** add observable `PersistenceStatus`, retain dirty state after failed saves, and expose retry for startup, debounce, and lifecycle flush failures.
+- [x] **P1 Storage:** prevent every automatic/destructive write after failed startup load until recovery succeeds.
+- [x] Implement versioned snapshot/manifest persistence with commit marker last, validation, previous fallback, and untouched legacy boxes.
+- [x] Add startup storage recovery UI for load/open-box failures and retry `init + load` without exposing raw production errors.
+- [ ] Add real-Hive fault-injection and CI storage regression coverage for open failure, interrupted writes, rollback, retry idempotency, and legacy dual-read.
+- [ ] Define a conservative snapshot retention/cleanup policy after multiple releases; keep at least current and previous valid payloads.
+- [ ] Add native restart, process-kill, and disposable-filesystem disk-full recovery tests.
+- [ ] Decide backup/export and encrypted-at-rest policy before public distribution.
+- [ ] Consider legacy-box cleanup only after export/restore support and several releases of verified snapshot recovery.
 - [ ] Bound or downsample profile image input before loading full bytes to avoid memory pressure from very large files.
 - [ ] Validate native Windows/macOS pointer tracking after skill-card hit-region alignment; capture a platform repro if compositor hover still differs.
 - [ ] Profile mobile theme switching after the `2x` snapshot cap and add a reduced-motion fallback only if frame timings still show jank.
@@ -113,12 +120,12 @@ Do not mix these product decisions into Release / Regression Hardening. Revisit 
 - [ ] Use `flutter-architecture-testing` for responsive UI, navigation, forms, and widget-test changes.
 - [ ] Use `appstate-decomposition` only for narrow engine or mutation-boundary work; never rewrite AppState wholesale.
 - [ ] Use `future-cloud-boundary` before GoalSpec, Task, ordering, timestamp, or storage migrations.
-- [ ] Create `flutter-dart-current-stack` for SDK compatibility and dependency-baseline checks.
-- [ ] Create `mobile-responsive-ux` for `360dp`, safe-area, typography, and adaptive route audits.
-- [ ] Create `roadmap-layout-audit` for paths, camera bounds, orientation, templates, and stage identity.
-- [ ] Create `goal-progress-modeling` for goal cycles, stage weighting, reset policy, and milestones.
+- [x] Create `flutter-dart-current-stack` for SDK compatibility and dependency-baseline checks.
+- [x] Create `mobile-responsive-ux` for `360dp`, safe-area, typography, and adaptive route audits.
+- [x] Create `roadmap-layout-audit` for paths, camera bounds, orientation, templates, and stage identity.
+- [x] Create `goal-progress-modeling` for goal cycles, stage weighting, reset policy, and milestones.
 - [ ] Create `desktop-pointer-hover-audit` for MouseRegion, transforms, overlays, and native hit testing.
-- [ ] Create `animation-performance-audit` for frame timing, repaint boundaries, image capture, and reduced-motion fallbacks.
+- [x] Create `animation-performance-audit` for frame timing, repaint boundaries, image capture, and reduced-motion fallbacks.
 
 ## Release / Regression Hardening
 
@@ -133,11 +140,13 @@ Automated baseline completed on 2026-06-30:
 - [x] Guard dialog/animation callbacks against running after widget disposal.
 - [x] Build the macOS release app successfully.
 - [x] Add QHD quest-count badge centering regression coverage.
+- [x] Revalidate Android SDK `36.1`, accepted licenses, Android 16 emulator startup, debug APK assembly/install, and the release signing refusal on 2026-07-02.
 
 Release blockers and deferred maintenance:
 
 - [ ] Replace Android/iOS/macOS `com.example...` identifiers with final owned application and bundle identifiers before distribution.
-- [ ] Configure Android SDK/`ANDROID_HOME` in the release environment and provide a private `android/key.properties`; release Gradle intentionally refuses debug or missing signing.
+- [ ] Provide a private `android/key.properties`; release Gradle correctly refuses release assembly without signing and never falls back to debug signing.
+- [ ] Migrate the app and affected plugins (`audioplayers_android`, `flutter_timezone`) to Flutter Built-in Kotlin in a dedicated dependency/build-system batch before the compatibility warning becomes an error.
 - [ ] Install the matching iOS platform in Xcode and configure distribution signing; the iOS no-codesign probe is currently blocked because iOS `26.2` is not installed.
 - [ ] Decide and document the iOS backup policy for local productivity data; Android backup is already disabled.
 - [ ] Decide whether local task/profile/goal text requires encrypted-at-rest storage and a key-management plan before public distribution.
@@ -168,6 +177,10 @@ Manual desktop/QHD checklist:
 
 ## Recently Completed
 
+- Android toolchain revalidation: Flutter now detects SDK/build-tools `36.1`, JDK 21 and accepted licenses; debug APK assembled, installed and launched on an Android 16 emulator without AndroidRuntime/Flutter errors, while release assembly stopped at the intentional private-signing guard.
+- Storage Reliability Epic: added observable load/save/dirty/failure status, blocking startup recovery with retry, responsive save-failure retry, immediate error observation for background saves, and failed-load write gating; added a versioned full-app snapshot with payload validation, commit marker last, previous fallback, and additive legacy migration.
+- Storage reliability characterization: added deterministic fake-storage fault injection, reproduced partial clear-and-write snapshots, cross-domain inconsistency and startup-load overwrite risk, and documented a status/guard-first recovery path followed by snapshot/manifest persistence in `docs/STORAGE_RELIABILITY_PLAN.md`.
+- Local workflow skills: created and validated `flutter-dart-current-stack`, `flutter-upgrade-audit`, `mobile-responsive-ux`, `roadmap-layout-audit`, `goal-progress-modeling`, and `animation-performance-audit` in the project skill library.
 - Full crash/static/release audit: hardened every mutable model-list boundary, normalized invalid reminder times, made optional notification/file-picker failures non-fatal, closed a dialog controller leak, and documented storage reliability/release follow-ups in `docs/CODE_REVIEW_REPORT.md`.
 - Quest creation stabilization: removed the redundant “раз в 3 дня” choice for new habits while preserving legacy edits, and normalized mutable model lists to prevent fixed-length crashes during subtask/checklist synchronization.
 - RoadMap/Rewards/Inbox polish: horizontal terminal insertion now centers between orb edges, Effects opens expanded by default, and active quick-task counts use the same compact circular badge in the Inbox panel and skill lists.
