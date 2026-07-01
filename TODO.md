@@ -1,6 +1,6 @@
 # TODO / Living Backlog
 
-Last updated: 2026-07-01
+Last updated: 2026-07-02
 
 This file tracks the active implementation roadmap and completed project work. Update it after every meaningful code or design change.
 
@@ -36,13 +36,21 @@ Do not mix these product decisions into Release / Regression Hardening. Revisit 
 - [ ] Add a quiet recommendation during skill creation to create at least one recurring ritual/quest.
 - [ ] Decide whether milestone feedback should fire after every completed stage when it does not land exactly on `25/50/100%`.
 - [ ] Add optional sound for the `100%` milestone behind sound and reduced-motion/accessibility settings.
-- [ ] Decide whether mobile “Действовать сегодня” should be removed entirely; it currently remains collapsed below tasks.
+- [ ] Validate the new compact next-action summary with real mobile use before deciding whether the expandable full “Действовать сегодня” dashboard should remain.
 - [ ] Finish the mobile truncation audit and introduce a coherent `TextTheme`/responsive typography system for `360/393/430/760dp`.
 - [ ] Profile theme switching on real mobile hardware; the current `2x` snapshot cap is only a partial mitigation.
 - [ ] Extend stage reordering beyond isolated linear roads only after branching/shared-root/cross-road semantics and conflict handling are designed.
 
 ## P1 — Mobile Foundation
 
+- [x] Surface a compact next-action/minimum-step summary between mobile skills and the task list, with a labelled `48dp` primary action and expandable full dashboard.
+- [x] Add dirty-draft `PopScope` protection to mobile AddSkill/AddTask routes; untouched forms still close directly and keyboard dismissal remains separate from route Back.
+- [ ] Add automated accessibility gates for semantics, minimum tap targets, focus order, and `200%` text scaling at `360/393/430dp`.
+- [ ] Add a device-local last-active skill/resumption context with an obvious return to the skill chooser; do not mix it into cloud-conflict domain state.
+- [ ] Add a discoverability hint for mobile task swipe actions and retire it after first successful use.
+- [ ] Shorten the mandatory first-run tunnel to first skill, first quest, and first useful completion; move RoadMap, statistics, trophies, and profile into optional tutorial modules.
+- [x] Replace the local-save failure cloud icon with storage-neutral, device-specific copy while preserving dirty state and retry.
+- [ ] Add delayed explanatory copy for unusually long startup loading without flashing it during normal fast startup.
 - [ ] Add a TextTheme-based mobile typography scale and responsive constants for `360`, `393`, `430`, and `760` widths.
 - [ ] Add widget coverage for overflow, truncation, navigation, and dark/light rendering at mobile widths.
 - [ ] Polish mobile skill squircles with richer density options and optional circular progress after usage feedback.
@@ -54,6 +62,8 @@ Do not mix these product decisions into Release / Regression Hardening. Revisit 
 - [ ] Consolidate remaining non-form breakpoint checks around shared responsive constants.
 - [ ] Polish mobile keyboard focus traversal and accessibility labels for icon/color form controls.
 - [ ] Extract shared field validation only if more creation forms adopt the same rules.
+- [ ] Define a presentation-only Quest Log MVP over existing task/skill/stage IDs; do not add models, storage schema, XP rules, or RoadMap semantics in that batch.
+- [ ] Run a five-scenario mobile usability check: first task, returning user, missing minimum step, dirty-form Back, and save-failure retry.
 
 ## P2 — RoadMap Layout
 
@@ -146,11 +156,13 @@ Release blockers and deferred maintenance:
 
 - [ ] Replace Android/iOS/macOS `com.example...` identifiers with final owned application and bundle identifiers before distribution.
 - [ ] Provide a private `android/key.properties`; release Gradle correctly refuses release assembly without signing and never falls back to debug signing.
+- [ ] Replace the default Flutter Android launcher icon/basic launch artwork with final RPG To-Do assets before store distribution.
 - [ ] Migrate the app and affected plugins (`audioplayers_android`, `flutter_timezone`) to Flutter Built-in Kotlin in a dedicated dependency/build-system batch before the compatibility warning becomes an error.
 - [ ] Install the matching iOS platform in Xcode and configure distribution signing; the iOS no-codesign probe is currently blocked because iOS `26.2` is not installed.
 - [ ] Decide and document the iOS backup policy for local productivity data; Android backup is already disabled.
 - [ ] Decide whether local task/profile/goal text requires encrypted-at-rest storage and a key-management plan before public distribution.
 - [ ] Review whether `SCHEDULE_EXACT_ALARM` is required for store policy and every reminder mode.
+- [ ] Decouple Android notification permission from exact-alarm capability, define an inexact fallback where acceptable, and show human-readable reminder scheduling failure instead of silent degradation.
 - [ ] Bump the release build number from `+1` and verify platform version metadata before shipping.
 - [ ] Migrate stale iOS/macOS CocoaPods integration to Swift Package Manager only in a dedicated build-system batch; do not accept automatic Flutter project churn blindly.
 - [ ] Track the `objective_c` code-asset framework-name warning with the package maintainer or a vetted dependency update.
@@ -177,6 +189,7 @@ Manual desktop/QHD checklist:
 
 ## Recently Completed
 
+- Mobile UX Quick Wins: mobile Act now shows a compact next action before the task list, minimum steps have a direct `48dp` CTA, empty skills guide quest creation, dirty AddSkill/AddTask routes confirm discard on close/Back, and local save failures use calm device-specific recovery copy with focused widget coverage.
 - Android toolchain revalidation: Flutter now detects SDK/build-tools `36.1`, JDK 21 and accepted licenses; debug APK assembled, installed and launched on an Android 16 emulator without AndroidRuntime/Flutter errors, while release assembly stopped at the intentional private-signing guard.
 - Storage Reliability Epic: added observable load/save/dirty/failure status, blocking startup recovery with retry, responsive save-failure retry, immediate error observation for background saves, and failed-load write gating; added a versioned full-app snapshot with payload validation, commit marker last, previous fallback, and additive legacy migration.
 - Storage reliability characterization: added deterministic fake-storage fault injection, reproduced partial clear-and-write snapshots, cross-domain inconsistency and startup-load overwrite risk, and documented a status/guard-first recovery path followed by snapshot/manifest persistence in `docs/STORAGE_RELIABILITY_PLAN.md`.

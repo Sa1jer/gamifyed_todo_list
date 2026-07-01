@@ -319,6 +319,11 @@ void main() {
       );
 
       expect(find.byKey(const Key('persistence-save-failure')), findsOneWidget);
+      expect(
+        find.textContaining('пока не записаны на устройство'),
+        findsOneWidget,
+      );
+      expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
       expect(state.persistenceStatus.isDirty, isTrue);
       storage.clearFailures();
       await tester.tap(find.byKey(const Key('persistence-retry-save')));

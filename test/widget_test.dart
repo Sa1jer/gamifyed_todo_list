@@ -1383,7 +1383,13 @@ void main() {
       expect(find.text('50%'), findsOneWidget);
       expect(
         tester.getTopLeft(expandedPanel).dy,
-        lessThan(tester.getTopLeft(find.text('Действовать сегодня')).dy),
+        lessThan(
+          tester
+              .getTopLeft(
+                find.byKey(const ValueKey('mobile-next-action-summary')),
+              )
+              .dy,
+        ),
       );
       expect(tester.takeException(), isNull);
 
@@ -2418,7 +2424,10 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    expect(find.text('Действовать сегодня'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('mobile-next-action-summary')),
+      findsOneWidget,
+    );
     expect(find.text('Быстрая задача'), findsNothing);
     expect(find.textContaining('Быстрые To-do'), findsNothing);
     expect(
@@ -2504,6 +2513,190 @@ void main() {
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
+  });
+
+  testWidgets('mobile Act surfaces the next minimum action before tasks', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = InMemoryStorageService()
+      .._onboardingSeen = true
+      ..skills = [
+        Skill(
+          id: 'mobile-focus-skill',
+          name: 'Flutter',
+          goal: 'Выпустить приложение',
+          color: const Color(0xFF4A9EFF),
+          icon: Icons.code_rounded,
+        ),
+      ]
+      ..tasks = [
+        Task(
+          id: 'mobile-focus-task',
+          title: 'Подготовить экран релиза',
+          skillId: 'mobile-focus-skill',
+          xpReward: 80,
+          type: TaskType.midTerm,
+          minimumAction: 'Открыть макет и проверить один блок',
+        ),
+      ];
+    await storage.init();
+
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    final summary = find.byKey(const ValueKey('mobile-next-action-summary'));
+    final trigger = find.byKey(
+      const ValueKey('mobile-next-action-trigger-mobile-focus-task'),
+    );
+    expect(summary, findsOneWidget);
+    expect(find.text('Минимальный шаг'), findsOneWidget);
+    expect(find.text('Открыть макет и проверить один блок'), findsOneWidget);
+    expect(tester.getSize(trigger).height, greaterThanOrEqualTo(48));
+
+    await tester.tap(
+      find.byKey(const ValueKey('mobile-expanded-skill-mobile-focus-skill')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('tasks-list')), findsOneWidget);
+    expect(
+      tester.getTopLeft(summary).dy,
+      lessThan(tester.getTopLeft(find.byKey(const ValueKey('tasks-list'))).dy),
+    );
+
+    await tester.tap(trigger);
+    await tester.pump(const Duration(seconds: 1));
+    expect(storage.tasks.single.isMinimumActionDone, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('mobile empty skill explains the next action and opens AddTask', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = InMemoryStorageService()
+      .._onboardingSeen = true
+      ..skills = [
+        Skill(
+          id: 'empty-mobile-skill',
+          name: 'Рисование',
+          goal: 'Рисовать увереннее',
+          color: const Color(0xFFFF9500),
+          icon: Icons.brush_rounded,
+        ),
+      ];
+    await storage.init();
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    await tester.tap(
+      find.byKey(const ValueKey('mobile-expanded-skill-empty-mobile-skill')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Добавь квест, чтобы начать движение'), findsOneWidget);
+    expect(find.textContaining('минимальный шаг'), findsOneWidget);
+    await tester.tap(find.text('Создать квест').last);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('mobile-add-task-page')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('mobile AddSkill protects a dirty draft on close', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = InMemoryStorageService().._onboardingSeen = true;
+    await storage.init();
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    await tester.tap(find.byKey(const ValueKey('mobile-add-skill-open')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('add-skill-name-field')),
+      'Новый навык',
+    );
+    await tester.tap(find.byKey(const ValueKey('mobile-form-cancel')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Отменить изменения?'), findsOneWidget);
+    expect(find.byKey(const ValueKey('mobile-add-skill-page')), findsOneWidget);
+    await tester.tap(find.text('Продолжить редактирование'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('mobile-add-skill-page')), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('mobile-form-cancel')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Удалить черновик'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('mobile-add-skill-page')), findsNothing);
+    expect(storage.skills.where((skill) => skill.id != kInboxSkillId), isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('mobile AddTask protects a dirty draft from system back', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = InMemoryStorageService()
+      .._onboardingSeen = true
+      ..skills = [
+        Skill(
+          id: 'draft-skill',
+          name: 'Flutter',
+          goal: 'Проверить Back',
+          color: const Color(0xFF4A9EFF),
+          icon: Icons.code_rounded,
+        ),
+      ];
+    await storage.init();
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(
+      find.byKey(const ValueKey('mobile-expanded-skill-draft-skill')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('add-task-button-draft-skill')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('add-task-title-field')),
+      'Не потерять черновик',
+    );
+    tester.testTextInput.hide();
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pump();
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('Отменить изменения?'), findsOneWidget);
+    expect(find.byKey(const ValueKey('mobile-add-task-page')), findsOneWidget);
+
+    await tester.tap(find.text('Удалить черновик'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('mobile-add-task-page')), findsNothing);
+    expect(storage.tasks, isEmpty);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('mobile AddSkill uses a seven-column icon grid', (

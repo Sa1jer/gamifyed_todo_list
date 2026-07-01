@@ -139,8 +139,8 @@ class _SaveFailureBanner extends StatelessWidget {
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   const message = Text(
-                    'Не удалось сохранить изменения. '
-                    'Они останутся в памяти до повторной попытки.',
+                    'Изменения пока не записаны на устройство. '
+                    'Они остаются открыты в приложении — попробуйте ещё раз.',
                   );
                   final retry = TextButton(
                     key: const Key('persistence-retry-save'),
@@ -161,7 +161,7 @@ class _SaveFailureBanner extends StatelessWidget {
                           const Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(Icons.cloud_off_rounded),
+                              Icon(Icons.warning_amber_rounded),
                               SizedBox(width: 12),
                               Expanded(child: message),
                             ],
@@ -179,7 +179,7 @@ class _SaveFailureBanner extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.cloud_off_rounded),
+                        const Icon(Icons.warning_amber_rounded),
                         const SizedBox(width: 12),
                         const Flexible(child: message),
                         const SizedBox(width: 12),

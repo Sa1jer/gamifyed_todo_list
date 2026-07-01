@@ -11,6 +11,7 @@ class TodayDashboard extends StatefulWidget {
   final Key? createFirstSkillButtonKey;
   final Key? nextQuestActionKey;
   final bool initiallyExpanded;
+  final bool compactSummary;
 
   const TodayDashboard({
     super.key,
@@ -20,6 +21,7 @@ class TodayDashboard extends StatefulWidget {
     this.createFirstSkillButtonKey,
     this.nextQuestActionKey,
     this.initiallyExpanded = true,
+    this.compactSummary = false,
   });
 
   static Skill? _skillFor(AppState state, Task task) {
@@ -164,6 +166,43 @@ class _TodayDashboardState extends State<TodayDashboard> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final compactDashboard = constraints.maxWidth < 720;
+        final mobileSummary = _MobileNextActionSummary(
+          state: state,
+          task: nextTask,
+          skill: nextTask == null
+              ? null
+              : TodayDashboard._skillFor(state, nextTask),
+          isDark: isDark,
+          onComplete: widget.onComplete,
+          onMinimumAction: widget.onMinimumAction,
+          onCreateFirstSkill: widget.onCreateFirstSkill,
+          createFirstSkillButtonKey: widget.createFirstSkillButtonKey,
+        );
+
+        if (widget.compactSummary && !_expanded) {
+          return AnimatedContainer(
+            duration: kMotionSlow,
+            curve: kMotionCurve,
+            height: 80,
+            child: AppPanel(
+              isDark: isDark,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 8, 4, 8),
+                child: Row(
+                  children: [
+                    Expanded(child: mobileSummary),
+                    const SizedBox(width: 2),
+                    _CollapseButton(
+                      expanded: false,
+                      color: sub,
+                      onTap: () => setState(() => _expanded = true),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
 
         return AnimatedContainer(
           duration: kMotionSlow,
@@ -493,6 +532,220 @@ class _CompactDashboardContent extends StatelessWidget {
   }
 }
 
+class _MobileNextActionSummary extends StatelessWidget {
+  final AppState state;
+  final Task? task;
+  final Skill? skill;
+  final bool isDark;
+  final Function(String id, Offset pos) onComplete;
+  final Function(String id, Offset pos) onMinimumAction;
+  final VoidCallback? onCreateFirstSkill;
+  final Key? createFirstSkillButtonKey;
+
+  const _MobileNextActionSummary({
+    required this.state,
+    required this.task,
+    required this.skill,
+    required this.isDark,
+    required this.onComplete,
+    required this.onMinimumAction,
+    required this.onCreateFirstSkill,
+    required this.createFirstSkillButtonKey,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final txt = textColor(isDark);
+    final currentTask = task;
+    final accent = skill?.color ?? const Color(0xFF4A9EFF);
+
+    if (currentTask == null) {
+      final hasSkills = state.roadmapSkills.isNotEmpty;
+      return Semantics(
+        key: const ValueKey('mobile-next-action-summary'),
+        container: true,
+        label: hasSkills
+            ? 'Нет активных квестов. Выберите навык и добавьте квест.'
+            : 'Нет навыков. Создайте первый навык.',
+        child: Row(
+          children: [
+            Icon(
+              hasSkills ? Icons.add_task_rounded : Icons.explore_rounded,
+              color: accent,
+              size: 22,
+            ),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Text(
+                hasSkills
+                    ? 'Выбери навык и добавь квест, чтобы начать движение.'
+                    : 'Создай первый навык — затем добавим небольшой квест.',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: txt,
+                  fontSize: 12,
+                  height: 1.2,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            if (!hasSkills && onCreateFirstSkill != null) ...[
+              const SizedBox(width: 8),
+              _MobileSummaryButton(
+                key: createFirstSkillButtonKey,
+                label: 'Создать',
+                icon: Icons.add_rounded,
+                color: accent,
+                semanticsLabel: 'Создать первый навык',
+                onTap: onCreateFirstSkill!,
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+
+    final canStartMinimum = state.canCompleteMinimumAction(currentTask);
+    final actionText = canStartMinimum
+        ? currentTask.minimumAction
+        : currentTask.title;
+    final actionLabel = canStartMinimum ? 'Минимальный шаг' : 'Следующий квест';
+    final trigger = canStartMinimum ? onMinimumAction : onComplete;
+
+    return Semantics(
+      key: const ValueKey('mobile-next-action-summary'),
+      container: true,
+      label: '$actionLabel. $actionText',
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: accent.withAlpha(isDark ? 34 : 22),
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: Icon(
+              canStartMinimum ? Icons.play_arrow_rounded : Icons.flag_rounded,
+              color: accent,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  actionLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: accent,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  actionText,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: txt,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Builder(
+            builder: (actionContext) => _MobileSummaryButton(
+              key: ValueKey('mobile-next-action-trigger-${currentTask.id}'),
+              label: canStartMinimum ? 'Начать' : 'Готово',
+              icon: canStartMinimum
+                  ? Icons.play_arrow_rounded
+                  : Icons.check_rounded,
+              color: accent,
+              semanticsLabel: canStartMinimum
+                  ? 'Начать минимальный шаг: $actionText'
+                  : 'Выполнить квест: ${currentTask.title}',
+              onTap: () {
+                final box = actionContext.findRenderObject() as RenderBox?;
+                trigger(
+                  currentTask.id,
+                  box?.localToGlobal(Offset.zero) ?? Offset.zero,
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MobileSummaryButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final String semanticsLabel;
+  final VoidCallback onTap;
+
+  const _MobileSummaryButton({
+    super.key,
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.semanticsLabel,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: semanticsLabel,
+      child: PressFeedback(
+        scale: 0.96,
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48, minWidth: 76),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(icon, color: Colors.white, size: 16),
+                  const SizedBox(width: 4),
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _NextActionCard extends StatelessWidget {
   final AppState state;
   final Task? task;
@@ -748,31 +1001,38 @@ class _MinimumActionHint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withAlpha(12),
-        borderRadius: BorderRadius.circular(9),
-        border: Border.all(color: color.withAlpha(34)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.play_arrow_rounded, color: color.withAlpha(220), size: 14),
-          const SizedBox(width: 5),
-          Expanded(
-            child: Text(
-              'Минимум: $text',
-              style: TextStyle(
-                color: textColor(isDark).withAlpha(210),
-                fontSize: 11.2,
-                fontWeight: FontWeight.w700,
-                height: 1.15,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+    return Semantics(
+      label: 'Минимальный шаг: $text',
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+        decoration: BoxDecoration(
+          color: color.withAlpha(12),
+          borderRadius: BorderRadius.circular(9),
+          border: Border.all(color: color.withAlpha(34)),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.play_arrow_rounded,
+              color: color.withAlpha(220),
+              size: 14,
             ),
-          ),
-        ],
+            const SizedBox(width: 5),
+            Expanded(
+              child: Text(
+                'Начни с этого: $text',
+                style: TextStyle(
+                  color: textColor(isDark).withAlpha(210),
+                  fontSize: 11.2,
+                  fontWeight: FontWeight.w700,
+                  height: 1.15,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1221,20 +1481,32 @@ class _CollapseButton extends StatelessWidget {
       message: expanded
           ? 'Свернуть блок “Действовать сегодня”'
           : 'Показать блок “Действовать сегодня”',
-      child: PressFeedback(
-        scale: 0.94,
-        onTap: onTap,
-        child: Container(
-          width: 28,
-          height: 28,
-          decoration: BoxDecoration(
-            color: color.withAlpha(24),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(
-            expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-            color: color,
-            size: 19,
+      child: Semantics(
+        button: true,
+        expanded: expanded,
+        child: PressFeedback(
+          scale: 0.94,
+          onTap: onTap,
+          child: SizedBox(
+            width: 48,
+            height: 48,
+            child: Center(
+              child: Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: color.withAlpha(24),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  expanded
+                      ? Icons.keyboard_arrow_up
+                      : Icons.keyboard_arrow_down,
+                  color: color,
+                  size: 19,
+                ),
+              ),
+            ),
           ),
         ),
       ),

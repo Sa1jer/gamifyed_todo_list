@@ -420,7 +420,7 @@ class _EmptyTasksState extends StatelessWidget {
                 ),
                 SizedBox(height: compact ? 6 : 12),
                 Text(
-                  'Добавьте первый квест',
+                  'Добавь квест, чтобы начать движение',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: txt,
@@ -430,7 +430,7 @@ class _EmptyTasksState extends StatelessWidget {
                 ),
                 const SizedBox(height: 5),
                 Text(
-                  'Для “$skillName” пока нет действий. Добавьте один маленький квест и минимальный шаг.',
+                  'У “$skillName” пока нет активных действий. Создай небольшой квест и добавь минимальный шаг — так начать будет легче.',
                   textAlign: TextAlign.center,
                   maxLines: compact ? 2 : null,
                   overflow: compact ? TextOverflow.ellipsis : null,
@@ -440,7 +440,7 @@ class _EmptyTasksState extends StatelessWidget {
                 HoverScale(
                   child: SmallBtn(
                     key: createFirstQuestButtonKey,
-                    label: 'Первый квест',
+                    label: 'Создать квест',
                     icon: Icons.add,
                     color: skillColor,
                     tooltip: 'Создать первый квест для навыка “$skillName”',

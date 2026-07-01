@@ -433,7 +433,7 @@ class _MainPageState extends State<MainPage> {
           targetKey: _roadmapCanvasKey,
           title: 'Карта',
           body:
-              'Большой пузырь — сам навык и финальная цель пути. Когда ты создашь этапы (пузыри поменьше), они выстроятся слева как дорога к этому навыку.',
+              'Большой пузырь — сам навык и финальная цель пути. Когда ты создашь этапы (пузыри поменьше), они выстроятся как дорога к этому навыку.',
           primaryLabel: 'Круто!',
           primaryIcon: Icons.arrow_forward_rounded,
           onPrimaryAction: () {
@@ -483,7 +483,7 @@ class _MainPageState extends State<MainPage> {
           title: 'Минимальный шаг',
           body:
               'Минимум — безопасный вход в действие. Он даёт часть XP и помогает не ждать идеального момента.',
-          primaryLabel: 'Поянял, круто!',
+          primaryLabel: 'Понял, круто!',
           primaryIcon: Icons.check_rounded,
           onPrimaryAction: () =>
               state.completeTutorialStep(TutorialStepIds.actMinimum),

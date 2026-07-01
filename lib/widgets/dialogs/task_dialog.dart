@@ -67,7 +67,30 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   bool _qualityExpanded = false;
   bool _subtasksExpanded = false;
   bool _submitting = false;
+  bool _allowPop = false;
+  bool _discardDialogOpen = false;
   String? _titleError;
+  late final String _initialDraftSignature;
+
+  String get _draftSignature => jsonEncode({
+    'title': _titleCtrl.text,
+    'description': _descriptionCtrl.text,
+    'minimumAction': _minimumActionCtrl.text,
+    'minimumEnabled': _minimumActionEnabled,
+    'xp': _xp,
+    'type': _type.name,
+    'frequency': _freq.name,
+    'customDays': _customCtrl.text,
+    'priority': _priority.name,
+    'subtasks': _subtasks,
+    'tags': _tags,
+    'treeNodeId': _treeNodeId,
+    'notificationsEnabled': _notificationsEnabled,
+    'notificationHour': _notificationTime.hour,
+    'notificationMinute': _notificationTime.minute,
+  });
+
+  bool get _isDirty => _draftSignature != _initialDraftSignature;
 
   int get _softCap => typeSoftCap[_type]!;
   bool get _overCap => _xp > _softCap;
@@ -201,9 +224,11 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
           _minimumActionCtrl.text.trim().isNotEmpty ||
           widget.focusMinimumAction;
     }
+    _initialDraftSignature = _draftSignature;
     _titleCtrl.addListener(_refreshDraft);
     _descriptionCtrl.addListener(_refreshDraft);
     _minimumActionCtrl.addListener(_refreshDraft);
+    _customCtrl.addListener(_refreshDraft);
     if (widget.focusMinimumAction) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _minimumActionFocusNode.requestFocus();
@@ -308,14 +333,21 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     );
 
     if (widget.fullScreen) {
-      return MobileFormPage(
-        pageKey: const ValueKey('mobile-add-task-page'),
-        saveKey: const ValueKey('mobile-add-task-save'),
-        title: title,
-        backgroundColor: bg,
-        accentColor: c,
-        onSave: _submitting ? null : _save,
-        child: form,
+      return PopScope(
+        canPop: _submitting || _allowPop || !_isDirty,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) unawaited(_requestClose());
+        },
+        child: MobileFormPage(
+          pageKey: const ValueKey('mobile-add-task-page'),
+          saveKey: const ValueKey('mobile-add-task-save'),
+          title: title,
+          backgroundColor: bg,
+          accentColor: c,
+          onSave: _submitting ? null : _save,
+          onCancel: () => unawaited(_requestClose()),
+          child: form,
+        ),
       );
     }
 
@@ -325,6 +357,25 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: SizedBox(width: 460, child: form),
     );
+  }
+
+  Future<void> _requestClose() async {
+    if (!mounted) return;
+    if (_submitting || _allowPop || !_isDirty) {
+      Navigator.pop(context);
+      return;
+    }
+    if (_discardDialogOpen) return;
+    _discardDialogOpen = true;
+    final discard = await showDiscardMobileFormDialog(
+      context,
+      isDark: widget.isDark,
+    );
+    _discardDialogOpen = false;
+    if (!mounted || !discard) return;
+    setState(() => _allowPop = true);
+    await WidgetsBinding.instance.endOfFrame;
+    if (mounted) Navigator.pop(context);
   }
 
   Widget _buildStageContextCard(

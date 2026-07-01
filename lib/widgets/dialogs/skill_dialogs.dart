@@ -332,7 +332,10 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
   Color _color = const Color(0xFF4A9EFF);
   IconData _icon = Icons.fitness_center;
   bool _submitting = false;
+  bool _allowPop = false;
+  bool _discardDialogOpen = false;
   String? _nameError;
+  late final String _initialDraftSignature;
 
   // All icons in a single flat list
   static final _allIcons = [...kIconsPrimary, ...kIconsExtra];
@@ -349,6 +352,21 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
           _spacing * 2) *
       1.08;
 
+  String get _draftSignature => jsonEncode({
+    'name': _nameCtrl.text,
+    'goal': _goalCtrl.text,
+    'firstStage': _firstStageCtrl.text,
+    'checklist': _items,
+    'color': _color.toARGB32(),
+    'icon': _icon.codePoint,
+  });
+
+  bool get _isDirty => _draftSignature != _initialDraftSignature;
+
+  void _refreshDraft() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void initState() {
     super.initState();
@@ -359,6 +377,10 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
       _color = ex.color;
       _icon = ex.icon;
     }
+    _initialDraftSignature = _draftSignature;
+    _nameCtrl.addListener(_refreshDraft);
+    _goalCtrl.addListener(_refreshDraft);
+    _firstStageCtrl.addListener(_refreshDraft);
   }
 
   @override
@@ -561,14 +583,21 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
     );
 
     if (widget.fullScreen) {
-      return MobileFormPage(
-        pageKey: const ValueKey('mobile-add-skill-page'),
-        saveKey: const ValueKey('mobile-add-skill-save'),
-        title: title,
-        backgroundColor: bg,
-        accentColor: _color,
-        onSave: _submitting ? null : _save,
-        child: form,
+      return PopScope(
+        canPop: _submitting || _allowPop || !_isDirty,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) unawaited(_requestClose());
+        },
+        child: MobileFormPage(
+          pageKey: const ValueKey('mobile-add-skill-page'),
+          saveKey: const ValueKey('mobile-add-skill-save'),
+          title: title,
+          backgroundColor: bg,
+          accentColor: _color,
+          onSave: _submitting ? null : _save,
+          onCancel: () => unawaited(_requestClose()),
+          child: form,
+        ),
       );
     }
 
@@ -578,6 +607,25 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: SizedBox(width: 480, child: form),
     );
+  }
+
+  Future<void> _requestClose() async {
+    if (!mounted) return;
+    if (_submitting || _allowPop || !_isDirty) {
+      Navigator.pop(context);
+      return;
+    }
+    if (_discardDialogOpen) return;
+    _discardDialogOpen = true;
+    final discard = await showDiscardMobileFormDialog(
+      context,
+      isDark: widget.isDark,
+    );
+    _discardDialogOpen = false;
+    if (!mounted || !discard) return;
+    setState(() => _allowPop = true);
+    await WidgetsBinding.instance.endOfFrame;
+    if (mounted) Navigator.pop(context);
   }
 
   Future<void> _save() async {

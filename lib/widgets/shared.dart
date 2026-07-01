@@ -1160,6 +1160,7 @@ class MobileFormPage extends StatelessWidget {
   final Color backgroundColor;
   final Color accentColor;
   final VoidCallback? onSave;
+  final VoidCallback? onCancel;
   final Widget child;
 
   const MobileFormPage({
@@ -1170,6 +1171,7 @@ class MobileFormPage extends StatelessWidget {
     required this.backgroundColor,
     required this.accentColor,
     required this.onSave,
+    this.onCancel,
     required this.child,
   });
 
@@ -1185,7 +1187,7 @@ class MobileFormPage extends StatelessWidget {
         leading: IconButton(
           key: const ValueKey('mobile-form-cancel'),
           tooltip: 'Отмена',
-          onPressed: () => Navigator.pop(context),
+          onPressed: onCancel ?? () => Navigator.pop(context),
           icon: const Icon(Icons.close_rounded),
         ),
         title: Text(title),
@@ -1205,6 +1207,40 @@ class MobileFormPage extends StatelessWidget {
       body: SafeArea(top: false, child: child),
     );
   }
+}
+
+Future<bool> showDiscardMobileFormDialog(
+  BuildContext context, {
+  required bool isDark,
+}) async {
+  final result = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      backgroundColor: surface(isDark),
+      title: Text(
+        'Отменить изменения?',
+        style: TextStyle(color: textColor(isDark)),
+      ),
+      content: Text(
+        'Введённые данные не сохранятся. Можно продолжить редактирование или удалить черновик.',
+        style: TextStyle(color: subtext(isDark), height: 1.35),
+      ),
+      actions: [
+        TextButton(
+          key: const ValueKey('mobile-form-keep-editing'),
+          onPressed: () => Navigator.pop(dialogContext, false),
+          child: const Text('Продолжить редактирование'),
+        ),
+        TextButton(
+          key: const ValueKey('mobile-form-discard'),
+          style: TextButton.styleFrom(foregroundColor: const Color(0xFFFF453A)),
+          onPressed: () => Navigator.pop(dialogContext, true),
+          child: const Text('Удалить черновик'),
+        ),
+      ],
+    ),
+  );
+  return result ?? false;
 }
 
 class DlgActions extends StatelessWidget {
