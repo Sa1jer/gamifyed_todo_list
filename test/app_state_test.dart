@@ -159,6 +159,136 @@ void main() {
     });
   });
 
+  group('mutable model list safety', () {
+    test('sync methods accept fixed-length constructor lists', () {
+      final task = Task(
+        id: 'fixed-task',
+        title: 'Проверить подзадачи',
+        skillId: 'skill-1',
+        xpReward: 20,
+        type: TaskType.shortTerm,
+        subtasks: List<String>.filled(1, 'Первый шаг'),
+        subtaskDone: List<bool>.filled(0, false),
+      );
+      final skill = Skill(
+        id: 'fixed-skill',
+        name: 'Навык',
+        goal: 'Проверить список',
+        color: Colors.blue,
+        icon: Icons.check,
+        checklist: List<String>.filled(1, 'Критерий'),
+        checklistDone: List<bool>.filled(0, false),
+      );
+      final node = SkillTreeNode(
+        id: 'fixed-node',
+        title: 'Этап',
+        checklist: List<String>.filled(1, 'Критерий этапа'),
+        checklistDone: List<bool>.filled(0, false),
+      );
+
+      expect(task.syncSubtaskDone, returnsNormally);
+      expect(skill.syncChecklistDone, returnsNormally);
+      expect(node.syncChecklistDone, returnsNormally);
+      expect(task.subtaskDone, [false]);
+      expect(skill.checklistDone, [false]);
+      expect(node.checklistDone, [false]);
+
+      task.subtasks.add('Второй шаг');
+      task.syncSubtaskDone();
+      expect(task.subtaskDone, [false, false]);
+    });
+
+    test('goal, weekly, and skill mutation paths copy caller-owned lists', () {
+      final review = GoalReviewEntry(id: 'review-1');
+      final goal = GoalSpec(
+        text: 'Надёжная цель',
+        reviews: List<GoalReviewEntry>.filled(0, review),
+      );
+      final keyResult = WeeklyKeyResult(id: 'result-1', title: 'Шаг');
+      final weeklyGoal = WeeklyGoal(
+        id: 'week-1',
+        weekStart: DateTime(2026, 6, 29),
+        title: 'Неделя',
+        keyResults: List<WeeklyKeyResult>.filled(0, keyResult),
+      );
+
+      expect(() => goal.reviews.add(review), returnsNormally);
+      expect(() => weeklyGoal.keyResults.add(keyResult), returnsNormally);
+
+      final state = AppState(
+        storage: _InMemoryStorageService(),
+        seedDefaults: false,
+      );
+      addTearDown(state.dispose);
+      final skill = Skill(
+        id: 'fixed-skill-update',
+        name: 'Навык',
+        goal: 'Цель',
+        color: Colors.blue,
+        icon: Icons.check,
+      );
+      state.addSkill(skill);
+
+      expect(
+        () => state.updateSkill(
+          skill,
+          name: skill.name,
+          goal: skill.goal,
+          checklist: List<String>.filled(2, 'Критерий'),
+          color: skill.color,
+          icon: skill.icon,
+        ),
+        returnsNormally,
+      );
+      expect(skill.checklistDone, [false, false]);
+    });
+
+    test('invalid notification time is normalized on create and update', () {
+      final task = Task(
+        id: 'invalid-reminder',
+        title: 'Напоминание',
+        skillId: 'skill-1',
+        xpReward: 20,
+        type: TaskType.shortTerm,
+        notificationsEnabled: true,
+        notificationHour: 24,
+        notificationMinute: -1,
+      );
+
+      expect(task.notificationsEnabled, isFalse);
+      expect(task.notificationHour, isNull);
+      expect(task.notificationMinute, isNull);
+
+      final state = AppState(
+        storage: _InMemoryStorageService(),
+        seedDefaults: false,
+      );
+      addTearDown(state.dispose);
+      state.tasks.add(task);
+      state.updateTask(
+        task,
+        title: task.title,
+        description: task.description,
+        xpReward: task.xpReward,
+        type: task.type,
+        repeatFrequency: task.repeatFrequency,
+        repeatCustomDays: task.repeatCustomDays,
+        priority: task.priority,
+        minimumAction: task.minimumAction,
+        subtasks: task.subtasks,
+        tags: task.tags,
+        notificationsEnabled: true,
+        notificationHour: 12,
+        notificationMinute: 60,
+        treeNodeId: null,
+      );
+
+      expect(task.notificationsEnabled, isFalse);
+      expect(task.notificationHour, isNull);
+      expect(task.notificationMinute, isNull);
+    });
+  });
+
   group('course nudge runtime dismiss', () {
     test('dismissed keys are session-only', () {
       final storage = _InMemoryStorageService();

@@ -886,26 +886,33 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                   Wrap(
                     spacing: 7,
                     runSpacing: 7,
-                    children: RepeatFrequency.values.map((freq) {
-                      final selected = _freq == freq;
-                      return _DialogChoiceChip(
-                        label: freqLabel[freq]!,
-                        color: color,
-                        selected: selected,
-                        backgroundColor: isDark
-                            ? const Color(0xFF23232D)
-                            : const Color(0xFFF0F0F5),
-                        borderColor: bdr,
-                        inactiveTextColor: sub,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        radius: 999,
-                        selectedWeight: FontWeight.w700,
-                        onTap: () => setState(() => _freq = freq),
-                      );
-                    }).toList(),
+                    children: RepeatFrequency.values
+                        .where(
+                          (freq) =>
+                              widget.existing != null ||
+                              freq != RepeatFrequency.every3Days,
+                        )
+                        .map((freq) {
+                          final selected = _freq == freq;
+                          return _DialogChoiceChip(
+                            label: freqLabel[freq]!,
+                            color: color,
+                            selected: selected,
+                            backgroundColor: isDark
+                                ? const Color(0xFF23232D)
+                                : const Color(0xFFF0F0F5),
+                            borderColor: bdr,
+                            inactiveTextColor: sub,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            radius: 999,
+                            selectedWeight: FontWeight.w700,
+                            onTap: () => setState(() => _freq = freq),
+                          );
+                        })
+                        .toList(),
                   ),
                   MotionExpandable(
                     expanded: _freq == RepeatFrequency.custom,

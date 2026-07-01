@@ -206,10 +206,11 @@ class SkillTreeNode {
     List<bool>? checklistDone,
     this.isMastered = false,
     this.masteredAt,
-  }) : prerequisiteIds = prerequisiteIds ?? [],
-       checklist = checklist ?? [],
-       checklistDone =
-           checklistDone ?? List.filled((checklist ?? []).length, false);
+  }) : prerequisiteIds = List.of(prerequisiteIds ?? const <String>[]),
+       checklist = List.of(checklist ?? const <String>[]),
+       checklistDone = List.of(
+         checklistDone ?? List.filled((checklist ?? []).length, false),
+       );
 
   int get checklistCompletedCount => checklistDone.where((done) => done).length;
 
@@ -273,7 +274,7 @@ class GoalSpec {
     this.currentValue,
     List<GoalReviewEntry>? reviews,
     DateTime? updatedAt,
-  }) : reviews = reviews ?? [],
+  }) : reviews = List.of(reviews ?? const <GoalReviewEntry>[]),
        updatedAt = updatedAt ?? DateTime.now();
 
   GoalSpec copyWith({
@@ -432,13 +433,18 @@ class Skill with XPOwner {
     this.level = 1,
     this.xp = 0,
   }) : goalSpec = goalSpec ?? GoalSpec(text: goal),
-       checklist = checklist ?? [],
-       treeNodes = treeNodes ?? [],
-       completedGoals = completedGoals ?? [],
-       completedRoadmaps = completedRoadmaps ?? [],
-       triggeredGoalMilestones = triggeredGoalMilestones ?? [],
-       checklistDone =
-           checklistDone ?? List.filled((checklist ?? []).length, false);
+       checklist = List.of(checklist ?? const <String>[]),
+       treeNodes = List.of(treeNodes ?? const <SkillTreeNode>[]),
+       completedGoals = List.of(completedGoals ?? const <CompletedGoal>[]),
+       completedRoadmaps = List.of(
+         completedRoadmaps ?? const <CompletedRoadmap>[],
+       ),
+       triggeredGoalMilestones = List.of(
+         triggeredGoalMilestones ?? const <int>[],
+       ),
+       checklistDone = List.of(
+         checklistDone ?? List.filled((checklist ?? []).length, false),
+       );
 
   String get goal => goalSpec.text;
 
@@ -582,10 +588,12 @@ class Task {
     DateTime? updatedAt,
   }) : _description = description.trim(),
        _skillId = skillId,
-       subtasks = subtasks ?? [],
-       consumedBuffIds = consumedBuffIds ?? [],
-       subtaskDone = subtaskDone ?? List.filled((subtasks ?? []).length, false),
-       tags = tags ?? [],
+       subtasks = List.of(subtasks ?? const <String>[]),
+       consumedBuffIds = List.of(consumedBuffIds ?? const <String>[]),
+       subtaskDone = List.of(
+         subtaskDone ?? List.filled((subtasks ?? []).length, false),
+       ),
+       tags = List.of(tags ?? const <String>[]),
        createdAt = createdAt ?? DateTime.now(),
        updatedAt = updatedAt ?? createdAt ?? DateTime.now() {
     normalizeScope();
@@ -609,7 +617,20 @@ class Task {
       minimumActionDoneAt = null;
       minimumActionEarnedXP = 0;
       bonusXpEarned = 0;
-      consumedBuffIds = const <String>[];
+      consumedBuffIds = <String>[];
+      notificationsEnabled = false;
+      notificationHour = null;
+      notificationMinute = null;
+    }
+
+    final hour = notificationHour;
+    final minute = notificationMinute;
+    if (hour == null ||
+        minute == null ||
+        hour < 0 ||
+        hour > 23 ||
+        minute < 0 ||
+        minute > 59) {
       notificationsEnabled = false;
       notificationHour = null;
       notificationMinute = null;
@@ -763,7 +784,7 @@ class WeeklyGoal {
     List<WeeklyKeyResult>? keyResults,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) : keyResults = keyResults ?? [],
+  }) : keyResults = List.of(keyResults ?? const <WeeklyKeyResult>[]),
        createdAt = createdAt ?? DateTime.now(),
        updatedAt = updatedAt ?? DateTime.now();
 

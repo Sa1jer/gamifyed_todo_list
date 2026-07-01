@@ -13,6 +13,10 @@ This file tracks the active implementation roadmap and completed project work. U
 
 ## P0 — Bugs / Stabilization
 
+- [ ] Add fault-injection tests and an explicit persistence error/retry state for debounced saves and startup loading; never hide a failed write as success.
+- [ ] Make multi-box Hive saves crash-consistent so `clear` plus interrupted sequential writes cannot leave partial skills/tasks/history snapshots.
+- [ ] Add startup storage recovery UI for I/O/open-box failures while preserving the last readable local snapshot.
+- [ ] Bound or downsample profile image input before loading full bytes to avoid memory pressure from very large files.
 - [ ] Validate native Windows/macOS pointer tracking after skill-card hit-region alignment; capture a platform repro if compositor hover still differs.
 - [ ] Profile mobile theme switching after the `2x` snapshot cap and add a reduced-motion fallback only if frame timings still show jank.
 
@@ -164,6 +168,8 @@ Manual desktop/QHD checklist:
 
 ## Recently Completed
 
+- Full crash/static/release audit: hardened every mutable model-list boundary, normalized invalid reminder times, made optional notification/file-picker failures non-fatal, closed a dialog controller leak, and documented storage reliability/release follow-ups in `docs/CODE_REVIEW_REPORT.md`.
+- Quest creation stabilization: removed the redundant “раз в 3 дня” choice for new habits while preserving legacy edits, and normalized mutable model lists to prevent fixed-length crashes during subtask/checklist synchronization.
 - RoadMap/Rewards/Inbox polish: horizontal terminal insertion now centers between orb edges, Effects opens expanded by default, and active quick-task counts use the same compact circular badge in the Inbox panel and skill lists.
 - RoadMap vertical insertion polish: add-stage actions now sit between the visible upper label text and lower orb, use a fixed `170dp` spread plus shared visual geometry, and keep long and mobile paths auto-fitted without changing horizontal layout or persistence.
 - RoadMap interaction polish: deleting a quest keeps its skill selected, every terminal-stage-to-skill connection exposes the existing safe extend-path action, and desktop orientation icons now match their resulting layouts.

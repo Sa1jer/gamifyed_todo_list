@@ -1432,6 +1432,12 @@ class _AddBossDialogState extends State<_AddBossDialog> {
   int _streak = 7;
 
   @override
+  void dispose() {
+    _titleCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isDark = widget.isDark;
     final bg = surface(isDark);

@@ -24,40 +24,44 @@ class NotificationService {
 
   Future<void> init() async {
     if (_initialized) return;
+    try {
+      tz_data.initializeTimeZones();
+      await _configureLocalTimezone();
 
-    tz_data.initializeTimeZones();
-    await _configureLocalTimezone();
+      const androidSettings = AndroidInitializationSettings(
+        '@mipmap/ic_launcher',
+      );
+      const macOSSettings = DarwinInitializationSettings(
+        requestAlertPermission: true,
+        requestBadgePermission: true,
+        requestSoundPermission: true,
+      );
+      const iOSSettings = DarwinInitializationSettings(
+        requestAlertPermission: true,
+        requestBadgePermission: true,
+        requestSoundPermission: true,
+      );
+      const windowsSettings = WindowsInitializationSettings(
+        appName: _windowsAppName,
+        appUserModelId: _windowsAppUserModelId,
+        guid: _windowsGuid,
+      );
+      const initSettings = InitializationSettings(
+        android: androidSettings,
+        iOS: iOSSettings,
+        macOS: macOSSettings,
+        windows: windowsSettings,
+      );
 
-    const androidSettings = AndroidInitializationSettings(
-      '@mipmap/ic_launcher',
-    );
-    const macOSSettings = DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
-    );
-    const iOSSettings = DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
-    );
-    const windowsSettings = WindowsInitializationSettings(
-      appName: _windowsAppName,
-      appUserModelId: _windowsAppUserModelId,
-      guid: _windowsGuid,
-    );
-    const initSettings = InitializationSettings(
-      android: androidSettings,
-      iOS: iOSSettings,
-      macOS: macOSSettings,
-      windows: windowsSettings,
-    );
-
-    await _notifications.initialize(
-      settings: initSettings,
-      onDidReceiveNotificationResponse: (response) {},
-    );
-    _initialized = true;
+      await _notifications.initialize(
+        settings: initSettings,
+        onDidReceiveNotificationResponse: (response) {},
+      );
+      _initialized = true;
+    } catch (_) {
+      _initialized = false;
+      _permissionsGranted = false;
+    }
   }
 
   Future<void> _configureLocalTimezone() async {
@@ -70,6 +74,7 @@ class NotificationService {
   }
 
   Future<bool> requestPermissions() async {
+    if (!_initialized) return false;
     final cached = _permissionsGranted;
     if (cached != null) return cached;
 
@@ -85,6 +90,11 @@ class NotificationService {
         _permissionsGranted = granted;
       }
       return granted;
+    } catch (_) {
+      if (generation == _permissionRequestGeneration) {
+        _permissionsGranted = false;
+      }
+      return false;
     } finally {
       if (identical(_permissionRequestInFlight, request)) {
         _permissionRequestInFlight = null;
@@ -167,6 +177,7 @@ class NotificationService {
     required DateTime scheduledTime,
     ReminderRepeatMode repeatMode = ReminderRepeatMode.none,
   }) async {
+    if (!_initialized) return;
     var scheduledDate = tz.TZDateTime.from(scheduledTime, tz.local);
     final now = tz.TZDateTime.now(tz.local);
     if (!scheduledDate.isAfter(now)) {
@@ -204,6 +215,7 @@ class NotificationService {
     required String body,
     required DateTime scheduledTime,
   }) async {
+    if (!_initialized) return;
     final tzTime = tz.TZDateTime.from(scheduledTime, tz.local);
 
     await _notifications.zonedSchedule(
@@ -220,12 +232,20 @@ class NotificationService {
 
   Future<void> cancelNotification(int id) async {
     if (!_initialized) return;
-    await _notifications.cancel(id: id);
+    try {
+      await _notifications.cancel(id: id);
+    } catch (_) {
+      // Notification failures must not break task deletion or completion.
+    }
   }
 
   Future<void> cancelAllNotifications() async {
     if (!_initialized) return;
-    await _notifications.cancelAll();
+    try {
+      await _notifications.cancelAll();
+    } catch (_) {
+      // Notification cleanup is best effort.
+    }
   }
 
   Future<void> showInstantNotification({
@@ -233,14 +253,19 @@ class NotificationService {
     required String title,
     required String body,
   }) async {
-    await _notifications.show(
-      id: id,
-      title: title,
-      body: body,
-      notificationDetails: _taskNotificationDetails(
-        channelDescription: 'Уведомления о квестах',
-      ),
-    );
+    if (!_initialized) return;
+    try {
+      await _notifications.show(
+        id: id,
+        title: title,
+        body: body,
+        notificationDetails: _taskNotificationDetails(
+          channelDescription: 'Уведомления о квестах',
+        ),
+      );
+    } catch (_) {
+      // Instant feedback is optional and should not affect core app state.
+    }
   }
 
   NotificationDetails _taskNotificationDetails({

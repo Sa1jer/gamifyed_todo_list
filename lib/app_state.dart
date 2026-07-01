@@ -1329,7 +1329,7 @@ class AppState extends ChangeNotifier {
     task.isDone = true;
     task.earnedXP = 0;
     task.bonusXpEarned = 0;
-    task.consumedBuffIds = const <String>[];
+    task.consumedBuffIds = <String>[];
     task.lastCompletedAt = now;
     task.updatedAt = now;
     _completeCoreTutorialAfterFirstAction();
@@ -1362,7 +1362,7 @@ class AppState extends ChangeNotifier {
     task.minimumActionDoneAt = now;
     task.minimumActionEarnedXP = earned;
     task.bonusXpEarned = 0;
-    task.consumedBuffIds = const <String>[];
+    task.consumedBuffIds = <String>[];
     task.updatedAt = now;
 
     if (task.type == TaskType.repeating) {
@@ -1541,7 +1541,7 @@ class AppState extends ChangeNotifier {
       task.isDone = false;
       task.earnedXP = 0;
       task.bonusXpEarned = 0;
-      task.consumedBuffIds = const <String>[];
+      task.consumedBuffIds = <String>[];
       task.lastCompletedAt = null;
       task.updatedAt = DateTime.now();
       _syncTaskNotification(task);
@@ -1579,7 +1579,7 @@ class AppState extends ChangeNotifier {
       task.minimumActionEarnedXP = 0;
     }
     _restoreConsumedBuffs(task.consumedBuffIds);
-    task.consumedBuffIds = const <String>[];
+    task.consumedBuffIds = <String>[];
 
     profile.totalXpEarned = math.max(0, profile.totalXpEarned - earned);
     profile.removeXP(earned);
@@ -1706,7 +1706,7 @@ class AppState extends ChangeNotifier {
     if (skill.id == kInboxSkillId) return;
     skill.name = name;
     skill.goal = goal;
-    skill.checklist = checklist;
+    skill.checklist = List.of(checklist);
     skill.color = color;
     skill.icon = icon;
     skill.syncChecklistDone();
@@ -2415,9 +2415,9 @@ class AppState extends ChangeNotifier {
       task.title = title;
       task.description = description.trim();
       task.priority = priority;
-      task.subtasks = subtasks;
+      task.subtasks = List.of(subtasks);
       task.syncSubtaskDone();
-      task.tags = tags;
+      task.tags = List.of(tags);
       task.updatedAt = DateTime.now();
       task.normalizeScope();
       _syncTaskNotification(task);
@@ -2438,13 +2438,14 @@ class AppState extends ChangeNotifier {
     } else {
       task.minimumAction = nextMinimumAction;
     }
-    task.subtasks = subtasks;
+    task.subtasks = List.of(subtasks);
     task.syncSubtaskDone();
-    task.tags = tags;
+    task.tags = List.of(tags);
     task.treeNodeId = _normalizedTreeNodeId(task.skillId, treeNodeId);
     task.notificationsEnabled = notificationsEnabled;
     task.notificationHour = notificationHour;
     task.notificationMinute = notificationMinute;
+    task.normalizeScope();
     task.updatedAt = DateTime.now();
 
     if (oldType == TaskType.repeating && type != TaskType.repeating) {
@@ -3160,41 +3161,45 @@ class AppState extends ChangeNotifier {
     String taskId,
     int notificationId,
   ) async {
-    final granted = await _notifications.requestPermissions();
-    if (!granted) return;
+    try {
+      final granted = await _notifications.requestPermissions();
+      if (!granted) return;
 
-    final task = _taskById(taskId);
-    final hour = task?.notificationHour;
-    final minute = task?.notificationMinute;
-    if (task == null ||
-        !task.notificationsEnabled ||
-        task.isDone ||
-        hour == null ||
-        minute == null) {
-      return;
-    }
+      final task = _taskById(taskId);
+      final hour = task?.notificationHour;
+      final minute = task?.notificationMinute;
+      if (task == null ||
+          !task.notificationsEnabled ||
+          task.isDone ||
+          hour == null ||
+          minute == null) {
+        return;
+      }
 
-    final now = DateTime.now();
-    var scheduledTime = DateTime(now.year, now.month, now.day, hour, minute);
-    if (!scheduledTime.isAfter(now)) {
-      scheduledTime = scheduledTime.add(const Duration(days: 1));
-    }
+      final now = DateTime.now();
+      var scheduledTime = DateTime(now.year, now.month, now.day, hour, minute);
+      if (!scheduledTime.isAfter(now)) {
+        scheduledTime = scheduledTime.add(const Duration(days: 1));
+      }
 
-    if (task.type == TaskType.repeating) {
-      await _notifications.scheduleRepeatingTask(
-        id: notificationId,
-        title: 'Напоминание о квесте',
-        body: 'Пора выполнить повторяющийся квест.',
-        scheduledTime: scheduledTime,
-        repeatMode: _repeatNotificationMode(task),
-      );
-    } else {
-      await _notifications.scheduleTaskReminder(
-        id: notificationId,
-        title: 'Напоминание о квесте',
-        body: 'Не забудь выполнить квест.',
-        scheduledTime: scheduledTime,
-      );
+      if (task.type == TaskType.repeating) {
+        await _notifications.scheduleRepeatingTask(
+          id: notificationId,
+          title: 'Напоминание о квесте',
+          body: 'Пора выполнить повторяющийся квест.',
+          scheduledTime: scheduledTime,
+          repeatMode: _repeatNotificationMode(task),
+        );
+      } else {
+        await _notifications.scheduleTaskReminder(
+          id: notificationId,
+          title: 'Напоминание о квесте',
+          body: 'Не забудь выполнить квест.',
+          scheduledTime: scheduledTime,
+        );
+      }
+    } catch (_) {
+      // Notification plugins are optional and must not break task mutations.
     }
   }
 

@@ -18,5 +18,28 @@ void main() {
       await service.cancelNotification(42);
       await service.cancelAllNotifications();
     });
+
+    test('notification operations fail soft before initialization', () async {
+      final service = NotificationService();
+
+      expect(await service.requestPermissions(), isFalse);
+      await service.scheduleTaskReminder(
+        id: 1,
+        title: 'Напоминание',
+        body: 'Текст',
+        scheduledTime: DateTime(2026, 7, 1, 9),
+      );
+      await service.scheduleRepeatingTask(
+        id: 2,
+        title: 'Напоминание',
+        body: 'Текст',
+        scheduledTime: DateTime(2026, 7, 1, 9),
+      );
+      await service.showInstantNotification(
+        id: 3,
+        title: 'Напоминание',
+        body: 'Текст',
+      );
+    });
   });
 }

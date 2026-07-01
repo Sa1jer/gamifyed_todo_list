@@ -194,14 +194,18 @@ class _ProfileDialogState extends State<ProfileDialog> {
   // ── Image picking ─────────────────────────────────────────────────────────
 
   Future<Uint8List?> _pickImage() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.image,
-      allowMultiple: false,
-      withData: true,
-    );
-    final bytes = result?.files.single.bytes;
-    if (bytes == null) return null;
-    return hasSupportedImageMagicBytes(bytes) ? bytes : null;
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        allowMultiple: false,
+        withData: true,
+      );
+      final bytes = result?.files.firstOrNull?.bytes;
+      if (bytes == null) return null;
+      return hasSupportedImageMagicBytes(bytes) ? bytes : null;
+    } catch (_) {
+      return null;
+    }
   }
 
   // ── Build ─────────────────────────────────────────────────────────────────

@@ -2954,6 +2954,7 @@ void main() {
 
       expect(find.text('Повторяемость'), findsOneWidget);
       expect(find.text('1 раз за 1 день'), findsOneWidget);
+      expect(find.text('раз в 3 дня'), findsNothing);
     },
   );
 
