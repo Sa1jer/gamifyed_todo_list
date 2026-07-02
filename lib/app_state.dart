@@ -50,6 +50,8 @@ class GoalMilestoneEvent {
 }
 
 class AppState extends ChangeNotifier {
+  static const int inboxTaskXp = 10;
+
   static const double _minimumActionRatio = 0.3;
   static const Duration _resetCheckInterval = Duration(minutes: 15);
   static const Duration _saveDebounceDuration = Duration(milliseconds: 750);
@@ -347,7 +349,7 @@ class AppState extends ChangeNotifier {
     return Skill(
       id: kInboxSkillId,
       name: 'Задачник',
-      goal: 'Быстрые задачи без XP и RoadMap',
+      goal: 'Быстрые действия · +10 XP · без RoadMap',
       color: const Color(0xFF34C759),
       icon: Icons.inbox_rounded,
     );
@@ -368,8 +370,8 @@ class AppState extends ChangeNotifier {
       inbox.name = 'Задачник';
       changed = true;
     }
-    if (inbox.goal != 'Быстрые задачи без XP и RoadMap') {
-      inbox.goal = 'Быстрые задачи без XP и RoadMap';
+    if (inbox.goal != 'Быстрые действия · +10 XP · без RoadMap') {
+      inbox.goal = 'Быстрые действия · +10 XP · без RoadMap';
       changed = true;
     }
     if (inbox.color != const Color(0xFF34C759)) {
@@ -1556,16 +1558,20 @@ class AppState extends ChangeNotifier {
   String _completeInboxTask(Task task) {
     final now = DateTime.now();
     task.isDone = true;
-    task.earnedXP = 0;
+    task.earnedXP = inboxTaskXp;
     task.bonusXpEarned = 0;
     task.consumedBuffIds = <String>[];
     task.lastCompletedAt = now;
     task.updatedAt = now;
-    _completeCoreTutorialAfterFirstAction();
+    profile.totalXpEarned += inboxTaskXp;
+    final profileLevelsGained = profile.addXP(inboxTaskXp);
+    _updateInboxDailyStats(inboxTaskXp);
     _syncTaskNotification(task);
     notifyListeners();
     _saveAll();
-    return 'Задача закрыта';
+    return profileLevelsGained > 0
+        ? '+$inboxTaskXp XP · новый уровень профиля'
+        : '+$inboxTaskXp XP · быстрое действие';
   }
 
   String? completeMinimumAction(String taskId) {
@@ -1656,6 +1662,12 @@ class AppState extends ChangeNotifier {
     _resetDailyStatsIfNeeded();
     todayStats!.xpEarned += xp;
     todayStats!.skillsImproved += skillUp;
+  }
+
+  void _updateInboxDailyStats(int xp) {
+    _resetDailyStatsIfNeeded();
+    todayStats!.tasksCompleted++;
+    todayStats!.xpEarned += xp;
   }
 
   void _resetDailyStatsIfNeeded() {
@@ -1767,12 +1779,21 @@ class AppState extends ChangeNotifier {
     final task = _taskById(taskId);
     if (task == null || !task.isDone) return;
     if (task.isInbox) {
+      final earned = task.earnedXP;
+      final completedToday =
+          task.lastCompletedAt != null &&
+          isSameDate(task.lastCompletedAt!, DateTime.now());
       task.isDone = false;
       task.earnedXP = 0;
       task.bonusXpEarned = 0;
       task.consumedBuffIds = <String>[];
       task.lastCompletedAt = null;
       task.updatedAt = DateTime.now();
+      if (earned > 0) {
+        profile.totalXpEarned = math.max(0, profile.totalXpEarned - earned);
+        profile.removeXP(earned);
+        if (completedToday) _decrementDailyStats(earned);
+      }
       _syncTaskNotification(task);
       notifyListeners();
       _saveAll();
@@ -2596,7 +2617,7 @@ class AppState extends ChangeNotifier {
     t.createdAt = DateTime.now();
     t.updatedAt = t.createdAt;
     tasks.add(t);
-    _completeOnboardingAfterFirstTask();
+    if (t.isSkillTask) _completeOnboardingAfterFirstTask();
     _syncTaskNotification(t);
     notifyListeners();
     _saveAll();

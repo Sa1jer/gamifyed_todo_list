@@ -15,13 +15,31 @@ class _OrbMasteryMapPainter extends CustomPainter {
     if (selectedSkill == null || selectedCenter == null) return;
 
     final glowPaint = Paint()
-      ..shader = RadialGradient(
-        colors: [
-          selectedSkill.color.withAlpha(isDark ? 38 : 30),
-          Colors.transparent,
-        ],
-      ).createShader(Rect.fromCircle(center: selectedCenter, radius: 300));
-    canvas.drawCircle(selectedCenter, 300, glowPaint);
+      ..shader =
+          RadialGradient(
+            colors: [
+              selectedSkill.color.withAlpha(
+                layout.compactVisuals
+                    ? isDark
+                          ? 20
+                          : 16
+                    : isDark
+                    ? 38
+                    : 30,
+              ),
+              Colors.transparent,
+            ],
+          ).createShader(
+            Rect.fromCircle(
+              center: selectedCenter,
+              radius: layout.compactVisuals ? 230 : 300,
+            ),
+          );
+    canvas.drawCircle(
+      selectedCenter,
+      layout.compactVisuals ? 230 : 300,
+      glowPaint,
+    );
 
     for (final road in layout.pathLayout.paths) {
       for (var index = 0; index < road.nodes.length - 1; index++) {
@@ -57,7 +75,7 @@ class _OrbMasteryMapPainter extends CustomPainter {
     }
   }
 
-  double get _skillOrbRadius => 70;
+  double get _skillOrbRadius => layout.focusedSkillOrbDiameter / 2 - 4;
 
   double _nodeOrbRadius(SkillTreeNode node) {
     final target = node.questTarget;
@@ -88,9 +106,9 @@ class _OrbMasteryMapPainter extends CustomPainter {
     final end = _edgePoint(to, from, toRadius);
     final color = _roadmapStageStatusColor(skill, status);
     final alpha = switch (status) {
-      SkillTreeNodeStatus.locked => 50,
-      SkillTreeNodeStatus.active => 140,
-      SkillTreeNodeStatus.mastered => 118,
+      SkillTreeNodeStatus.locked => layout.compactVisuals ? 35 : 50,
+      SkillTreeNodeStatus.active => layout.compactVisuals ? 118 : 140,
+      SkillTreeNodeStatus.mastered => layout.compactVisuals ? 96 : 118,
     };
     final width = switch (status) {
       SkillTreeNodeStatus.locked => 1.45,
@@ -99,7 +117,15 @@ class _OrbMasteryMapPainter extends CustomPainter {
     };
     final path = _roadConnectionPath(start, end, layout.layoutAxis);
     final glowPaint = Paint()
-      ..color = color.withAlpha(status == SkillTreeNodeStatus.active ? 24 : 12)
+      ..color = color.withAlpha(
+        layout.compactVisuals
+            ? status == SkillTreeNodeStatus.active
+                  ? 14
+                  : 7
+            : status == SkillTreeNodeStatus.active
+            ? 24
+            : 12,
+      )
       ..style = PaintingStyle.stroke
       ..strokeWidth = width + 4
       ..strokeCap = StrokeCap.round
@@ -142,8 +168,12 @@ class _OrbMasteryMapPainter extends CustomPainter {
 
 class _MasteryVectorGridPainter extends CustomPainter {
   final bool isDark;
+  final bool calmMobile;
 
-  const _MasteryVectorGridPainter({required this.isDark});
+  const _MasteryVectorGridPainter({
+    required this.isDark,
+    this.calmMobile = false,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -151,6 +181,7 @@ class _MasteryVectorGridPainter extends CustomPainter {
   }
 
   void _drawVectorGrid(Canvas canvas, Size size) {
+    if (calmMobile) return;
     const minorCell = 42.0;
     const majorEvery = 5;
     const majorCell = minorCell * majorEvery;
@@ -219,6 +250,6 @@ class _MasteryVectorGridPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _MasteryVectorGridPainter oldDelegate) {
-    return oldDelegate.isDark != isDark;
+    return oldDelegate.isDark != isDark || oldDelegate.calmMobile != calmMobile;
   }
 }

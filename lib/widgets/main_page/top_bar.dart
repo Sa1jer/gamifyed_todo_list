@@ -351,15 +351,15 @@ class _MobileWorkspaceNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bdr = borderColor(isDark);
-    final sub = subtext(isDark);
+    final bdr = _MobileJournalTokens.outline(isDark);
+    final sub = _MobileJournalTokens.muted(isDark);
 
     return SafeArea(
       top: false,
       child: Container(
         padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
         decoration: BoxDecoration(
-          color: surface(isDark),
+          color: _MobileJournalTokens.surfaceColor(isDark),
           border: Border(top: BorderSide(color: bdr)),
         ),
         child: Row(
@@ -371,44 +371,59 @@ class _MobileWorkspaceNav extends StatelessWidget {
                   child: PressFeedback(
                     scale: 0.96,
                     onTap: () => onChanged(item),
-                    child: AnimatedContainer(
-                      duration: kMotionStandard,
-                      curve: kMotionCurve,
-                      margin: const EdgeInsets.symmetric(horizontal: 3),
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      decoration: BoxDecoration(
-                        color: item == mode
-                            ? item.color.withAlpha(isDark ? 34 : 24)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: item == mode
-                              ? item.color.withAlpha(75)
-                              : Colors.transparent,
+                    child: Center(
+                      child: AnimatedContainer(
+                        duration: _motionDuration(context),
+                        curve: _MobileJournalTokens.curve,
+                        constraints: const BoxConstraints(
+                          minWidth: 112,
+                          minHeight: 54,
                         ),
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            item.icon,
-                            color: item == mode ? item.color : sub,
-                            size: 18,
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            item.shortLabel,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: item == mode ? item.color : sub,
-                              fontSize: 11,
-                              fontWeight: item == mode
-                                  ? FontWeight.w900
-                                  : FontWeight.w700,
+                        margin: const EdgeInsets.symmetric(horizontal: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 7,
+                        ),
+                        decoration: BoxDecoration(
+                          color: item == mode
+                              ? (item == WorkspaceMode.act
+                                        ? _MobileJournalTokens.amber
+                                        : _MobileJournalTokens.violet)
+                                    .withAlpha(isDark ? 40 : 28)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              item.icon,
+                              color: item == mode
+                                  ? item == WorkspaceMode.act
+                                        ? _MobileJournalTokens.amber
+                                        : _MobileJournalTokens.violet
+                                  : sub,
+                              size: 19,
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 3),
+                            Text(
+                              item.shortLabel,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: item == mode
+                                    ? item == WorkspaceMode.act
+                                          ? _MobileJournalTokens.amber
+                                          : _MobileJournalTokens.violet
+                                    : sub,
+                                fontSize: 11,
+                                fontWeight: item == mode
+                                    ? FontWeight.w900
+                                    : FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),

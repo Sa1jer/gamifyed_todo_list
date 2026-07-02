@@ -93,6 +93,8 @@ class _IconChoiceButton extends StatefulWidget {
   final Color color;
   final Color inactiveColor;
   final VoidCallback onTap;
+  final bool mobile;
+  final String semanticsLabel;
 
   const _IconChoiceButton({
     required this.icon,
@@ -100,6 +102,8 @@ class _IconChoiceButton extends StatefulWidget {
     required this.color,
     required this.inactiveColor,
     required this.onTap,
+    this.mobile = false,
+    this.semanticsLabel = 'Выбрать иконку',
   });
 
   @override
@@ -123,34 +127,43 @@ class _IconChoiceButtonState extends State<_IconChoiceButton> {
         ? widget.color
         : (_hovered ? widget.color.withAlpha(220) : widget.inactiveColor);
 
-    return Tooltip(
-      message: 'Выбрать иконку',
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() {
-          _hovered = false;
-          _pressed = false;
-        }),
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: widget.onTap,
-          onTapDown: (_) => setState(() => _pressed = true),
-          onTapCancel: () => setState(() => _pressed = false),
-          onTapUp: (_) => setState(() => _pressed = false),
-          child: AnimatedScale(
-            scale: _pressed ? 0.92 : 1,
-            duration: kMotionFast,
-            curve: kMotionCurve,
-            child: AnimatedContainer(
-              duration: kMotionStandard,
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: widget.semanticsLabel,
+      child: Tooltip(
+        message: widget.semanticsLabel,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          onEnter: (_) => setState(() => _hovered = true),
+          onExit: (_) => setState(() {
+            _hovered = false;
+            _pressed = false;
+          }),
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: widget.onTap,
+            onTapDown: (_) => setState(() => _pressed = true),
+            onTapCancel: () => setState(() => _pressed = false),
+            onTapUp: (_) => setState(() => _pressed = false),
+            child: AnimatedScale(
+              scale: _pressed ? 0.92 : 1,
+              duration: kMotionFast,
               curve: kMotionCurve,
-              decoration: BoxDecoration(
-                color: fillColor,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: outlineColor, width: 1.4),
+              child: AnimatedContainer(
+                duration: kMotionStandard,
+                curve: kMotionCurve,
+                constraints: widget.mobile
+                    ? const BoxConstraints(minWidth: 44, minHeight: 44)
+                    : const BoxConstraints(),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: fillColor,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: outlineColor, width: 1.4),
+                ),
+                child: Icon(widget.icon, size: 18, color: iconColor),
               ),
-              child: Icon(widget.icon, size: 18, color: iconColor),
             ),
           ),
         ),
@@ -164,12 +177,16 @@ class _ColorChoiceButton extends StatefulWidget {
   final bool selected;
   final bool isDark;
   final VoidCallback onTap;
+  final bool mobile;
+  final String semanticsLabel;
 
   const _ColorChoiceButton({
     required this.color,
     required this.selected,
     required this.isDark,
     required this.onTap,
+    this.mobile = false,
+    this.semanticsLabel = 'Выбрать цвет',
   });
 
   @override
@@ -183,54 +200,66 @@ class _ColorChoiceButtonState extends State<_ColorChoiceButton> {
   @override
   Widget build(BuildContext context) {
     final ringColor = widget.selected
-        ? (widget.isDark ? Colors.white : const Color(0xFF202033))
+        ? darken(widget.color, widget.isDark ? 0.05 : 0.2)
         : (_hovered ? widget.color.withAlpha(120) : Colors.transparent);
     final shadowAlpha = widget.selected ? 90 : (_hovered ? 45 : 0);
 
-    return Tooltip(
-      message: 'Выбрать цвет',
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() {
-          _hovered = false;
-          _pressed = false;
-        }),
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: widget.onTap,
-          onTapDown: (_) => setState(() => _pressed = true),
-          onTapCancel: () => setState(() => _pressed = false),
-          onTapUp: (_) => setState(() => _pressed = false),
-          child: AnimatedScale(
-            scale: _pressed ? 0.9 : 1,
-            duration: kMotionFast,
-            curve: kMotionCurve,
-            child: AnimatedContainer(
-              duration: kMotionStandard,
+    final size = widget.mobile ? 40.0 : 28.0;
+    return Semantics(
+      button: true,
+      selected: widget.selected,
+      label: widget.semanticsLabel,
+      child: Tooltip(
+        message: 'Выбрать цвет',
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          onEnter: (_) => setState(() => _hovered = true),
+          onExit: (_) => setState(() {
+            _hovered = false;
+            _pressed = false;
+          }),
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: widget.onTap,
+            onTapDown: (_) => setState(() => _pressed = true),
+            onTapCancel: () => setState(() => _pressed = false),
+            onTapUp: (_) => setState(() => _pressed = false),
+            child: AnimatedScale(
+              scale: _pressed ? 0.9 : 1,
+              duration: kMotionFast,
               curve: kMotionCurve,
-              width: 28,
-              height: 28,
-              padding: const EdgeInsets.all(3),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: ringColor,
-                  width: widget.selected ? 2 : 1,
-                ),
-                boxShadow: shadowAlpha == 0
-                    ? null
-                    : [
-                        BoxShadow(
-                          color: widget.color.withAlpha(shadowAlpha),
-                          blurRadius: widget.selected ? 10 : 7,
-                        ),
-                      ],
-              ),
-              child: DecoratedBox(
+              child: AnimatedContainer(
+                duration: kMotionStandard,
+                curve: kMotionCurve,
+                width: size,
+                height: size,
+                padding: const EdgeInsets.all(3),
                 decoration: BoxDecoration(
-                  color: widget.color,
-                  shape: BoxShape.circle,
+                  shape: widget.mobile ? BoxShape.rectangle : BoxShape.circle,
+                  borderRadius: widget.mobile
+                      ? BorderRadius.circular(13)
+                      : null,
+                  border: Border.all(
+                    color: ringColor,
+                    width: widget.selected ? 2 : 1,
+                  ),
+                  boxShadow: shadowAlpha == 0
+                      ? null
+                      : [
+                          BoxShadow(
+                            color: widget.color.withAlpha(shadowAlpha),
+                            blurRadius: widget.selected ? 10 : 7,
+                          ),
+                        ],
+                ),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: widget.color,
+                    shape: widget.mobile ? BoxShape.rectangle : BoxShape.circle,
+                    borderRadius: widget.mobile
+                        ? BorderRadius.circular(9)
+                        : null,
+                  ),
                 ),
               ),
             ),

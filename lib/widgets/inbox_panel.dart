@@ -8,8 +8,13 @@ import 'shared.dart';
 
 class InboxPanel extends StatefulWidget {
   final void Function(String taskId, Offset position) onComplete;
+  final bool embedded;
 
-  const InboxPanel({super.key, required this.onComplete});
+  const InboxPanel({
+    super.key,
+    required this.onComplete,
+    this.embedded = false,
+  });
 
   @override
   State<InboxPanel> createState() => _InboxPanelState();
@@ -80,188 +85,200 @@ class _InboxPanelState extends State<InboxPanel> {
       );
     }
 
-    return AppPanel(
-      isDark: isDark,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          if (constraints.maxHeight < 120) {
-            return Padding(
-              padding: const EdgeInsets.all(10),
-              child: Row(
+    final content = LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxHeight < 120) {
+          return Padding(
+            padding: const EdgeInsets.all(10),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.inbox_rounded,
+                  color: Color(0xFF34C759),
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Expanded(child: quickAddField(dense: true)),
+                const SizedBox(width: 6),
+                IconButton.filled(
+                  tooltip: 'Добавить в Задачник',
+                  onPressed: () => _addInboxTask(state),
+                  style: IconButton.styleFrom(
+                    backgroundColor: accent,
+                    foregroundColor: Colors.white,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  icon: const Icon(Icons.add_rounded, size: 18),
+                ),
+                const SizedBox(width: 4),
+                InboxTaskCountBubble(
+                  key: const ValueKey('inbox-active-count'),
+                  count: active.length,
+                  color: accent,
+                  isDark: isDark,
+                  size: 24,
+                ),
+              ],
+            ),
+          );
+        }
+
+        return Padding(
+          padding: EdgeInsets.fromLTRB(12, compact ? 10 : 12, 12, 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  const Icon(
-                    Icons.inbox_rounded,
-                    color: Color(0xFF34C759),
-                    size: 20,
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: accent.withAlpha(isDark ? 28 : 20),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: accent.withAlpha(70)),
+                    ),
+                    child: const Icon(
+                      Icons.inbox_rounded,
+                      color: Color(0xFF34C759),
+                      size: 18,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Задачник',
+                          style: TextStyle(
+                            color: txt,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        Text(
+                          'Быстрые действия · +${AppState.inboxTaskXp} XP · без RoadMap',
+                          style: TextStyle(
+                            color: sub,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(width: 8),
-                  Expanded(child: quickAddField(dense: true)),
-                  const SizedBox(width: 6),
-                  IconButton.filled(
-                    tooltip: 'Добавить в Задачник',
-                    onPressed: () => _addInboxTask(state),
-                    style: IconButton.styleFrom(
-                      backgroundColor: accent,
-                      foregroundColor: Colors.white,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    icon: const Icon(Icons.add_rounded, size: 18),
-                  ),
-                  const SizedBox(width: 4),
                   InboxTaskCountBubble(
                     key: const ValueKey('inbox-active-count'),
                     count: active.length,
                     color: accent,
                     isDark: isDark,
-                    size: 24,
                   ),
                 ],
               ),
-            );
-          }
-
-          return Padding(
-            padding: EdgeInsets.fromLTRB(12, compact ? 10 : 12, 12, 10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: accent.withAlpha(isDark ? 28 : 20),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: accent.withAlpha(70)),
-                      ),
-                      child: const Icon(
-                        Icons.inbox_rounded,
-                        color: Color(0xFF34C759),
-                        size: 18,
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(child: quickAddField(dense: false)),
+                  const SizedBox(width: 8),
+                  FilledButton.icon(
+                    onPressed: () => _addInboxTask(state),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: accent,
+                      foregroundColor: Colors.white,
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Задачник',
-                            style: TextStyle(
-                              color: txt,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                          Text(
-                            'Быстрые To-do без XP и RoadMap',
-                            style: TextStyle(
-                              color: sub,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            maxLines: 1,
+                    icon: const Icon(Icons.add_rounded, size: 17),
+                    label: Text(compact ? 'OK' : 'Быстрая задача'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: MotionFadeSlideSwitcher(
+                  child: active.isEmpty && done.isEmpty
+                      ? Align(
+                          key: const ValueKey('inbox-empty'),
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'Сюда можно бросить бытовые To-do, не смешивая их с навыками.',
+                            style: TextStyle(color: sub, fontSize: 12),
+                            maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    InboxTaskCountBubble(
-                      key: const ValueKey('inbox-active-count'),
-                      count: active.length,
-                      color: accent,
-                      isDark: isDark,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(child: quickAddField(dense: false)),
-                    const SizedBox(width: 8),
-                    FilledButton.icon(
-                      onPressed: () => _addInboxTask(state),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: accent,
-                        foregroundColor: Colors.white,
-                        visualDensity: VisualDensity.compact,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
-                        ),
-                      ),
-                      icon: const Icon(Icons.add_rounded, size: 17),
-                      label: Text(compact ? 'OK' : 'Быстрая задача'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Expanded(
-                  child: MotionFadeSlideSwitcher(
-                    child: active.isEmpty && done.isEmpty
-                        ? Align(
-                            key: const ValueKey('inbox-empty'),
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              'Сюда можно бросить бытовые To-do, не смешивая их с навыками.',
-                              style: TextStyle(color: sub, fontSize: 12),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
+                        )
+                      : ListView(
+                          key: const ValueKey('inbox-list'),
+                          padding: EdgeInsets.zero,
+                          children: [
+                            ...active.map(
+                              (task) => _InboxTaskRow(
+                                key: ValueKey('inbox-active-${task.id}'),
+                                task: task,
+                                isDark: isDark,
+                                color: accent,
+                                onComplete: widget.onComplete,
+                                onUndo: () => state.uncompleteTask(task.id),
+                                onDelete: () => state.removeTask(task.id),
+                              ),
                             ),
-                          )
-                        : ListView(
-                            key: const ValueKey('inbox-list'),
-                            padding: EdgeInsets.zero,
-                            children: [
-                              ...active.map(
-                                (task) => _InboxTaskRow(
-                                  key: ValueKey('inbox-active-${task.id}'),
-                                  task: task,
-                                  isDark: isDark,
-                                  color: accent,
-                                  onComplete: widget.onComplete,
-                                  onUndo: () => state.uncompleteTask(task.id),
-                                  onDelete: () => state.removeTask(task.id),
+                            if (done.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  top: 4,
+                                  bottom: 2,
                                 ),
-                              ),
-                              if (done.isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.only(
-                                    top: 4,
-                                    bottom: 2,
-                                  ),
-                                  child: Text(
-                                    'Готово (${done.length})',
-                                    style: TextStyle(
-                                      color: sub,
-                                      fontSize: 10.5,
-                                      fontWeight: FontWeight.w800,
-                                    ),
+                                child: Text(
+                                  'Готово (${done.length})',
+                                  style: TextStyle(
+                                    color: sub,
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w800,
                                   ),
                                 ),
-                              ...done.map(
-                                (task) => _InboxTaskRow(
-                                  key: ValueKey('inbox-done-${task.id}'),
-                                  task: task,
-                                  isDark: isDark,
-                                  color: accent,
-                                  onComplete: widget.onComplete,
-                                  onUndo: () => state.uncompleteTask(task.id),
-                                  onDelete: () => state.removeTask(task.id),
-                                ),
                               ),
-                            ],
-                          ),
-                  ),
+                            ...done.map(
+                              (task) => _InboxTaskRow(
+                                key: ValueKey('inbox-done-${task.id}'),
+                                task: task,
+                                isDark: isDark,
+                                color: accent,
+                                onComplete: widget.onComplete,
+                                onUndo: () => state.uncompleteTask(task.id),
+                                onDelete: () => state.removeTask(task.id),
+                              ),
+                            ),
+                          ],
+                        ),
                 ),
-              ],
-            ),
-          );
-        },
-      ),
+              ),
+            ],
+          ),
+        );
+      },
     );
+    if (widget.embedded) {
+      return Container(
+        key: const ValueKey('mobile-inbox-focus'),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [accent.withAlpha(isDark ? 17 : 10), surface(isDark)],
+          ),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: content,
+      );
+    }
+    return AppPanel(isDark: isDark, child: content);
   }
 }
 
@@ -346,12 +363,26 @@ class _InboxTaskRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 6),
-          Text(
-            'без XP',
-            style: TextStyle(
-              color: sub.withAlpha(190),
-              fontSize: 10.5,
-              fontWeight: FontWeight.w700,
+          Semantics(
+            label: 'Награда ${AppState.inboxTaskXp} опыта',
+            child: Container(
+              key: ValueKey('inbox-xp-${task.id}'),
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFB020).withAlpha(isDark ? 24 : 18),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(
+                  color: const Color(0xFFFFB020).withAlpha(90),
+                ),
+              ),
+              child: const Text(
+                '+${AppState.inboxTaskXp} XP',
+                style: TextStyle(
+                  color: Color(0xFFFFB020),
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
             ),
           ),
           IconButton(

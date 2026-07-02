@@ -169,7 +169,7 @@ void main() {
     final state = await pumpInboxPanel(tester);
 
     expect(find.text('Задачник'), findsOneWidget);
-    expect(find.textContaining('без XP'), findsOneWidget);
+    expect(find.textContaining('+10 XP'), findsWidgets);
     expect(find.textContaining('активн.'), findsNothing);
     expect(find.byKey(const ValueKey('inbox-active-count')), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -182,7 +182,7 @@ void main() {
     expect(state.inboxTasks, hasLength(1));
     expect(state.inboxTasks.single.skillId, kInboxSkillId);
     expect(find.text('Позвонить врачу'), findsOneWidget);
-    expect(find.text('без XP'), findsOneWidget);
+    expect(find.textContaining('+10 XP'), findsWidgets);
     expect(
       find.descendant(
         of: find.byKey(const ValueKey('inbox-active-count')),
@@ -196,7 +196,9 @@ void main() {
     await tester.pump(const Duration(milliseconds: 260));
 
     expect(state.inboxTasks.single.isDone, isTrue);
-    expect(state.profile.xp, 0);
+    expect(state.profile.xp, AppState.inboxTaskXp);
+    expect(state.todayStats?.xpEarned, AppState.inboxTaskXp);
+    expect(state.todayStats?.tasksCompleted, 1);
     expect(state.history, isEmpty);
     expect(find.byTooltip('Вернуть в Задачник'), findsOneWidget);
     expect(

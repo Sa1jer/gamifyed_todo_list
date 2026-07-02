@@ -7,6 +7,7 @@ class _SkillOrbButton extends StatefulWidget {
   final bool roadFocus;
   final bool hiddenInFocus;
   final bool dimmed;
+  final bool compactVisuals;
   final VoidCallback onTap;
 
   const _SkillOrbButton({
@@ -16,6 +17,7 @@ class _SkillOrbButton extends StatefulWidget {
     this.roadFocus = false,
     this.hiddenInFocus = false,
     required this.dimmed,
+    this.compactVisuals = false,
     required this.onTap,
   });
 
@@ -32,17 +34,31 @@ class _SkillOrbButtonState extends State<_SkillOrbButton> {
       widget.skill,
     );
     final orbSize = widget.roadFocus
-        ? _roadmapFocusedSkillOrbDiameter
+        ? widget.compactVisuals
+              ? _roadmapMobileFocusedSkillOrbDiameter
+              : _roadmapFocusedSkillOrbDiameter
         : widget.selected
-        ? 98.0
+        ? widget.compactVisuals
+              ? 86.0
+              : 98.0
+        : widget.compactVisuals
+        ? 78.0
         : 89.0;
     final iconSize = widget.roadFocus
-        ? 52.0
+        ? widget.compactVisuals
+              ? 40.0
+              : 52.0
         : widget.selected
-        ? 37.0
+        ? widget.compactVisuals
+              ? 31.0
+              : 37.0
+        : widget.compactVisuals
+        ? 28.0
         : 32.0;
     final levelSize = widget.roadFocus
-        ? 32.0
+        ? widget.compactVisuals
+              ? 25.0
+              : 32.0
         : widget.selected
         ? 22.0
         : 19.0;
@@ -51,7 +67,9 @@ class _SkillOrbButtonState extends State<_SkillOrbButton> {
               ? 128
               : 118
         : widget.roadFocus
-        ? 92
+        ? widget.compactVisuals
+              ? 54
+              : 92
         : widget.selected
         ? 105
         : 48;
@@ -60,7 +78,9 @@ class _SkillOrbButtonState extends State<_SkillOrbButton> {
               ? 40.0
               : 34.0
         : widget.roadFocus
-        ? 32.0
+        ? widget.compactVisuals
+              ? 22.0
+              : 32.0
         : widget.selected
         ? 30.0
         : 18.0;
@@ -127,7 +147,9 @@ class _SkillOrbButtonState extends State<_SkillOrbButton> {
                                 ? Colors.white
                                 : widget.skill.color,
                             width: widget.roadFocus
-                                ? 3.4
+                                ? widget.compactVisuals
+                                      ? 2.2
+                                      : 3.4
                                 : widget.selected
                                 ? 3
                                 : 2,

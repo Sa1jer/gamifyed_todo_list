@@ -131,12 +131,14 @@ class _RoadmapTemplatePanel extends StatefulWidget {
   final bool isDark;
   final ValueChanged<RoadmapTemplateConfig> onApply;
   final VoidCallback onHide;
+  final bool sheetMode;
 
   const _RoadmapTemplatePanel({
     required this.skill,
     required this.isDark,
     required this.onApply,
     required this.onHide,
+    this.sheetMode = false,
     super.key,
   });
 
@@ -165,204 +167,204 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
       customPathCount: _customPathCount,
       stagesPerPath: _stagesPerPath,
     );
-    return AppPanel(
-      isDark: isDark,
-      child: Padding(
-        padding: const EdgeInsets.all(10.5),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: color.withAlpha(28),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(Icons.route, color: color, size: 16),
+    final content = Padding(
+      padding: const EdgeInsets.all(10.5),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: color.withAlpha(28),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Шаблон RoadMap',
-                        style: TextStyle(
-                          color: textColor(isDark),
-                          fontSize: 13.0,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 1),
-                      Text(
-                        'Выберите одну структуру пути для навыка.',
-                        style: TextStyle(
-                          color: subtext(isDark),
-                          fontSize: 10.8,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 9),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                _RoadmapTemplateChip(
-                  label: 'Простой',
-                  selected: _template == RoadmapTemplate.simple,
-                  isDark: isDark,
-                  color: color,
-                  onTap: () => setState(() {
-                    _template = RoadmapTemplate.simple;
-                    _customPathCount = 1;
-                  }),
-                ),
-                _RoadmapTemplateChip(
-                  label: 'Нормальный',
-                  selected: _template == RoadmapTemplate.normal,
-                  isDark: isDark,
-                  color: color,
-                  onTap: () => setState(() {
-                    _template = RoadmapTemplate.normal;
-                    _customPathCount = 2;
-                  }),
-                ),
-                _RoadmapTemplateChip(
-                  label: 'Сложный',
-                  selected: _template == RoadmapTemplate.hard,
-                  isDark: isDark,
-                  color: color,
-                  onTap: () => setState(() {
-                    _template = RoadmapTemplate.hard;
-                    _customPathCount = 3;
-                  }),
-                ),
-                _RoadmapTemplateChip(
-                  label: 'Свой',
-                  selected: _template == RoadmapTemplate.custom,
-                  isDark: isDark,
-                  color: color,
-                  onTap: () =>
-                      setState(() => _template = RoadmapTemplate.custom),
-                ),
-              ],
-            ),
-            const SizedBox(height: 9),
-            _RoadmapCounterControl(
-              isDark: isDark,
-              color: color,
-              label: 'Этапов в дороге',
-              value: _stagesPerPath,
-              onDecrease: _stagesPerPath <= 1
-                  ? null
-                  : () => setState(() => _stagesPerPath--),
-              onIncrease: _stagesPerPath >= 12
-                  ? null
-                  : () => setState(() => _stagesPerPath++),
-            ),
-            AnimatedSwitcher(
-              duration: kMotionStandard,
-              switchInCurve: kMotionCurve,
-              switchOutCurve: kMotionExitCurve,
-              child: _template == RoadmapTemplate.custom
-                  ? Padding(
-                      key: const ValueKey('custom-path-count'),
-                      padding: const EdgeInsets.only(top: 7),
-                      child: _RoadmapCounterControl(
-                        isDark: isDark,
-                        color: color,
-                        label: 'Дорог',
-                        value: _pathCount,
-                        onDecrease: _pathCount <= 1
-                            ? null
-                            : () => setState(() => _customPathCount--),
-                        onIncrease: _pathCount >= 12
-                            ? null
-                            : () => setState(() => _customPathCount++),
-                      ),
-                    )
-                  : const SizedBox(key: ValueKey('fixed-path-count')),
-            ),
-            if (config.canOverloadFocus) ...[
-              const SizedBox(height: 7),
-              _RoadmapTemplateWarning(isDark: isDark),
-            ],
-            const SizedBox(height: 9),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Expanded(
-                  child: PressFeedback(
-                    scale: 0.96,
-                    onTap: () => widget.onApply(config),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 11,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: color,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.add_road,
-                            color: Colors.white,
-                            size: 15,
-                          ),
-                          const SizedBox(width: 4),
-                          Flexible(
-                            child: Text(
-                              'Применить',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                PressFeedback(
-                  scale: 0.94,
-                  onTap: widget.onHide,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(0, 7, 0, 2),
-                    child: Text(
-                      'Скрыть',
+                child: Icon(Icons.route, color: color, size: 16),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Шаблон RoadMap',
                       style: TextStyle(
-                        color: subtext(isDark),
-                        fontSize: 11.2,
+                        color: textColor(isDark),
+                        fontSize: 13.0,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
+                    const SizedBox(height: 1),
+                    Text(
+                      'Выберите одну структуру пути для навыка.',
+                      style: TextStyle(
+                        color: subtext(isDark),
+                        fontSize: 10.8,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 9),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              _RoadmapTemplateChip(
+                label: 'Простой',
+                selected: _template == RoadmapTemplate.simple,
+                isDark: isDark,
+                color: color,
+                onTap: () => setState(() {
+                  _template = RoadmapTemplate.simple;
+                  _customPathCount = 1;
+                }),
+              ),
+              _RoadmapTemplateChip(
+                label: 'Нормальный',
+                selected: _template == RoadmapTemplate.normal,
+                isDark: isDark,
+                color: color,
+                onTap: () => setState(() {
+                  _template = RoadmapTemplate.normal;
+                  _customPathCount = 2;
+                }),
+              ),
+              _RoadmapTemplateChip(
+                label: 'Сложный',
+                selected: _template == RoadmapTemplate.hard,
+                isDark: isDark,
+                color: color,
+                onTap: () => setState(() {
+                  _template = RoadmapTemplate.hard;
+                  _customPathCount = 3;
+                }),
+              ),
+              _RoadmapTemplateChip(
+                label: 'Свой',
+                selected: _template == RoadmapTemplate.custom,
+                isDark: isDark,
+                color: color,
+                onTap: () => setState(() => _template = RoadmapTemplate.custom),
+              ),
+            ],
+          ),
+          const SizedBox(height: 9),
+          _RoadmapCounterControl(
+            isDark: isDark,
+            color: color,
+            label: 'Этапов в дороге',
+            value: _stagesPerPath,
+            onDecrease: _stagesPerPath <= 1
+                ? null
+                : () => setState(() => _stagesPerPath--),
+            onIncrease: _stagesPerPath >= 12
+                ? null
+                : () => setState(() => _stagesPerPath++),
+          ),
+          AnimatedSwitcher(
+            duration: kMotionStandard,
+            switchInCurve: kMotionCurve,
+            switchOutCurve: kMotionExitCurve,
+            child: _template == RoadmapTemplate.custom
+                ? Padding(
+                    key: const ValueKey('custom-path-count'),
+                    padding: const EdgeInsets.only(top: 7),
+                    child: _RoadmapCounterControl(
+                      isDark: isDark,
+                      color: color,
+                      label: 'Дорог',
+                      value: _pathCount,
+                      onDecrease: _pathCount <= 1
+                          ? null
+                          : () => setState(() => _customPathCount--),
+                      onIncrease: _pathCount >= 12
+                          ? null
+                          : () => setState(() => _customPathCount++),
+                    ),
+                  )
+                : const SizedBox(key: ValueKey('fixed-path-count')),
+          ),
+          if (config.canOverloadFocus) ...[
+            const SizedBox(height: 7),
+            _RoadmapTemplateWarning(isDark: isDark),
+          ],
+          const SizedBox(height: 9),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: PressFeedback(
+                  scale: 0.96,
+                  onTap: () => widget.onApply(config),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 11,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.add_road,
+                          color: Colors.white,
+                          size: 15,
+                        ),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            'Применить',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ],
-            ),
-          ],
-        ),
+              ),
+              const SizedBox(width: 8),
+              PressFeedback(
+                scale: 0.94,
+                onTap: widget.onHide,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(0, 7, 0, 2),
+                  child: Text(
+                    widget.sheetMode ? 'Закрыть' : 'Скрыть',
+                    style: TextStyle(
+                      color: subtext(isDark),
+                      fontSize: 11.2,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
+    if (widget.sheetMode) {
+      return Material(color: Colors.transparent, child: content);
+    }
+    return AppPanel(isDark: isDark, child: content);
   }
 }
 

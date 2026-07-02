@@ -12,6 +12,8 @@ class TodayDashboard extends StatefulWidget {
   final Key? nextQuestActionKey;
   final bool initiallyExpanded;
   final bool compactSummary;
+  final bool mobileJournal;
+  final bool hideEmptyWhenSkillsExist;
 
   const TodayDashboard({
     super.key,
@@ -22,6 +24,8 @@ class TodayDashboard extends StatefulWidget {
     this.nextQuestActionKey,
     this.initiallyExpanded = true,
     this.compactSummary = false,
+    this.mobileJournal = false,
+    this.hideEmptyWhenSkillsExist = false,
   });
 
   static Skill? _skillFor(AppState state, Task task) {
@@ -166,6 +170,7 @@ class _TodayDashboardState extends State<TodayDashboard> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final compactDashboard = constraints.maxWidth < 720;
+        final largeText = MediaQuery.textScalerOf(context).scale(1) > 1.5;
         final mobileSummary = _MobileNextActionSummary(
           state: state,
           task: nextTask,
@@ -177,30 +182,47 @@ class _TodayDashboardState extends State<TodayDashboard> {
           onMinimumAction: widget.onMinimumAction,
           onCreateFirstSkill: widget.onCreateFirstSkill,
           createFirstSkillButtonKey: widget.createFirstSkillButtonKey,
+          nextQuestActionKey: widget.nextQuestActionKey,
         );
 
         if (widget.compactSummary && !_expanded) {
+          if (nextTask == null &&
+              widget.hideEmptyWhenSkillsExist &&
+              state.roadmapSkills.isNotEmpty) {
+            return const SizedBox.shrink(
+              key: ValueKey('mobile-next-action-hidden-empty'),
+            );
+          }
+          final summaryContent = Padding(
+            padding: const EdgeInsets.fromLTRB(10, 8, 4, 8),
+            child: largeText
+                ? mobileSummary
+                : Row(
+                    children: [
+                      Expanded(child: mobileSummary),
+                      const SizedBox(width: 2),
+                      _CollapseButton(
+                        expanded: false,
+                        color: sub,
+                        onTap: () => setState(() => _expanded = true),
+                      ),
+                    ],
+                  ),
+          );
           return AnimatedContainer(
+            key: const ValueKey('mobile-next-action-surface'),
             duration: kMotionSlow,
             curve: kMotionCurve,
-            height: 80,
-            child: AppPanel(
-              isDark: isDark,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(10, 8, 4, 8),
-                child: Row(
-                  children: [
-                    Expanded(child: mobileSummary),
-                    const SizedBox(width: 2),
-                    _CollapseButton(
-                      expanded: false,
-                      color: sub,
-                      onTap: () => setState(() => _expanded = true),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            height: largeText ? 180 : (widget.mobileJournal ? 72 : 80),
+            decoration: widget.mobileJournal
+                ? BoxDecoration(
+                    color: surface(isDark),
+                    borderRadius: BorderRadius.circular(18),
+                  )
+                : null,
+            child: widget.mobileJournal
+                ? summaryContent
+                : AppPanel(isDark: isDark, child: summaryContent),
           );
         }
 
@@ -541,6 +563,7 @@ class _MobileNextActionSummary extends StatelessWidget {
   final Function(String id, Offset pos) onMinimumAction;
   final VoidCallback? onCreateFirstSkill;
   final Key? createFirstSkillButtonKey;
+  final Key? nextQuestActionKey;
 
   const _MobileNextActionSummary({
     required this.state,
@@ -551,6 +574,7 @@ class _MobileNextActionSummary extends StatelessWidget {
     required this.onMinimumAction,
     required this.onCreateFirstSkill,
     required this.createFirstSkillButtonKey,
+    required this.nextQuestActionKey,
   });
 
   @override
@@ -612,6 +636,81 @@ class _MobileNextActionSummary extends StatelessWidget {
         : currentTask.title;
     final actionLabel = canStartMinimum ? 'Минимальный шаг' : 'Следующий квест';
     final trigger = canStartMinimum ? onMinimumAction : onComplete;
+    final largeText = MediaQuery.textScalerOf(context).scale(1) > 1.5;
+
+    Widget actionButton() => KeyedSubtree(
+      key: nextQuestActionKey,
+      child: Builder(
+        builder: (actionContext) => _MobileSummaryButton(
+          key: ValueKey('mobile-next-action-trigger-${currentTask.id}'),
+          label: canStartMinimum ? 'Начать' : 'Готово',
+          icon: canStartMinimum
+              ? Icons.play_arrow_rounded
+              : Icons.check_rounded,
+          color: accent,
+          semanticsLabel: canStartMinimum
+              ? 'Начать минимальный шаг: $actionText'
+              : 'Выполнить квест: ${currentTask.title}',
+          onTap: () {
+            final box = actionContext.findRenderObject() as RenderBox?;
+            trigger(
+              currentTask.id,
+              box?.localToGlobal(Offset.zero) ?? Offset.zero,
+            );
+          },
+        ),
+      ),
+    );
+
+    if (largeText) {
+      return Semantics(
+        key: const ValueKey('mobile-next-action-summary'),
+        container: true,
+        label: '$actionLabel. $actionText',
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  canStartMinimum
+                      ? Icons.play_arrow_rounded
+                      : Icons.flag_rounded,
+                  color: accent,
+                  size: 20,
+                ),
+                const SizedBox(width: 7),
+                Expanded(
+                  child: Text(
+                    'Сейчас · $actionLabel',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: accent,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              actionText,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: txt,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const Spacer(),
+            SizedBox(width: double.infinity, child: actionButton()),
+          ],
+        ),
+      );
+    }
 
     return Semantics(
       key: const ValueKey('mobile-next-action-summary'),
@@ -639,7 +738,7 @@ class _MobileNextActionSummary extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  actionLabel,
+                  'Сейчас · $actionLabel',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -649,40 +748,43 @@ class _MobileNextActionSummary extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  actionText,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: txt,
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w800,
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        actionText,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: txt,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    if (skill != null) ...[
+                      const SizedBox(width: 6),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 80),
+                        child: Text(
+                          skill!.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: accent,
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
           ),
           const SizedBox(width: 8),
-          Builder(
-            builder: (actionContext) => _MobileSummaryButton(
-              key: ValueKey('mobile-next-action-trigger-${currentTask.id}'),
-              label: canStartMinimum ? 'Начать' : 'Готово',
-              icon: canStartMinimum
-                  ? Icons.play_arrow_rounded
-                  : Icons.check_rounded,
-              color: accent,
-              semanticsLabel: canStartMinimum
-                  ? 'Начать минимальный шаг: $actionText'
-                  : 'Выполнить квест: ${currentTask.title}',
-              onTap: () {
-                final box = actionContext.findRenderObject() as RenderBox?;
-                trigger(
-                  currentTask.id,
-                  box?.localToGlobal(Offset.zero) ?? Offset.zero,
-                );
-              },
-            ),
-          ),
+          actionButton(),
         ],
       ),
     );

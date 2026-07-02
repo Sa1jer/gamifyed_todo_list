@@ -156,6 +156,43 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
     _animateRoadmapCameraTo(_roadmapFitMatrix(layout, viewport, true));
   }
 
+  void _showRoadmapTemplateSheet(BuildContext context, Skill skill) {
+    final isDark = widget.isDark;
+    final applyTemplate = widget.onApplyRoadmapTemplate;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => SafeArea(
+        top: false,
+        child: Container(
+          key: const ValueKey('roadmap-template-bottom-sheet'),
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.86,
+          ),
+          decoration: BoxDecoration(
+            color: surface(isDark),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
+          ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 18),
+            child: _RoadmapTemplatePanel(
+              key: const ValueKey('roadmap-template-panel'),
+              skill: skill,
+              isDark: isDark,
+              sheetMode: true,
+              onHide: () => Navigator.pop(sheetContext),
+              onApply: (config) {
+                Navigator.pop(sheetContext);
+                applyTemplate(skill, config);
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   bool _matrixCloseTo(Matrix4 a, Matrix4 b) {
     for (var index = 0; index < 16; index++) {
       if ((a.storage[index] - b.storage[index]).abs() > 0.35) {
@@ -277,13 +314,15 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
     }
 
     if (selectedCenter != null) {
+      final focusedDiameter = layout.focusedSkillOrbDiameter;
+      final focusedWidth = layout.compactVisuals ? 216.0 : 264.0;
       include(
         layout.layoutAxis == _RoadmapLayoutAxis.vertical
             ? Rect.fromLTWH(
-                selectedCenter.dx - 132,
-                selectedCenter.dy - _roadmapFocusedSkillOrbDiameter / 2,
-                264,
-                _roadmapFocusedSkillOrbDiameter +
+                selectedCenter.dx - focusedWidth / 2,
+                selectedCenter.dy - focusedDiameter / 2,
+                focusedWidth,
+                focusedDiameter +
                     _roadmapSkillLabelGap +
                     _roadmapSkillLabelHeight,
               )
@@ -319,19 +358,29 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
     final state = widget.state;
     final isDark = widget.isDark;
     final selection = widget.selection;
-    final bg = isDark
+    final mobilePresentation = MediaQuery.sizeOf(context).width < 760;
+    final bg = mobilePresentation
+        ? isDark
+              ? const Color(0xFF11100F)
+              : const Color(0xFFF6EEDD)
+        : isDark
         ? Color.lerp(const Color(0xFF0D0D12), Colors.black, 0.75)!
         : const Color(0xFFF3EBDD);
     return Container(
       key: ValueKey('roadmap-canvas-${widget.layoutAxis.name}'),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: borderColor(isDark)),
+        borderRadius: BorderRadius.circular(mobilePresentation ? 18 : 14),
+        border: Border.all(
+          color: mobilePresentation
+              ? borderColor(isDark).withAlpha(70)
+              : borderColor(isDark),
+        ),
       ),
       clipBehavior: Clip.hardEdge,
       child: LayoutBuilder(
         builder: (context, constraints) {
+          final calmMobile = mobilePresentation;
           final layout = _buildOrbLayout(
             state,
             Size(constraints.maxWidth, constraints.maxHeight),
@@ -353,7 +402,15 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
             children: [
               Positioned.fill(
                 child: CustomPaint(
-                  painter: _MasteryVectorGridPainter(isDark: isDark),
+                  key: ValueKey(
+                    calmMobile
+                        ? 'roadmap-mobile-calm-background'
+                        : 'roadmap-desktop-vector-grid',
+                  ),
+                  painter: _MasteryVectorGridPainter(
+                    isDark: isDark,
+                    calmMobile: calmMobile,
+                  ),
                 ),
               ),
               Positioned.fill(
@@ -387,17 +444,24 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
                           final hiddenInFocus =
                               selectedSkill != null && !roadFocus;
                           final orbDiameter = roadFocus
-                              ? _roadmapFocusedSkillOrbDiameter
+                              ? layout.focusedSkillOrbDiameter
                               : selected
-                              ? 98.0
+                              ? calmMobile
+                                    ? 86.0
+                                    : 98.0
+                              : calmMobile
+                              ? 78.0
                               : 89.0;
+                          final focusedWidth = calmMobile ? 216.0 : 264.0;
                           return AnimatedPositioned(
                             key: ValueKey('map-skill-orb-${skill.id}'),
                             duration: kMotionSlow,
                             curve: kMotionCurve,
-                            left: position.dx - (roadFocus ? 132 : 108),
+                            left:
+                                position.dx -
+                                (roadFocus ? focusedWidth / 2 : 108),
                             top: position.dy - orbDiameter / 2,
-                            width: roadFocus ? 264 : 216,
+                            width: roadFocus ? focusedWidth : 216,
                             height:
                                 orbDiameter +
                                 _roadmapSkillLabelGap +
@@ -409,6 +473,7 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
                               roadFocus: roadFocus,
                               hiddenInFocus: hiddenInFocus,
                               dimmed: selectedSkill != null && !selected,
+                              compactVisuals: calmMobile,
                               onTap: () => widget.onSelectSkill(skill),
                             ),
                           );
@@ -600,6 +665,17 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
                               icon: Icons.route,
                               color: selectedSkill.color,
                               onTap: () {
+                                if (calmMobile) {
+                                  if (selection?.type !=
+                                      _MasterySelectionType.skill) {
+                                    widget.onSelectSkill(selectedSkill);
+                                  }
+                                  _showRoadmapTemplateSheet(
+                                    context,
+                                    selectedSkill,
+                                  );
+                                  return;
+                                }
                                 setState(() => _templatePanelHidden = false);
                                 if (selection?.type !=
                                     _MasterySelectionType.skill) {
@@ -646,6 +722,7 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
     final pathCount = math.max(1, pathLayout.paths.length);
     final maxStagesInPath = math.max(1, pathLayout.maxStagesInPath);
     final stageCount = selectedSkill?.treeNodes.length ?? 0;
+    final compactVisuals = minSize.width < 760;
     final vertical = widget.layoutAxis == _RoadmapLayoutAxis.vertical;
     const verticalStageStep = _roadmapVerticalStageStep;
     const stageStep = 170.0;
@@ -716,6 +793,7 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
             baseTextStyle: baseTextStyle,
             textScaler: textScaler,
             textDirection: textDirection,
+            compactVisuals: compactVisuals,
           );
 
     return _OrbCanvasLayout(
@@ -727,6 +805,7 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
       skillPositions: skillPositions,
       nodePositions: nodePositions,
       pathInsertionPoints: pathInsertionPoints,
+      compactVisuals: compactVisuals,
     );
   }
 
@@ -739,7 +818,7 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
     if (layout.layoutAxis == _RoadmapLayoutAxis.vertical) {
       final width = math.min(measuredWidth, 260.0);
       return Rect.fromLTWH(
-        skillCenter.dx + 108,
+        skillCenter.dx + layout.focusedSkillOrbDiameter / 2 + 34,
         skillCenter.dy - _roadmapGoalAnchorEstimatedHeight / 2,
         width,
         _roadmapGoalAnchorEstimatedHeight,
@@ -846,6 +925,7 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
     required TextStyle baseTextStyle,
     required TextScaler textScaler,
     required TextDirection textDirection,
+    required bool compactVisuals,
   }) {
     final points = <_RoadmapInsertionPoint>[];
     for (final path in pathLayout.paths) {
@@ -889,6 +969,9 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
                   baseTextStyle,
                   textScaler,
                   textDirection,
+                  orbDiameter: compactVisuals
+                      ? _roadmapMobileFocusedSkillOrbDiameter
+                      : _roadmapFocusedSkillOrbDiameter,
                 ),
                 lowerPosition: terminalPosition,
                 lowerTopOffset: _roadmapNodeOrbTopOffset(terminal),
@@ -961,6 +1044,11 @@ class _OrbCanvasLayout {
   final Map<Skill, Offset> skillPositions;
   final Map<String, Offset> nodePositions;
   final List<_RoadmapInsertionPoint> pathInsertionPoints;
+  final bool compactVisuals;
+
+  double get focusedSkillOrbDiameter => compactVisuals
+      ? _roadmapMobileFocusedSkillOrbDiameter
+      : _roadmapFocusedSkillOrbDiameter;
 
   const _OrbCanvasLayout({
     required this.size,
@@ -971,5 +1059,6 @@ class _OrbCanvasLayout {
     required this.skillPositions,
     required this.nodePositions,
     required this.pathInsertionPoints,
+    required this.compactVisuals,
   });
 }

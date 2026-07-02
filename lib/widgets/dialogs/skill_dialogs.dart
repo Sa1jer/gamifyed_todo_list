@@ -324,6 +324,27 @@ class AddSkillDialog extends StatefulWidget {
   State<AddSkillDialog> createState() => _AddSkillDialogState();
 }
 
+enum _SkillIconCategory {
+  all('Все'),
+  body('Тело'),
+  mind('Разум'),
+  creativity('Творчество'),
+  work('Работа'),
+  home('Быт');
+
+  final String label;
+
+  const _SkillIconCategory(this.label);
+}
+
+class _SkillIconOption {
+  final IconData icon;
+  final String label;
+  final _SkillIconCategory category;
+
+  const _SkillIconOption(this.icon, this.label, this.category);
+}
+
 class _AddSkillDialogState extends State<AddSkillDialog> {
   final _nameCtrl = TextEditingController();
   final _goalCtrl = TextEditingController();
@@ -336,9 +357,143 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
   bool _discardDialogOpen = false;
   String? _nameError;
   late final String _initialDraftSignature;
+  _SkillIconCategory _iconCategory = _SkillIconCategory.all;
 
-  // All icons in a single flat list
-  static final _allIcons = [...kIconsPrimary, ...kIconsExtra];
+  static const _iconOptions = <_SkillIconOption>[
+    _SkillIconOption(
+      Icons.fitness_center,
+      'Силовые тренировки',
+      _SkillIconCategory.body,
+    ),
+    _SkillIconOption(Icons.code, 'Программирование', _SkillIconCategory.mind),
+    _SkillIconOption(Icons.sports_esports, 'Игры', _SkillIconCategory.home),
+    _SkillIconOption(Icons.menu_book, 'Чтение', _SkillIconCategory.mind),
+    _SkillIconOption(Icons.music_note, 'Музыка', _SkillIconCategory.creativity),
+    _SkillIconOption(Icons.palette, 'Рисование', _SkillIconCategory.creativity),
+    _SkillIconOption(
+      Icons.language,
+      'Иностранные языки',
+      _SkillIconCategory.mind,
+    ),
+    _SkillIconOption(Icons.science, 'Наука', _SkillIconCategory.mind),
+    _SkillIconOption(Icons.directions_run, 'Бег', _SkillIconCategory.body),
+    _SkillIconOption(Icons.psychology, 'Психология', _SkillIconCategory.mind),
+    _SkillIconOption(Icons.attach_money, 'Финансы', _SkillIconCategory.work),
+    _SkillIconOption(Icons.business_center, 'Карьера', _SkillIconCategory.work),
+    _SkillIconOption(
+      Icons.camera_alt,
+      'Фотография',
+      _SkillIconCategory.creativity,
+    ),
+    _SkillIconOption(Icons.school, 'Обучение', _SkillIconCategory.mind),
+    _SkillIconOption(Icons.sports_soccer, 'Футбол', _SkillIconCategory.body),
+    _SkillIconOption(Icons.flight, 'Путешествия', _SkillIconCategory.home),
+    _SkillIconOption(Icons.favorite, 'Здоровье', _SkillIconCategory.body),
+    _SkillIconOption(Icons.emoji_events, 'Достижения', _SkillIconCategory.work),
+    _SkillIconOption(Icons.restaurant, 'Кулинария', _SkillIconCategory.home),
+    _SkillIconOption(Icons.local_hospital, 'Медицина', _SkillIconCategory.body),
+    _SkillIconOption(Icons.trending_up, 'Рост', _SkillIconCategory.work),
+    _SkillIconOption(
+      Icons.self_improvement,
+      'Медитация',
+      _SkillIconCategory.body,
+    ),
+    _SkillIconOption(Icons.star, 'Личное мастерство', _SkillIconCategory.work),
+    _SkillIconOption(Icons.public, 'Мир и культура', _SkillIconCategory.mind),
+    _SkillIconOption(Icons.home, 'Дом', _SkillIconCategory.home),
+    _SkillIconOption(Icons.shopping_cart, 'Покупки', _SkillIconCategory.home),
+    _SkillIconOption(Icons.pets, 'Питомцы', _SkillIconCategory.home),
+    _SkillIconOption(Icons.nature, 'Природа', _SkillIconCategory.home),
+    _SkillIconOption(Icons.sports_tennis, 'Теннис', _SkillIconCategory.body),
+    _SkillIconOption(
+      Icons.sports_basketball,
+      'Баскетбол',
+      _SkillIconCategory.body,
+    ),
+    _SkillIconOption(
+      Icons.directions_bike,
+      'Велоспорт',
+      _SkillIconCategory.body,
+    ),
+    _SkillIconOption(Icons.pool, 'Плавание', _SkillIconCategory.body),
+    _SkillIconOption(
+      Icons.laptop_mac,
+      'Компьютерная работа',
+      _SkillIconCategory.work,
+    ),
+    _SkillIconOption(
+      Icons.phone_android,
+      'Мобильные технологии',
+      _SkillIconCategory.work,
+    ),
+    _SkillIconOption(Icons.headphones, 'Аудио', _SkillIconCategory.creativity),
+    _SkillIconOption(Icons.tv, 'Видео', _SkillIconCategory.creativity),
+    _SkillIconOption(
+      Icons.local_florist,
+      'Цветоводство',
+      _SkillIconCategory.home,
+    ),
+    _SkillIconOption(Icons.eco, 'Экология', _SkillIconCategory.home),
+    _SkillIconOption(Icons.park, 'Садоводство', _SkillIconCategory.home),
+    _SkillIconOption(Icons.beach_access, 'Отдых', _SkillIconCategory.home),
+    _SkillIconOption(Icons.spa, 'Восстановление', _SkillIconCategory.body),
+    _SkillIconOption(Icons.hiking, 'Походы', _SkillIconCategory.body),
+    _SkillIconOption(Icons.bolt, 'Энергия', _SkillIconCategory.body),
+    _SkillIconOption(Icons.water_drop, 'Водный режим', _SkillIconCategory.body),
+    _SkillIconOption(Icons.wb_sunny, 'Дневной режим', _SkillIconCategory.home),
+    _SkillIconOption(Icons.nightlight_round, 'Сон', _SkillIconCategory.body),
+    _SkillIconOption(
+      Icons.cloud,
+      'Облачные технологии',
+      _SkillIconCategory.work,
+    ),
+    _SkillIconOption(Icons.recycling, 'Переработка', _SkillIconCategory.home),
+    _SkillIconOption(Icons.biotech, 'Биология', _SkillIconCategory.mind),
+    _SkillIconOption(Icons.agriculture, 'Земледелие', _SkillIconCategory.home),
+    _SkillIconOption(
+      Icons.volunteer_activism,
+      'Волонтёрство',
+      _SkillIconCategory.home,
+    ),
+    _SkillIconOption(Icons.construction, 'Ремесло', _SkillIconCategory.work),
+    _SkillIconOption(
+      Icons.auto_fix_high,
+      'Дизайн',
+      _SkillIconCategory.creativity,
+    ),
+    _SkillIconOption(Icons.brush, 'Живопись', _SkillIconCategory.creativity),
+    _SkillIconOption(Icons.calculate, 'Математика', _SkillIconCategory.mind),
+    _SkillIconOption(Icons.translate, 'Перевод', _SkillIconCategory.mind),
+    _SkillIconOption(Icons.history_edu, 'История', _SkillIconCategory.mind),
+    _SkillIconOption(
+      Icons.sports_martial_arts,
+      'Боевые искусства',
+      _SkillIconCategory.body,
+    ),
+    _SkillIconOption(Icons.sailing, 'Парусный спорт', _SkillIconCategory.body),
+    _SkillIconOption(Icons.snowboarding, 'Сноуборд', _SkillIconCategory.body),
+  ];
+  static const _colorLabels = <String>[
+    'Алый',
+    'Коралловый',
+    'Янтарный',
+    'Золотой',
+    'Лаймовый',
+    'Зелёный',
+    'Бирюзовый',
+    'Голубой',
+    'Синий',
+    'Индиго',
+    'Фиолетовый',
+    'Серый',
+  ];
+
+  List<_SkillIconOption> get _visibleIconOptions =>
+      _iconCategory == _SkillIconCategory.all
+      ? _iconOptions
+      : _iconOptions
+            .where((option) => option.category == _iconCategory)
+            .toList(growable: false);
 
   // Grid geometry
   static const _crossAxisCount = 9;
@@ -402,6 +557,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
     final title = widget.existing != null
         ? 'Редактировать навык'
         : 'Новый навык';
+    final iconOptions = widget.fullScreen ? _visibleIconOptions : _iconOptions;
 
     final form = SingleChildScrollView(
       key: const ValueKey('add-skill-form-scroll'),
@@ -414,19 +570,36 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
             DlgHeader(title: title, txtColor: txt),
             const SizedBox(height: 16),
           ],
-          Center(
-            child: Container(
-              key: const ValueKey('skill-preview-icon'),
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                color: _color.withAlpha(35),
-                borderRadius: BorderRadius.circular(16),
+          if (widget.fullScreen)
+            _MobileSkillEmblemPreview(
+              icon: _icon,
+              color: _color,
+              name: _nameCtrl.text,
+              isDark: isDark,
+            )
+          else
+            Center(
+              child: Container(
+                key: const ValueKey('skill-preview-icon'),
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: _color.withAlpha(35),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(_icon, color: _color, size: 30),
               ),
-              child: Icon(_icon, color: _color, size: 30),
             ),
-          ),
           const SizedBox(height: 16),
+          if (widget.fullScreen) ...[
+            _MobileSkillFormSection(
+              title: 'Название навыка',
+              subtitle: 'Коротко назови направление, в котором хочешь расти.',
+              color: _color,
+              isDark: isDark,
+            ),
+            const SizedBox(height: 9),
+          ],
           DlgField(
             label: 'Название навыка',
             ctrl: _nameCtrl,
@@ -451,7 +624,16 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
               ),
             ),
           ],
-          const SizedBox(height: 10),
+          SizedBox(height: widget.fullScreen ? 18 : 10),
+          if (widget.fullScreen) ...[
+            _MobileSkillFormSection(
+              title: 'Цель',
+              subtitle: 'Цель поможет понять, к чему ведёт путь.',
+              color: _color,
+              isDark: isDark,
+            ),
+            const SizedBox(height: 9),
+          ],
           DlgField(
             label: 'Цель',
             ctrl: _goalCtrl,
@@ -462,6 +644,18 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
             min: 2,
             fieldKey: const ValueKey('add-skill-goal-field'),
           ),
+          if (widget.fullScreen) ...[
+            const SizedBox(height: 7),
+            Text(
+              'Можно уточнить цель позже — она не обязана быть идеальной с первого раза.',
+              style: TextStyle(
+                color: sub,
+                fontSize: 11.5,
+                height: 1.3,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
           const SizedBox(height: 14),
           if (widget.showFirstRunHints && widget.existing == null) ...[
             FirstRunDialogHint(
@@ -472,13 +666,22 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
             ),
             const SizedBox(height: 14),
           ],
+          if (widget.fullScreen) ...[
+            _MobileSkillFormSection(
+              title: 'Внешний вид',
+              subtitle: 'Цвет связывает навык с квестами и RoadMap.',
+              color: _color,
+              isDark: isDark,
+            ),
+            const SizedBox(height: 12),
+          ],
           Row(
             children: [
               SubLbl('Иконка', sub),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  '${_allIcons.length} иконок · прокрутите',
+                  '${_iconOptions.length} иконок · прокрутите',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.right,
@@ -487,9 +690,41 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
               ),
             ],
           ),
+          if (widget.fullScreen) ...[
+            const SizedBox(height: 8),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: _SkillIconCategory.values.map((category) {
+                  final selected = category == _iconCategory;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: ChoiceChip(
+                      key: ValueKey('skill-icon-category-${category.name}'),
+                      selected: selected,
+                      onSelected: (_) =>
+                          setState(() => _iconCategory = category),
+                      label: Text(category.label),
+                      showCheckmark: false,
+                      selectedColor: _color.withAlpha(isDark ? 38 : 22),
+                      side: BorderSide(
+                        color: selected ? _color.withAlpha(130) : bdr,
+                      ),
+                      labelStyle: TextStyle(
+                        color: selected ? _color : sub,
+                        fontWeight: selected
+                            ? FontWeight.w900
+                            : FontWeight.w700,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
           Container(
-            height: _gridHeight,
+            height: widget.fullScreen ? 232 : _gridHeight,
             decoration: BoxDecoration(
               color: fBg,
               borderRadius: BorderRadius.circular(10),
@@ -497,8 +732,10 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
             ),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final crossAxisCount = constraints.maxWidth < 390
-                    ? 7
+                final crossAxisCount = widget.fullScreen
+                    ? constraints.maxWidth < 340
+                          ? 6
+                          : 7
                     : _crossAxisCount;
                 return GridView.builder(
                   key: const ValueKey('skill-icon-grid'),
@@ -509,16 +746,18 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
                     crossAxisSpacing: _spacing,
                     childAspectRatio: 1,
                   ),
-                  itemCount: _allIcons.length,
+                  itemCount: iconOptions.length,
                   itemBuilder: (_, i) {
-                    final ic = _allIcons[i];
-                    final sel = ic == _icon;
+                    final option = iconOptions[i];
+                    final sel = option.icon == _icon;
                     return _IconChoiceButton(
-                      icon: ic,
+                      icon: option.icon,
                       selected: sel,
                       color: _color,
                       inactiveColor: sub,
-                      onTap: () => setState(() => _icon = ic),
+                      mobile: widget.fullScreen,
+                      semanticsLabel: option.label,
+                      onTap: () => setState(() => _icon = option.icon),
                     );
                   },
                 );
@@ -542,6 +781,8 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
                   color: c,
                   selected: sel,
                   isDark: isDark,
+                  mobile: widget.fullScreen,
+                  semanticsLabel: _colorLabels[i],
                   onTap: () => setState(() => _color = c),
                 ),
               );
@@ -550,8 +791,21 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
           const SizedBox(height: 14),
 
           if (widget.existing == null) ...[
+            if (widget.fullScreen) ...[
+              const SizedBox(height: 4),
+              _MobileSkillFormSection(
+                title: 'Первый этап',
+                subtitle:
+                    'Можно оставить пустым и собрать дорожную карту позже.',
+                color: _color,
+                isDark: isDark,
+              ),
+              const SizedBox(height: 9),
+            ],
             DlgField(
-              label: 'Первый этап (опционально)',
+              label: widget.fullScreen
+                  ? 'Название первого этапа (необязательно)'
+                  : 'Первый этап (опционально)',
               ctrl: _firstStageCtrl,
               fBg: fBg,
               txt: txt,
@@ -560,7 +814,9 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
             ),
             const SizedBox(height: 6),
             Text(
-              'Например: «Основа». Можно оставить пустым и собрать дорожную карту позже.',
+              widget.fullScreen
+                  ? 'Например: «Основа» или «Первая неделя практики».'
+                  : 'Например: «Основа». Можно оставить пустым и собрать дорожную карту позже.',
               style: TextStyle(
                 color: sub,
                 fontSize: 11.5,
@@ -596,6 +852,35 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
           accentColor: _color,
           onSave: _submitting ? null : _save,
           onCancel: () => unawaited(_requestClose()),
+          showTopSaveAction: false,
+          bottomAction: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            child: FilledButton.icon(
+              key: const ValueKey('mobile-add-skill-bottom-save'),
+              onPressed: _submitting ? null : _save,
+              style: FilledButton.styleFrom(
+                backgroundColor: _color,
+                foregroundColor: Colors.white,
+                minimumSize: const Size.fromHeight(52),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
+              ),
+              icon: Icon(
+                widget.existing == null
+                    ? Icons.auto_awesome_rounded
+                    : Icons.save_rounded,
+                size: 19,
+              ),
+              label: Text(
+                widget.existing == null ? 'Создать навык' : 'Сохранить навык',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ),
           child: form,
         ),
       );
@@ -666,6 +951,135 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
         requiredQuestCompletions: 3,
       ),
     ];
+  }
+}
+
+class _MobileSkillEmblemPreview extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String name;
+  final bool isDark;
+
+  const _MobileSkillEmblemPreview({
+    required this.icon,
+    required this.color,
+    required this.name,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final displayName = name.trim().isEmpty ? 'Твой новый навык' : name.trim();
+
+    return Center(
+      child: Column(
+        children: [
+          AnimatedContainer(
+            key: const ValueKey('skill-preview-icon'),
+            duration: reduceMotion ? Duration.zero : kMotionSlow,
+            curve: kMotionCurve,
+            width: 112,
+            height: 112,
+            decoration: BoxDecoration(
+              color: color.withAlpha(isDark ? 24 : 16),
+              borderRadius: BorderRadius.circular(34),
+              border: Border.all(color: color.withAlpha(150), width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: color.withAlpha(isDark ? 46 : 30),
+                  blurRadius: 22,
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
+            child: AnimatedSwitcher(
+              duration: reduceMotion ? Duration.zero : kMotionStandard,
+              child: Icon(
+                icon,
+                key: ValueKey(icon.codePoint),
+                color: color,
+                size: 50,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          AnimatedSwitcher(
+            duration: reduceMotion ? Duration.zero : kMotionStandard,
+            child: Text(
+              displayName,
+              key: ValueKey(displayName),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: name.trim().isEmpty
+                    ? subtext(isDark)
+                    : textColor(isDark),
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MobileSkillFormSection extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final Color color;
+  final bool isDark;
+
+  const _MobileSkillFormSection({
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 4,
+          height: 34,
+          decoration: BoxDecoration(
+            color: color.withAlpha(190),
+            borderRadius: BorderRadius.circular(99),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  color: textColor(isDark),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  color: subtext(isDark),
+                  fontSize: 11.5,
+                  height: 1.25,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }
 

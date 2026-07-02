@@ -357,8 +357,8 @@ Issues:
 
 - `ThemeData` has no product `TextTheme`; many local hard-coded font sizes make
   hierarchy and large-text behavior difficult to govern.
-- Top/profile chrome is visually persistent while the daily recommendation is
-  collapsed.
+- Mobile top/profile chrome is now compact, but the remaining desktop-first
+  type constants still limit how confidently the hierarchy scales above 130%.
 - Many icon controls are 28-42dp visual boxes or custom gesture surfaces; visual
   density is good for desktop but must be checked against mobile target size.
 - The default Flutter Android launcher icon and basic launch background do not
@@ -432,10 +432,54 @@ Implemented on 2026-07-02:
 6. Widget coverage now protects next-action placement/action, empty-skill CTA,
    dirty AddSkill close, dirty AddTask system Back, and save-failure copy.
 
+### Mobile Visual System Redesign Epic
+
+Implemented on 2026-07-02 without model/storage changes, RoadMap engine changes,
+or goal-progress formula changes. The only product-logic change is the approved
+fixed `+10 XP` reward for quick tasks:
+
+1. The identity header now gives profile XP numeric and visual weight while
+   retaining the captured-state overflow sheet, reward badge, and hidden debug
+   entry. Draft mobile colors, spacing, radii, and motion live in local
+   `MobileJournalTokens`; the global and desktop themes were not migrated.
+2. `Сейчас` has two presentation-only states. Overview contains honest daily
+   momentum, compact full-width skill cards with goal-progress rings, the global
+   next action, and a separate Inbox accordion. Focus replaces that overview
+   with a readable stable-ID skill switcher, explicit `Обзор`, and one task
+   surface with separate skill XP and goal progress.
+3. Inbox is no longer selected as a normal mobile skill. Its low-opacity
+   accordion exposes input, all quick tasks, count, and `+10 XP` pills. Quick
+   completion and undo update profile XP and today's XP/action count only; they
+   remain isolated from skill XP, RoadMap, history, buffs, achievements, chests,
+   and milestones. Desktop keeps the system-skill layout and shared XP copy.
+4. Mobile RoadMap defaults to `Путь навыка`: a scroll route built from the
+   existing `RoadmapEngine` snapshot/path layout, runtime branch pills, semantic
+   stage states, compact progress, and safe details/templates sheets. The
+   unchanged InteractiveViewer is available as `Свободная карта`; desktop keeps
+   canvas-first behavior.
+5. Mobile AddSkill now has a live emblem rather than a fake skill card,
+   meaningful icon semantics, non-persisted category filters, squircle color
+   swatches, dirty-draft protection, and one bottom SafeArea CTA. Desktop and
+   AddTask submit behavior remain unchanged.
+6. The mockups supplied hierarchy, atmosphere, and navigation direction, but
+   were intentionally not copied pixel-for-pixel. No fake metrics, dual rings,
+   new economy, assets, fonts, packages, graph mutations, or Quest Log were
+   introduced.
+7. Widget coverage protects Overview/Focus, honest momentum, Inbox accordion,
+   stable reorder IDs, isolated XP/undo, linear/branch paths, free-map fallback,
+   templates, AddSkill semantics, and dark/light layouts at
+   `360/393/430/700dp`; the `360dp` path also runs at `200%` text scale.
+
+Dark mode is the polished target. Light mode has a warm usable fallback with
+readable text/icons and no broken gradients, but `Light Journal Palette Polish`
+remains a dedicated follow-up. Remaining work also includes app-wide typography
+and design tokens, broader `200%`/screen-reader/focus-order gates, physical-device
+motion/keyboard QA, additional RoadMap/icon polish, and Android release QA.
+
 Remaining quick wins:
 
-1. Add semantic button/toggled labels to remaining shared custom controls and
-   automated tap-target, focus-order, and 200% text-scale tests at 360dp.
+1. Extend the new `200%` mobile journal test into app-wide semantic button,
+   tap-target, focus-order, and screen-reader gates.
 2. Add delayed startup copy after a short spinner-only interval.
 3. Add a first-use hint for mobile swipe actions, then retire it after discovery.
 4. Verify and improve reminder copy for notification denial, exact-alarm denial,
@@ -446,6 +490,8 @@ Remaining quick wins:
    RoadMap, statistics, trophies, and profile as optional learn-more modules.
 7. Create final launcher/splash artwork and replace placeholder metadata before
    release.
+8. Design a real streak model and stats contract before adding richer streak
+   metrics; Overview currently shows only an honest positive existing streak.
 
 Quest Log Presentation Layer remains explicitly deferred. If pursued, it should
 first be a presentation-only view over existing task/skill/stage identities,
@@ -458,8 +504,8 @@ approved changes:
 
 - If usage feedback shows the compact summary is insufficient, explore a deeper
   mobile "Сейчас" recomposition without introducing a separate Quest Log.
-- Simplify persistent mobile chrome and group secondary destinations without
-  hiding critical recovery or reward state.
+- Validate the new compact mobile chrome and secondary-destination sheet with
+  real use, especially reward discoverability and one-handed reach.
 - Build a gentle return-after-absence surface that summarizes the last active
   goal, one restart action, and optional review.
 - Define a product typography/token system for compact, regular, and large-text
@@ -482,7 +528,7 @@ approved changes:
 - Complete real-device recovery and process-kill tests before claiming storage
   reliability for release.
 
-No P0 core-flow defect was reproduced in the current 289-test suite.
+No P0 core-flow defect was reproduced in the current 291-test suite.
 
 ### P1 — High-Friction Mobile Flows
 
@@ -503,8 +549,8 @@ No P0 core-flow defect was reproduced in the current 289-test suite.
   ellipsis at 360/393/430dp.
 - Persist or derive a safe last-active context and add a return-after-absence
   nudge.
-- Revisit mobile top/profile chrome hierarchy and secondary destination
-  discoverability.
+- **Implemented:** unify mobile top/profile chrome and group secondary
+  destinations while keeping reward state visible.
 - Explain the four progress systems consistently and label equal-weight goal
   percentages as RoadMap progress until goals become measurable.
 - Add current-stage focus and long-label disclosure to mobile RoadMap.

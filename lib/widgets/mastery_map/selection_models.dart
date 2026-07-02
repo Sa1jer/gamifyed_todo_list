@@ -5,6 +5,7 @@ enum _MasterySelectionType { skill, node, quest }
 enum _RoadmapLayoutAxis { horizontal, vertical }
 
 const _roadmapFocusedSkillOrbDiameter = 149.0;
+const _roadmapMobileFocusedSkillOrbDiameter = 120.0;
 const _roadmapSkillLabelGap = 9.0;
 const _roadmapSkillLabelHeight = 46.0;
 const _roadmapNodeItemWidth = 154.0;
@@ -62,8 +63,9 @@ double _roadmapFocusedSkillLabelTextBottomOffset(
   Skill skill,
   TextStyle baseTextStyle,
   TextScaler textScaler,
-  TextDirection textDirection,
-) {
+  TextDirection textDirection, {
+  double orbDiameter = _roadmapFocusedSkillOrbDiameter,
+}) {
   final textHeight = _roadmapLabelTextHeight(
     text: skill.name,
     maxWidth: 190,
@@ -74,7 +76,7 @@ double _roadmapFocusedSkillLabelTextBottomOffset(
     textScaler: textScaler,
     textDirection: textDirection,
   );
-  return _roadmapFocusedSkillOrbDiameter / 2 +
+  return orbDiameter / 2 +
       _roadmapSkillLabelGap +
       (_roadmapSkillLabelHeight + textHeight) / 2;
 }

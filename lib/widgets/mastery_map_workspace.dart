@@ -22,5 +22,6 @@ part 'mastery_map/painters.dart';
 part 'mastery_map/orbs.dart';
 part 'mastery_map/template_panel.dart';
 part 'mastery_map/mobile_panels.dart';
+part 'mastery_map/mobile_path_view.dart';
 part 'mastery_map/inspector.dart';
 part 'mastery_map/structure_editor.dart';

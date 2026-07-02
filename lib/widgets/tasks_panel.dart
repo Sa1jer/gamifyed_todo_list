@@ -8,6 +8,7 @@ import 'shared.dart';
 import 'dialogs.dart';
 import 'goal_header.dart';
 import 'inbox_panel.dart';
+import 'skill_goal_progress.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TASKS PANEL
@@ -17,12 +18,14 @@ class TasksPanel extends StatefulWidget {
   final Function(String id, Offset pos) onComplete;
   final Function(String id, Offset pos) onMinimumAction;
   final bool planningMode;
+  final bool mobileFocus;
   final Key? createFirstQuestButtonKey;
   const TasksPanel({
     super.key,
     required this.onComplete,
     required this.onMinimumAction,
     this.planningMode = false,
+    this.mobileFocus = false,
     this.createFirstQuestButtonKey,
   });
   @override
@@ -30,6 +33,9 @@ class TasksPanel extends StatefulWidget {
 }
 
 class _TasksPanelState extends State<TasksPanel> {
+  String? _lastSkillId;
+  bool _completedExpanded = false;
+
   @override
   Widget build(BuildContext context) {
     final s = AppStateProvider.of(context);
@@ -39,24 +45,36 @@ class _TasksPanelState extends State<TasksPanel> {
     final sub = subtext(isDark);
     final bdr = borderColor(isDark);
     final skill = s.selectedSkill;
+    final largeText = MediaQuery.textScalerOf(context).scale(1) > 1.5;
 
     if (skill == null) {
       final hasSkills = s.roadmapSkills.isNotEmpty;
       return Container(
+        key: widget.mobileFocus
+            ? const ValueKey('mobile-skill-focus-empty')
+            : null,
         decoration: BoxDecoration(
           color: sfc,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: bdr),
+          borderRadius: BorderRadius.circular(widget.mobileFocus ? 18 : 14),
+          border: widget.mobileFocus ? null : Border.all(color: bdr),
         ),
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.arrow_back, color: sub, size: 30),
+              Icon(
+                widget.mobileFocus
+                    ? Icons.touch_app_outlined
+                    : Icons.arrow_back,
+                color: sub,
+                size: widget.mobileFocus ? 26 : 30,
+              ),
               const SizedBox(height: 12),
               Text(
                 hasSkills
-                    ? (widget.planningMode
+                    ? (widget.mobileFocus
+                          ? 'Выбери навык для фокуса'
+                          : widget.planningMode
                           ? 'Выберите навык для настройки'
                           : 'Выберите навык')
                     : 'Сначала создайте навык',
@@ -69,7 +87,9 @@ class _TasksPanelState extends State<TasksPanel> {
               const SizedBox(height: 4),
               Text(
                 hasSkills
-                    ? (widget.planningMode
+                    ? (widget.mobileFocus
+                          ? 'Здесь появятся цель, прогресс и квесты.'
+                          : widget.planningMode
                           ? 'Здесь откроются цель, прогресс и квесты навыка'
                           : 'Квесты откроются здесь')
                     : 'После навыка можно будет добавить первый квест',
@@ -83,115 +103,187 @@ class _TasksPanelState extends State<TasksPanel> {
     }
 
     if (skill.id == kInboxSkillId) {
-      return InboxPanel(onComplete: widget.onComplete);
+      return InboxPanel(
+        onComplete: widget.onComplete,
+        embedded: widget.mobileFocus,
+      );
     }
 
     final allTasks = s.tasksForSkill(skill.id);
     final active = allTasks.where((t) => !t.isDone).toList();
     final done = allTasks.where((t) => t.isDone).toList()
       ..sort(_compareCompletedTasksNewestFirst);
+    if (_lastSkillId != skill.id) {
+      _lastSkillId = skill.id;
+      _completedExpanded = false;
+    }
     return Container(
+      key: widget.mobileFocus
+          ? ValueKey('mobile-selected-skill-focus-${skill.id}')
+          : null,
       decoration: BoxDecoration(
-        color: sfc,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: bdr),
+        color: widget.mobileFocus ? null : sfc,
+        gradient: widget.mobileFocus
+            ? LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [skill.color.withAlpha(isDark ? 10 : 7), sfc, sfc],
+              )
+            : null,
+        borderRadius: BorderRadius.circular(widget.mobileFocus ? 24 : 14),
+        border: widget.mobileFocus
+            ? Border.all(color: skill.color.withAlpha(isDark ? 50 : 58))
+            : Border.all(color: bdr),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── Header ──────────────────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 12, 8),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Skill icon
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: skill.color.withAlpha(30),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(skill.icon, color: skill.color, size: 16),
-                ),
-                const SizedBox(width: 10),
-                // Name + goal
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+          if (widget.mobileFocus)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
-                      Text(
-                        skill.name,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: txt,
+                      _SkillIcon(skill: skill),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          skill.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 17,
+                            color: txt,
+                          ),
                         ),
                       ),
-                      GoalHeader(skill: skill, isDark: isDark),
                     ],
                   ),
-                ),
-                const SizedBox(width: 8),
-                if (widget.planningMode) ...[
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 9,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: sub.withAlpha(16),
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: sub.withAlpha(45)),
-                    ),
-                    child: Text(
-                      'структура',
-                      style: TextStyle(
-                        color: sub,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
+                  const SizedBox(height: 7),
+                  GoalHeader(skill: skill, isDark: isDark, maxLines: 2),
+                ],
+              ),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 12, 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  _SkillIcon(skill: skill),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          skill.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: txt,
+                          ),
+                        ),
+                        GoalHeader(skill: skill, isDark: isDark, maxLines: 1),
+                      ],
                     ),
                   ),
                   const SizedBox(width: 8),
-                ],
-                HoverScale(
-                  child: SmallBtn(
-                    key: ValueKey('add-task-button-${skill.id}'),
-                    label: 'Новый квест',
-                    icon: Icons.add,
-                    color: skill.color,
-                    tooltip: 'Создать квест для навыка “${skill.name}”',
-                    onTap: () => _addTask(context, skill),
+                  if (widget.planningMode) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 9,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: sub.withAlpha(16),
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(color: sub.withAlpha(45)),
+                      ),
+                      child: Text(
+                        'структура',
+                        style: TextStyle(
+                          color: sub,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  HoverScale(
+                    child: SmallBtn(
+                      key: ValueKey('add-task-button-${skill.id}'),
+                      label: 'Новый квест',
+                      icon: Icons.add,
+                      color: skill.color,
+                      tooltip: 'Создать квест для навыка “${skill.name}”',
+                      onTap: () => _addTask(context, skill),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
 
           // ── Skill XP bar ────────────────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: XPBar(
-                    progress: skill.progress,
-                    color: skill.color,
-                    height: 6,
+            child: widget.mobileFocus && largeText
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      XPBar(
+                        progress: skill.progress,
+                        color: skill.color,
+                        height: 6,
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        'Ур. ${skill.level} · ${skill.xp}/${skill.xpNeeded} XP',
+                        style: TextStyle(color: sub, fontSize: 10.5),
+                      ),
+                    ],
+                  )
+                : Row(
+                    children: [
+                      Expanded(
+                        child: XPBar(
+                          progress: skill.progress,
+                          color: skill.color,
+                          height: 6,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        widget.mobileFocus
+                            ? 'Ур. ${skill.level} · ${skill.xp}/${skill.xpNeeded} XP'
+                            : '${skill.xp} / ${skill.xpNeeded} XP  •  Ур.${skill.level}',
+                        style: TextStyle(color: sub, fontSize: 11),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '${skill.xp} / ${skill.xpNeeded} XP  •  Ур.${skill.level}',
-                  style: TextStyle(color: sub, fontSize: 11),
-                ),
-              ],
-            ),
           ),
 
-          Container(height: 1, color: borderColor(isDark)),
+          if (widget.mobileFocus)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 9),
+              child: SkillGoalProgress(
+                skill: skill,
+                isDark: isDark,
+                compact: true,
+              ),
+            ),
+
+          if (widget.mobileFocus)
+            const SizedBox(height: 1)
+          else
+            Container(height: 1, color: borderColor(isDark)),
 
           // ── Task list ────────────────────────────────────────────────────────────
           Expanded(
@@ -202,6 +294,7 @@ class _TasksPanelState extends State<TasksPanel> {
                       isDark: isDark,
                       skillColor: skill.color,
                       skillName: skill.name,
+                      mobileJournal: widget.mobileFocus,
                       onAdd: () => _addTask(context, skill),
                       createFirstQuestButtonKey:
                           widget.createFirstQuestButtonKey,
@@ -231,52 +324,107 @@ class _TasksPanelState extends State<TasksPanel> {
                             ),
                           );
                         }),
-                        if (done.isNotEmpty) ...[
-                          MotionListItem(
-                            key: ValueKey('done-header-${done.length}'),
-                            index: active.length,
-                            child: Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.check_circle_outline,
-                                    color: sub,
-                                    size: 14,
+                        if (widget.mobileFocus)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+                            child: SizedBox(
+                              width: double.infinity,
+                              height: 46,
+                              child: OutlinedButton.icon(
+                                key: ValueKey('add-task-button-${skill.id}'),
+                                onPressed: () => _addTask(context, skill),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: skill.color,
+                                  side: BorderSide(
+                                    color: skill.color.withAlpha(95),
                                   ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Выполнено (${done.length})',
-                                    style: TextStyle(
-                                      color: sub,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
                                   ),
-                                ],
+                                ),
+                                icon: const Icon(Icons.add_rounded, size: 19),
+                                label: const Text(
+                                  'Новый квест',
+                                  style: TextStyle(fontWeight: FontWeight.w900),
+                                ),
                               ),
                             ),
                           ),
-                          ...done.asMap().entries.map((entry) {
-                            final index = active.length + entry.key + 1;
-                            final t = entry.value;
-                            return MotionListItem(
-                              key: ValueKey('task-done-${t.id}'),
-                              index: index,
-                              child: TaskTile(
-                                task: t,
-                                isDark: isDark,
-                                skillColor: skill.color,
-                                previewEarnedXP: t.earnedXP,
-                                previewBuffBonus: t.bonusXpEarned,
-                                onToggle: (_) => s.uncompleteTask(t.id),
-                                onMinimumAction: (_) {},
-                                onUncomplete: () => s.uncompleteTask(t.id),
-                                onDelete: () => s.removeTask(t.id),
-                                onEdit: () => _editTask(context, skill, t),
+                        if (done.isNotEmpty) ...[
+                          if (widget.mobileFocus)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(8, 8, 8, 2),
+                              child: TextButton.icon(
+                                key: ValueKey('done-header-${done.length}'),
+                                onPressed: () => setState(
+                                  () =>
+                                      _completedExpanded = !_completedExpanded,
+                                ),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: sub,
+                                  minimumSize: const Size(0, 44),
+                                ),
+                                icon: Icon(
+                                  _completedExpanded
+                                      ? Icons.expand_less_rounded
+                                      : Icons.expand_more_rounded,
+                                  size: 18,
+                                ),
+                                label: Text('Выполнено (${done.length})'),
                               ),
-                            );
-                          }),
+                            )
+                          else
+                            MotionListItem(
+                              key: ValueKey('done-header-${done.length}'),
+                              index: active.length,
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  16,
+                                  12,
+                                  16,
+                                  6,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.check_circle_outline,
+                                      color: sub,
+                                      size: 14,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Выполнено (${done.length})',
+                                      style: TextStyle(
+                                        color: sub,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          if (!widget.mobileFocus || _completedExpanded)
+                            ...done.asMap().entries.map((entry) {
+                              final index = active.length + entry.key + 1;
+                              final t = entry.value;
+                              return MotionListItem(
+                                key: ValueKey('task-done-${t.id}'),
+                                index: index,
+                                child: TaskTile(
+                                  task: t,
+                                  isDark: isDark,
+                                  skillColor: skill.color,
+                                  previewEarnedXP: t.earnedXP,
+                                  previewBuffBonus: t.bonusXpEarned,
+                                  onToggle: (_) => s.uncompleteTask(t.id),
+                                  onMinimumAction: (_) {},
+                                  onUncomplete: () => s.uncompleteTask(t.id),
+                                  onDelete: () => s.removeTask(t.id),
+                                  onEdit: () => _editTask(context, skill, t),
+                                ),
+                              );
+                            }),
                         ],
                       ],
                     ),
@@ -383,12 +531,32 @@ class _TasksPanelState extends State<TasksPanel> {
   }
 }
 
+class _SkillIcon extends StatelessWidget {
+  final Skill skill;
+
+  const _SkillIcon({required this.skill});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 32,
+      height: 32,
+      decoration: BoxDecoration(
+        color: skill.color.withAlpha(30),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Icon(skill.icon, color: skill.color, size: 16),
+    );
+  }
+}
+
 class _EmptyTasksState extends StatelessWidget {
   final bool isDark;
   final Color skillColor;
   final String skillName;
   final VoidCallback onAdd;
   final Key? createFirstQuestButtonKey;
+  final bool mobileJournal;
 
   const _EmptyTasksState({
     super.key,
@@ -397,6 +565,7 @@ class _EmptyTasksState extends StatelessWidget {
     required this.skillName,
     required this.onAdd,
     this.createFirstQuestButtonKey,
+    this.mobileJournal = false,
   });
 
   @override
@@ -406,7 +575,7 @@ class _EmptyTasksState extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final compact = constraints.maxHeight < 220;
+        final compact = mobileJournal || constraints.maxHeight < 220;
         return SingleChildScrollView(
           padding: EdgeInsets.all(compact ? 10 : 22),
           child: Center(
@@ -420,7 +589,9 @@ class _EmptyTasksState extends StatelessWidget {
                 ),
                 SizedBox(height: compact ? 6 : 12),
                 Text(
-                  'Добавь квест, чтобы начать движение',
+                  mobileJournal
+                      ? 'Добавь первый квест'
+                      : 'Добавь квест, чтобы начать движение',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: txt,
@@ -430,7 +601,9 @@ class _EmptyTasksState extends StatelessWidget {
                 ),
                 const SizedBox(height: 5),
                 Text(
-                  'У “$skillName” пока нет активных действий. Создай небольшой квест и добавь минимальный шаг — так начать будет легче.',
+                  mobileJournal
+                      ? 'Начни с маленького действия — так легче вернуться завтра.'
+                      : 'У “$skillName” пока нет активных действий. Создай небольшой квест и добавь минимальный шаг — так начать будет легче.',
                   textAlign: TextAlign.center,
                   maxLines: compact ? 2 : null,
                   overflow: compact ? TextOverflow.ellipsis : null,

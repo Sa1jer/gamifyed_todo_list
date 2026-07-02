@@ -1162,6 +1162,8 @@ class MobileFormPage extends StatelessWidget {
   final VoidCallback? onSave;
   final VoidCallback? onCancel;
   final Widget child;
+  final Widget? bottomAction;
+  final bool showTopSaveAction;
 
   const MobileFormPage({
     super.key,
@@ -1173,6 +1175,8 @@ class MobileFormPage extends StatelessWidget {
     required this.onSave,
     this.onCancel,
     required this.child,
+    this.bottomAction,
+    this.showTopSaveAction = true,
   });
 
   @override
@@ -1191,20 +1195,30 @@ class MobileFormPage extends StatelessWidget {
           icon: const Icon(Icons.close_rounded),
         ),
         title: Text(title),
-        actions: [
-          TextButton(
-            key: saveKey,
-            onPressed: onSave,
-            style: TextButton.styleFrom(foregroundColor: accentColor),
-            child: const Text(
-              'Создать',
-              style: TextStyle(fontWeight: FontWeight.w900),
-            ),
-          ),
-          const SizedBox(width: 4),
-        ],
+        actions: showTopSaveAction
+            ? [
+                TextButton(
+                  key: saveKey,
+                  onPressed: onSave,
+                  style: TextButton.styleFrom(foregroundColor: accentColor),
+                  child: const Text(
+                    'Создать',
+                    style: TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                ),
+                const SizedBox(width: 4),
+              ]
+            : const [
+                SizedBox(
+                  key: ValueKey('mobile-form-top-save-hidden'),
+                  width: 8,
+                ),
+              ],
       ),
       body: SafeArea(top: false, child: child),
+      bottomNavigationBar: bottomAction == null
+          ? null
+          : SafeArea(top: false, child: bottomAction!),
     );
   }
 }

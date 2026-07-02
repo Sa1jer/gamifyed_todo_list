@@ -9,138 +9,124 @@ class _CompactSkillSelector extends StatelessWidget {
     final isDark = state.isDark;
     final txt = textColor(isDark);
     final sub = subtext(isDark);
-    final selectedSkill = state.selectedSkill;
-    final expanded = selectedSkill == null;
+    final skills = state.roadmapSkills;
+    final inboxActiveCount = state.inboxTasks
+        .where((task) => !task.isDone)
+        .length;
     final reduceMotion =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
 
     return AnimatedContainer(
-      key: ValueKey(
-        expanded ? 'mobile-skill-panel-expanded' : 'mobile-skill-panel-compact',
-      ),
+      key: const ValueKey('mobile-skill-panel-compact'),
       duration: reduceMotion ? Duration.zero : kMotionStandard,
       curve: kMotionCurve,
-      height: expanded ? 214 : 98,
-      child: AppPanel(
-        isDark: isDark,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.bolt, color: const Color(0xFF4A9EFF), size: 16),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      selectedSkill == null
-                          ? 'Навыки'
-                          : 'Фокус: ${selectedSkill.name}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: txt,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w900,
-                      ),
+      height: 126,
+      decoration: BoxDecoration(
+        color: surface(isDark),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withAlpha(8),
+                  blurRadius: 16,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 9, 10, 9),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Навыки',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: txt,
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  SmallBtn(
-                    key: const ValueKey('mobile-add-skill-open'),
-                    label: 'Навык',
-                    icon: Icons.add,
-                    color: const Color(0xFF4A9EFF),
-                    tooltip: 'Создать навык и первый квест',
-                    onTap: () => _addSkill(context),
+                ),
+                _MobileInboxShortcut(
+                  selected: state.selectedSkillId == kInboxSkillId,
+                  count: inboxActiveCount,
+                  isDark: isDark,
+                  onTap: () => state.selectSkill(kInboxSkillId),
+                ),
+                const SizedBox(width: 5),
+                IconButton.filled(
+                  key: const ValueKey('mobile-add-skill-open'),
+                  tooltip: 'Создать навык',
+                  onPressed: () => _addSkill(context),
+                  style: IconButton.styleFrom(
+                    minimumSize: const Size.square(44),
+                    maximumSize: const Size.square(44),
+                    backgroundColor: const Color(0xFF4A9EFF),
+                    foregroundColor: Colors.white,
                   ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Expanded(
-                child: state.skills.isEmpty
-                    ? Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'Создайте навык — приложение сразу добавит первый этап.',
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: sub,
-                            fontSize: 11.5,
-                            height: 1.2,
-                          ),
-                        ),
-                      )
-                    : AnimatedSwitcher(
-                        duration: reduceMotion
-                            ? Duration.zero
-                            : kMotionStandard,
-                        switchInCurve: kMotionCurve,
-                        switchOutCurve: kMotionCurve,
-                        child: KeyedSubtree(
-                          key: ValueKey(
-                            expanded
-                                ? 'mobile-skill-list-expanded'
-                                : 'mobile-skill-list-compact',
-                          ),
-                          child: ReorderableListView.builder(
-                            key: const ValueKey('compact-skill-list'),
-                            scrollDirection: Axis.horizontal,
-                            itemCount: state.skills.length,
-                            buildDefaultDragHandles: false,
-                            onReorderItem: state.reorderSkills,
-                            itemBuilder: (_, index) {
-                              final skill = state.skills[index];
-                              final selected =
-                                  state.selectedSkillId == skill.id;
-                              final canReorder = skill.id != kInboxSkillId;
-                              final taskCount = state
-                                  .tasksForSkill(skill.id)
-                                  .where((task) => !task.isDone)
-                                  .length;
-                              final item = expanded
-                                  ? _ExpandedMobileSkillCard(
-                                      skill: skill,
-                                      isDark: isDark,
-                                      taskCount: taskCount,
-                                      onTap: () => state.selectSkill(skill.id),
-                                    )
-                                  : _CompactSkillChip(
-                                      skill: skill,
-                                      selected: selected,
-                                      isDark: isDark,
-                                      taskCount: taskCount,
-                                      canReorder: canReorder,
-                                      onTap: () => state.selectSkill(skill.id),
-                                    );
-                              return Padding(
-                                key: ValueKey(
-                                  'compact-skill-reorder-item-${skill.id}',
-                                ),
-                                padding: EdgeInsets.only(
-                                  right: index == state.skills.length - 1
-                                      ? 0
-                                      : 7,
-                                ),
-                                child: canReorder
-                                    ? ReorderableDelayedDragStartListener(
-                                        key: ValueKey(
-                                          'compact-skill-reorder-${skill.id}',
-                                        ),
-                                        index: index,
-                                        child: item,
-                                      )
-                                    : item,
-                              );
-                            },
-                          ),
+                  icon: const Icon(Icons.add_rounded, size: 20),
+                ),
+              ],
+            ),
+            const SizedBox(height: 7),
+            Expanded(
+              child: skills.isEmpty
+                  ? Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Создай первый навык, чтобы начать свой путь.',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: sub,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-              ),
-            ],
-          ),
+                    )
+                  : ReorderableListView.builder(
+                      key: const ValueKey('compact-skill-list'),
+                      scrollDirection: Axis.horizontal,
+                      itemCount: skills.length,
+                      buildDefaultDragHandles: false,
+                      onReorderItem: state.reorderSkills,
+                      itemBuilder: (_, index) {
+                        final skill = skills[index];
+                        final selected = state.selectedSkillId == skill.id;
+                        final taskCount = state
+                            .tasksForSkill(skill.id)
+                            .where((task) => !task.isDone)
+                            .length;
+                        return Padding(
+                          key: ValueKey(
+                            'compact-skill-reorder-item-${skill.id}',
+                          ),
+                          padding: EdgeInsets.only(
+                            right: index == skills.length - 1 ? 0 : 7,
+                          ),
+                          child: ReorderableDelayedDragStartListener(
+                            key: ValueKey('compact-skill-reorder-${skill.id}'),
+                            index: index,
+                            child: _CompactSkillChip(
+                              skill: skill,
+                              selected: selected,
+                              isDark: isDark,
+                              taskCount: taskCount,
+                              canReorder: true,
+                              onTap: () => state.selectSkill(skill.id),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
         ),
       ),
     );
@@ -173,205 +159,6 @@ class _CompactSkillSelector extends StatelessWidget {
   }
 }
 
-class _ExpandedMobileSkillCard extends StatelessWidget {
-  final Skill skill;
-  final bool isDark;
-  final int taskCount;
-  final VoidCallback onTap;
-
-  const _ExpandedMobileSkillCard({
-    required this.skill,
-    required this.isDark,
-    required this.taskCount,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final txt = textColor(isDark);
-    final sub = subtext(isDark);
-    final color = skill.color;
-    final isInbox = skill.id == kInboxSkillId;
-    final progress = const GoalProgressEngine().snapshotForSkill(skill);
-    final questLabel =
-        '$taskCount ${_countLabel(taskCount, 'квест', 'квеста', 'квестов')}';
-    final inboxLabel = _countLabel(
-      taskCount,
-      'быстрая задача',
-      'быстрые задачи',
-      'быстрых задач',
-    );
-
-    return Semantics(
-      button: true,
-      label: isInbox
-          ? '${skill.name}, $taskCount $inboxLabel'
-          : '${skill.name}, уровень ${skill.level}, $questLabel, '
-                '${progress.isEmpty ? "этапы не добавлены" : progress.percentLabel}',
-      child: PressFeedback(
-        scale: 0.98,
-        onTap: onTap,
-        child: Container(
-          key: ValueKey('mobile-expanded-skill-${skill.id}'),
-          width: 220,
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: color.withAlpha(isDark ? 22 : 13),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: color.withAlpha(isDark ? 58 : 42)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: color.withAlpha(isDark ? 38 : 26),
-                      borderRadius: BorderRadius.circular(13),
-                    ),
-                    child: Icon(skill.icon, color: color, size: 21),
-                  ),
-                  const SizedBox(width: 9),
-                  Expanded(
-                    child: Text(
-                      skill.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: txt,
-                        fontSize: 14,
-                        height: 1.12,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Icon(Icons.arrow_forward_rounded, color: sub, size: 17),
-                ],
-              ),
-              const Spacer(),
-              if (isInbox)
-                InboxTaskCountBubble(
-                  key: const ValueKey('mobile-inbox-task-count'),
-                  count: taskCount,
-                  color: color,
-                  isDark: isDark,
-                  size: 24,
-                )
-              else ...[
-                Row(
-                  children: [
-                    _MobileSkillMetric(
-                      key: ValueKey('mobile-skill-level-${skill.id}'),
-                      icon: Icons.bolt_rounded,
-                      label: 'Ур. ${skill.level}',
-                      color: color,
-                    ),
-                    const SizedBox(width: 4),
-                    _MobileSkillMetric(
-                      key: ValueKey('mobile-skill-quests-${skill.id}'),
-                      icon: Icons.checklist_rounded,
-                      label: questLabel,
-                      color: sub,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 9),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        progress.isEmpty
-                            ? 'Этапы не добавлены'
-                            : 'Прогресс цели',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: sub,
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    if (!progress.isEmpty)
-                      Text(
-                        progress.percentLabel,
-                        key: ValueKey('mobile-skill-progress-${skill.id}'),
-                        style: TextStyle(
-                          color: color,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(3),
-                  child: LinearProgressIndicator(
-                    value: progress.isEmpty ? 0 : progress.value,
-                    minHeight: 5,
-                    backgroundColor: color.withAlpha(28),
-                    valueColor: AlwaysStoppedAnimation(
-                      progress.isEmpty ? sub.withAlpha(90) : color,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  String _countLabel(int count, String one, String few, String many) {
-    final mod100 = count % 100;
-    if (mod100 >= 11 && mod100 <= 14) return many;
-    return switch (count % 10) {
-      1 => one,
-      2 || 3 || 4 => few,
-      _ => many,
-    };
-  }
-}
-
-class _MobileSkillMetric extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-
-  const _MobileSkillMetric({
-    super.key,
-    required this.icon,
-    required this.label,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: color, size: 13),
-        const SizedBox(width: 3),
-        Text(
-          label,
-          style: TextStyle(
-            color: color,
-            fontSize: 11,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _CompactSkillChip extends StatefulWidget {
   final Skill skill;
   final bool selected;
@@ -397,66 +184,147 @@ class _CompactSkillChipState extends State<_CompactSkillChip> {
   @override
   Widget build(BuildContext context) {
     final skill = widget.skill;
-    final sub = subtext(widget.isDark);
     final color = skill.color;
 
-    return PressFeedback(
-      scale: 0.97,
-      onTap: widget.onTap,
-      child: AnimatedContainer(
-        duration: kMotionStandard,
-        curve: kMotionCurve,
-        constraints: const BoxConstraints(minWidth: 118, maxWidth: 190),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-        decoration: BoxDecoration(
-          color: widget.selected
-              ? color.withAlpha(widget.isDark ? 30 : 20)
-              : color.withAlpha(widget.isDark ? 12 : 8),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: widget.selected ? color.withAlpha(90) : color.withAlpha(34),
+    return Semantics(
+      button: true,
+      selected: widget.selected,
+      label:
+          '${skill.name}, уровень ${skill.level}, активных квестов ${widget.taskCount}. Удерживайте, чтобы изменить порядок.',
+      child: PressFeedback(
+        scale: 0.97,
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          key: ValueKey('mobile-skill-chip-${skill.id}'),
+          duration: kMotionStandard,
+          curve: kMotionCurve,
+          constraints: const BoxConstraints(minWidth: 132, maxWidth: 184),
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+          decoration: BoxDecoration(
+            color: widget.selected
+                ? color.withAlpha(widget.isDark ? 30 : 18)
+                : widget.isDark
+                ? Colors.white.withAlpha(5)
+                : Colors.black.withAlpha(3),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: widget.selected
+                  ? color.withAlpha(105)
+                  : color.withAlpha(22),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: color.withAlpha(widget.isDark ? 25 : 16),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(skill.icon, color: color, size: 16),
+              ),
+              const SizedBox(width: 7),
+              Flexible(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      skill.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: widget.selected
+                            ? color
+                            : textColor(widget.isDark),
+                        fontSize: 11.5,
+                        height: 1.05,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      'Ур. ${skill.level} · ${widget.taskCount} квестов',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: subtext(widget.isDark),
+                        fontSize: 9.5,
+                        height: 1,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(skill.icon, color: color, size: 15),
-            const SizedBox(width: 6),
-            Flexible(
-              child: Text(
-                skill.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+}
+
+class _MobileInboxShortcut extends StatelessWidget {
+  final bool selected;
+  final int count;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  const _MobileInboxShortcut({
+    required this.selected,
+    required this.count,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const color = Color(0xFF34C759);
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: 'Быстрые задачи, активных $count',
+      child: PressFeedback(
+        scale: 0.96,
+        onTap: onTap,
+        child: AnimatedContainer(
+          key: const ValueKey('mobile-inbox-shortcut'),
+          duration: kMotionStandard,
+          constraints: const BoxConstraints(minHeight: 36),
+          padding: const EdgeInsets.fromLTRB(9, 6, 7, 6),
+          decoration: BoxDecoration(
+            color: selected
+                ? color.withAlpha(isDark ? 27 : 18)
+                : isDark
+                ? Colors.white.withAlpha(5)
+                : Colors.black.withAlpha(3),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.inbox_rounded, color: color, size: 15),
+              const SizedBox(width: 5),
+              Text(
+                'Быстрые',
                 style: TextStyle(
-                  color: widget.selected ? color : textColor(widget.isDark),
-                  fontSize: 12,
+                  color: selected ? color : textColor(isDark),
+                  fontSize: 10.5,
                   fontWeight: FontWeight.w900,
                 ),
               ),
-            ),
-            const SizedBox(width: 6),
-            if (skill.id == kInboxSkillId)
+              const SizedBox(width: 5),
               InboxTaskCountBubble(
-                key: const ValueKey('mobile-compact-inbox-task-count'),
-                count: widget.taskCount,
+                key: const ValueKey('mobile-inbox-shortcut-count'),
+                count: count,
                 color: color,
-                isDark: widget.isDark,
+                isDark: isDark,
                 size: 20,
-              )
-            else
-              Text(
-                '${widget.taskCount}',
-                style: TextStyle(
-                  color: widget.selected ? color : sub,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                ),
               ),
-            if (widget.canReorder) ...[
-              const SizedBox(width: 2),
-              Icon(Icons.drag_indicator_rounded, color: sub, size: 13),
             ],
-          ],
+          ),
         ),
       ),
     );

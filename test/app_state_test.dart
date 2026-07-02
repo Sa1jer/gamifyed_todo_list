@@ -391,40 +391,52 @@ void main() {
       expect(restored.treeNodes, isEmpty);
     });
 
-    test(
-      'completing inbox task does not grant XP or affect skill progress',
-      () {
-        state.addInboxTask('Заплатить за интернет');
-        final task = state.inboxTasks.single;
-        final profileXp = state.profile.xp;
-        final totalXp = state.profile.totalXpEarned;
-        final skillXp = skill.xp;
-        final skillLevel = skill.level;
-        final progress = const GoalProgressEngine()
-            .snapshotForSkill(skill)
-            .value;
+    test('completing inbox task grants isolated profile and daily XP', () {
+      state.startTutorialModule(TutorialModuleIds.core);
+      final tutorialStep = state.activeTutorialStepId;
+      state.addInboxTask('Заплатить за интернет');
+      final task = state.inboxTasks.single;
+      final profileXp = state.profile.xp;
+      final totalXp = state.profile.totalXpEarned;
+      final skillXp = skill.xp;
+      final skillLevel = skill.level;
+      final achievementCount = state.achievements
+          .where((achievement) => achievement.isUnlocked)
+          .length;
+      final chestCount = state.rewardChests.length;
+      final buffCount = state.buffs.length;
+      final progress = const GoalProgressEngine().snapshotForSkill(skill).value;
 
-        final message = state.completeTask(task.id);
+      final message = state.completeTask(task.id);
 
-        expect(message, 'Задача закрыта');
-        expect(task.isDone, isTrue);
-        expect(task.earnedXP, 0);
-        expect(state.profile.xp, profileXp);
-        expect(state.profile.totalXpEarned, totalXp);
-        expect(skill.xp, skillXp);
-        expect(skill.level, skillLevel);
-        expect(
-          const GoalProgressEngine().snapshotForSkill(skill).value,
-          progress,
-        );
-        expect(state.todayStats, isNull);
-        expect(state.history, isEmpty);
-        expect(state.consumeGoalMilestoneNotifications(), isEmpty);
-        expect(state.canMasterSkillTreeNode(skill.id, 'stage-1'), isFalse);
-      },
-    );
+      expect(message, contains('+${AppState.inboxTaskXp} XP'));
+      expect(task.isDone, isTrue);
+      expect(task.earnedXP, AppState.inboxTaskXp);
+      expect(state.profile.xp, profileXp + AppState.inboxTaskXp);
+      expect(state.profile.totalXpEarned, totalXp + AppState.inboxTaskXp);
+      expect(state.todayStats?.xpEarned, AppState.inboxTaskXp);
+      expect(state.todayStats?.tasksCompleted, 1);
+      expect(skill.xp, skillXp);
+      expect(skill.level, skillLevel);
+      expect(
+        const GoalProgressEngine().snapshotForSkill(skill).value,
+        progress,
+      );
+      expect(state.history, isEmpty);
+      expect(
+        state.achievements
+            .where((achievement) => achievement.isUnlocked)
+            .length,
+        achievementCount,
+      );
+      expect(state.rewardChests.length, chestCount);
+      expect(state.buffs.length, buffCount);
+      expect(state.consumeGoalMilestoneNotifications(), isEmpty);
+      expect(state.canMasterSkillTreeNode(skill.id, 'stage-1'), isFalse);
+      expect(state.activeTutorialStepId, tutorialStep);
+    });
 
-    test('inbox task undo does not roll back unrelated skill state', () {
+    test('inbox task undo rolls back isolated profile and daily XP', () {
       state.addInboxTask('Разобрать почту');
       final task = state.inboxTasks.single;
       state.completeTask(task.id);
@@ -434,8 +446,30 @@ void main() {
       expect(task.isDone, isFalse);
       expect(task.earnedXP, 0);
       expect(state.profile.xp, 0);
+      expect(state.profile.totalXpEarned, 0);
+      expect(state.todayStats?.xpEarned, 0);
+      expect(state.todayStats?.tasksCompleted, 0);
       expect(skill.xp, 0);
       expect(state.history, isEmpty);
+    });
+
+    test('inbox task XP crosses and reverses a profile level boundary', () {
+      state.profile.xp = state.profile.xpNeeded - 5;
+      state.profile.totalXpEarned = state.profile.xp;
+      state.addInboxTask('Закрыть маленькое дело');
+      final task = state.inboxTasks.single;
+
+      state.completeTask(task.id);
+
+      expect(state.profile.level, 2);
+      expect(state.profile.xp, 5);
+      expect(state.profile.totalXpEarned, 1005);
+
+      state.uncompleteTask(task.id);
+
+      expect(state.profile.level, 1);
+      expect(state.profile.xp, 995);
+      expect(state.profile.totalXpEarned, 995);
     });
 
     test('normal skill quest still behaves as before', () {

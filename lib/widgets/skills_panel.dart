@@ -612,7 +612,7 @@ class _SkillCardState extends State<SkillCard> {
                           builder: (context, constraints) {
                             if (isInboxSkill) {
                               return Text(
-                                'Быстрые задачи без XP и RoadMap',
+                                'Быстрые задачи · +${AppState.inboxTaskXp} XP · без RoadMap',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(

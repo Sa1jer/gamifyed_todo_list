@@ -45,14 +45,19 @@ Do not mix these product decisions into Release / Regression Hardening. Revisit 
 
 - [x] Surface a compact next-action/minimum-step summary between mobile skills and the task list, with a labelled `48dp` primary action and expandable full dashboard.
 - [x] Add dirty-draft `PopScope` protection to mobile AddSkill/AddTask routes; untouched forms still close directly and keyboard dismissal remains separate from route Back.
-- [ ] Add automated accessibility gates for semantics, minimum tap targets, focus order, and `200%` text scaling at `360/393/430dp`.
+- [x] Replace mobile TopBar/ProfileBar stacking with one SafeArea identity header and captured-state secondary-actions sheet while preserving desktop chrome.
+- [x] Split mobile `Сейчас` into Overview and Skill Focus with reorderable full-width goal-progress cards, a stable-ID switcher, explicit `Обзор`, and one focus surface.
+- [x] Move Inbox out of the mobile skill selector into a separate animated accordion while preserving its system ID and desktop presentation.
+- [x] Add mobile `Путь навыка` as the default scroll route with runtime branch pills, safe details/templates sheets, and the existing canvas as `Свободная карта`.
+- [x] Redesign mobile AddSkill around a live emblem, meaningful icon semantics/runtime categories, squircle colors, dirty-draft safety, and one bottom CTA.
+- [ ] Extend automated accessibility gates beyond the journal: minimum tap targets, focus order, screen-reader traversal, and `200%` text scaling across dialogs/statistics/rewards at `360/393/430dp`.
 - [ ] Add a device-local last-active skill/resumption context with an obvious return to the skill chooser; do not mix it into cloud-conflict domain state.
 - [ ] Add a discoverability hint for mobile task swipe actions and retire it after first successful use.
 - [ ] Shorten the mandatory first-run tunnel to first skill, first quest, and first useful completion; move RoadMap, statistics, trophies, and profile into optional tutorial modules.
 - [x] Replace the local-save failure cloud icon with storage-neutral, device-specific copy while preserving dirty state and retry.
 - [ ] Add delayed explanatory copy for unusually long startup loading without flashing it during normal fast startup.
 - [ ] Add a TextTheme-based mobile typography scale and responsive constants for `360`, `393`, `430`, and `760` widths.
-- [ ] Add widget coverage for overflow, truncation, navigation, and dark/light rendering at mobile widths.
+- [x] Add widget coverage for overflow, truncation, navigation, and dark/light rendering at `360/393/430/700dp` with `1.3x` text scaling.
 - [ ] Polish mobile skill squircles with richer density options and optional circular progress after usage feedback.
 - [ ] Add explicit accessibility labels for remaining mobile skill-panel controls.
 - [ ] Add an app-level reduced-motion setting; the mobile panel currently respects the platform disable-animations flag.
@@ -61,6 +66,10 @@ Do not mix these product decisions into Release / Regression Hardening. Revisit 
 - [ ] Move mobile edit-skill and edit-task flows to full-screen routes after creation routes have usage feedback.
 - [ ] Consolidate remaining non-form breakpoint checks around shared responsive constants.
 - [ ] Polish mobile keyboard focus traversal and accessibility labels for icon/color form controls.
+- [ ] Run `Light Journal Palette Polish`: tune the warm light fallback, skill-accent contrast, selected states, and launch continuity without changing the desktop/global theme.
+- [ ] Promote proven mobile journal values into a full design-token and `TextTheme` pass only after Polish audit feedback.
+- [ ] Design `Streak model and stats`: define current streak semantics before adding persistence or richer momentum cards.
+- [ ] Polish mobile RoadMap path labels/icons and branch disclosure after physical-device usage; do not rewrite `RoadmapEngine`.
 - [ ] Extract shared field validation only if more creation forms adopt the same rules.
 - [ ] Define a presentation-only Quest Log MVP over existing task/skill/stage IDs; do not add models, storage schema, XP rules, or RoadMap semantics in that batch.
 - [ ] Run a five-scenario mobile usability check: first task, returning user, missing minimum step, dirty-form Back, and save-failure retry.
@@ -104,6 +113,8 @@ Do not mix these product decisions into Release / Regression Hardening. Revisit 
 
 ## P5 — Task Inbox / “Задачник”
 
+- [x] Grant quick tasks a fixed isolated `+10 XP` on mobile and desktop with symmetric undo and daily XP/completed-action accounting.
+- [x] Present quick tasks as a mobile Overview-only accordion with reward pills, without selecting Inbox as a normal skill.
 - [ ] Add recurring inbox tasks only after the plain To-do flow has usage feedback.
 - [ ] Add inbox tags/categories without mixing them into skill tags.
 - [ ] Add “convert inbox task to skill quest” with explicit skill selection.
@@ -172,7 +183,7 @@ Release blockers and deferred maintenance:
 
 Manual mobile checklist (`~360dp`, real device preferred):
 
-- [ ] Home opens; expanded/compact skill panel and selected-skill view remain readable.
+- [ ] Home opens; identity header, compact skill selector, quick-task shortcut and selected-skill focus remain readable.
 - [ ] AddSkill/AddTask full-screen routes survive keyboard open/close and save/cancel.
 - [ ] Quick task attaches to `Задачник`; skill-local task attaches to the selected stable skill ID and no random stage.
 - [ ] RoadMap opens vertical-only; fullscreen/orientation toggle stay hidden; centering and stage reorder controls remain usable.
@@ -189,6 +200,8 @@ Manual desktop/QHD checklist:
 
 ## Recently Completed
 
+- Mobile Visual System Redesign Epic: introduced dark-first local journal tokens, Overview/Focus states, honest momentum, goal-progress skill cards, an Inbox accordion with isolated `+10 XP`, mobile path/free-map RoadMap modes, live-emblem AddSkill, lightweight reduced-motion transitions, and `360dp/200%` regression coverage without schema, model, goal-formula, RoadMap-engine, package, or desktop composition changes.
+- Mobile Visual Hierarchy Redesign MVP: unified the mobile identity header and secondary-actions sheet, separated quick tasks from reorderable skill chips, preserved the global next-action source, consolidated skill focus, calmed RoadMap visuals/templates, improved AddSkill hierarchy/targets, and added responsive dark/light widget coverage without model or storage changes.
 - Mobile UX Quick Wins: mobile Act now shows a compact next action before the task list, minimum steps have a direct `48dp` CTA, empty skills guide quest creation, dirty AddSkill/AddTask routes confirm discard on close/Back, and local save failures use calm device-specific recovery copy with focused widget coverage.
 - Android toolchain revalidation: Flutter now detects SDK/build-tools `36.1`, JDK 21 and accepted licenses; debug APK assembled, installed and launched on an Android 16 emulator without AndroidRuntime/Flutter errors, while release assembly stopped at the intentional private-signing guard.
 - Storage Reliability Epic: added observable load/save/dirty/failure status, blocking startup recovery with retry, responsive save-failure retry, immediate error observation for background saves, and failed-load write gating; added a versioned full-app snapshot with payload validation, commit marker last, previous fallback, and additive legacy migration.

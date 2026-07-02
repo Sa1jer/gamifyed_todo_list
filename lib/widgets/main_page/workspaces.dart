@@ -25,28 +25,13 @@ class _ActWorkspace extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth < kMobileFormBreakpoint) {
-          return Column(
-            children: [
-              const _CompactSkillSelector(),
-              const SizedBox(height: 8),
-              TodayDashboard(
-                initiallyExpanded: false,
-                compactSummary: true,
-                onComplete: onComplete,
-                onMinimumAction: onMinimumAction,
-                onCreateFirstSkill: onCreateFirstSkill,
-                createFirstSkillButtonKey: createFirstSkillButtonKey,
-                nextQuestActionKey: nextQuestActionKey,
-              ),
-              const SizedBox(height: 8),
-              Expanded(
-                child: TasksPanel(
-                  onComplete: onComplete,
-                  onMinimumAction: onMinimumAction,
-                  createFirstQuestButtonKey: createFirstQuestButtonKey,
-                ),
-              ),
-            ],
+          return _MobileActJournal(
+            onComplete: onComplete,
+            onMinimumAction: onMinimumAction,
+            onCreateSkill: onCreateFirstSkill,
+            createFirstSkillButtonKey: createFirstSkillButtonKey,
+            createFirstQuestButtonKey: createFirstQuestButtonKey,
+            nextQuestActionKey: nextQuestActionKey,
           );
         }
 

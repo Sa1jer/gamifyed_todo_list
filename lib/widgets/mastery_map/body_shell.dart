@@ -16,69 +16,85 @@ class _MasteryMapHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const color = Color(0xFF4A9EFF);
-    final showFullscreen = MediaQuery.sizeOf(context).width >= 760;
-    return AppPanel(
-      isDark: isDark,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-        child: Row(
-          children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: color.withAlpha(24),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.account_tree, color: color, size: 23),
+    final mobile = MediaQuery.sizeOf(context).width < 760;
+    final showFullscreen = !mobile;
+    final content = Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: mobile ? 12 : 18,
+        vertical: mobile ? 9 : 14,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: mobile ? 34 : 42,
+            height: mobile ? 34 : 42,
+            decoration: BoxDecoration(
+              color: color.withAlpha(24),
+              borderRadius: BorderRadius.circular(12),
             ),
+            child: Icon(
+              Icons.account_tree,
+              color: color,
+              size: mobile ? 19 : 23,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Дорожная карта',
+                  style: TextStyle(
+                    color: textColor(isDark),
+                    fontSize: mobile ? 16 : 18,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'Карта показывает путь навыка: этапы, связи и следующий шаг мастерства. Квесты здесь — практика для этапов.',
+                  maxLines: mobile ? 1 : 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: subtext(isDark),
+                    fontSize: mobile ? 11 : 12.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (showFullscreen) ...[
             const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Дорожная карта',
-                    style: TextStyle(
-                      color: textColor(isDark),
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    'Карта показывает путь навыка: этапы, связи и следующий шаг мастерства. Квесты здесь — практика для этапов.',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: subtext(isDark),
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
+            _RoadmapLayoutToggle(
+              isDark: isDark,
+              value: layoutAxis,
+              onChanged: onLayoutAxisChanged,
             ),
-            if (showFullscreen) ...[
-              const SizedBox(width: 12),
-              _RoadmapLayoutToggle(
-                isDark: isDark,
-                value: layoutAxis,
-                onChanged: onLayoutAxisChanged,
-              ),
-              const SizedBox(width: 8),
-              SmallBtn(
-                label: 'Развернуть',
-                icon: Icons.open_in_full,
-                color: color,
-                onTap: onFullscreen,
-              ),
-            ],
+            const SizedBox(width: 8),
+            SmallBtn(
+              label: 'Развернуть',
+              icon: Icons.open_in_full,
+              color: color,
+              onTap: onFullscreen,
+            ),
           ],
-        ),
+        ],
       ),
     );
+    if (mobile) {
+      return Container(
+        key: const ValueKey('roadmap-mobile-hero'),
+        decoration: BoxDecoration(
+          color: surface(isDark),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: content,
+      );
+    }
+    return AppPanel(isDark: isDark, child: content);
   }
 }
 

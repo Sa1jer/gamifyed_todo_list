@@ -26,6 +26,7 @@ Rect _roadmapVisibleInsertRect(WidgetTester tester, Finder finder) {
 class InMemoryStorageService extends StorageService {
   List<Skill> skills = [];
   List<Task> tasks = [];
+  List<RewardChest> rewardChests = [];
   bool? _theme;
   bool? _tooltipsEnabled;
   bool? _onboardingSeen;
@@ -126,10 +127,12 @@ class InMemoryStorageService extends StorageService {
   Future<void> saveBosses(List<Boss> bosses) async {}
 
   @override
-  Future<List<RewardChest>> loadRewardChests() async => [];
+  Future<List<RewardChest>> loadRewardChests() async => List.of(rewardChests);
 
   @override
-  Future<void> saveRewardChests(List<RewardChest> rewardChests) async {}
+  Future<void> saveRewardChests(List<RewardChest> rewardChests) async {
+    this.rewardChests = List.of(rewardChests);
+  }
 
   @override
   Future<List<Buff>> loadBuffs() async => [];
@@ -249,6 +252,118 @@ void main() {
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
+  });
+
+  testWidgets('mobile header keeps secondary actions in an overflow sheet', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = InMemoryStorageService()
+      .._onboardingSeen = true
+      ..rewardChests = [
+        RewardChest(
+          id: 'mobile-header-chest',
+          title: 'Новый трофей',
+          description: 'Проверка badge',
+          rarity: RewardRarity.common,
+          sourceKey: 'test',
+          unlockedAt: DateTime(2026),
+        ),
+      ];
+    await storage.init();
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    final menuButton = find.byKey(const ValueKey('mobile-header-menu'));
+    expect(menuButton, findsOneWidget);
+    expect(find.byIcon(Icons.volume_up), findsNothing);
+    expect(find.byIcon(Icons.help_outline), findsNothing);
+    final badge = tester.widget<Badge>(
+      find.descendant(of: menuButton, matching: find.byType(Badge)),
+    );
+    expect(badge.isLabelVisible, isTrue);
+
+    await tester.tap(menuButton);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('mobile-header-menu-sheet')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('mobile-menu-rewards')), findsOneWidget);
+    expect(find.byKey(const ValueKey('mobile-menu-stats')), findsOneWidget);
+    expect(find.byKey(const ValueKey('mobile-menu-sound')), findsOneWidget);
+    expect(find.byKey(const ValueKey('mobile-menu-theme')), findsOneWidget);
+    expect(find.byKey(const ValueKey('mobile-menu-help')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+
+  testWidgets('mobile journal stays readable across target widths', (
+    WidgetTester tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+    for (final width in [360.0, 393.0, 430.0, 700.0]) {
+      tester.view.physicalSize = Size(width, 900);
+      tester.platformDispatcher.textScaleFactorTestValue = width == 360
+          ? 2
+          : 1.3;
+      final skillId = 'responsive-${width.toInt()}';
+      final storage = InMemoryStorageService()
+        .._onboardingSeen = true
+        .._theme = width != 393
+        ..skills = [
+          Skill(
+            id: skillId,
+            name: 'Длинное название навыка для $width dp',
+            goal:
+                'Уверенно пройти длинный путь без потери контекста на мобильном экране',
+            color: const Color(0xFF4A9EFF),
+            icon: Icons.auto_stories_rounded,
+          ),
+        ]
+        ..tasks = [
+          Task(
+            id: 'responsive-task-${width.toInt()}',
+            title: 'Сделать один понятный следующий шаг',
+            skillId: skillId,
+            xpReward: 20,
+            type: TaskType.shortTerm,
+          ),
+        ];
+      await storage.init();
+      await tester.pumpWidget(RPGApp(storage: storage));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.byKey(const ValueKey('mobile-header-menu')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('mobile-skill-panel-compact')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull, reason: 'overview width: $width');
+      await tester.tap(find.byKey(ValueKey('mobile-skill-chip-$skillId')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(ValueKey('mobile-selected-skill-focus-$skillId')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull, reason: 'width: $width');
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    }
   });
 
   testWidgets('First-run tutorial dismisses once and persists', (
@@ -1209,7 +1324,7 @@ void main() {
     await tester.pump();
   });
 
-  testWidgets('mobile skill rail supports long-press reorder', (
+  testWidgets('mobile skill overview supports reorder and Inbox accordion', (
     WidgetTester tester,
   ) async {
     tester.view.physicalSize = const Size(360, 800);
@@ -1259,33 +1374,23 @@ void main() {
       findsNothing,
     );
 
-    final listFinder = find.byKey(const ValueKey('compact-skill-list'));
-    await tester.drag(listFinder, const Offset(-320, 0));
-    await tester.pumpAndSettle();
-
+    final listFinder = find.byKey(const ValueKey('mobile-skill-overview-list'));
+    expect(find.byKey(const ValueKey('mobile-inbox-shortcut')), findsNothing);
     expect(find.text('Задачник'), findsOneWidget);
     expect(
-      find.byKey(const ValueKey('mobile-inbox-task-count')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(ValueKey('compact-skill-reorder-$kInboxSkillId')),
+      find.byKey(const ValueKey('mobile-inbox-accordion-content')),
       findsNothing,
     );
-    await tester.tap(find.text('Задачник'));
-    await tester.pumpAndSettle();
-
-    expect(find.textContaining('Быстрые To-do без XP'), findsOneWidget);
-    await tester.drag(listFinder, const Offset(-320, 0));
-    await tester.pumpAndSettle();
-    expect(
-      find.byKey(const ValueKey('mobile-compact-inbox-task-count')),
-      findsOneWidget,
+    await tester.tap(
+      find.byKey(const ValueKey('mobile-inbox-accordion-toggle')),
     );
-
-    await tester.tap(find.text('Задачник').first);
     await tester.pumpAndSettle();
-    await tester.drag(listFinder, const Offset(320, 0));
+
+    expect(find.byKey(const ValueKey('mobile-inbox-focus')), findsOneWidget);
+    expect(find.textContaining('+10 XP'), findsOneWidget);
+    await tester.tap(
+      find.byKey(const ValueKey('mobile-inbox-accordion-toggle')),
+    );
     await tester.pumpAndSettle();
 
     final list = tester.widget<ReorderableListView>(listFinder);
@@ -1300,7 +1405,10 @@ void main() {
       ['mobile-short', 'mobile-long'],
     );
     expect(
-      find.text('Очень длинное название мобильного навыка'),
+      find.descendant(
+        of: find.byKey(const ValueKey('mobile-skill-chip-mobile-long')),
+        matching: find.text('Очень длинное название мобильного навыка'),
+      ),
       findsOneWidget,
     );
     expect(tester.takeException(), isNull);
@@ -1310,7 +1418,7 @@ void main() {
   });
 
   testWidgets(
-    'mobile skill experience expands, reports progress, and collapses',
+    'mobile skill experience separates Overview and one selected focus',
     (WidgetTester tester) async {
       tester.view.physicalSize = const Size(360, 800);
       tester.view.devicePixelRatio = 1;
@@ -1369,48 +1477,93 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      final expandedPanel = find.byKey(
-        const ValueKey('mobile-skill-panel-expanded'),
+      final compactPanel = find.byKey(
+        const ValueKey('mobile-skill-panel-compact'),
       );
-      final skillCard = find.byKey(
-        const ValueKey('mobile-expanded-skill-mobile-experience'),
+      final skillChip = find.byKey(
+        const ValueKey('mobile-skill-chip-mobile-experience'),
       );
-      expect(expandedPanel, findsOneWidget);
-      expect(skillCard, findsOneWidget);
-      expect(find.text(skillName), findsOneWidget);
-      expect(find.text('Ур. 4'), findsOneWidget);
-      expect(find.text('2 квеста'), findsOneWidget);
-      expect(find.text('50%'), findsOneWidget);
+      expect(compactPanel, findsOneWidget);
+      expect(skillChip, findsOneWidget);
       expect(
-        tester.getTopLeft(expandedPanel).dy,
-        lessThan(
-          tester
-              .getTopLeft(
-                find.byKey(const ValueKey('mobile-next-action-summary')),
-              )
-              .dy,
-        ),
+        find.descendant(of: skillChip, matching: find.textContaining('Ур. 4')),
+        findsOneWidget,
       );
+      expect(
+        find.byKey(
+          const ValueKey('mobile-selected-skill-focus-mobile-experience'),
+        ),
+        findsNothing,
+      );
+      expect(find.byKey(const ValueKey('mobile-momentum-row')), findsOneWidget);
+      expect(find.byKey(const ValueKey('mobile-momentum-xp')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('mobile-momentum-completed')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('mobile-momentum-streak')),
+        findsNothing,
+      );
+      expect(find.text('0 дней'), findsNothing);
+      expect(find.text('Задачник'), findsOneWidget);
+      final goalSemantics = tester
+          .widgetList<Semantics>(
+            find.descendant(of: skillChip, matching: find.byType(Semantics)),
+          )
+          .any(
+            (semantics) =>
+                semantics.properties.value == 'Прогресс цели: 50%' ||
+                semantics.properties.label == 'Прогресс цели: 50%',
+          );
+      expect(goalSemantics, isTrue);
       expect(tester.takeException(), isNull);
 
-      await tester.tap(skillCard);
+      await tester.tap(skillChip);
       await tester.pumpAndSettle();
 
       expect(
         find.byKey(const ValueKey('mobile-skill-panel-compact')),
-        findsOneWidget,
+        findsNothing,
       );
-      expect(find.text('Фокус: $skillName'), findsOneWidget);
       expect(
-        find.byKey(const ValueKey('mobile-skill-list-compact')),
+        find.byKey(const ValueKey('mobile-focus-switcher')),
         findsOneWidget,
       );
+      expect(
+        find.byKey(const ValueKey('mobile-overview-action')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey('mobile-momentum-row')), findsNothing);
+      expect(find.text('Задачник'), findsNothing);
+      expect(
+        find.byKey(
+          const ValueKey('mobile-selected-skill-focus-mobile-experience'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Дойти до уверенного результата'), findsOneWidget);
+      expect(find.text('50%'), findsOneWidget);
+      expect(find.byKey(const ValueKey('tasks-list')), findsOneWidget);
+      expect(find.textContaining('Фокус:'), findsNothing);
 
       tester.view.physicalSize = const Size(700, 800);
       await tester.pumpAndSettle();
 
-      expect(find.text('Фокус: $skillName'), findsOneWidget);
+      expect(
+        find.byKey(
+          const ValueKey('mobile-selected-skill-focus-mobile-experience'),
+        ),
+        findsOneWidget,
+      );
       expect(tester.takeException(), isNull);
+
+      await tester.tap(find.byKey(const ValueKey('mobile-overview-action')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('mobile-skill-panel-compact')),
+        findsOneWidget,
+      );
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
@@ -1442,9 +1595,16 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    expect(find.text('Этапы не добавлены'), findsOneWidget);
+    expect(find.text('Нет пути'), findsOneWidget);
+
+    await tester.tap(
+      find.byKey(const ValueKey('mobile-skill-chip-mobile-empty-roadmap')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Добавьте этапы'), findsOneWidget);
     expect(
-      find.byKey(const ValueKey('mobile-skill-progress-mobile-empty-roadmap')),
+      find.byKey(const ValueKey('skill-goal-bar-mobile-empty-roadmap')),
       findsNothing,
     );
     expect(tester.takeException(), isNull);
@@ -1708,6 +1868,10 @@ void main() {
     await tester.tap(find.text('Шаблоны'));
     await tester.pumpAndSettle();
     expect(find.text('Шаблон RoadMap'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('roadmap-template-bottom-sheet')),
+      findsNothing,
+    );
     expect(find.text('Назад к навыкам'), findsOneWidget);
     expect(find.text('Квесты без этапа'), findsOneWidget);
     expect(find.text('Свободный квест навыка'), findsOneWidget);
@@ -2323,49 +2487,34 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.byKey(const ValueKey('roadmap-canvas-vertical')),
+      find.byKey(const ValueKey('mobile-roadmap-skill-chooser')),
       findsOneWidget,
     );
-    await tester.tap(find.byKey(const ValueKey('map-skill-orb-empty-roadmap')));
+    expect(find.byType(InteractiveViewer), findsNothing);
+    await tester.tap(
+      find.byKey(const ValueKey('mobile-roadmap-choose-empty-roadmap')),
+    );
     await tester.pumpAndSettle();
     expect(
-      find.byKey(const ValueKey('map-node-empty-roadmap-single-stage')),
-      findsNothing,
+      find.byKey(const ValueKey('mobile-roadmap-path-empty-roadmap')),
+      findsOneWidget,
     );
+    expect(find.text('У пути пока нет этапов'), findsOneWidget);
+    expect(find.text('Добавить этап'), findsOneWidget);
     expect(tester.takeException(), isNull);
 
-    await tester.tap(find.text('Назад к навыкам'));
-    await tester.pumpAndSettle();
     await tester.tap(
-      find.byKey(const ValueKey('map-skill-orb-single-roadmap')),
+      find.byKey(const ValueKey('mobile-roadmap-skill-single-roadmap')),
     );
     await tester.pumpAndSettle();
     expect(
-      find.byKey(const ValueKey('map-node-single-roadmap-single-stage')),
+      find.byKey(const ValueKey('mobile-path-stage-single-stage')),
       findsOneWidget,
     );
     expect(
-      find.byKey(const ValueKey('roadmap-canvas-vertical')),
+      find.byKey(const ValueKey('mobile-roadmap-path-single-roadmap')),
       findsOneWidget,
     );
-    final mobileInsertion = find.byKey(
-      const ValueKey('roadmap-insert-single-roadmap-single-stage-skill'),
-    );
-    expect(mobileInsertion, findsOneWidget);
-    final mobileInsertionCenter = tester.getCenter(mobileInsertion);
-    final mobileSkillLabel = tester.getRect(
-      find.byKey(const ValueKey('map-skill-label-text-single-roadmap')),
-    );
-    final mobileStageSurface = tester.getRect(
-      find.byKey(
-        const ValueKey('map-node-surface-single-roadmap-single-stage'),
-      ),
-    );
-    expect(
-      mobileInsertionCenter.dy,
-      closeTo((mobileSkillLabel.bottom + mobileStageSurface.top) / 2, 1),
-    );
-    expect(mobileInsertion.hitTestable(), findsOneWidget);
     expect(tester.takeException(), isNull);
 
     await tester.pumpWidget(const SizedBox.shrink());
@@ -2428,15 +2577,18 @@ void main() {
       find.byKey(const ValueKey('mobile-next-action-summary')),
       findsOneWidget,
     );
-    expect(find.text('Быстрая задача'), findsNothing);
-    expect(find.textContaining('Быстрые To-do'), findsNothing);
+    expect(find.text('Задачник'), findsOneWidget);
     expect(
-      find.byKey(const ValueKey('mobile-skill-panel-expanded')),
+      find.byKey(const ValueKey('mobile-inbox-accordion-content')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('mobile-skill-panel-compact')),
       findsOneWidget,
     );
 
     await tester.tap(
-      find.byKey(const ValueKey('mobile-expanded-skill-mobile-skill')),
+      find.byKey(const ValueKey('mobile-skill-chip-mobile-skill')),
     );
     await tester.pumpAndSettle();
 
@@ -2448,35 +2600,38 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Развернуть'), findsNothing);
+    expect(find.byType(InteractiveViewer), findsNothing);
+    expect(
+      find.byKey(const ValueKey('mobile-roadmap-path-mobile-skill')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('mobile-path-stage-mobile-stage')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('mobile-path-stage-mobile-stage-middle')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('mobile-path-stage-mobile-stage-terminal')),
+      findsOneWidget,
+    );
+    expect(find.text('Шаблон RoadMap'), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('mobile-roadmap-templates')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('mobile-roadmap-template-sheet')),
+      findsOneWidget,
+    );
+    expect(find.text('Шаблон RoadMap'), findsOneWidget);
+    await tester.tap(find.text('Закрыть'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Свободная карта'));
+    await tester.pumpAndSettle();
     final viewerFinder = find.byType(InteractiveViewer).first;
-    final viewer = tester.widget<InteractiveViewer>(viewerFinder);
-    final viewport = tester.getSize(viewerFinder);
-    const overviewSkillCenter = Offset(360, 310);
-    final initiallyCentered = MatrixUtils.transformPoint(
-      viewer.transformationController!.value,
-      overviewSkillCenter,
-    );
-    expect(initiallyCentered.dx, closeTo(viewport.width / 2, 2));
-    expect(initiallyCentered.dy, closeTo(viewport.height / 2, 2));
-
-    viewer.transformationController!.value = Matrix4.translationValues(
-      72,
-      48,
-      0,
-    );
-    await tester.tap(find.text('Отцентровать'));
-    await tester.pumpAndSettle();
-    final recentered = MatrixUtils.transformPoint(
-      viewer.transformationController!.value,
-      overviewSkillCenter,
-    );
-    expect(recentered.dx, closeTo(viewport.width / 2, 2));
-    expect(recentered.dy, closeTo(viewport.height / 2, 2));
-
-    final mobileSkillChip = find.text(skillName).last;
-    await tester.ensureVisible(mobileSkillChip);
-    await tester.tap(mobileSkillChip);
-    await tester.pumpAndSettle();
+    expect(viewerFinder, findsOneWidget);
 
     expect(
       find.byKey(const ValueKey('roadmap-canvas-vertical')),
@@ -2487,33 +2642,80 @@ void main() {
       findsNothing,
     );
     expect(find.byKey(const ValueKey('roadmap-layout-vertical')), findsNothing);
-    final mobileRoot = tester.getCenter(
-      find.byKey(const ValueKey('map-node-mobile-skill-mobile-stage')),
-    );
-    final mobileMiddle = tester.getCenter(
-      find.byKey(const ValueKey('map-node-mobile-skill-mobile-stage-middle')),
-    );
-    final mobileTerminal = tester.getCenter(
-      find.byKey(const ValueKey('map-node-mobile-skill-mobile-stage-terminal')),
-    );
-    final mobileSkill = tester.getCenter(
-      find.byKey(const ValueKey('map-skill-surface-mobile-skill')),
-    );
-    final mobileGoal = tester.getRect(
-      find.byKey(const ValueKey('roadmap-goal-anchor-mobile-skill')),
-    );
-    expect(mobileSkill.dy, lessThan(mobileTerminal.dy));
-    expect(mobileTerminal.dy, lessThan(mobileMiddle.dy));
-    expect(mobileMiddle.dy, lessThan(mobileRoot.dy));
-    expect((mobileRoot.dx - mobileTerminal.dx).abs(), lessThan(2));
-    expect(mobileGoal.left, greaterThan(mobileSkill.dx));
-    expect(find.text('Шаблон RoadMap'), findsNothing);
-    expect(find.text('Шаблоны'), findsOneWidget);
     expect(tester.takeException(), isNull);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
   });
+
+  testWidgets(
+    'mobile RoadMap switches runtime branches without graph changes',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final storage = InMemoryStorageService()
+        .._onboardingSeen = true
+        ..skills = [
+          Skill(
+            id: 'branching-mobile',
+            name: 'Ветвящийся путь',
+            goal: 'Проверить две дороги',
+            color: const Color(0xFFFF3B70),
+            icon: Icons.call_split_rounded,
+            treeNodes: [
+              SkillTreeNode(id: 'shared-root', title: 'Общая основа'),
+              SkillTreeNode(
+                id: 'left-branch',
+                title: 'Левая ветка',
+                prerequisiteIds: ['shared-root'],
+              ),
+              SkillTreeNode(
+                id: 'right-branch',
+                title: 'Правая ветка',
+                prerequisiteIds: ['shared-root'],
+              ),
+            ],
+          ),
+        ];
+      await storage.init();
+      await tester.pumpWidget(RPGApp(storage: storage));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      await tester.tap(find.text('Карта').last);
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('mobile-roadmap-choose-branching-mobile')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Есть развилки'), findsOneWidget);
+      expect(find.text('Путь 1'), findsOneWidget);
+      expect(find.text('Путь 2'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('mobile-path-stage-left-branch')),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Путь 2'));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('mobile-path-stage-right-branch')),
+        findsOneWidget,
+      );
+      expect(
+        storage.skills
+            .where((skill) => skill.id == 'branching-mobile')
+            .single
+            .treeNodes,
+        hasLength(3),
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('mobile Act surfaces the next minimum action before tasks', (
     WidgetTester tester,
@@ -2555,23 +2757,21 @@ void main() {
       const ValueKey('mobile-next-action-trigger-mobile-focus-task'),
     );
     expect(summary, findsOneWidget);
-    expect(find.text('Минимальный шаг'), findsOneWidget);
+    expect(find.textContaining('Минимальный шаг'), findsOneWidget);
     expect(find.text('Открыть макет и проверить один блок'), findsOneWidget);
     expect(tester.getSize(trigger).height, greaterThanOrEqualTo(48));
-
-    await tester.tap(
-      find.byKey(const ValueKey('mobile-expanded-skill-mobile-focus-skill')),
-    );
-    await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('tasks-list')), findsOneWidget);
-    expect(
-      tester.getTopLeft(summary).dy,
-      lessThan(tester.getTopLeft(find.byKey(const ValueKey('tasks-list'))).dy),
-    );
 
     await tester.tap(trigger);
     await tester.pump(const Duration(seconds: 1));
     expect(storage.tasks.single.isMinimumActionDone, isTrue);
+
+    await tester.tap(
+      find.byKey(const ValueKey('mobile-skill-chip-mobile-focus-skill')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('tasks-list')), findsOneWidget);
+    expect(summary, findsNothing);
+    expect(find.byKey(const ValueKey('mobile-momentum-row')), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -2600,12 +2800,12 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
 
     await tester.tap(
-      find.byKey(const ValueKey('mobile-expanded-skill-empty-mobile-skill')),
+      find.byKey(const ValueKey('mobile-skill-chip-empty-mobile-skill')),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Добавь квест, чтобы начать движение'), findsOneWidget);
-    expect(find.textContaining('минимальный шаг'), findsOneWidget);
+    expect(find.text('Добавь первый квест'), findsOneWidget);
+    expect(find.textContaining('вернуться завтра'), findsOneWidget);
     await tester.tap(find.text('Создать квест').last);
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('mobile-add-task-page')), findsOneWidget);
@@ -2674,10 +2874,10 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
     await tester.tap(
-      find.byKey(const ValueKey('mobile-expanded-skill-draft-skill')),
+      find.byKey(const ValueKey('mobile-skill-chip-draft-skill')),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('add-task-button-draft-skill')));
+    await tester.tap(find.text('Создать квест').last);
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const ValueKey('add-task-title-field')),
@@ -2699,7 +2899,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('mobile AddSkill uses a seven-column icon grid', (
+  testWidgets('mobile AddSkill uses touch-friendly icon grid', (
     WidgetTester tester,
   ) async {
     tester.view.physicalSize = const Size(360, 800);
@@ -2710,7 +2910,11 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: AddSkillDialog(isDark: true, onSave: (_, _, _, _, _, _, _) {}),
+          body: AddSkillDialog(
+            isDark: true,
+            fullScreen: true,
+            onSave: (_, _, _, _, _, _, _) {},
+          ),
         ),
       ),
     );
@@ -2721,7 +2925,18 @@ void main() {
     );
     final delegate =
         grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
-    expect(delegate.crossAxisCount, 7);
+    expect(delegate.crossAxisCount, 6);
+    final firstIcon = find.byTooltip('Силовые тренировки').first;
+    expect(tester.getSize(firstIcon).shortestSide, greaterThanOrEqualTo(44));
+    expect(
+      find.byKey(const ValueKey('skill-icon-category-all')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('mobile-form-top-save-hidden')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('mobile-add-skill-save')), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -2744,9 +2959,19 @@ void main() {
 
     expect(find.byKey(const ValueKey('mobile-add-skill-page')), findsOneWidget);
     expect(find.byType(Dialog), findsNothing);
+    expect(
+      find.byKey(const ValueKey('mobile-add-skill-bottom-save')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('mobile-add-skill-save')), findsNothing);
+    expect(find.text('Твой новый навык'), findsOneWidget);
+    expect(find.text('Внешний вид'), findsOneWidget);
+    expect(find.text('Первый этап'), findsOneWidget);
     expect(tester.takeException(), isNull);
 
-    await tester.tap(find.byKey(const ValueKey('mobile-add-skill-save')));
+    await tester.tap(
+      find.byKey(const ValueKey('mobile-add-skill-bottom-save')),
+    );
     await tester.pump();
     expect(find.text('Введите название навыка'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -2762,12 +2987,16 @@ void main() {
       find.byKey(const ValueKey('add-skill-name-field')),
       '  Мобильная разработка  ',
     );
+    await tester.pumpAndSettle();
+    expect(find.text('Мобильная разработка'), findsWidgets);
     await tester.enterText(
       find.byKey(const ValueKey('add-skill-goal-field')),
       'Собрать приложение',
     );
     expect(tester.takeException(), isNull);
-    await tester.tap(find.byKey(const ValueKey('mobile-add-skill-save')));
+    await tester.tap(
+      find.byKey(const ValueKey('mobile-add-skill-bottom-save')),
+    );
     await tester.pumpAndSettle();
     await tester.pump(const Duration(seconds: 1));
 

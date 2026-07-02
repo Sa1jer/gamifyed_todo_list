@@ -769,6 +769,13 @@ class _MainPageState extends State<MainPage> {
           if (_mode == mode) return;
           setState(() {
             _mode = mode;
+            if (mode == WorkspaceMode.mastery) {
+              final selected = s.selectedSkill;
+              _roadmapFocusSkillId =
+                  selected == null || selected.id == kInboxSkillId
+                  ? null
+                  : selected.id;
+            }
             if (mode != WorkspaceMode.stats) {
               _statsTutorialActive = false;
             }
@@ -796,7 +803,9 @@ class _MainPageState extends State<MainPage> {
         );
 
         return Scaffold(
-          backgroundColor: isDark
+          backgroundColor: mobileShell
+              ? _MobileJournalTokens.background(isDark)
+              : isDark
               ? const Color(0xFF0F0F13)
               : const Color(0xFFF0F2F8),
           body: Stack(
@@ -804,23 +813,36 @@ class _MainPageState extends State<MainPage> {
             children: [
               Column(
                 children: [
-                  TopBar(
+                  if (!mobileShell)
+                    TopBar(
+                      isDark: isDark,
+                      onToggle: widget.onToggleTheme,
+                      state: s,
+                      mode: displayedMode,
+                      onModeChanged: changeMode,
+                      onStatsTap: openStatistics,
+                      rewardsKey: _rewardsButtonKey,
+                      roadmapKey: _roadmapNavKey,
+                      statsKey: _statsButtonKey,
+                      onRewardsTap: () => _openRewardsDialog(s),
+                      onAppIconTap: kDebugMode
+                          ? () => _handleDebugAdminTap(s)
+                          : null,
+                    ),
+                  ProfileBar(
+                    key: _profileBarKey,
                     isDark: isDark,
-                    onToggle: widget.onToggleTheme,
+                    mobile: mobileShell,
                     state: s,
-                    mode: displayedMode,
-                    onModeChanged: changeMode,
-                    onStatsTap: openStatistics,
-                    rewardsKey: _rewardsButtonKey,
-                    roadmapKey: _roadmapNavKey,
-                    statsKey: _statsButtonKey,
+                    onToggleTheme: widget.onToggleTheme,
                     onRewardsTap: () => _openRewardsDialog(s),
+                    onStatsTap: openStatistics,
                     onAppIconTap: kDebugMode
                         ? () => _handleDebugAdminTap(s)
                         : null,
-                    showModeSwitch: !mobileShell,
+                    rewardsKey: mobileShell ? _rewardsButtonKey : null,
+                    statsKey: mobileShell ? _statsButtonKey : null,
                   ),
-                  ProfileBar(key: _profileBarKey, isDark: isDark),
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),

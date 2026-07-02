@@ -41,8 +41,12 @@ class _MasteryMobileSelectionSummary extends StatelessWidget {
         : const GoalProgressEngine().snapshotForSkill(skill);
 
     if (skill == null) {
-      return AppPanel(
-        isDark: isDark,
+      return Container(
+        key: const ValueKey('roadmap-mobile-empty-summary'),
+        decoration: BoxDecoration(
+          color: surface(isDark),
+          borderRadius: BorderRadius.circular(18),
+        ),
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Column(
@@ -104,8 +108,16 @@ class _MasteryMobileSelectionSummary extends StatelessWidget {
             : 'Цель пути: ${skill.goal} · ${goalProgress!.percentLabel}',
     };
 
-    return AppPanel(
-      isDark: isDark,
+    return Container(
+      key: ValueKey('roadmap-mobile-path-summary-${skill.id}'),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [skill.color.withAlpha(isDark ? 17 : 10), surface(isDark)],
+        ),
+        borderRadius: BorderRadius.circular(18),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
@@ -162,11 +174,18 @@ class _MasteryMobileSelectionSummary extends StatelessWidget {
                 ),
                 if (onOpenDetails != null) ...[
                   const SizedBox(width: 8),
-                  SmallBtn(
-                    label: 'Детали',
-                    icon: Icons.expand_less,
-                    color: const Color(0xFF4A9EFF),
-                    onTap: onOpenDetails!,
+                  TextButton.icon(
+                    onPressed: onOpenDetails,
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFF4A9EFF),
+                      minimumSize: const Size(0, 48),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                    icon: const Icon(Icons.notes_rounded, size: 17),
+                    label: const Text(
+                      'Детали',
+                      style: TextStyle(fontWeight: FontWeight.w900),
+                    ),
                   ),
                 ],
               ],
@@ -188,6 +207,22 @@ class _MasteryMobileSelectionSummary extends StatelessWidget {
                   }
                 },
               ),
+              if (skill.treeNodes.isEmpty) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: FilledButton.tonalIcon(
+                    key: ValueKey('roadmap-mobile-add-first-stage-${skill.id}'),
+                    onPressed: () => onAddStage(skill),
+                    style: FilledButton.styleFrom(
+                      foregroundColor: skill.color,
+                      minimumSize: const Size(0, 44),
+                    ),
+                    icon: const Icon(Icons.add_rounded, size: 17),
+                    label: const Text('Добавить первый этап'),
+                  ),
+                ),
+              ],
             ],
           ],
         ),
