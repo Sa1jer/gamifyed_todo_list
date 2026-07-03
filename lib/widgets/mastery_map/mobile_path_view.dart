@@ -118,14 +118,19 @@ class _MobileRoadmapJournalState extends State<_MobileRoadmapJournal> {
               }
             },
             selectedColor: skill.color.withAlpha(widget.isDark ? 28 : 18),
-            backgroundColor: surface(widget.isDark),
+            backgroundColor: MobileJournalTokens.surface(widget.isDark),
             side: BorderSide(
               color: selected
                   ? skill.color.withAlpha(110)
-                  : borderColor(widget.isDark),
+                  : MobileJournalTokens.outline(widget.isDark),
             ),
             labelStyle: TextStyle(
-              color: selected ? skill.color : textColor(widget.isDark),
+              color: selected
+                  ? MobileJournalTokens.readableAccent(
+                      skill.color,
+                      widget.isDark,
+                    )
+                  : MobileJournalTokens.text(widget.isDark),
               fontWeight: FontWeight.w800,
             ),
           );
@@ -160,7 +165,7 @@ class _MobileRoadmapJournalState extends State<_MobileRoadmapJournal> {
               foregroundColor: WidgetStateProperty.resolveWith(
                 (states) => states.contains(WidgetState.selected)
                     ? skill.color
-                    : subtext(widget.isDark),
+                    : MobileJournalTokens.muted(widget.isDark),
               ),
             ),
           ),
@@ -208,7 +213,9 @@ class _MobileRoadmapJournalState extends State<_MobileRoadmapJournal> {
             ? const Color(0xFF0D0E15)
             : const Color(0xFFF6F0E5),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: borderColor(widget.isDark).withAlpha(150)),
+        border: Border.all(
+          color: MobileJournalTokens.outline(widget.isDark).withAlpha(150),
+        ),
       ),
       child: Stack(
         children: [
@@ -260,7 +267,7 @@ class _MobileRoadmapJournalState extends State<_MobileRoadmapJournal> {
               key: const ValueKey('mobile-roadmap-path-back-to-skills'),
               onPressed: () => widget.onSelectionChanged(null),
               style: OutlinedButton.styleFrom(
-                backgroundColor: surface(widget.isDark),
+                backgroundColor: MobileJournalTokens.surface(widget.isDark),
               ),
               icon: const Icon(Icons.keyboard_return_rounded, size: 18),
               label: const Text('Назад к навыкам'),
@@ -305,7 +312,7 @@ class _MobileRoadmapJournalState extends State<_MobileRoadmapJournal> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: textColor(widget.isDark),
+                        color: MobileJournalTokens.text(widget.isDark),
                         fontSize: 15,
                         fontWeight: FontWeight.w900,
                       ),
@@ -317,7 +324,7 @@ class _MobileRoadmapJournalState extends State<_MobileRoadmapJournal> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: subtext(widget.isDark),
+                        color: MobileJournalTokens.muted(widget.isDark),
                         fontSize: 11,
                       ),
                     ),
@@ -350,8 +357,11 @@ class _MobileRoadmapJournalState extends State<_MobileRoadmapJournal> {
                   progress.isEmpty ? 'Нет пути' : progress.percentLabel,
                   style: TextStyle(
                     color: progress.isEmpty
-                        ? subtext(widget.isDark)
-                        : skill.color,
+                        ? MobileJournalTokens.muted(widget.isDark)
+                        : MobileJournalTokens.readableAccent(
+                            skill.color,
+                            widget.isDark,
+                          ),
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -380,7 +390,7 @@ class _MobileRoadmapJournalState extends State<_MobileRoadmapJournal> {
               Text(
                 'Есть развилки',
                 style: TextStyle(
-                  color: subtext(widget.isDark),
+                  color: MobileJournalTokens.muted(widget.isDark),
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
                 ),
@@ -408,7 +418,7 @@ class _MobileRoadmapJournalState extends State<_MobileRoadmapJournal> {
                     side: BorderSide(
                       color: selected
                           ? skill.color.withAlpha(100)
-                          : borderColor(widget.isDark),
+                          : MobileJournalTokens.outline(widget.isDark),
                     ),
                   ),
                 );
@@ -433,7 +443,7 @@ class _MobileRoadmapJournalState extends State<_MobileRoadmapJournal> {
           heightFactor: 0.72,
           child: Container(
             decoration: BoxDecoration(
-              color: surface(isDark),
+              color: MobileJournalTokens.surface(isDark),
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(24),
               ),
@@ -567,7 +577,7 @@ class _MobileRoadmapHeader extends StatelessWidget {
                 Text(
                   'Дорожная карта',
                   style: TextStyle(
-                    color: textColor(isDark),
+                    color: MobileJournalTokens.text(isDark),
                     fontSize: 17,
                     fontWeight: FontWeight.w900,
                   ),
@@ -576,7 +586,10 @@ class _MobileRoadmapHeader extends StatelessWidget {
                   'Путь навыка: этапы, связи и цели',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: subtext(isDark), fontSize: 11.5),
+                  style: TextStyle(
+                    color: MobileJournalTokens.muted(isDark),
+                    fontSize: 11.5,
+                  ),
                 ),
               ],
             ),
@@ -612,7 +625,7 @@ class _MobileRoadmapSkillChooser extends StatelessWidget {
             child: Text(
               'Выбери навык, чтобы открыть его маршрут. Карта не выбирает первый путь за тебя.',
               style: TextStyle(
-                color: subtext(isDark),
+                color: MobileJournalTokens.muted(isDark),
                 fontSize: 12.5,
                 height: 1.35,
               ),
@@ -629,7 +642,7 @@ class _MobileRoadmapSkillChooser extends StatelessWidget {
             constraints: const BoxConstraints(minHeight: 72),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
             decoration: BoxDecoration(
-              color: surface(isDark),
+              color: MobileJournalTokens.surface(isDark),
               borderRadius: BorderRadius.circular(18),
               border: Border.all(color: skill.color.withAlpha(55)),
             ),
@@ -643,7 +656,7 @@ class _MobileRoadmapSkillChooser extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: textColor(isDark),
+                      color: MobileJournalTokens.text(isDark),
                       fontSize: 15,
                       fontWeight: FontWeight.w900,
                     ),
@@ -652,12 +665,20 @@ class _MobileRoadmapSkillChooser extends StatelessWidget {
                 Text(
                   progress.isEmpty ? 'Нет пути' : progress.percentLabel,
                   style: TextStyle(
-                    color: progress.isEmpty ? subtext(isDark) : skill.color,
+                    color: progress.isEmpty
+                        ? MobileJournalTokens.muted(isDark)
+                        : MobileJournalTokens.readableAccent(
+                            skill.color,
+                            isDark,
+                          ),
                     fontWeight: FontWeight.w900,
                   ),
                 ),
                 const SizedBox(width: 4),
-                Icon(Icons.chevron_right_rounded, color: subtext(isDark)),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: MobileJournalTokens.muted(isDark),
+                ),
               ],
             ),
           ),
@@ -816,8 +837,8 @@ class _StageLabelCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: info.role == RoadmapStageRole.locked
-                    ? subtext(isDark)
-                    : textColor(isDark),
+                    ? MobileJournalTokens.muted(isDark)
+                    : MobileJournalTokens.text(isDark),
                 fontSize: 12,
                 fontWeight: FontWeight.w900,
               ),
@@ -862,7 +883,7 @@ class _MobileEmptyPath extends StatelessWidget {
             Text(
               'У пути пока нет этапов',
               style: TextStyle(
-                color: textColor(isDark),
+                color: MobileJournalTokens.text(isDark),
                 fontSize: 16,
                 fontWeight: FontWeight.w900,
               ),
@@ -871,7 +892,10 @@ class _MobileEmptyPath extends StatelessWidget {
             Text(
               'Добавь первый этап вручную или выбери готовую структуру.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: subtext(isDark), fontSize: 12),
+              style: TextStyle(
+                color: MobileJournalTokens.muted(isDark),
+                fontSize: 12,
+              ),
             ),
             const SizedBox(height: 14),
             FilledButton.icon(
@@ -928,5 +952,8 @@ _StageVisual _stageVisual(RoadmapStageInfo info, Skill skill) {
   };
 }
 
-Duration _roadmapMotionDuration(BuildContext context) =>
-    MediaQuery.disableAnimationsOf(context) ? Duration.zero : kMotionSlow;
+Duration _roadmapMotionDuration(BuildContext context) => MobileMotion.duration(
+  context,
+  appReducedMotion: AppStateProvider.maybeOf(context)?.reducedMotion ?? false,
+  normal: kMotionSlow,
+);

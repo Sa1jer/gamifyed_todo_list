@@ -250,8 +250,14 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   @override
   Widget build(BuildContext context) {
     final isDark = widget.isDark;
-    final bg = surface(isDark);
-    final fBg = isDark ? const Color(0xFF13131A) : const Color(0xFFF5F5F7);
+    final bg = widget.fullScreen
+        ? MobileJournalTokens.background(isDark)
+        : surface(isDark);
+    final fBg = widget.fullScreen
+        ? MobileJournalTokens.questRow(isDark)
+        : isDark
+        ? const Color(0xFF13131A)
+        : const Color(0xFFF5F5F7);
     final txt = textColor(isDark);
     final sub = subtext(isDark);
     final bdr = borderColor(isDark);

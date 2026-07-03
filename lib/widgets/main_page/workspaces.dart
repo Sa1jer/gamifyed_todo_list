@@ -24,7 +24,7 @@ class _ActWorkspace extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxWidth < kMobileFormBreakpoint) {
+        if (MobileResponsiveMetrics.isMobileWidth(constraints.maxWidth)) {
           return _MobileActJournal(
             onComplete: onComplete,
             onMinimumAction: onMinimumAction,
@@ -170,7 +170,7 @@ class _SkillTaskWorkspace extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxWidth < 760) {
+        if (MobileResponsiveMetrics.isMobileWidth(constraints.maxWidth)) {
           return Column(
             children: [
               const _CompactSkillSelector(),

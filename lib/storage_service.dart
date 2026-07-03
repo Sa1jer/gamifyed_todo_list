@@ -46,6 +46,7 @@ class StorageService {
   static const String _isDarkKey = 'isDark';
   static const String _sfxEnabledKey = 'sfxEnabled';
   static const String _tooltipsEnabledKey = 'tooltipsEnabled';
+  static const String _reducedMotionKey = 'reducedMotion';
   static const String _onboardingSeenKey = 'onboardingSeen';
   static const String _tutorialProgressKey = 'tutorialProgress';
   static const String _bestStreakKey = 'bestStreak';
@@ -68,6 +69,7 @@ class StorageService {
   SnapshotBackend? _snapshotBackend;
 
   bool _initialized = false;
+  bool? _runtimeReducedMotion;
 
   StorageService({SnapshotBackend? snapshotBackend})
     : _snapshotBackend = snapshotBackend;
@@ -436,6 +438,20 @@ class StorageService {
   Future<void> saveTooltipsEnabled(bool enabled) async {
     _ensureInit();
     await _meta.put(_tooltipsEnabledKey, enabled ? 'true' : 'false');
+  }
+
+  /// Device-local UI preference kept outside domain snapshots intentionally.
+  Future<bool?> loadReducedMotion() async {
+    if (!_initialized) return _runtimeReducedMotion;
+    final raw = _meta.get(_reducedMotionKey);
+    if (raw == null) return null;
+    return raw == 'true';
+  }
+
+  Future<void> saveReducedMotion(bool enabled) async {
+    _runtimeReducedMotion = enabled;
+    if (!_initialized) return;
+    await _meta.put(_reducedMotionKey, enabled ? 'true' : 'false');
   }
 
   Future<bool?> loadOnboardingSeen() async {

@@ -13,6 +13,7 @@ import '../utils.dart';
 import 'dialogs.dart';
 import 'shared.dart';
 import 'skill_goal_progress.dart';
+import 'mobile_journal_tokens.dart';
 
 part 'mastery_map/selection_models.dart';
 part 'mastery_map/workspace_shell.dart';

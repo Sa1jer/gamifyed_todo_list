@@ -283,6 +283,16 @@ void main() {
 
     final menuButton = find.byKey(const ValueKey('mobile-header-menu'));
     expect(menuButton, findsOneWidget);
+    expect(
+      tester
+          .widgetList<Semantics>(find.byType(Semantics))
+          .any(
+            (semantics) =>
+                semantics.properties.label == 'Раздел Сейчас' &&
+                semantics.properties.selected == true,
+          ),
+      isTrue,
+    );
     expect(find.byIcon(Icons.volume_up), findsNothing);
     expect(find.byIcon(Icons.help_outline), findsNothing);
     final badge = tester.widget<Badge>(
@@ -300,9 +310,17 @@ void main() {
     expect(find.byKey(const ValueKey('mobile-menu-rewards')), findsOneWidget);
     expect(find.byKey(const ValueKey('mobile-menu-stats')), findsOneWidget);
     expect(find.byKey(const ValueKey('mobile-menu-sound')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('mobile-menu-reduced-motion')),
+      findsOneWidget,
+    );
     expect(find.byKey(const ValueKey('mobile-menu-theme')), findsOneWidget);
     expect(find.byKey(const ValueKey('mobile-menu-help')), findsOneWidget);
     expect(tester.takeException(), isNull);
+
+    await tester.tap(find.byKey(const ValueKey('mobile-menu-reduced-motion')));
+    await tester.pumpAndSettle();
+    expect(await storage.loadReducedMotion(), isTrue);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
@@ -346,7 +364,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
 
-    for (final width in [360.0, 393.0, 430.0, 700.0]) {
+    for (final width in [360.0, 393.0, 430.0, 700.0, 760.0]) {
       tester.view.physicalSize = Size(width, 900);
       tester.platformDispatcher.textScaleFactorTestValue = width == 360
           ? 2
@@ -390,7 +408,7 @@ void main() {
           findsNothing,
         );
         expect(
-          find.byKey(const ValueKey('mobile-focus-placeholder-hidden')),
+          find.byKey(const ValueKey('focus-placeholder-hidden')),
           findsOneWidget,
         );
       }
@@ -412,6 +430,152 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
     }
+  });
+
+  testWidgets('mobile empty overview replaces the focus placeholder', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = InMemoryStorageService().._onboardingSeen = true;
+    await storage.init();
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Создай первый навык'), findsOneWidget);
+    expect(
+      find.text('После этого здесь появятся квесты и фокус.'),
+      findsOneWidget,
+    );
+    expect(find.text('Выбери навык для фокуса'), findsNothing);
+    expect(
+      find.byKey(const ValueKey('mobile-focus-placeholder')),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('single skill placeholder adapts between full and hidden', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = InMemoryStorageService()
+      .._onboardingSeen = true
+      ..skills = [
+        Skill(
+          id: 'adaptive-placeholder',
+          name: 'Один навык',
+          goal: '',
+          color: const Color(0xFF4A9EFF),
+          icon: Icons.explore_rounded,
+        ),
+      ];
+    await storage.init();
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pumpAndSettle();
+
+    final skill = find.byKey(
+      const ValueKey('mobile-skill-chip-adaptive-placeholder'),
+    );
+    final placeholder = find.byKey(const ValueKey('mobile-focus-placeholder'));
+    final inbox = find.byKey(const ValueKey('mobile-inbox-accordion-toggle'));
+    expect(
+      find.byKey(const ValueKey('focus-placeholder-full')),
+      findsOneWidget,
+    );
+    expect(
+      tester.getBottomLeft(skill).dy,
+      lessThan(tester.getTopLeft(placeholder).dy),
+    );
+    expect(
+      tester.getBottomLeft(placeholder).dy,
+      lessThan(tester.getTopLeft(inbox).dy),
+    );
+
+    tester.view.physicalSize = const Size(360, 580);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('focus-placeholder-full')), findsNothing);
+    expect(
+      find.byKey(const ValueKey('mobile-focus-placeholder')),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('mobile skill focus transition moves surrounding cards', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    Skill skill(String id, String name, Color color) => Skill(
+      id: id,
+      name: name,
+      goal: '',
+      color: color,
+      icon: Icons.explore_rounded,
+    );
+
+    final storage = InMemoryStorageService()
+      .._onboardingSeen = true
+      ..skills = [
+        skill('transition-top', 'Верхний', const Color(0xFF4A9EFF)),
+        skill('transition-middle', 'Средний', const Color(0xFFFF9500)),
+        skill('transition-bottom', 'Нижний', const Color(0xFF34C759)),
+      ];
+    await storage.init();
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const ValueKey('mobile-skill-chip-transition-middle')),
+    );
+    await tester.pump();
+    expect(
+      find.byKey(
+        const ValueKey('mobile-skill-card-exiting-above-transition-top'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('mobile-skill-card-opening-transition-middle')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(
+        const ValueKey('mobile-skill-card-exiting-below-transition-bottom'),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.pump(const Duration(milliseconds: 181));
+    expect(
+      find.byKey(const ValueKey('mobile-skill-focus-transition-middle')),
+      findsOneWidget,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('mobile-overview-action')));
+    await tester.pump();
+    expect(
+      find.byKey(const ValueKey('mobile-skill-focus-transition-middle')),
+      findsOneWidget,
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('mobile-skill-overview')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('mobile-skill-card-transition-middle')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('First-run tutorial dismisses once and persists', (
@@ -1406,6 +1570,13 @@ void main() {
           xpReward: 20,
           type: TaskType.shortTerm,
         ),
+        Task(
+          id: 'mobile-inbox-task',
+          title: 'Быстрая проверка',
+          skillId: kInboxSkillId,
+          xpReward: 0,
+          type: TaskType.shortTerm,
+        ),
       ];
     await storage.init();
 
@@ -1460,6 +1631,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('mobile-inbox-focus')), findsOneWidget);
+    expect(find.text('Задачник'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('mobile-inbox-icon-badge')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('inbox-active-count')), findsNothing);
     expect(find.textContaining('+10 XP'), findsOneWidget);
     await tester.tap(
       find.byKey(const ValueKey('mobile-inbox-accordion-toggle')),
@@ -1636,6 +1813,17 @@ void main() {
       expect(find.byKey(const ValueKey('mobile-act-overview')), findsOneWidget);
       expect(
         find.byKey(const ValueKey('mobile-act-focus-mobile-experience')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(
+          const ValueKey('mobile-skill-card-opening-mobile-experience'),
+        ),
+        findsOneWidget,
+      );
+      await tester.pump(const Duration(milliseconds: 181));
+      expect(
+        find.byKey(const ValueKey('mobile-act-focus-mobile-experience')),
         findsOneWidget,
       );
       await tester.pumpAndSettle();
@@ -1791,6 +1979,8 @@ void main() {
         find.byKey(const ValueKey('mobile-act-focus-mobile-experience')),
         findsOneWidget,
       );
+      expect(find.byKey(const ValueKey('mobile-act-overview')), findsNothing);
+      await tester.pump(const Duration(milliseconds: 151));
       expect(find.byKey(const ValueKey('mobile-act-overview')), findsOneWidget);
       await tester.pumpAndSettle();
       expect(
@@ -3234,6 +3424,16 @@ void main() {
     expect(find.text('Фокус'), findsOneWidget);
     final firstIcon = find.byTooltip('Бой').first;
     expect(tester.getSize(firstIcon).shortestSide, greaterThanOrEqualTo(44));
+    final semantics = tester.widgetList<Semantics>(find.byType(Semantics));
+    expect(semantics.any((node) => node.properties.label == 'Бой'), isTrue);
+    expect(
+      semantics.any(
+        (node) =>
+            node.properties.label == 'Синий' &&
+            node.properties.selected == true,
+      ),
+      isTrue,
+    );
     final colorGrid = tester.widget<GridView>(
       find.byKey(const ValueKey('skill-color-grid')),
     );

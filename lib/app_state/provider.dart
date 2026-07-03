@@ -22,6 +22,9 @@ class AppStateProvider extends InheritedWidget {
   static AppState of(BuildContext ctx) =>
       ctx.dependOnInheritedWidgetOfExactType<AppStateProvider>()!.state;
 
+  static AppState? maybeOf(BuildContext ctx) =>
+      ctx.dependOnInheritedWidgetOfExactType<AppStateProvider>()?.state;
+
   @override
   bool updateShouldNotify(AppStateProvider old) => true;
 }

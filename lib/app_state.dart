@@ -63,6 +63,7 @@ class AppState extends ChangeNotifier {
   bool _isDark = true;
   bool _sfxEnabled = true;
   bool _tooltipsEnabled = true;
+  bool _reducedMotion = false;
   bool _onboardingSeen = false;
   bool _onboardingReplayRequested = false;
   TutorialProgress _tutorialProgress = const TutorialProgress.empty();
@@ -84,6 +85,7 @@ class AppState extends ChangeNotifier {
   bool get isDark => _isDark;
   bool get sfxEnabled => _sfxEnabled;
   bool get tooltipsEnabled => _tooltipsEnabled;
+  bool get reducedMotion => _reducedMotion;
   bool get onboardingSeen => _onboardingSeen;
   TutorialProgress get tutorialProgress => _tutorialProgress;
   String? get activeTutorialModuleId => _effectiveTutorialModuleId;
@@ -515,9 +517,11 @@ class AppState extends ChangeNotifier {
     late bool? savedTheme;
     late bool? savedSfxEnabled;
     late bool? savedTooltipsEnabled;
+    late bool? savedReducedMotion;
     late bool? savedOnboardingSeen;
     late TutorialProgress? savedTutorialProgress;
 
+    savedReducedMotion = await _storage.loadReducedMotion();
     if (snapshot != null) {
       loadedSkills = snapshot.skills;
       loadedTasks = snapshot.tasks;
@@ -566,6 +570,9 @@ class AppState extends ChangeNotifier {
     }
     if (savedTooltipsEnabled != null) {
       _tooltipsEnabled = savedTooltipsEnabled;
+    }
+    if (savedReducedMotion != null) {
+      _reducedMotion = savedReducedMotion;
     }
     if (savedOnboardingSeen != null) {
       _onboardingSeen = savedOnboardingSeen;
@@ -761,6 +768,7 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> _writeAllUnlocked() async {
+    await _storage.saveReducedMotion(_reducedMotion);
     if (_storage.supportsSnapshots) {
       await _storage.saveSnapshot(_createStorageSnapshot());
       return;
@@ -841,6 +849,12 @@ class AppState extends ChangeNotifier {
 
   void toggleTooltipsEnabled() {
     _tooltipsEnabled = !_tooltipsEnabled;
+    notifyListeners();
+    _requestObservedImmediateSave();
+  }
+
+  void toggleReducedMotion() {
+    _reducedMotion = !_reducedMotion;
     notifyListeners();
     _requestObservedImmediateSave();
   }

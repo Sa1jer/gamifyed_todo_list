@@ -73,7 +73,7 @@ class ProfileBar extends StatelessWidget {
               maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.82,
             ),
             decoration: BoxDecoration(
-              color: surface(isDark),
+              color: MobileJournalTokens.surface(isDark),
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(26),
               ),
@@ -198,6 +198,16 @@ class ProfileBar extends StatelessWidget {
                     onTap: () => closeThen(state.toggleSfxEnabled),
                   ),
                   _MobileMenuTile(
+                    key: const ValueKey('mobile-menu-reduced-motion'),
+                    icon: Icons.motion_photos_off_rounded,
+                    title: 'Снизить анимации',
+                    subtitle: 'Уменьшает движение и отключает лишние переходы.',
+                    color: const Color(0xFF5E5CE6),
+                    isDark: isDark,
+                    toggled: state.reducedMotion,
+                    onTap: () => closeThen(state.toggleReducedMotion),
+                  ),
+                  _MobileMenuTile(
                     key: const ValueKey('mobile-menu-theme'),
                     icon: isDark
                         ? Icons.light_mode_rounded
@@ -237,6 +247,8 @@ class ProfileBar extends StatelessWidget {
     final sub = subtext(isDark);
 
     if (mobile) {
+      final metrics = MobileResponsiveMetrics.of(context);
+      final typography = MobileJournalTokens.textTheme(context, isDark);
       final rewardsCount = appState.unopenedRewardChests.length;
       return SafeArea(
         bottom: false,
@@ -249,7 +261,12 @@ class ProfileBar extends StatelessWidget {
               ),
             ),
           ),
-          padding: const EdgeInsets.fromLTRB(16, 12, 10, 12),
+          padding: EdgeInsets.fromLTRB(
+            metrics.pagePadding,
+            12,
+            math.max(10, metrics.pagePadding - 4),
+            12,
+          ),
           child: Row(
             children: [
               Semantics(
@@ -279,11 +296,7 @@ class ProfileBar extends StatelessWidget {
                                 profile.name,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: _MobileJournalTokens.text(isDark),
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w900,
-                                ),
+                                style: typography.titleLarge,
                               ),
                             ),
                             const SizedBox(width: 7),
@@ -497,6 +510,7 @@ class _MobileMenuTile extends StatelessWidget {
   final Color color;
   final bool isDark;
   final int badge;
+  final bool? toggled;
   final VoidCallback? onTap;
 
   const _MobileMenuTile({
@@ -507,6 +521,7 @@ class _MobileMenuTile extends StatelessWidget {
     required this.color,
     required this.isDark,
     this.badge = 0,
+    this.toggled,
     required this.onTap,
   });
 
@@ -515,6 +530,7 @@ class _MobileMenuTile extends StatelessWidget {
     return Semantics(
       button: true,
       enabled: onTap != null,
+      toggled: toggled,
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: onTap,
@@ -539,7 +555,7 @@ class _MobileMenuTile extends StatelessWidget {
                     Text(
                       title,
                       style: TextStyle(
-                        color: textColor(isDark),
+                        color: MobileJournalTokens.text(isDark),
                         fontSize: 13.5,
                         fontWeight: FontWeight.w900,
                       ),
@@ -550,7 +566,7 @@ class _MobileMenuTile extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: subtext(isDark),
+                        color: MobileJournalTokens.muted(isDark),
                         fontSize: 11.5,
                         height: 1.25,
                       ),
@@ -558,7 +574,13 @@ class _MobileMenuTile extends StatelessWidget {
                   ],
                 ),
               ),
-              if (badge > 0)
+              if (toggled != null)
+                Icon(
+                  toggled! ? Icons.toggle_on_rounded : Icons.toggle_off_rounded,
+                  color: toggled! ? color : subtext(isDark),
+                  size: 34,
+                )
+              else if (badge > 0)
                 Container(
                   constraints: const BoxConstraints(
                     minWidth: 24,

@@ -579,8 +579,14 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
   @override
   Widget build(BuildContext context) {
     final isDark = widget.isDark;
-    final bg = surface(isDark);
-    final fBg = isDark ? const Color(0xFF13131A) : const Color(0xFFF5F5F7);
+    final bg = widget.fullScreen
+        ? MobileJournalTokens.background(isDark)
+        : surface(isDark);
+    final fBg = widget.fullScreen
+        ? MobileJournalTokens.questRow(isDark)
+        : isDark
+        ? const Color(0xFF13131A)
+        : const Color(0xFFF5F5F7);
     final txt = textColor(isDark);
     final sub = subtext(isDark);
     final bdr = borderColor(isDark);
@@ -1037,7 +1043,11 @@ class _MobileSkillEmblemPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final reduceMotion = MobileMotion.reduced(
+      context,
+      appReducedMotion:
+          AppStateProvider.maybeOf(context)?.reducedMotion ?? false,
+    );
     final displayName = name.trim().isEmpty ? 'Твой новый навык' : name.trim();
 
     return Center(

@@ -16,7 +16,9 @@ class _MasteryMapHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const color = Color(0xFF4A9EFF);
-    final mobile = MediaQuery.sizeOf(context).width < 760;
+    final mobile = MobileResponsiveMetrics.isMobileWidth(
+      MediaQuery.sizeOf(context).width,
+    );
     final showFullscreen = !mobile;
     final content = Padding(
       padding: EdgeInsets.symmetric(

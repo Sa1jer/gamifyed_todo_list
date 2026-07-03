@@ -1,5 +1,31 @@
 # Mobile UX/UI Product Audit
 
+## Polish Update — 2026-07-03
+
+The current batch kept the Overview/Focus product structure and audited it as a
+stabilization pass rather than another redesign. The main changes are:
+
+- shared mobile width buckets for `360`, `393`, `430`, and `760dp`, card/page
+  spacing, tap-target guidance, typography, and motion;
+- a device-local `Снизить анимации` preference combined with Android/platform
+  `disableAnimations`; domain snapshots and persisted entities are unchanged;
+- reduced motion applied to Overview/Focus, Inbox, bottom navigation, AddSkill
+  controls, and mobile RoadMap transitions;
+- a deliberate warm Light Journal palette for the mobile shell, skill surfaces,
+  forms, RoadMap, and reward pills, with darker light-theme reward text;
+- selected-state semantics for bottom navigation, existing skill/quest/RoadMap
+  labels retained, and reading-order traversal applied to mobile forms;
+- exact `760dp` handling consolidated as mobile rather than falling through to
+  desktop composition at one boundary pixel.
+
+Automated checks cover responsive buckets, light contrast, app/platform reduced
+motion, reduced-motion persistence, AddSkill icon/color semantics, selected
+navigation semantics, `200%` journal scaling, and existing dirty-form/storage
+recovery regressions. Android 16 emulator checks are useful for layout, but they
+are not a substitute for physical-device TalkBack, outdoor light-theme review,
+or profile-mode frame timing. Those gates remain pending in
+`docs/MOBILE_ACCESSIBILITY_MOTION_QA.md`.
+
 Audit date: 2026-07-02
 
 Scope: current Flutter mobile experience, product flow, information architecture,

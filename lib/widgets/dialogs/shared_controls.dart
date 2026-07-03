@@ -36,6 +36,13 @@ class _DialogChoiceChipState extends State<_DialogChoiceChip> {
   @override
   Widget build(BuildContext context) {
     final selected = widget.selected;
+    final appReducedMotion =
+        AppStateProvider.maybeOf(context)?.reducedMotion ?? false;
+    final motion = MobileMotion.duration(
+      context,
+      appReducedMotion: appReducedMotion,
+      normal: kMotionStandard,
+    );
     final fillColor = selected
         ? widget.color.withAlpha(38)
         : (_hovered ? widget.color.withAlpha(16) : widget.backgroundColor);
@@ -60,11 +67,11 @@ class _DialogChoiceChipState extends State<_DialogChoiceChip> {
         onTapCancel: () => setState(() => _pressed = false),
         onTapUp: (_) => setState(() => _pressed = false),
         child: AnimatedScale(
-          scale: _pressed ? 0.97 : 1,
-          duration: kMotionFast,
+          scale: _pressed && motion != Duration.zero ? 0.97 : 1,
+          duration: motion,
           curve: kMotionCurve,
           child: AnimatedContainer(
-            duration: kMotionStandard,
+            duration: motion,
             curve: kMotionCurve,
             padding: widget.padding,
             decoration: BoxDecoration(
@@ -119,6 +126,13 @@ class _IconChoiceButtonState extends State<_IconChoiceButton> {
   @override
   Widget build(BuildContext context) {
     final selected = widget.selected;
+    final appReducedMotion =
+        AppStateProvider.maybeOf(context)?.reducedMotion ?? false;
+    final motion = MobileMotion.duration(
+      context,
+      appReducedMotion: appReducedMotion,
+      normal: kMotionStandard,
+    );
     final fillColor = selected
         ? widget.color.withAlpha(46)
         : (_hovered ? widget.color.withAlpha(14) : Colors.transparent);
@@ -129,7 +143,7 @@ class _IconChoiceButtonState extends State<_IconChoiceButton> {
         ? widget.color
         : (_hovered ? widget.color.withAlpha(220) : widget.inactiveColor);
     final iconTile = AnimatedContainer(
-      duration: kMotionStandard,
+      duration: motion,
       curve: kMotionCurve,
       constraints: widget.mobile
           ? const BoxConstraints(minWidth: 44, minHeight: 44)
@@ -166,8 +180,8 @@ class _IconChoiceButtonState extends State<_IconChoiceButton> {
             onTapCancel: () => setState(() => _pressed = false),
             onTapUp: (_) => setState(() => _pressed = false),
             child: AnimatedScale(
-              scale: _pressed ? 0.92 : 1,
-              duration: kMotionFast,
+              scale: _pressed && motion != Duration.zero ? 0.92 : 1,
+              duration: motion,
               curve: kMotionCurve,
               child: widget.mobile
                   ? Column(
@@ -227,6 +241,13 @@ class _ColorChoiceButtonState extends State<_ColorChoiceButton> {
 
   @override
   Widget build(BuildContext context) {
+    final appReducedMotion =
+        AppStateProvider.maybeOf(context)?.reducedMotion ?? false;
+    final motion = MobileMotion.duration(
+      context,
+      appReducedMotion: appReducedMotion,
+      normal: kMotionStandard,
+    );
     final ringColor = widget.selected
         ? darken(widget.color, widget.isDark ? 0.05 : 0.2)
         : (_hovered
@@ -259,11 +280,11 @@ class _ColorChoiceButtonState extends State<_ColorChoiceButton> {
             onTapCancel: () => setState(() => _pressed = false),
             onTapUp: (_) => setState(() => _pressed = false),
             child: AnimatedScale(
-              scale: _pressed ? 0.9 : 1,
-              duration: kMotionFast,
+              scale: _pressed && motion != Duration.zero ? 0.9 : 1,
+              duration: motion,
               curve: kMotionCurve,
               child: AnimatedContainer(
-                duration: kMotionStandard,
+                duration: motion,
                 curve: kMotionCurve,
                 width: size,
                 height: size,

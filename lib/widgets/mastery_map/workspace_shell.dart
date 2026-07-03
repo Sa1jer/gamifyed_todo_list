@@ -103,7 +103,9 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
     final state = AppStateProvider.of(context);
     final selection = _validSelection(state);
     final isDark = widget.isDark;
-    final mobile = MediaQuery.sizeOf(context).width < 760;
+    final mobile = MobileResponsiveMetrics.isMobileWidth(
+      MediaQuery.sizeOf(context).width,
+    );
     final layoutAxis = mobile
         ? _RoadmapLayoutAxis.vertical
         : _desktopLayoutAxis;

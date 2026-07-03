@@ -9,11 +9,13 @@ import 'shared.dart';
 class InboxPanel extends StatefulWidget {
   final void Function(String taskId, Offset position) onComplete;
   final bool embedded;
+  final bool showHeader;
 
   const InboxPanel({
     super.key,
     required this.onComplete,
     this.embedded = false,
+    this.showHeader = true,
   });
 
   @override
@@ -92,12 +94,14 @@ class _InboxPanelState extends State<InboxPanel> {
             padding: const EdgeInsets.all(10),
             child: Row(
               children: [
-                const Icon(
-                  Icons.inbox_rounded,
-                  color: Color(0xFF34C759),
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
+                if (widget.showHeader) ...[
+                  const Icon(
+                    Icons.inbox_rounded,
+                    color: Color(0xFF34C759),
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                ],
                 Expanded(child: quickAddField(dense: true)),
                 const SizedBox(width: 6),
                 IconButton.filled(
@@ -110,14 +114,16 @@ class _InboxPanelState extends State<InboxPanel> {
                   ),
                   icon: const Icon(Icons.add_rounded, size: 18),
                 ),
-                const SizedBox(width: 4),
-                InboxTaskCountBubble(
-                  key: const ValueKey('inbox-active-count'),
-                  count: active.length,
-                  color: accent,
-                  isDark: isDark,
-                  size: 24,
-                ),
+                if (widget.showHeader) ...[
+                  const SizedBox(width: 4),
+                  InboxTaskCountBubble(
+                    key: const ValueKey('inbox-active-count'),
+                    count: active.length,
+                    color: accent,
+                    isDark: isDark,
+                    size: 24,
+                  ),
+                ],
               ],
             ),
           );
@@ -128,58 +134,59 @@ class _InboxPanelState extends State<InboxPanel> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: accent.withAlpha(isDark ? 28 : 20),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: accent.withAlpha(70)),
+              if (widget.showHeader)
+                Row(
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: accent.withAlpha(isDark ? 28 : 20),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: accent.withAlpha(70)),
+                      ),
+                      child: const Icon(
+                        Icons.inbox_rounded,
+                        color: Color(0xFF34C759),
+                        size: 18,
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.inbox_rounded,
-                      color: Color(0xFF34C759),
-                      size: 18,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Задачник',
-                          style: TextStyle(
-                            color: txt,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w900,
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Задачник',
+                            style: TextStyle(
+                              color: txt,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w900,
+                            ),
                           ),
-                        ),
-                        Text(
-                          'Быстрые действия · +${AppState.inboxTaskXp} XP · без RoadMap',
-                          style: TextStyle(
-                            color: sub,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
+                          Text(
+                            'Быстрые действия · +${AppState.inboxTaskXp} XP · без RoadMap',
+                            style: TextStyle(
+                              color: sub,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  InboxTaskCountBubble(
-                    key: const ValueKey('inbox-active-count'),
-                    count: active.length,
-                    color: accent,
-                    isDark: isDark,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
+                    const SizedBox(width: 8),
+                    InboxTaskCountBubble(
+                      key: const ValueKey('inbox-active-count'),
+                      count: active.length,
+                      color: accent,
+                      isDark: isDark,
+                    ),
+                  ],
+                ),
+              if (widget.showHeader) const SizedBox(height: 10),
               Row(
                 children: [
                   Expanded(child: quickAddField(dense: false)),

@@ -11,6 +11,7 @@ import '../models.dart';
 import '../utils.dart';
 import 'reward_animations.dart';
 import 'shared.dart';
+import 'mobile_journal_tokens.dart';
 
 part 'dialogs/achievements_history.dart';
 part 'dialogs/shared_controls.dart';
@@ -29,8 +30,9 @@ Future<T?> showAdaptiveCreationForm<T>({
   required BuildContext context,
   required AdaptiveCreationFormBuilder builder,
 }) {
-  final useFullScreen =
-      MediaQuery.sizeOf(context).width < kMobileFormBreakpoint;
+  final useFullScreen = MobileResponsiveMetrics.isMobileWidth(
+    MediaQuery.sizeOf(context).width,
+  );
   if (useFullScreen) {
     return Navigator.of(context, rootNavigator: true).push<T>(
       MaterialPageRoute<T>(

@@ -56,17 +56,18 @@ Do not mix these product decisions into Release / Regression Hardening. Revisit 
 - [ ] Shorten the mandatory first-run tunnel to first skill, first quest, and first useful completion; move RoadMap, statistics, trophies, and profile into optional tutorial modules.
 - [x] Replace the local-save failure cloud icon with storage-neutral, device-specific copy while preserving dirty state and retry.
 - [ ] Add delayed explanatory copy for unusually long startup loading without flashing it during normal fast startup.
-- [ ] Add a TextTheme-based mobile typography scale and responsive constants for `360`, `393`, `430`, and `760` widths.
+- [x] Add a TextTheme-based mobile typography foundation and shared responsive constants for `360`, `393`, `430`, and `760` widths.
 - [x] Add widget coverage for overflow, truncation, navigation, and dark/light rendering at `360/393/430/700dp` with `1.3x` text scaling.
 - [ ] Polish mobile skill squircles with richer density options and optional circular progress after usage feedback.
 - [ ] Add explicit accessibility labels for remaining mobile skill-panel controls.
-- [ ] Add an app-level reduced-motion setting; the mobile panel currently respects the platform disable-animations flag.
+- [x] Add a persisted device-local reduced-motion setting combined with the platform disable-animations flag across the journal, forms, bottom navigation, and mobile RoadMap transitions.
 - [ ] Decide the final mobile placement/content density for the collapsed “Действовать сегодня” block after usage feedback.
 - [ ] Revisit desktop/mobile skill-panel visual parity only if the mobile direction proves useful.
 - [ ] Move mobile edit-skill and edit-task flows to full-screen routes after creation routes have usage feedback.
 - [ ] Consolidate remaining non-form breakpoint checks around shared responsive constants.
 - [ ] Polish mobile keyboard focus traversal and accessibility labels for icon/color form controls.
-- [ ] Run `Light Journal Palette Polish`: tune the warm light fallback, skill-accent contrast, selected states, and launch continuity without changing the desktop/global theme.
+- [x] Run `Light Journal Palette Polish` for the mobile journal, creation forms, reward pills, and RoadMap surfaces without changing the desktop/global theme.
+- [ ] Finish adopting the shared mobile typography scale in statistics/rewards secondary surfaces after physical-device and `200%` TalkBack review.
 - [ ] Promote proven mobile journal values into a full design-token and `TextTheme` pass only after Polish audit feedback.
 - [ ] Design `Streak model and stats`: define current streak semantics before adding persistence or richer momentum cards.
 - [ ] Polish mobile RoadMap path labels/icons and branch disclosure after physical-device usage; do not rewrite `RoadmapEngine`.
@@ -200,6 +201,7 @@ Manual desktop/QHD checklist:
 
 ## Recently Completed
 
+- Mobile Polish Audit: added device-local reduced motion, shared `360/393/430/760` metrics and mobile typography tokens, warm Light Journal surfaces, stronger light reward/accent contrast, selected bottom-navigation semantics, reading-order form traversal, and accessibility regression coverage. Physical TalkBack/profile-mode validation remains pending.
 - `1.3.49`: added mobile skill long-press/swipe edit and delete actions, a safe Focus delete action, explicit edit-mode save copy, XP-based skill rings, mobile statistics close, and bottom-right RoadMap return actions.
 - `1.3.49`: completed quests stay visible until the user swipes them into the persisted `Выполнено` archive; restore keeps earned XP, while uncomplete clears the archive state.
 - `1.3.49`: mobile AddSkill removes duplicate field labels and uses disappearing in-field guidance for skill name and goal.

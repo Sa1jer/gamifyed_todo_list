@@ -720,6 +720,7 @@ class XpRewardPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final value = xp < 0 ? -xp : xp;
     final copy = '${isReversal ? '-' : '+'}$value XP';
+    final foreground = MobileJournalTokens.rewardGoldForeground(isDark);
     return Semantics(
       label: isReversal ? 'Откат $value XP' : 'Награда $value XP',
       child: Container(
@@ -734,16 +735,12 @@ class XpRewardPill extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.bolt_rounded,
-              size: 13,
-              color: MobileJournalTokens.rewardGold,
-            ),
+            Icon(Icons.bolt_rounded, size: 13, color: foreground),
             const SizedBox(width: 3),
             Text(
               copy,
-              style: const TextStyle(
-                color: MobileJournalTokens.rewardGold,
+              style: TextStyle(
+                color: foreground,
                 fontSize: 11,
                 fontWeight: FontWeight.w900,
               ),
@@ -1372,7 +1369,13 @@ class MobileFormPage extends StatelessWidget {
                 ),
               ],
       ),
-      body: SafeArea(top: false, child: child),
+      body: SafeArea(
+        top: false,
+        child: FocusTraversalGroup(
+          policy: ReadingOrderTraversalPolicy(),
+          child: child,
+        ),
+      ),
       bottomNavigationBar: bottomAction == null
           ? null
           : SafeArea(top: false, child: bottomAction!),

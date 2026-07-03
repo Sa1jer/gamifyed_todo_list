@@ -766,7 +766,9 @@ class _MainPageState extends State<MainPage> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final mobileShell = constraints.maxWidth < 760;
+        final mobileShell = MobileResponsiveMetrics.isMobileWidth(
+          constraints.maxWidth,
+        );
         final displayedMode = !mobileShell && _mode == WorkspaceMode.stats
             ? WorkspaceMode.act
             : _mode;

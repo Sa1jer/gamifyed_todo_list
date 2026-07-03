@@ -2,6 +2,8 @@ part of '../main_page.dart';
 
 enum _MobileSkillAction { edit, delete }
 
+enum _MobileSkillTransitionPhase { idle, opening, closing, restoring }
+
 abstract final class _MobileJournalTokens {
   static const raisedDark = MobileJournalTokens.raisedDark;
   static const violet = MobileJournalTokens.violet;
@@ -50,6 +52,14 @@ class _MobileActJournal extends StatefulWidget {
 
 class _MobileActJournalState extends State<_MobileActJournal> {
   bool _inboxExpanded = false;
+  _MobileSkillTransitionPhase _skillTransition =
+      _MobileSkillTransitionPhase.idle;
+  String? _transitionSkillId;
+  int? _transitionSkillIndex;
+  int _transitionGeneration = 0;
+  bool _transitionLocked = false;
+
+  bool get _isSkillTransitioning => _transitionLocked;
 
   @override
   Widget build(BuildContext context) {
@@ -65,50 +75,120 @@ class _MobileActJournalState extends State<_MobileActJournal> {
       });
     }
 
-    return AnimatedSize(
-      duration: _motionDuration(context),
-      curve: _MobileJournalTokens.curve,
-      alignment: Alignment.topCenter,
-      child: AnimatedSwitcher(
+    return PopScope(
+      canPop: selectedSkill == null && !_isSkillTransitioning,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && selectedSkill != null) {
+          _closeSkillFocus(state, selectedSkill);
+        }
+      },
+      child: AnimatedSize(
         duration: _motionDuration(context),
-        switchInCurve: _MobileJournalTokens.curve,
-        switchOutCurve: Curves.easeInCubic,
-        transitionBuilder: (child, animation) {
-          final slide =
-              Tween<Offset>(
-                begin: const Offset(0, 0.055),
-                end: Offset.zero,
-              ).animate(
-                CurvedAnimation(
-                  parent: animation,
-                  curve: _MobileJournalTokens.curve,
-                ),
-              );
-          return FadeTransition(
-            opacity: animation,
-            child: SlideTransition(
-              position: slide,
-              child: ScaleTransition(
-                scale: Tween<double>(begin: 0.985, end: 1).animate(
+        curve: _MobileJournalTokens.curve,
+        alignment: Alignment.topCenter,
+        child: AnimatedSwitcher(
+          duration: _motionDuration(context),
+          switchInCurve: _MobileJournalTokens.curve,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, animation) {
+            final slide =
+                Tween<Offset>(
+                  begin: const Offset(0, 0.07),
+                  end: Offset.zero,
+                ).animate(
                   CurvedAnimation(
                     parent: animation,
                     curve: _MobileJournalTokens.curve,
                   ),
+                );
+            return FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: slide,
+                child: ScaleTransition(
+                  scale: Tween<double>(begin: 0.965, end: 1).animate(
+                    CurvedAnimation(
+                      parent: animation,
+                      curve: _MobileJournalTokens.curve,
+                    ),
+                  ),
+                  child: child,
                 ),
-                child: child,
               ),
-            ),
-          );
-        },
-        layoutBuilder: (current, previous) => Stack(
-          alignment: Alignment.topCenter,
-          children: [...previous, ?current],
+            );
+          },
+          layoutBuilder: (current, previous) => Stack(
+            alignment: Alignment.topCenter,
+            children: [...previous, ?current],
+          ),
+          child: selectedSkill == null
+              ? _buildOverview(context, state)
+              : _buildFocus(context, state, selectedSkill),
         ),
-        child: selectedSkill == null
-            ? _buildOverview(context, state)
-            : _buildFocus(context, state, selectedSkill),
       ),
     );
+  }
+
+  Future<void> _openSkillFocus(AppState state, Skill skill, int index) async {
+    if (_isSkillTransitioning) return;
+    final generation = ++_transitionGeneration;
+    final reducedMotion = MobileMotion.reduced(
+      context,
+      appReducedMotion: state.reducedMotion,
+    );
+    setState(() {
+      _transitionLocked = true;
+      _inboxExpanded = false;
+      _transitionSkillId = skill.id;
+      _transitionSkillIndex = index;
+      _skillTransition = _MobileSkillTransitionPhase.opening;
+    });
+    if (!reducedMotion) {
+      await Future<void>.delayed(const Duration(milliseconds: 180));
+    }
+    if (!mounted || generation != _transitionGeneration) return;
+    state.selectSkill(skill.id);
+    if (!reducedMotion) {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+    if (!mounted || generation != _transitionGeneration) return;
+    setState(() {
+      _skillTransition = _MobileSkillTransitionPhase.idle;
+      _transitionLocked = false;
+    });
+  }
+
+  Future<void> _closeSkillFocus(AppState state, Skill skill) async {
+    if (_isSkillTransitioning) return;
+    final generation = ++_transitionGeneration;
+    final reducedMotion = MobileMotion.reduced(
+      context,
+      appReducedMotion: state.reducedMotion,
+    );
+    final skills = state.roadmapSkills;
+    final index = skills.indexWhere((candidate) => candidate.id == skill.id);
+    setState(() {
+      _transitionLocked = true;
+      _transitionSkillId = skill.id;
+      _transitionSkillIndex = index < 0 ? null : index;
+      _skillTransition = _MobileSkillTransitionPhase.closing;
+    });
+    if (!reducedMotion) {
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+    }
+    if (!mounted || generation != _transitionGeneration) return;
+    setState(() => _skillTransition = _MobileSkillTransitionPhase.restoring);
+    state.selectSkill(skill.id);
+    if (!reducedMotion) {
+      await Future<void>.delayed(const Duration(milliseconds: 16));
+    }
+    if (!mounted || generation != _transitionGeneration) return;
+    setState(() => _skillTransition = _MobileSkillTransitionPhase.idle);
+    if (!reducedMotion) {
+      await Future<void>.delayed(_MobileJournalTokens.motion);
+    }
+    if (!mounted || generation != _transitionGeneration) return;
+    setState(() => _transitionLocked = false);
   }
 
   Widget _buildOverview(BuildContext context, AppState state) {
@@ -136,131 +216,185 @@ class _MobileActJournalState extends State<_MobileActJournal> {
             : 0.0;
 
         return KeyedSubtree(
-          key: const ValueKey('mobile-act-overview'),
-          child: CustomScrollView(
-            key: const ValueKey('mobile-skill-panel-compact'),
-            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-            slivers: [
-              SliverToBoxAdapter(child: _MobileMomentumRow(state: state)),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 16, bottom: 9),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Навыки',
-                          style: TextStyle(
-                            color: _MobileJournalTokens.text(isDark),
-                            fontSize: 20,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ),
-                      KeyedSubtree(
-                        key: widget.createFirstSkillButtonKey,
-                        child: IconButton.filled(
-                          key: const ValueKey('mobile-add-skill-open'),
-                          tooltip: 'Создать навык',
-                          onPressed: widget.onCreateSkill,
-                          style: IconButton.styleFrom(
-                            minimumSize: const Size.square(48),
-                            backgroundColor: _MobileJournalTokens.violet,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(15),
+          key: const ValueKey('mobile-skill-overview'),
+          child: KeyedSubtree(
+            key: const ValueKey('mobile-act-overview'),
+            child: CustomScrollView(
+              key: const ValueKey('mobile-skill-panel-compact'),
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              slivers: [
+                SliverToBoxAdapter(child: _MobileMomentumRow(state: state)),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 16, bottom: 9),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Навыки',
+                            style: TextStyle(
+                              color: _MobileJournalTokens.text(isDark),
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
                             ),
                           ),
-                          icon: const Icon(Icons.add_rounded),
                         ),
+                        KeyedSubtree(
+                          key: widget.createFirstSkillButtonKey,
+                          child: IconButton.filled(
+                            key: const ValueKey('mobile-add-skill-open'),
+                            tooltip: 'Создать навык',
+                            onPressed: widget.onCreateSkill,
+                            style: IconButton.styleFrom(
+                              minimumSize: const Size.square(48),
+                              backgroundColor: _MobileJournalTokens.violet,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(15),
+                              ),
+                            ),
+                            icon: const Icon(Icons.add_rounded),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (skills.isEmpty)
+                  SliverToBoxAdapter(
+                    child: _MobileJournalEmptySkills(
+                      onCreate: widget.onCreateSkill,
+                    ),
+                  )
+                else
+                  SliverToBoxAdapter(
+                    child: ReorderableListView.builder(
+                      key: const ValueKey('mobile-skill-overview-list'),
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      buildDefaultDragHandles: false,
+                      itemCount: skills.length,
+                      onReorderItem: state.reorderSkills,
+                      itemBuilder: (context, index) {
+                        final skill = skills[index];
+                        final activeCount = state
+                            .tasksForSkill(skill.id)
+                            .where((task) => !task.isDone)
+                            .length;
+                        final card = _MobileSkillOverviewCard(
+                          skill: skill,
+                          activeQuestCount: activeCount,
+                          isDark: isDark,
+                          reorderIndex: index,
+                          onTap: () => _openSkillFocus(state, skill, index),
+                          onLongPress: () => _showSkillActions(
+                            context,
+                            state: state,
+                            skill: skill,
+                          ),
+                          onEdit: () =>
+                              _editSkill(context, state: state, skill: skill),
+                          onDelete: () => _confirmDeleteSkill(
+                            context,
+                            state: state,
+                            skill: skill,
+                          ),
+                        );
+                        final transitionIndex = _transitionSkillIndex;
+                        final reducedMotion = MobileMotion.reduced(
+                          context,
+                          appReducedMotion: state.reducedMotion,
+                        );
+                        final moving =
+                            !reducedMotion &&
+                                _skillTransition ==
+                                    _MobileSkillTransitionPhase.opening ||
+                            _skillTransition ==
+                                _MobileSkillTransitionPhase.restoring;
+                        final selected = _transitionSkillId == skill.id;
+                        final direction = transitionIndex == null
+                            ? 0
+                            : index.compareTo(transitionIndex);
+                        final offset = moving
+                            ? selected
+                                  ? const Offset(0, -0.1)
+                                  : Offset(0, direction < 0 ? -0.34 : 0.34)
+                            : Offset.zero;
+                        final opacity = moving ? (selected ? 0.48 : 0.0) : 1.0;
+                        final transitionKey = !moving
+                            ? 'mobile-skill-card-${skill.id}'
+                            : selected
+                            ? 'mobile-skill-card-opening-${skill.id}'
+                            : direction < 0
+                            ? 'mobile-skill-card-exiting-above-${skill.id}'
+                            : 'mobile-skill-card-exiting-below-${skill.id}';
+                        return Padding(
+                          key: ValueKey('mobile-skill-overview-${skill.id}'),
+                          padding: EdgeInsets.only(
+                            bottom: index == skills.length - 1 ? 0 : 10,
+                          ),
+                          child: AnimatedSlide(
+                            duration: _motionDuration(context),
+                            curve: _MobileJournalTokens.curve,
+                            offset: offset,
+                            child: AnimatedOpacity(
+                              duration: MediaQuery.disableAnimationsOf(context)
+                                  ? Duration.zero
+                                  : const Duration(milliseconds: 210),
+                              curve: _MobileJournalTokens.curve,
+                              opacity: opacity,
+                              child: AnimatedScale(
+                                duration: _motionDuration(context),
+                                curve: _MobileJournalTokens.curve,
+                                scale: moving ? (selected ? 1.025 : 0.97) : 1,
+                                child: KeyedSubtree(
+                                  key: ValueKey(transitionKey),
+                                  child: KeyedSubtree(
+                                    key: index == 0
+                                        ? widget.nextQuestActionKey
+                                        : null,
+                                    child: card,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                if (skills.isEmpty)
+                  SliverToBoxAdapter(
+                    child: SizedBox(height: math.min(placeholderSlot, 80)),
+                  )
+                else
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        top: placeholderSlot >= 120 ? 12 : 0,
                       ),
-                    ],
+                      child: _MobileFocusPlaceholder(
+                        availableHeight: placeholderSlot,
+                        skillCount: skills.length,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              if (skills.isEmpty)
                 SliverToBoxAdapter(
-                  child: _MobileJournalEmptySkills(
-                    onCreate: widget.onCreateSkill,
-                  ),
-                )
-              else
-                SliverToBoxAdapter(
-                  child: ReorderableListView.builder(
-                    key: const ValueKey('mobile-skill-overview-list'),
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    buildDefaultDragHandles: false,
-                    itemCount: skills.length,
-                    onReorderItem: state.reorderSkills,
-                    itemBuilder: (context, index) {
-                      final skill = skills[index];
-                      final activeCount = state
-                          .tasksForSkill(skill.id)
-                          .where((task) => !task.isDone)
-                          .length;
-                      final card = _MobileSkillOverviewCard(
-                        skill: skill,
-                        activeQuestCount: activeCount,
-                        isDark: isDark,
-                        reorderIndex: index,
-                        onTap: () {
-                          if (_inboxExpanded) {
-                            setState(() => _inboxExpanded = false);
-                          }
-                          state.selectSkill(skill.id);
-                        },
-                        onLongPress: () => _showSkillActions(
-                          context,
-                          state: state,
-                          skill: skill,
-                        ),
-                        onEdit: () =>
-                            _editSkill(context, state: state, skill: skill),
-                        onDelete: () => _confirmDeleteSkill(
-                          context,
-                          state: state,
-                          skill: skill,
-                        ),
-                      );
-                      return Padding(
-                        key: ValueKey('mobile-skill-overview-${skill.id}'),
-                        padding: EdgeInsets.only(
-                          bottom: index == skills.length - 1 ? 0 : 10,
-                        ),
-                        child: KeyedSubtree(
-                          key: index == 0 ? widget.nextQuestActionKey : null,
-                          child: card,
-                        ),
-                      );
-                    },
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: _MobileInboxAccordion(
+                      expanded: _inboxExpanded,
+                      taskCount: inboxCount,
+                      isDark: isDark,
+                      onToggle: () =>
+                          setState(() => _inboxExpanded = !_inboxExpanded),
+                      onComplete: widget.onComplete,
+                    ),
                   ),
                 ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    top: placeholderSlot >= 108 ? 12 : 0,
-                  ),
-                  child: _MobileFocusPlaceholder(
-                    availableHeight: placeholderSlot,
-                  ),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: _MobileInboxAccordion(
-                    expanded: _inboxExpanded,
-                    taskCount: inboxCount,
-                    isDark: isDark,
-                    onToggle: () =>
-                        setState(() => _inboxExpanded = !_inboxExpanded),
-                    onComplete: widget.onComplete,
-                  ),
-                ),
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 12)),
-            ],
+                const SliverToBoxAdapter(child: SizedBox(height: 12)),
+              ],
+            ),
           ),
         );
       },
@@ -268,20 +402,47 @@ class _MobileActJournalState extends State<_MobileActJournal> {
   }
 
   Widget _buildFocus(BuildContext context, AppState state, Skill skill) {
+    final closing = _skillTransition == _MobileSkillTransitionPhase.closing;
+    final reducedMotion = MobileMotion.reduced(
+      context,
+      appReducedMotion: state.reducedMotion,
+    );
     return KeyedSubtree(
-      key: ValueKey('mobile-act-focus-${skill.id}'),
-      child: SingleChildScrollView(
-        key: ValueKey('mobile-journal-focus-${skill.id}'),
-        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-        padding: const EdgeInsets.only(bottom: 12),
-        child: TasksPanel(
-          onComplete: widget.onComplete,
-          onMinimumAction: widget.onMinimumAction,
-          mobileFocus: true,
-          onMobileOverview: () => state.selectSkill(skill.id),
-          onMobileDeleteSkill: () =>
-              _confirmDeleteSkill(context, state: state, skill: skill),
-          createFirstQuestButtonKey: widget.createFirstQuestButtonKey,
+      key: ValueKey('mobile-skill-focus-${skill.id}'),
+      child: KeyedSubtree(
+        key: ValueKey('mobile-act-focus-${skill.id}'),
+        child: AnimatedSlide(
+          duration: _motionDuration(context),
+          curve: _MobileJournalTokens.curve,
+          offset: closing && !reducedMotion
+              ? const Offset(0, 0.08)
+              : Offset.zero,
+          child: AnimatedOpacity(
+            duration: MediaQuery.disableAnimationsOf(context)
+                ? Duration.zero
+                : const Duration(milliseconds: 210),
+            opacity: closing ? 0 : 1,
+            child: AnimatedScale(
+              duration: _motionDuration(context),
+              curve: _MobileJournalTokens.curve,
+              scale: closing ? 0.97 : 1,
+              child: SingleChildScrollView(
+                key: ValueKey('mobile-journal-focus-${skill.id}'),
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                padding: const EdgeInsets.only(bottom: 12),
+                child: TasksPanel(
+                  onComplete: widget.onComplete,
+                  onMinimumAction: widget.onMinimumAction,
+                  mobileFocus: true,
+                  onMobileOverview: () => _closeSkillFocus(state, skill),
+                  onMobileDeleteSkill: () =>
+                      _confirmDeleteSkill(context, state: state, skill: skill),
+                  createFirstQuestButtonKey: widget.createFirstQuestButtonKey,
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -413,23 +574,29 @@ class _MobileActJournalState extends State<_MobileActJournal> {
 
 class _MobileFocusPlaceholder extends StatelessWidget {
   final double availableHeight;
+  final int skillCount;
 
-  const _MobileFocusPlaceholder({required this.availableHeight});
+  const _MobileFocusPlaceholder({
+    required this.availableHeight,
+    required this.skillCount,
+  });
 
   @override
   Widget build(BuildContext context) {
     final isDark = AppStateProvider.of(context).isDark;
     final textScale = MediaQuery.textScalerOf(context).scale(1);
-    final visible = textScale < 1.7 && availableHeight >= 108;
+    final visible = textScale < 1.7 && availableHeight >= 120;
     final slotHeight = visible ? availableHeight : 0.0;
-    final large = slotHeight >= 170;
-    final cardHeight = math.min(slotHeight, 300.0);
+    final large = slotHeight > 220;
+    final cardHeight = large
+        ? math.min(slotHeight, skillCount == 1 ? 340.0 : 280.0)
+        : math.min(slotHeight, 150.0);
     final duration = _motionDuration(context);
 
     return AnimatedSize(
       duration: duration,
       curve: _MobileJournalTokens.curve,
-      alignment: Alignment.bottomCenter,
+      alignment: Alignment.topCenter,
       child: AnimatedOpacity(
         duration: duration,
         opacity: visible ? 1 : 0,
@@ -438,8 +605,13 @@ class _MobileFocusPlaceholder extends StatelessWidget {
                 key: const ValueKey('mobile-focus-placeholder'),
                 height: slotHeight,
                 child: Align(
-                  alignment: Alignment.bottomCenter,
+                  alignment: Alignment.topCenter,
                   child: SizedBox(
+                    key: ValueKey(
+                      large
+                          ? 'focus-placeholder-full'
+                          : 'focus-placeholder-compact',
+                    ),
                     width: double.infinity,
                     height: cardHeight,
                     child: DashedBorderContainer(
@@ -463,7 +635,7 @@ class _MobileFocusPlaceholder extends StatelessWidget {
                   ),
                 ),
               )
-            : const SizedBox(key: ValueKey('mobile-focus-placeholder-hidden')),
+            : const SizedBox(key: ValueKey('focus-placeholder-hidden')),
       ),
     );
   }
@@ -998,17 +1170,67 @@ class _MobileInboxAccordion extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: _MobileJournalTokens.inbox.withAlpha(20),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: const Icon(
-                            Icons.inbox_rounded,
-                            color: _MobileJournalTokens.inbox,
-                          ),
+                        Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: _MobileJournalTokens.inbox.withAlpha(20),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: const Icon(
+                                Icons.inbox_rounded,
+                                color: _MobileJournalTokens.inbox,
+                              ),
+                            ),
+                            Positioned(
+                              right: -5,
+                              top: -5,
+                              child: Container(
+                                key: const ValueKey('mobile-inbox-icon-badge'),
+                                constraints: const BoxConstraints(
+                                  minWidth: 22,
+                                  minHeight: 21,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 5,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isDark
+                                      ? Colors.white.withAlpha(
+                                          taskCount == 0 ? 24 : 42,
+                                        )
+                                      : Colors.black.withAlpha(
+                                          taskCount == 0 ? 14 : 24,
+                                        ),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isDark
+                                        ? Colors.white.withAlpha(45)
+                                        : Colors.black.withAlpha(28),
+                                  ),
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  '$taskCount',
+                                  style: TextStyle(
+                                    color: isDark
+                                        ? Colors.white.withAlpha(
+                                            taskCount == 0 ? 150 : 225,
+                                          )
+                                        : Colors.black.withAlpha(
+                                            taskCount == 0 ? 120 : 195,
+                                          ),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -1035,11 +1257,6 @@ class _MobileInboxAccordion extends StatelessWidget {
                               ),
                             ],
                           ),
-                        ),
-                        InboxTaskCountBubble(
-                          count: taskCount,
-                          color: _MobileJournalTokens.inbox,
-                          isDark: isDark,
                         ),
                         const SizedBox(width: 6),
                         AnimatedRotation(
@@ -1069,6 +1286,7 @@ class _MobileInboxAccordion extends StatelessWidget {
                         child: InboxPanel(
                           onComplete: onComplete,
                           embedded: true,
+                          showHeader: false,
                         ),
                       ),
                     )
@@ -1114,7 +1332,7 @@ class _MobileJournalEmptySkills extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Один ясный путь лучше десятка забытых планов.',
+            'После этого здесь появятся квесты и фокус.',
             textAlign: TextAlign.center,
             style: TextStyle(color: _MobileJournalTokens.muted(isDark)),
           ),
@@ -1134,10 +1352,11 @@ class _MobileJournalEmptySkills extends StatelessWidget {
   }
 }
 
-Duration _motionDuration(BuildContext context) =>
-    MediaQuery.disableAnimationsOf(context)
-    ? Duration.zero
-    : _MobileJournalTokens.motion;
+Duration _motionDuration(BuildContext context) => MobileMotion.duration(
+  context,
+  appReducedMotion: AppStateProvider.maybeOf(context)?.reducedMotion ?? false,
+  normal: _MobileJournalTokens.motion,
+);
 
 String _questWord(int count) {
   final mod10 = count % 10;

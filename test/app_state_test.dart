@@ -159,6 +159,27 @@ void main() {
     });
   });
 
+  group('device UI preferences', () {
+    test('reduced motion persists outside domain snapshots', () async {
+      final storage = _InMemoryStorageService();
+      await storage.init();
+      final state = AppState(storage: storage);
+      await state.loadSavedData();
+
+      expect(state.reducedMotion, isFalse);
+      state.toggleReducedMotion();
+      await state.flushSaves();
+      expect(await storage.loadReducedMotion(), isTrue);
+
+      final restarted = AppState(storage: storage);
+      await restarted.loadSavedData();
+      expect(restarted.reducedMotion, isTrue);
+
+      state.dispose();
+      restarted.dispose();
+    });
+  });
+
   group('mutable model list safety', () {
     test('sync methods accept fixed-length constructor lists', () {
       final task = Task(
