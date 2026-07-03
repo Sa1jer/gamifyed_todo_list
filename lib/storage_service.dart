@@ -1233,6 +1233,7 @@ class StorageService {
     'xpReward': t.xpReward,
     'type': t.type.name,
     'isDone': t.isDone,
+    'isArchived': t.isArchived,
     'streak': t.streak,
     'earnedXP': t.earnedXP,
     'repeatFrequency': t.repeatFrequency.name,
@@ -1267,6 +1268,7 @@ class StorageService {
       xpReward: _readInt(d, 'xpReward', 20),
       type: _readEnum(TaskType.values, d['type'], TaskType.shortTerm),
       isDone: _readBool(d, 'isDone'),
+      isArchived: _readBool(d, 'isArchived'),
       streak: _readInt(d, 'streak'),
       earnedXP: _readInt(d, 'earnedXP'),
       repeatFrequency: _readEnum(

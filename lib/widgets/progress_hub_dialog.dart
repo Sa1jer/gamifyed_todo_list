@@ -1442,26 +1442,23 @@ class _ProgressStoryFactChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: color.withAlpha(40)),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            '$label: ',
-            style: TextStyle(
-              color: subtext(isDark),
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-            ),
+      child: Text.rich(
+        TextSpan(
+          text: '$label: ',
+          style: TextStyle(
+            color: subtext(isDark),
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
           ),
-          Text(
-            value,
-            style: TextStyle(
-              color: color,
-              fontSize: 11,
-              fontWeight: FontWeight.w900,
+          children: [
+            TextSpan(
+              text: value,
+              style: TextStyle(color: color, fontWeight: FontWeight.w900),
             ),
-          ),
-        ],
+          ],
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }

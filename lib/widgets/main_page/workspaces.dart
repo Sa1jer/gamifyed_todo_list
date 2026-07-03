@@ -98,6 +98,7 @@ class _ProgressWorkspace extends StatelessWidget {
   final AppState state;
   final bool isDark;
   final bool showTutorialHint;
+  final VoidCallback onClose;
   final VoidCallback? onTutorialComplete;
   final VoidCallback onOpenDailyVictories;
   final VoidCallback onOpenCharacterTimeline;
@@ -114,6 +115,7 @@ class _ProgressWorkspace extends StatelessWidget {
     required this.state,
     required this.isDark,
     this.showTutorialHint = false,
+    required this.onClose,
     this.onTutorialComplete,
     required this.onOpenDailyVictories,
     required this.onOpenCharacterTimeline,
@@ -133,6 +135,8 @@ class _ProgressWorkspace extends StatelessWidget {
         state: state,
         isDark: isDark,
         showTutorialHint: showTutorialHint,
+        showCloseButton: true,
+        onClose: onClose,
         onTutorialComplete: onTutorialComplete,
         subtitle: 'Что получилось, какой навык вырос и что продолжить.',
         onOpenDailyVictories: onOpenDailyVictories,

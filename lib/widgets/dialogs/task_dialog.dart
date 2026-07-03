@@ -325,7 +325,9 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
             DlgActions(
               onCancel: () => Navigator.pop(context),
               onSave: _save,
-              saveLabel: widget.existing == null ? 'Создать' : 'Сохранить',
+              saveLabel: widget.existing == null
+                  ? 'Создать'
+                  : 'Сохранить изменения',
               saveColor: c,
             ),
         ],
@@ -345,6 +347,9 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
           backgroundColor: bg,
           accentColor: c,
           onSave: _submitting ? null : _save,
+          saveLabel: widget.existing == null
+              ? 'Создать'
+              : 'Сохранить изменения',
           onCancel: () => unawaited(_requestClose()),
           child: form,
         ),

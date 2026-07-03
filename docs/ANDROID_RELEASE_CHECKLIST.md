@@ -18,7 +18,7 @@ application ID.
 | Android Gradle Plugin | `8.11.1` | Ready |
 | Kotlin Gradle Plugin | `2.2.20` | Works with deferred migration warning |
 | Flutter Android defaults | compile/target `36`, min `24`, NDK `28.2.13676358` | Inherited from Flutter SDK |
-| App version | `1.3.48+1` | Maps to versionName `1.3.48`, versionCode `1` |
+| App version | `1.3.49+1` | Maps to versionName `1.3.49`, versionCode `1` |
 
 Direct `./gradlew` requires `JAVA_HOME` in the current shell. Flutter already
 uses the Android Studio JDK. A reproducible direct-wrapper command is:
@@ -35,7 +35,7 @@ JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" \
 | `flutter pub get` | Passed; no dependency upgrade requested |
 | `dart format lib test` | Passed; no changes |
 | `flutter analyze` | Passed; no findings |
-| `flutter test -r expanded --timeout 30s` | Passed, `285/285` |
+| `flutter test -r expanded --timeout 30s` | Passed, `296/296` |
 | `dart fix --dry-run` | Nothing to fix |
 | `git diff --check` | Passed |
 | `flutter build apk --debug` | Passed: `build/app/outputs/flutter-apk/app-debug.apk` |

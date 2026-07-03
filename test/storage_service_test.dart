@@ -55,6 +55,8 @@ void main() {
         skillId: 'skill-1',
         xpReward: 25,
         type: TaskType.repeating,
+        isDone: true,
+        isArchived: true,
         repeatFrequency: RepeatFrequency.weekly,
         priority: Priority.high,
       );
@@ -65,6 +67,7 @@ void main() {
       expect(encoded['description'], 'Keep this note with the quest');
       expect(encoded['repeatFrequency'], RepeatFrequency.weekly.name);
       expect(encoded['priority'], Priority.high.name);
+      expect(encoded['isArchived'], isTrue);
 
       final decoded = storage.debugDecodeTask(jsonEncode(encoded));
 
@@ -72,6 +75,7 @@ void main() {
       expect(decoded.description, 'Keep this note with the quest');
       expect(decoded.repeatFrequency, RepeatFrequency.weekly);
       expect(decoded.priority, Priority.high);
+      expect(decoded.isArchived, isTrue);
     });
 
     test('old int enum task payload still decodes correctly', () {
@@ -95,6 +99,7 @@ void main() {
       expect(decoded.skillId, 'skill-1');
       expect(decoded.repeatFrequency, RepeatFrequency.every3Days);
       expect(decoded.priority, Priority.low);
+      expect(decoded.isArchived, isFalse);
     });
 
     test('new string enum task payload decodes correctly', () {

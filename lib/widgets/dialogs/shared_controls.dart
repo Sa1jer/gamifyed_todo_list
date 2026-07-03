@@ -95,6 +95,7 @@ class _IconChoiceButton extends StatefulWidget {
   final VoidCallback onTap;
   final bool mobile;
   final String semanticsLabel;
+  final String? displayLabel;
 
   const _IconChoiceButton({
     required this.icon,
@@ -104,6 +105,7 @@ class _IconChoiceButton extends StatefulWidget {
     required this.onTap,
     this.mobile = false,
     this.semanticsLabel = 'Выбрать иконку',
+    this.displayLabel,
   });
 
   @override
@@ -126,6 +128,23 @@ class _IconChoiceButtonState extends State<_IconChoiceButton> {
     final iconColor = selected
         ? widget.color
         : (_hovered ? widget.color.withAlpha(220) : widget.inactiveColor);
+    final iconTile = AnimatedContainer(
+      duration: kMotionStandard,
+      curve: kMotionCurve,
+      constraints: widget.mobile
+          ? const BoxConstraints(minWidth: 44, minHeight: 44)
+          : const BoxConstraints(),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: fillColor,
+        borderRadius: BorderRadius.circular(widget.mobile ? 13 : 8),
+        border: Border.all(color: outlineColor, width: 1.4),
+        boxShadow: selected && widget.mobile
+            ? [BoxShadow(color: widget.color.withAlpha(42), blurRadius: 10)]
+            : null,
+      ),
+      child: Icon(widget.icon, size: widget.mobile ? 20 : 18, color: iconColor),
+    );
 
     return Semantics(
       button: true,
@@ -150,20 +169,29 @@ class _IconChoiceButtonState extends State<_IconChoiceButton> {
               scale: _pressed ? 0.92 : 1,
               duration: kMotionFast,
               curve: kMotionCurve,
-              child: AnimatedContainer(
-                duration: kMotionStandard,
-                curve: kMotionCurve,
-                constraints: widget.mobile
-                    ? const BoxConstraints(minWidth: 44, minHeight: 44)
-                    : const BoxConstraints(),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: fillColor,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: outlineColor, width: 1.4),
-                ),
-                child: Icon(widget.icon, size: 18, color: iconColor),
-              ),
+              child: widget.mobile
+                  ? Column(
+                      children: [
+                        Expanded(child: iconTile),
+                        const SizedBox(height: 3),
+                        Text(
+                          widget.displayLabel ?? widget.semanticsLabel,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: selected
+                                ? widget.color
+                                : widget.inactiveColor,
+                            fontSize: 9,
+                            fontWeight: selected
+                                ? FontWeight.w800
+                                : FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    )
+                  : iconTile,
             ),
           ),
         ),
@@ -201,8 +229,14 @@ class _ColorChoiceButtonState extends State<_ColorChoiceButton> {
   Widget build(BuildContext context) {
     final ringColor = widget.selected
         ? darken(widget.color, widget.isDark ? 0.05 : 0.2)
-        : (_hovered ? widget.color.withAlpha(120) : Colors.transparent);
-    final shadowAlpha = widget.selected ? 90 : (_hovered ? 45 : 0);
+        : (_hovered
+              ? widget.color.withAlpha(120)
+              : widget.mobile
+              ? widget.color.withAlpha(48)
+              : Colors.transparent);
+    final shadowAlpha = widget.selected
+        ? 90
+        : (_hovered ? 45 : (widget.mobile ? 24 : 0));
 
     final size = widget.mobile ? 40.0 : 28.0;
     return Semantics(

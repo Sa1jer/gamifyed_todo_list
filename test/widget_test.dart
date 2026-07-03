@@ -11,6 +11,8 @@ import 'package:todo_list_app/storage_service.dart';
 import 'package:todo_list_app/utils.dart';
 import 'package:todo_list_app/widgets/dialogs.dart';
 import 'package:todo_list_app/widgets/skills_panel.dart';
+import 'package:todo_list_app/widgets/mobile_journal_tokens.dart';
+import 'package:todo_list_app/widgets/shared.dart';
 import 'package:todo_list_app/widgets/tasks_panel.dart';
 
 Rect _roadmapVisibleInsertRect(WidgetTester tester, Finder finder) {
@@ -306,6 +308,36 @@ void main() {
     await tester.pump();
   });
 
+  testWidgets('mobile statistics workspace has an explicit close action', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = InMemoryStorageService().._onboardingSeen = true;
+    await storage.init();
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    await tester.tap(find.byKey(const ValueKey('mobile-header-menu')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('mobile-menu-stats')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('stats-workspace')), findsOneWidget);
+    final close = find.byTooltip('Закрыть историю роста');
+    expect(close, findsOneWidget);
+    await tester.tap(close);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('act-workspace')), findsOneWidget);
+    expect(find.byKey(const ValueKey('stats-workspace')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('mobile journal stays readable across target widths', (
     WidgetTester tester,
   ) async {
@@ -329,7 +361,7 @@ void main() {
             name: 'Длинное название навыка для $width dp',
             goal:
                 'Уверенно пройти длинный путь без потери контекста на мобильном экране',
-            color: const Color(0xFF4A9EFF),
+            color: const Color(0xFFFF1635),
             icon: Icons.auto_stories_rounded,
           ),
         ]
@@ -352,6 +384,16 @@ void main() {
         find.byKey(const ValueKey('mobile-skill-panel-compact')),
         findsOneWidget,
       );
+      if (width == 360) {
+        expect(
+          find.byKey(const ValueKey('mobile-focus-placeholder')),
+          findsNothing,
+        );
+        expect(
+          find.byKey(const ValueKey('mobile-focus-placeholder-hidden')),
+          findsOneWidget,
+        );
+      }
       expect(tester.takeException(), isNull, reason: 'overview width: $width');
       await tester.tap(find.byKey(ValueKey('mobile-skill-chip-$skillId')));
       await tester.pumpAndSettle();
@@ -359,7 +401,13 @@ void main() {
         find.byKey(ValueKey('mobile-selected-skill-focus-$skillId')),
         findsOneWidget,
       );
-      expect(tester.takeException(), isNull, reason: 'width: $width');
+      final focusError = tester.takeException();
+      expect(
+        focusError,
+        isNull,
+        reason:
+            'width: $width\n${focusError is FlutterError ? focusError.toStringDeep() : focusError}',
+      );
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
@@ -1381,6 +1429,31 @@ void main() {
       find.byKey(const ValueKey('mobile-inbox-accordion-content')),
       findsNothing,
     );
+    await tester.longPress(
+      find.byKey(const ValueKey('mobile-skill-chip-mobile-long')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Редактировать навык'), findsOneWidget);
+    expect(find.text('Удалить навык'), findsOneWidget);
+    await tester.tap(find.text('Редактировать навык'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('mobile-add-skill-page')), findsOneWidget);
+    expect(find.text('Сохранить изменения'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('mobile-form-cancel')));
+    await tester.pumpAndSettle();
+
+    await tester.drag(
+      find.byKey(const ValueKey('mobile-skill-chip-mobile-long')),
+      const Offset(-220, 0),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Править'), findsOneWidget);
+    expect(find.text('Удалить'), findsOneWidget);
+    await tester.drag(
+      find.byKey(const ValueKey('mobile-skill-chip-mobile-long')),
+      const Offset(220, 0),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(
       find.byKey(const ValueKey('mobile-inbox-accordion-toggle')),
     );
@@ -1434,9 +1507,10 @@ void main() {
             id: skillId,
             name: skillName,
             goal: 'Дойти до уверенного результата',
-            color: const Color(0xFF4A9EFF),
+            color: const Color(0xFFFF1635),
             icon: Icons.auto_stories_rounded,
             level: 4,
+            xp: 1000,
             treeNodes: [
               SkillTreeNode(
                 id: 'stage-done',
@@ -1450,7 +1524,9 @@ void main() {
         ..tasks = [
           Task(
             id: 'mobile-active-1',
-            title: 'Первый квест',
+            title:
+                'Очень длинный первый квест, который должен аккуратно переноситься на узком экране',
+            description: 'Короткое пояснение под названием квеста',
             skillId: skillId,
             xpReward: 20,
             type: TaskType.shortTerm,
@@ -1460,6 +1536,20 @@ void main() {
             title: 'Второй квест',
             skillId: skillId,
             xpReward: 20,
+            type: TaskType.shortTerm,
+          ),
+          Task(
+            id: 'mobile-active-3',
+            title: 'Третий квест',
+            skillId: skillId,
+            xpReward: 30,
+            type: TaskType.shortTerm,
+          ),
+          Task(
+            id: 'mobile-active-4',
+            title: 'Четвёртый квест',
+            skillId: skillId,
+            xpReward: 40,
             type: TaskType.shortTerm,
           ),
           Task(
@@ -1484,6 +1574,12 @@ void main() {
         const ValueKey('mobile-skill-chip-mobile-experience'),
       );
       expect(compactPanel, findsOneWidget);
+      expect(find.byKey(const ValueKey('mobile-act-overview')), findsOneWidget);
+      expect(find.text('Выбери навык для фокуса'), findsOneWidget);
+      expect(
+        find.text('Здесь появятся квесты, прогресс и цели'),
+        findsOneWidget,
+      );
       expect(skillChip, findsOneWidget);
       expect(
         find.descendant(of: skillChip, matching: find.textContaining('Ур. 4')),
@@ -1507,35 +1603,62 @@ void main() {
       );
       expect(find.text('0 дней'), findsNothing);
       expect(find.text('Задачник'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('mobile-next-action-summary')),
+        findsNothing,
+      );
+      expect(
+        tester
+            .getTopLeft(find.byKey(const ValueKey('mobile-focus-placeholder')))
+            .dy,
+        lessThan(
+          tester
+              .getTopLeft(
+                find.byKey(const ValueKey('mobile-inbox-accordion-toggle')),
+              )
+              .dy,
+        ),
+      );
       final goalSemantics = tester
           .widgetList<Semantics>(
             find.descendant(of: skillChip, matching: find.byType(Semantics)),
           )
           .any(
             (semantics) =>
-                semantics.properties.value == 'Прогресс цели: 50%' ||
-                semantics.properties.label == 'Прогресс цели: 50%',
+                semantics.properties.value == 'Прогресс уровня: 50%' ||
+                semantics.properties.label == 'Прогресс уровня: 50%',
           );
       expect(goalSemantics, isTrue);
       expect(tester.takeException(), isNull);
 
       await tester.tap(skillChip);
+      await tester.pump();
+      expect(find.byKey(const ValueKey('mobile-act-overview')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('mobile-act-focus-mobile-experience')),
+        findsOneWidget,
+      );
       await tester.pumpAndSettle();
 
       expect(
         find.byKey(const ValueKey('mobile-skill-panel-compact')),
         findsNothing,
       );
-      expect(
-        find.byKey(const ValueKey('mobile-focus-switcher')),
-        findsOneWidget,
-      );
+      expect(find.byKey(const ValueKey('mobile-focus-switcher')), findsNothing);
       expect(
         find.byKey(const ValueKey('mobile-overview-action')),
         findsOneWidget,
       );
+      expect(
+        find.byKey(const ValueKey('mobile-act-focus-mobile-experience')),
+        findsOneWidget,
+      );
       expect(find.byKey(const ValueKey('mobile-momentum-row')), findsNothing);
       expect(find.text('Задачник'), findsNothing);
+      expect(
+        find.byKey(const ValueKey('mobile-next-action-summary')),
+        findsNothing,
+      );
       expect(
         find.byKey(
           const ValueKey('mobile-selected-skill-focus-mobile-experience'),
@@ -1543,9 +1666,109 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Дойти до уверенного результата'), findsOneWidget);
-      expect(find.text('50%'), findsOneWidget);
-      expect(find.byKey(const ValueKey('tasks-list')), findsOneWidget);
+      expect(find.text('Прогресс цели'), findsNothing);
+      expect(find.text('50%'), findsNothing);
+      expect(
+        find.byKey(const ValueKey('mobile-focus-quest-row-mobile-active-1')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('quest-xp-mobile-active-1')),
+        findsOneWidget,
+      );
+      expect(find.byType(XpRewardPill), findsNWidgets(5));
+      expect(
+        find.byKey(const ValueKey('task-done-mobile-completed')),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Выполнено ('), findsNothing);
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('mobile-focus-quest-row-mobile-completed')),
+      );
+      await tester.pumpAndSettle();
+      await tester.drag(
+        find.byKey(const ValueKey('mobile-focus-quest-row-mobile-completed')),
+        const Offset(220, 0),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('В Выполнено'), findsOneWidget);
+      await tester.tap(find.text('В Выполнено'));
+      await tester.pumpAndSettle();
+      expect(find.text('Выполнено (1)'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('mobile-focus-quest-row-mobile-completed')),
+        findsNothing,
+      );
+      await tester.ensureVisible(find.text('Выполнено (1)'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Выполнено (1)'));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('task-archived-mobile-completed')),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .getSize(
+              find.byKey(
+                const ValueKey('mobile-focus-quest-row-mobile-active-1'),
+              ),
+            )
+            .height,
+        greaterThan(
+          tester
+              .getSize(
+                find.byKey(
+                  const ValueKey('mobile-focus-quest-row-mobile-active-2'),
+                ),
+              )
+              .height,
+        ),
+      );
+      expect(find.byType(MobileSkillFocusSurface), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('mobile-delete-skill-mobile-experience')),
+        findsOneWidget,
+      );
+      expect(find.byType(DashedBorderContainer), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('mobile-dashed-add-quest')),
+        findsOneWidget,
+      );
+      final focusSurface = tester.widget<MobileSkillFocusSurface>(
+        find.byType(MobileSkillFocusSurface),
+      );
+      expect(focusSurface.skillColor, const Color(0xFFFF1635));
+      final questRow = tester.widget<Container>(
+        find.byKey(const ValueKey('mobile-focus-quest-row-mobile-active-1')),
+      );
+      final questDecoration = questRow.decoration! as BoxDecoration;
+      expect(questDecoration.color, MobileJournalTokens.questRow(true));
+      final completedRow = tester.widget<Container>(
+        find.byKey(const ValueKey('mobile-focus-quest-row-mobile-completed')),
+      );
+      final completedDecoration = completedRow.decoration! as BoxDecoration;
+      expect(
+        completedDecoration.color,
+        isNot(MobileJournalTokens.questRow(true)),
+      );
+      expect(MobileJournalTokens.rewardGold, const Color(0xFFFFB020));
+      expect(find.text('Новый квест'), findsOneWidget);
       expect(find.textContaining('Фокус:'), findsNothing);
+
+      await tester.longPress(
+        find.byKey(
+          const ValueKey('mobile-focus-quest-long-press-mobile-active-1'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('mobile-add-task-page')),
+        findsOneWidget,
+      );
+      expect(find.text('Сохранить изменения'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('mobile-form-cancel')));
+      await tester.pumpAndSettle();
 
       tester.view.physicalSize = const Size(700, 800);
       await tester.pumpAndSettle();
@@ -1558,7 +1781,17 @@ void main() {
       );
       expect(tester.takeException(), isNull);
 
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('mobile-overview-action')),
+      );
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('mobile-overview-action')));
+      await tester.pump();
+      expect(
+        find.byKey(const ValueKey('mobile-act-focus-mobile-experience')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey('mobile-act-overview')), findsOneWidget);
       await tester.pumpAndSettle();
       expect(
         find.byKey(const ValueKey('mobile-skill-panel-compact')),
@@ -1570,7 +1803,57 @@ void main() {
     },
   );
 
-  testWidgets('mobile skill without RoadMap stages has neutral progress', (
+  testWidgets('desktop task row uses the shared amber XP reward pill', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final task = Task(
+      id: 'desktop-reward',
+      title: 'Проверить награду на desktop',
+      skillId: 'desktop-skill',
+      xpReward: 35,
+      type: TaskType.shortTerm,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 720,
+              child: TaskTile(
+                task: task,
+                isDark: true,
+                skillColor: const Color(0xFF7562FF),
+                previewEarnedXP: 35,
+                previewBuffBonus: 0,
+                onToggle: (_) {},
+                onMinimumAction: (_) {},
+                onUncomplete: () {},
+                onArchive: () {},
+                onRestoreArchive: () {},
+                onDelete: () {},
+                onEdit: () {},
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      find.byKey(const ValueKey('quest-xp-desktop-reward')),
+      findsOneWidget,
+    );
+    expect(find.byType(XpRewardPill), findsOneWidget);
+    expect(MobileJournalTokens.rewardGold, const Color(0xFFFFB020));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('mobile skill ring uses level XP without RoadMap stages', (
     WidgetTester tester,
   ) async {
     tester.view.physicalSize = const Size(360, 800);
@@ -1587,6 +1870,7 @@ void main() {
           goal: 'Добавить этапы позже',
           color: const Color(0xFFFF9500),
           icon: Icons.lightbulb_outline_rounded,
+          xp: 250,
         ),
       ];
     await storage.init();
@@ -1595,14 +1879,15 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    expect(find.text('Нет пути'), findsOneWidget);
+    expect(find.text('25%'), findsOneWidget);
 
     await tester.tap(
       find.byKey(const ValueKey('mobile-skill-chip-mobile-empty-roadmap')),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Добавьте этапы'), findsOneWidget);
+    expect(find.text('Прогресс цели'), findsNothing);
+    expect(find.text('Добавьте этапы'), findsNothing);
     expect(
       find.byKey(const ValueKey('skill-goal-bar-mobile-empty-roadmap')),
       findsNothing,
@@ -2501,10 +2786,22 @@ void main() {
     );
     expect(find.text('У пути пока нет этапов'), findsOneWidget);
     expect(find.text('Добавить этап'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('mobile-roadmap-path-back-to-skills')),
+      findsOneWidget,
+    );
+    await tester.tap(
+      find.byKey(const ValueKey('mobile-roadmap-path-back-to-skills')),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('mobile-roadmap-skill-chooser')),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
 
     await tester.tap(
-      find.byKey(const ValueKey('mobile-roadmap-skill-single-roadmap')),
+      find.byKey(const ValueKey('mobile-roadmap-choose-single-roadmap')),
     );
     await tester.pumpAndSettle();
     expect(
@@ -2575,7 +2872,7 @@ void main() {
 
     expect(
       find.byKey(const ValueKey('mobile-next-action-summary')),
-      findsOneWidget,
+      findsNothing,
     );
     expect(find.text('Задачник'), findsOneWidget);
     expect(
@@ -2717,7 +3014,7 @@ void main() {
     },
   );
 
-  testWidgets('mobile Act surfaces the next minimum action before tasks', (
+  testWidgets('mobile Act keeps next action inside selected skill focus', (
     WidgetTester tester,
   ) async {
     tester.view.physicalSize = const Size(360, 800);
@@ -2753,23 +3050,22 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
 
     final summary = find.byKey(const ValueKey('mobile-next-action-summary'));
-    final trigger = find.byKey(
-      const ValueKey('mobile-next-action-trigger-mobile-focus-task'),
-    );
-    expect(summary, findsOneWidget);
-    expect(find.textContaining('Минимальный шаг'), findsOneWidget);
-    expect(find.text('Открыть макет и проверить один блок'), findsOneWidget);
-    expect(tester.getSize(trigger).height, greaterThanOrEqualTo(48));
-
-    await tester.tap(trigger);
-    await tester.pump(const Duration(seconds: 1));
-    expect(storage.tasks.single.isMinimumActionDone, isTrue);
+    expect(summary, findsNothing);
+    expect(find.text('Выбери навык для фокуса'), findsOneWidget);
 
     await tester.tap(
       find.byKey(const ValueKey('mobile-skill-chip-mobile-focus-skill')),
     );
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('tasks-list')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('mobile-focus-quest-row-mobile-focus-task')),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Минимум:'), findsOneWidget);
+    expect(
+      find.textContaining('Открыть макет и проверить один блок'),
+      findsOneWidget,
+    );
     expect(summary, findsNothing);
     expect(find.byKey(const ValueKey('mobile-momentum-row')), findsNothing);
     expect(tester.takeException(), isNull);
@@ -2926,8 +3222,55 @@ void main() {
     final delegate =
         grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
     expect(delegate.crossAxisCount, 6);
-    final firstIcon = find.byTooltip('Силовые тренировки').first;
+    expect(grid.childrenDelegate.estimatedChildCount, 12);
+    expect(find.text('Бой'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('skill-icon-grid')),
+        matching: find.text('Разум'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Фокус'), findsOneWidget);
+    final firstIcon = find.byTooltip('Бой').first;
     expect(tester.getSize(firstIcon).shortestSide, greaterThanOrEqualTo(44));
+    final colorGrid = tester.widget<GridView>(
+      find.byKey(const ValueKey('skill-color-grid')),
+    );
+    final colorDelegate =
+        colorGrid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
+    expect(colorDelegate.crossAxisCount, 6);
+    expect(colorGrid.childrenDelegate.estimatedChildCount, 12);
+    final firstRowY = tester
+        .getCenter(find.byKey(const ValueKey('skill-color-0')))
+        .dy;
+    expect(
+      tester.getCenter(find.byKey(const ValueKey('skill-color-5'))).dy,
+      closeTo(firstRowY, 0.1),
+    );
+    expect(
+      tester.getCenter(find.byKey(const ValueKey('skill-color-6'))).dy,
+      greaterThan(firstRowY),
+    );
+    final unselectedSwatch = tester.widget<AnimatedContainer>(
+      find.descendant(
+        of: find.byKey(const ValueKey('skill-color-0')),
+        matching: find.byType(AnimatedContainer),
+      ),
+    );
+    final selectedSwatch = tester.widget<AnimatedContainer>(
+      find.descendant(
+        of: find.byKey(const ValueKey('skill-color-8')),
+        matching: find.byType(AnimatedContainer),
+      ),
+    );
+    final unselectedDecoration = unselectedSwatch.decoration! as BoxDecoration;
+    final selectedDecoration = selectedSwatch.decoration! as BoxDecoration;
+    expect(unselectedDecoration.boxShadow, isNotEmpty);
+    expect(
+      selectedDecoration.boxShadow!.first.blurRadius,
+      greaterThan(unselectedDecoration.boxShadow!.first.blurRadius),
+    );
     expect(
       find.byKey(const ValueKey('skill-icon-category-all')),
       findsOneWidget,
@@ -2965,6 +3308,21 @@ void main() {
     );
     expect(find.byKey(const ValueKey('mobile-add-skill-save')), findsNothing);
     expect(find.text('Твой новый навык'), findsOneWidget);
+    expect(find.text('Название навыка'), findsOneWidget);
+    final nameField = tester.widget<TextField>(
+      find.byKey(const ValueKey('add-skill-name-field')),
+    );
+    final goalField = tester.widget<TextField>(
+      find.byKey(const ValueKey('add-skill-goal-field')),
+    );
+    expect(
+      nameField.decoration?.hintText,
+      'Коротко назови направление, в котором хочешь расти.',
+    );
+    expect(
+      goalField.decoration?.hintText,
+      'Цель поможет понять, к чему ведёт путь.',
+    );
     expect(find.text('Внешний вид'), findsOneWidget);
     expect(find.text('Первый этап'), findsOneWidget);
     expect(tester.takeException(), isNull);

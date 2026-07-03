@@ -359,6 +359,29 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
   late final String _initialDraftSignature;
   _SkillIconCategory _iconCategory = _SkillIconCategory.all;
 
+  static const _curatedIconOptions = <_SkillIconOption>[
+    _SkillIconOption(Icons.sports_martial_arts, 'Бой', _SkillIconCategory.body),
+    _SkillIconOption(Icons.psychology, 'Разум', _SkillIconCategory.mind),
+    _SkillIconOption(Icons.fitness_center, 'Тело', _SkillIconCategory.body),
+    _SkillIconOption(Icons.favorite, 'Здоровье', _SkillIconCategory.body),
+    _SkillIconOption(Icons.attach_money, 'Финансы', _SkillIconCategory.work),
+    _SkillIconOption(Icons.business_center, 'Работа', _SkillIconCategory.work),
+    _SkillIconOption(
+      Icons.music_note,
+      'Творчество',
+      _SkillIconCategory.creativity,
+    ),
+    _SkillIconOption(Icons.public, 'Мир', _SkillIconCategory.mind),
+    _SkillIconOption(
+      Icons.favorite_border,
+      'Отношения',
+      _SkillIconCategory.home,
+    ),
+    _SkillIconOption(Icons.palette, 'Хобби', _SkillIconCategory.creativity),
+    _SkillIconOption(Icons.flag_rounded, 'Цель', _SkillIconCategory.work),
+    _SkillIconOption(Icons.adjust_rounded, 'Фокус', _SkillIconCategory.mind),
+  ];
+
   static const _iconOptions = <_SkillIconOption>[
     _SkillIconOption(
       Icons.fitness_center,
@@ -488,12 +511,19 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
     'Серый',
   ];
 
-  List<_SkillIconOption> get _visibleIconOptions =>
-      _iconCategory == _SkillIconCategory.all
-      ? _iconOptions
-      : _iconOptions
-            .where((option) => option.category == _iconCategory)
-            .toList(growable: false);
+  List<_SkillIconOption> get _visibleIconOptions {
+    if (_iconCategory != _SkillIconCategory.all) {
+      return _iconOptions
+          .where((option) => option.category == _iconCategory)
+          .toList(growable: false);
+    }
+    if (_curatedIconOptions.any((option) => option.icon == _icon)) {
+      return _curatedIconOptions;
+    }
+    final selected = _iconOptions.where((option) => option.icon == _icon);
+    if (selected.isEmpty) return _curatedIconOptions;
+    return [selected.first, ..._curatedIconOptions.take(11)];
+  }
 
   // Grid geometry
   static const _crossAxisCount = 9;
@@ -594,7 +624,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
           if (widget.fullScreen) ...[
             _MobileSkillFormSection(
               title: 'Название навыка',
-              subtitle: 'Коротко назови направление, в котором хочешь расти.',
+              subtitle: '',
               color: _color,
               isDark: isDark,
             ),
@@ -602,6 +632,10 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
           ],
           DlgField(
             label: 'Название навыка',
+            hintText: widget.fullScreen
+                ? 'Коротко назови направление, в котором хочешь расти.'
+                : null,
+            showLabel: !widget.fullScreen,
             ctrl: _nameCtrl,
             fBg: fBg,
             txt: txt,
@@ -628,7 +662,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
           if (widget.fullScreen) ...[
             _MobileSkillFormSection(
               title: 'Цель',
-              subtitle: 'Цель поможет понять, к чему ведёт путь.',
+              subtitle: '',
               color: _color,
               isDark: isDark,
             ),
@@ -636,6 +670,10 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
           ],
           DlgField(
             label: 'Цель',
+            hintText: widget.fullScreen
+                ? 'Цель поможет понять, к чему ведёт путь.'
+                : null,
+            showLabel: !widget.fullScreen,
             ctrl: _goalCtrl,
             fBg: fBg,
             txt: txt,
@@ -681,7 +719,9 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  '${_iconOptions.length} иконок · прокрутите',
+                  widget.fullScreen
+                      ? '${iconOptions.length} вариантов · категории расширяют выбор'
+                      : '${_iconOptions.length} иконок · прокрутите',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.right,
@@ -724,7 +764,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
           ],
           const SizedBox(height: 8),
           Container(
-            height: widget.fullScreen ? 232 : _gridHeight,
+            height: widget.fullScreen ? 158 : _gridHeight,
             decoration: BoxDecoration(
               color: fBg,
               borderRadius: BorderRadius.circular(10),
@@ -732,11 +772,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
             ),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final crossAxisCount = widget.fullScreen
-                    ? constraints.maxWidth < 340
-                          ? 6
-                          : 7
-                    : _crossAxisCount;
+                final crossAxisCount = widget.fullScreen ? 6 : _crossAxisCount;
                 return GridView.builder(
                   key: const ValueKey('skill-icon-grid'),
                   padding: const EdgeInsets.all(_spacing),
@@ -744,7 +780,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
                     crossAxisCount: crossAxisCount,
                     mainAxisSpacing: _spacing,
                     crossAxisSpacing: _spacing,
-                    childAspectRatio: 1,
+                    childAspectRatio: widget.fullScreen ? 0.72 : 1,
                   ),
                   itemCount: iconOptions.length,
                   itemBuilder: (_, i) {
@@ -757,6 +793,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
                       inactiveColor: sub,
                       mobile: widget.fullScreen,
                       semanticsLabel: option.label,
+                      displayLabel: widget.fullScreen ? option.label : null,
                       onTap: () => setState(() => _icon = option.icon),
                     );
                   },
@@ -768,26 +805,53 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
 
           SubLbl('Цвет', sub),
           const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: kColors.asMap().entries.map((entry) {
-              final i = entry.key;
-              final c = entry.value;
-              final sel = c == _color;
-              return KeyedSubtree(
-                key: ValueKey('skill-color-$i'),
-                child: _ColorChoiceButton(
-                  color: c,
-                  selected: sel,
-                  isDark: isDark,
-                  mobile: widget.fullScreen,
-                  semanticsLabel: _colorLabels[i],
-                  onTap: () => setState(() => _color = c),
-                ),
-              );
-            }).toList(),
-          ),
+          if (widget.fullScreen)
+            GridView.builder(
+              key: const ValueKey('skill-color-grid'),
+              shrinkWrap: true,
+              primary: false,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 6,
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+                childAspectRatio: 1,
+              ),
+              itemCount: kColors.length,
+              itemBuilder: (context, i) {
+                final color = kColors[i];
+                return Center(
+                  key: ValueKey('skill-color-$i'),
+                  child: _ColorChoiceButton(
+                    color: color,
+                    selected: color == _color,
+                    isDark: isDark,
+                    mobile: true,
+                    semanticsLabel: _colorLabels[i],
+                    onTap: () => setState(() => _color = color),
+                  ),
+                );
+              },
+            )
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: kColors.asMap().entries.map((entry) {
+                final i = entry.key;
+                final color = entry.value;
+                return KeyedSubtree(
+                  key: ValueKey('skill-color-$i'),
+                  child: _ColorChoiceButton(
+                    color: color,
+                    selected: color == _color,
+                    isDark: isDark,
+                    semanticsLabel: _colorLabels[i],
+                    onTap: () => setState(() => _color = color),
+                  ),
+                );
+              }).toList(),
+            ),
           const SizedBox(height: 14),
 
           if (widget.existing == null) ...[
@@ -832,7 +896,9 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
             DlgActions(
               onCancel: () => Navigator.pop(context),
               onSave: _save,
-              saveLabel: widget.existing == null ? 'Создать' : 'Сохранить',
+              saveLabel: widget.existing == null
+                  ? 'Создать'
+                  : 'Сохранить изменения',
             ),
         ],
       ),
@@ -873,7 +939,9 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
                 size: 19,
               ),
               label: Text(
-                widget.existing == null ? 'Создать навык' : 'Сохранить навык',
+                widget.existing == null
+                    ? 'Создать навык'
+                    : 'Сохранить изменения',
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w900,
@@ -1065,16 +1133,18 @@ class _MobileSkillFormSection extends StatelessWidget {
                   fontWeight: FontWeight.w900,
                 ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  color: subtext(isDark),
-                  fontSize: 11.5,
-                  height: 1.25,
-                  fontWeight: FontWeight.w600,
+              if (subtitle.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: subtext(isDark),
+                    fontSize: 11.5,
+                    height: 1.25,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),

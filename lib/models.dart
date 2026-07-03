@@ -523,6 +523,7 @@ class Task {
   int xpReward;
   TaskType type;
   bool isDone;
+  bool isArchived;
   int streak;
   int earnedXP;
   RepeatFrequency repeatFrequency;
@@ -565,6 +566,7 @@ class Task {
     required this.xpReward,
     required this.type,
     this.isDone = false,
+    this.isArchived = false,
     this.streak = 0,
     this.earnedXP = 0,
     this.repeatFrequency = RepeatFrequency.daily,
@@ -604,6 +606,7 @@ class Task {
   bool get isSkillTask => skillId.trim().isNotEmpty && !isInbox;
 
   void normalizeScope() {
+    if (!isDone) isArchived = false;
     if ((_skillId?.trim().isEmpty ?? true)) {
       skillId = kInboxSkillId;
     }

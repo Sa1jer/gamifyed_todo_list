@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
-const String kAppVersionLabel = 'v1.3.42+1';
+const String kAppVersionLabel = 'v1.3.49+1';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ID GENERATOR

@@ -331,6 +331,12 @@ class _MainPageState extends State<MainPage> {
       state: state,
       isDark: isDark,
       showTutorialHint: showTutorialHint,
+      onClose: () {
+        setState(() {
+          _mode = WorkspaceMode.act;
+          _statsTutorialActive = false;
+        });
+      },
       onTutorialComplete: showTutorialHint
           ? () {
               _completeStatisticsTutorial(state);

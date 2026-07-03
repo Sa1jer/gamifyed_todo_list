@@ -363,27 +363,10 @@ class _InboxTaskRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 6),
-          Semantics(
-            label: 'Награда ${AppState.inboxTaskXp} опыта',
-            child: Container(
-              key: ValueKey('inbox-xp-${task.id}'),
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFB020).withAlpha(isDark ? 24 : 18),
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(
-                  color: const Color(0xFFFFB020).withAlpha(90),
-                ),
-              ),
-              child: const Text(
-                '+${AppState.inboxTaskXp} XP',
-                style: TextStyle(
-                  color: Color(0xFFFFB020),
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ),
+          XpRewardPill(
+            key: ValueKey('inbox-xp-${task.id}'),
+            xp: AppState.inboxTaskXp,
+            isDark: isDark,
           ),
           IconButton(
             tooltip: 'Удалить из Задачника',

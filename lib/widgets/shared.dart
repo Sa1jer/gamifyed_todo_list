@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import '../models.dart';
 import '../utils.dart';
+import 'mobile_journal_tokens.dart';
 
 const _kPanelRadius = 14.0;
 const kMotionFast = Duration(milliseconds: 90);
@@ -702,6 +704,151 @@ class TaskBadge extends StatelessWidget {
   );
 }
 
+class XpRewardPill extends StatelessWidget {
+  final int xp;
+  final bool isDark;
+  final bool isReversal;
+
+  const XpRewardPill({
+    super.key,
+    required this.xp,
+    required this.isDark,
+    this.isReversal = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final value = xp < 0 ? -xp : xp;
+    final copy = '${isReversal ? '-' : '+'}$value XP';
+    return Semantics(
+      label: isReversal ? 'Откат $value XP' : 'Награда $value XP',
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+        decoration: BoxDecoration(
+          color: MobileJournalTokens.rewardGoldBackground(isDark),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: MobileJournalTokens.rewardGoldBorder(isDark),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.bolt_rounded,
+              size: 13,
+              color: MobileJournalTokens.rewardGold,
+            ),
+            const SizedBox(width: 3),
+            Text(
+              copy,
+              style: const TextStyle(
+                color: MobileJournalTokens.rewardGold,
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class DashedBorderContainer extends StatelessWidget {
+  final Widget child;
+  final Color color;
+  final Color? backgroundColor;
+  final BorderRadius borderRadius;
+  final double strokeWidth;
+  final double dashLength;
+  final double gapLength;
+
+  const DashedBorderContainer({
+    super.key,
+    required this.child,
+    required this.color,
+    this.backgroundColor,
+    this.borderRadius = const BorderRadius.all(Radius.circular(16)),
+    this.strokeWidth = 1.2,
+    this.dashLength = 7,
+    this.gapLength = 5,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      key: const ValueKey('dashed-border-painter'),
+      foregroundPainter: _DashedRoundedRectPainter(
+        color: color,
+        radius: borderRadius.topLeft.x,
+        strokeWidth: strokeWidth,
+        dashLength: dashLength,
+        gapLength: gapLength,
+      ),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: borderRadius,
+        ),
+        child: child,
+      ),
+    );
+  }
+}
+
+class _DashedRoundedRectPainter extends CustomPainter {
+  final Color color;
+  final double radius;
+  final double strokeWidth;
+  final double dashLength;
+  final double gapLength;
+
+  const _DashedRoundedRectPainter({
+    required this.color,
+    required this.radius,
+    required this.strokeWidth,
+    required this.dashLength,
+    required this.gapLength,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    final inset = strokeWidth / 2;
+    final rect = (Offset.zero & size).deflate(inset);
+    final path = Path()
+      ..addRRect(
+        RRect.fromRectAndRadius(
+          rect,
+          Radius.circular(math.max(0, radius - inset)),
+        ),
+      );
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+
+    for (final metric in path.computeMetrics()) {
+      var distance = 0.0;
+      while (distance < metric.length) {
+        final end = math.min(distance + dashLength, metric.length);
+        canvas.drawPath(metric.extractPath(distance, end), paint);
+        distance += dashLength + gapLength;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedRoundedRectPainter oldDelegate) =>
+      color != oldDelegate.color ||
+      radius != oldDelegate.radius ||
+      strokeWidth != oldDelegate.strokeWidth ||
+      dashLength != oldDelegate.dashLength ||
+      gapLength != oldDelegate.gapLength;
+}
+
 class InboxTaskCountBubble extends StatelessWidget {
   final int count;
   final Color color;
@@ -1107,9 +1254,11 @@ class DlgHeader extends StatelessWidget {
 
 class DlgField extends StatelessWidget {
   final String label;
+  final String? hintText;
   final TextEditingController ctrl;
   final Color fBg, txt, sub, bdr;
   final int min;
+  final bool showLabel;
   final Key? fieldKey;
   final ValueChanged<String>? onChanged;
   const DlgField({
@@ -1121,6 +1270,8 @@ class DlgField extends StatelessWidget {
     required this.sub,
     required this.bdr,
     this.min = 1,
+    this.hintText,
+    this.showLabel = true,
     this.fieldKey,
     this.onChanged,
   });
@@ -1128,8 +1279,7 @@ class DlgField extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      SubLbl(label, sub),
-      const SizedBox(height: 6),
+      if (showLabel) ...[SubLbl(label, sub), const SizedBox(height: 6)],
       Container(
         decoration: BoxDecoration(
           color: fBg,
@@ -1143,9 +1293,14 @@ class DlgField extends StatelessWidget {
           style: TextStyle(color: txt, fontSize: 14),
           minLines: min,
           maxLines: min == 1 ? 1 : 4,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             border: InputBorder.none,
-            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            hintText: hintText,
+            hintStyle: TextStyle(color: sub, fontSize: 13, height: 1.25),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
           ),
         ),
       ),
@@ -1164,6 +1319,7 @@ class MobileFormPage extends StatelessWidget {
   final Widget child;
   final Widget? bottomAction;
   final bool showTopSaveAction;
+  final String saveLabel;
 
   const MobileFormPage({
     super.key,
@@ -1177,6 +1333,7 @@ class MobileFormPage extends StatelessWidget {
     required this.child,
     this.bottomAction,
     this.showTopSaveAction = true,
+    this.saveLabel = 'Создать',
   });
 
   @override
@@ -1201,9 +1358,9 @@ class MobileFormPage extends StatelessWidget {
                   key: saveKey,
                   onPressed: onSave,
                   style: TextButton.styleFrom(foregroundColor: accentColor),
-                  child: const Text(
-                    'Создать',
-                    style: TextStyle(fontWeight: FontWeight.w900),
+                  child: Text(
+                    saveLabel,
+                    style: const TextStyle(fontWeight: FontWeight.w900),
                   ),
                 ),
                 const SizedBox(width: 4),
@@ -1269,8 +1426,10 @@ class DlgActions extends StatelessWidget {
     this.saveColor = const Color(0xFF4A9EFF),
   });
   @override
-  Widget build(BuildContext context) => Row(
-    mainAxisAlignment: MainAxisAlignment.end,
+  Widget build(BuildContext context) => Wrap(
+    alignment: WrapAlignment.end,
+    spacing: 10,
+    runSpacing: 8,
     children: [
       PressFeedback(
         onTap: onCancel,
@@ -1290,7 +1449,6 @@ class DlgActions extends StatelessWidget {
           ),
         ),
       ),
-      const SizedBox(width: 10),
       PressFeedback(
         onTap: onSave,
         child: Container(

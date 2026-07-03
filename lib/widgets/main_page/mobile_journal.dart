@@ -1,37 +1,30 @@
 part of '../main_page.dart';
 
-abstract final class _MobileJournalTokens {
-  static const backgroundDark = Color(0xFF090A11);
-  static const surfaceDark = Color(0xFF12131D);
-  static const raisedDark = Color(0xFF171925);
-  static const outlineDark = Color(0xFF2B2D3B);
-  static const textDark = Color(0xFFF5F2FA);
-  static const mutedDark = Color(0xFF9895A7);
-  static const violet = Color(0xFF7562FF);
-  static const amber = Color(0xFFFF8A1F);
-  static const inbox = Color(0xFF35C76F);
+enum _MobileSkillAction { edit, delete }
 
-  static const radiusLarge = 24.0;
-  static const radiusMedium = 18.0;
-  static const motion = Duration(milliseconds: 220);
-  static const curve = Curves.easeOutCubic;
+abstract final class _MobileJournalTokens {
+  static const raisedDark = MobileJournalTokens.raisedDark;
+  static const violet = MobileJournalTokens.violet;
+  static const amber = MobileJournalTokens.amber;
+  static const inbox = MobileJournalTokens.inbox;
+
+  static const radiusLarge = MobileJournalTokens.radiusLarge;
+  static const radiusMedium = MobileJournalTokens.radiusMedium;
+  static const motion = MobileJournalTokens.motion;
+  static const curve = MobileJournalTokens.curve;
 
   static Color background(bool isDark) =>
-      isDark ? backgroundDark : const Color(0xFFF5F1E8);
+      MobileJournalTokens.background(isDark);
 
-  static Color surfaceColor(bool isDark) =>
-      isDark ? surfaceDark : const Color(0xFFFFFCF6);
+  static Color surfaceColor(bool isDark) => MobileJournalTokens.surface(isDark);
 
-  static Color raised(bool isDark) =>
-      isDark ? raisedDark : const Color(0xFFF2EEE6);
+  static Color raised(bool isDark) => MobileJournalTokens.raised(isDark);
 
-  static Color outline(bool isDark) =>
-      isDark ? outlineDark : const Color(0xFFD9D3C8);
+  static Color outline(bool isDark) => MobileJournalTokens.outline(isDark);
 
-  static Color text(bool isDark) => isDark ? textDark : const Color(0xFF17151C);
+  static Color text(bool isDark) => MobileJournalTokens.text(isDark);
 
-  static Color muted(bool isDark) =>
-      isDark ? mutedDark : const Color(0xFF68636F);
+  static Color muted(bool isDark) => MobileJournalTokens.muted(isDark);
 }
 
 class _MobileActJournal extends StatefulWidget {
@@ -72,17 +65,49 @@ class _MobileActJournalState extends State<_MobileActJournal> {
       });
     }
 
-    return AnimatedSwitcher(
+    return AnimatedSize(
       duration: _motionDuration(context),
-      switchInCurve: _MobileJournalTokens.curve,
-      switchOutCurve: Curves.easeInCubic,
-      layoutBuilder: (current, previous) => Stack(
-        alignment: Alignment.topCenter,
-        children: [...previous, ?current],
+      curve: _MobileJournalTokens.curve,
+      alignment: Alignment.topCenter,
+      child: AnimatedSwitcher(
+        duration: _motionDuration(context),
+        switchInCurve: _MobileJournalTokens.curve,
+        switchOutCurve: Curves.easeInCubic,
+        transitionBuilder: (child, animation) {
+          final slide =
+              Tween<Offset>(
+                begin: const Offset(0, 0.055),
+                end: Offset.zero,
+              ).animate(
+                CurvedAnimation(
+                  parent: animation,
+                  curve: _MobileJournalTokens.curve,
+                ),
+              );
+          return FadeTransition(
+            opacity: animation,
+            child: SlideTransition(
+              position: slide,
+              child: ScaleTransition(
+                scale: Tween<double>(begin: 0.985, end: 1).animate(
+                  CurvedAnimation(
+                    parent: animation,
+                    curve: _MobileJournalTokens.curve,
+                  ),
+                ),
+                child: child,
+              ),
+            ),
+          );
+        },
+        layoutBuilder: (current, previous) => Stack(
+          alignment: Alignment.topCenter,
+          children: [...previous, ?current],
+        ),
+        child: selectedSkill == null
+            ? _buildOverview(context, state)
+            : _buildFocus(context, state, selectedSkill),
       ),
-      child: selectedSkill == null
-          ? _buildOverview(context, state)
-          : _buildFocus(context, state, selectedSkill),
     );
   }
 
@@ -90,139 +115,453 @@ class _MobileActJournalState extends State<_MobileActJournal> {
     final isDark = state.isDark;
     final skills = state.roadmapSkills;
     final inboxCount = state.inboxTasks.where((task) => !task.isDone).length;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final skillListHeight = skills.isEmpty
+            ? 150.0
+            : skills.length * 94.0 + math.max(0, skills.length - 1) * 10.0;
+        final inboxContentHeight = _inboxExpanded
+            ? (170.0 + inboxCount * 52).clamp(230.0, 430.0)
+            : 0.0;
+        final fixedHeight =
+            84.0 +
+            73.0 +
+            skillListHeight +
+            12.0 +
+            76.0 +
+            inboxContentHeight +
+            12.0;
+        final placeholderSlot = constraints.maxHeight.isFinite
+            ? math.max(0.0, constraints.maxHeight - fixedHeight - 12.0)
+            : 0.0;
 
-    return CustomScrollView(
-      key: const ValueKey('mobile-skill-panel-compact'),
-      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      slivers: [
-        SliverToBoxAdapter(child: _MobileMomentumRow(state: state)),
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.only(top: 16, bottom: 9),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Навыки',
-                    style: TextStyle(
-                      color: _MobileJournalTokens.text(isDark),
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                    ),
+        return KeyedSubtree(
+          key: const ValueKey('mobile-act-overview'),
+          child: CustomScrollView(
+            key: const ValueKey('mobile-skill-panel-compact'),
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            slivers: [
+              SliverToBoxAdapter(child: _MobileMomentumRow(state: state)),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 16, bottom: 9),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Навыки',
+                          style: TextStyle(
+                            color: _MobileJournalTokens.text(isDark),
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      KeyedSubtree(
+                        key: widget.createFirstSkillButtonKey,
+                        child: IconButton.filled(
+                          key: const ValueKey('mobile-add-skill-open'),
+                          tooltip: 'Создать навык',
+                          onPressed: widget.onCreateSkill,
+                          style: IconButton.styleFrom(
+                            minimumSize: const Size.square(48),
+                            backgroundColor: _MobileJournalTokens.violet,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                          ),
+                          icon: const Icon(Icons.add_rounded),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                KeyedSubtree(
-                  key: widget.createFirstSkillButtonKey,
-                  child: IconButton.filled(
-                    key: const ValueKey('mobile-add-skill-open'),
-                    tooltip: 'Создать навык',
-                    onPressed: widget.onCreateSkill,
-                    style: IconButton.styleFrom(
-                      minimumSize: const Size.square(48),
-                      backgroundColor: _MobileJournalTokens.violet,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                    ),
-                    icon: const Icon(Icons.add_rounded),
+              ),
+              if (skills.isEmpty)
+                SliverToBoxAdapter(
+                  child: _MobileJournalEmptySkills(
+                    onCreate: widget.onCreateSkill,
                   ),
+                )
+              else
+                SliverToBoxAdapter(
+                  child: ReorderableListView.builder(
+                    key: const ValueKey('mobile-skill-overview-list'),
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    buildDefaultDragHandles: false,
+                    itemCount: skills.length,
+                    onReorderItem: state.reorderSkills,
+                    itemBuilder: (context, index) {
+                      final skill = skills[index];
+                      final activeCount = state
+                          .tasksForSkill(skill.id)
+                          .where((task) => !task.isDone)
+                          .length;
+                      final card = _MobileSkillOverviewCard(
+                        skill: skill,
+                        activeQuestCount: activeCount,
+                        isDark: isDark,
+                        reorderIndex: index,
+                        onTap: () {
+                          if (_inboxExpanded) {
+                            setState(() => _inboxExpanded = false);
+                          }
+                          state.selectSkill(skill.id);
+                        },
+                        onLongPress: () => _showSkillActions(
+                          context,
+                          state: state,
+                          skill: skill,
+                        ),
+                        onEdit: () =>
+                            _editSkill(context, state: state, skill: skill),
+                        onDelete: () => _confirmDeleteSkill(
+                          context,
+                          state: state,
+                          skill: skill,
+                        ),
+                      );
+                      return Padding(
+                        key: ValueKey('mobile-skill-overview-${skill.id}'),
+                        padding: EdgeInsets.only(
+                          bottom: index == skills.length - 1 ? 0 : 10,
+                        ),
+                        child: KeyedSubtree(
+                          key: index == 0 ? widget.nextQuestActionKey : null,
+                          child: card,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    top: placeholderSlot >= 108 ? 12 : 0,
+                  ),
+                  child: _MobileFocusPlaceholder(
+                    availableHeight: placeholderSlot,
+                  ),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: _MobileInboxAccordion(
+                    expanded: _inboxExpanded,
+                    taskCount: inboxCount,
+                    isDark: isDark,
+                    onToggle: () =>
+                        setState(() => _inboxExpanded = !_inboxExpanded),
+                    onComplete: widget.onComplete,
+                  ),
+                ),
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 12)),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildFocus(BuildContext context, AppState state, Skill skill) {
+    return KeyedSubtree(
+      key: ValueKey('mobile-act-focus-${skill.id}'),
+      child: SingleChildScrollView(
+        key: ValueKey('mobile-journal-focus-${skill.id}'),
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        padding: const EdgeInsets.only(bottom: 12),
+        child: TasksPanel(
+          onComplete: widget.onComplete,
+          onMinimumAction: widget.onMinimumAction,
+          mobileFocus: true,
+          onMobileOverview: () => state.selectSkill(skill.id),
+          onMobileDeleteSkill: () =>
+              _confirmDeleteSkill(context, state: state, skill: skill),
+          createFirstQuestButtonKey: widget.createFirstQuestButtonKey,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showSkillActions(
+    BuildContext context, {
+    required AppState state,
+    required Skill skill,
+  }) async {
+    AppFeedback.selection();
+    final isDark = state.isDark;
+    final action = await showModalBottomSheet<_MobileSkillAction>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => SafeArea(
+        top: false,
+        child: Container(
+          key: ValueKey('mobile-skill-actions-${skill.id}'),
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+          decoration: BoxDecoration(
+            color: surface(isDark),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  key: ValueKey('mobile-skill-edit-${skill.id}'),
+                  leading: const Icon(Icons.edit_rounded),
+                  title: const Text('Редактировать навык'),
+                  onTap: () =>
+                      Navigator.pop(sheetContext, _MobileSkillAction.edit),
+                ),
+                ListTile(
+                  key: ValueKey('mobile-skill-delete-${skill.id}'),
+                  leading: const Icon(
+                    Icons.delete_outline_rounded,
+                    color: Color(0xFFFF3B30),
+                  ),
+                  title: const Text(
+                    'Удалить навык',
+                    style: TextStyle(color: Color(0xFFFF3B30)),
+                  ),
+                  onTap: () =>
+                      Navigator.pop(sheetContext, _MobileSkillAction.delete),
                 ),
               ],
             ),
           ),
         ),
-        if (skills.isEmpty)
-          SliverToBoxAdapter(
-            child: _MobileJournalEmptySkills(onCreate: widget.onCreateSkill),
-          )
-        else
-          SliverToBoxAdapter(
-            child: ReorderableListView.builder(
-              key: const ValueKey('mobile-skill-overview-list'),
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              buildDefaultDragHandles: false,
-              itemCount: skills.length,
-              onReorderItem: state.reorderSkills,
-              itemBuilder: (context, index) {
-                final skill = skills[index];
-                final activeCount = state
-                    .tasksForSkill(skill.id)
-                    .where((task) => !task.isDone)
-                    .length;
-                return Padding(
-                  key: ValueKey('mobile-skill-overview-${skill.id}'),
-                  padding: EdgeInsets.only(
-                    bottom: index == skills.length - 1 ? 0 : 10,
-                  ),
-                  child: ReorderableDelayedDragStartListener(
-                    key: ValueKey('compact-skill-reorder-${skill.id}'),
-                    index: index,
-                    child: _MobileSkillOverviewCard(
-                      skill: skill,
-                      activeQuestCount: activeCount,
-                      isDark: isDark,
-                      onTap: () {
-                        if (_inboxExpanded) {
-                          setState(() => _inboxExpanded = false);
-                        }
-                        state.selectSkill(skill.id);
-                      },
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: _MobileInboxAccordion(
-              expanded: _inboxExpanded,
-              taskCount: inboxCount,
-              isDark: isDark,
-              onToggle: () => setState(() => _inboxExpanded = !_inboxExpanded),
-              onComplete: widget.onComplete,
-            ),
-          ),
+      ),
+    );
+    if (!context.mounted || action == null) return;
+    if (action == _MobileSkillAction.edit) {
+      await _editSkill(context, state: state, skill: skill);
+      return;
+    }
+    await _confirmDeleteSkill(context, state: state, skill: skill);
+  }
+
+  Future<void> _editSkill(
+    BuildContext context, {
+    required AppState state,
+    required Skill skill,
+  }) {
+    final isDark = state.isDark;
+    return showAdaptiveCreationForm<void>(
+      context: context,
+      builder: (_, fullScreen) => AddSkillDialog(
+        isDark: isDark,
+        fullScreen: fullScreen,
+        existing: skill,
+        onSave: (name, goal, checklist, color, icon, _, _) => state.updateSkill(
+          skill,
+          name: name,
+          goal: goal,
+          checklist: checklist,
+          color: color,
+          icon: icon,
         ),
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: TodayDashboard(
-              initiallyExpanded: false,
-              compactSummary: true,
-              mobileJournal: true,
-              hideEmptyWhenSkillsExist: true,
-              onComplete: widget.onComplete,
-              onMinimumAction: widget.onMinimumAction,
-              onCreateFirstSkill: widget.onCreateSkill,
-              nextQuestActionKey: widget.nextQuestActionKey,
-            ),
-          ),
-        ),
-        const SliverToBoxAdapter(child: SizedBox(height: 12)),
-      ],
+      ),
     );
   }
 
-  Widget _buildFocus(BuildContext context, AppState state, Skill skill) {
-    return Column(
-      key: ValueKey('mobile-journal-focus-${skill.id}'),
-      children: [
-        _MobileFocusSwitcher(
-          state: state,
-          selectedSkill: skill,
-          onOverview: () => state.selectSkill(skill.id),
+  Future<void> _confirmDeleteSkill(
+    BuildContext context, {
+    required AppState state,
+    required Skill skill,
+  }) async {
+    final isDark = state.isDark;
+    final taskCount = state.tasksForSkill(skill.id).length;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: surface(isDark),
+        title: Text(
+          'Удалить навык «${skill.name}»?',
+          style: TextStyle(color: textColor(isDark)),
         ),
-        const SizedBox(height: 8),
-        Expanded(
-          child: TasksPanel(
-            onComplete: widget.onComplete,
-            onMinimumAction: widget.onMinimumAction,
-            mobileFocus: true,
-            createFirstQuestButtonKey: widget.createFirstQuestButtonKey,
+        content: Text(
+          'Будут удалены уровень и XP навыка, его RoadMap и $taskCount ${_questWord(taskCount)}. Это действие нельзя отменить.',
+          style: TextStyle(color: subtext(isDark), height: 1.35),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Отмена'),
+          ),
+          FilledButton(
+            key: ValueKey('confirm-delete-skill-${skill.id}'),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFFF3B30),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Удалить навык'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirmed != true) return;
+    AppFeedback.destructive();
+    state.removeSkill(skill.id);
+  }
+}
+
+class _MobileFocusPlaceholder extends StatelessWidget {
+  final double availableHeight;
+
+  const _MobileFocusPlaceholder({required this.availableHeight});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = AppStateProvider.of(context).isDark;
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
+    final visible = textScale < 1.7 && availableHeight >= 108;
+    final slotHeight = visible ? availableHeight : 0.0;
+    final large = slotHeight >= 170;
+    final cardHeight = math.min(slotHeight, 300.0);
+    final duration = _motionDuration(context);
+
+    return AnimatedSize(
+      duration: duration,
+      curve: _MobileJournalTokens.curve,
+      alignment: Alignment.bottomCenter,
+      child: AnimatedOpacity(
+        duration: duration,
+        opacity: visible ? 1 : 0,
+        child: visible
+            ? SizedBox(
+                key: const ValueKey('mobile-focus-placeholder'),
+                height: slotHeight,
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: cardHeight,
+                    child: DashedBorderContainer(
+                      color: _MobileJournalTokens.outline(isDark),
+                      backgroundColor: _MobileJournalTokens.surfaceColor(
+                        isDark,
+                      ),
+                      borderRadius: BorderRadius.circular(
+                        _MobileJournalTokens.radiusLarge,
+                      ),
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 18,
+                          vertical: large ? 20 : 14,
+                        ),
+                        child: large
+                            ? _MobileFocusPlaceholderLarge(isDark: isDark)
+                            : _MobileFocusPlaceholderCompact(isDark: isDark),
+                      ),
+                    ),
+                  ),
+                ),
+              )
+            : const SizedBox(key: ValueKey('mobile-focus-placeholder-hidden')),
+      ),
+    );
+  }
+}
+
+class _MobileFocusPlaceholderLarge extends StatelessWidget {
+  final bool isDark;
+
+  const _MobileFocusPlaceholderLarge({required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          width: 58,
+          height: 58,
+          decoration: BoxDecoration(
+            color: _MobileJournalTokens.violet.withAlpha(isDark ? 20 : 14),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: _MobileJournalTokens.violet.withAlpha(70),
+            ),
+          ),
+          child: const Icon(
+            Icons.adjust_rounded,
+            color: _MobileJournalTokens.violet,
+            size: 28,
+          ),
+        ),
+        const SizedBox(height: 14),
+        _MobileFocusPlaceholderCopy(isDark: isDark, centered: true),
+      ],
+    );
+  }
+}
+
+class _MobileFocusPlaceholderCompact extends StatelessWidget {
+  final bool isDark;
+
+  const _MobileFocusPlaceholderCompact({required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: _MobileJournalTokens.violet.withAlpha(isDark ? 20 : 14),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: const Icon(
+            Icons.adjust_rounded,
+            color: _MobileJournalTokens.violet,
+          ),
+        ),
+        const SizedBox(width: 13),
+        Expanded(child: _MobileFocusPlaceholderCopy(isDark: isDark)),
+      ],
+    );
+  }
+}
+
+class _MobileFocusPlaceholderCopy extends StatelessWidget {
+  final bool isDark;
+  final bool centered;
+
+  const _MobileFocusPlaceholderCopy({
+    required this.isDark,
+    this.centered = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: centered
+          ? CrossAxisAlignment.center
+          : CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Выбери навык для фокуса',
+          textAlign: centered ? TextAlign.center : TextAlign.start,
+          style: TextStyle(
+            color: _MobileJournalTokens.text(isDark),
+            fontSize: centered ? 16 : 15,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Здесь появятся квесты, прогресс и цели',
+          textAlign: centered ? TextAlign.center : TextAlign.start,
+          style: TextStyle(
+            color: _MobileJournalTokens.muted(isDark),
+            fontSize: 11.5,
           ),
         ),
       ],
@@ -343,108 +682,163 @@ class _MobileSkillOverviewCard extends StatelessWidget {
   final Skill skill;
   final int activeQuestCount;
   final bool isDark;
+  final int reorderIndex;
   final VoidCallback onTap;
+  final VoidCallback onLongPress;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   const _MobileSkillOverviewCard({
     required this.skill,
     required this.activeQuestCount,
     required this.isDark,
+    required this.reorderIndex,
     required this.onTap,
+    required this.onLongPress,
+    required this.onEdit,
+    required this.onDelete,
   });
 
   @override
   Widget build(BuildContext context) {
-    final progress = const GoalProgressEngine().snapshotForSkill(skill);
-    final progressLabel = progress.isEmpty ? 'Нет пути' : progress.percentLabel;
-    final semanticsProgress = progress.isEmpty
-        ? 'Прогресс цели: путь не задан'
-        : 'Прогресс цели: ${progress.percentLabel}';
+    final progress = skill.progress.clamp(0.0, 1.0);
+    final progressLabel = '${(progress * 100).round()}%';
+    final semanticsProgress = 'Прогресс уровня: $progressLabel';
 
-    return Semantics(
-      button: true,
-      label:
-          '${skill.name}, уровень ${skill.level}, активных квестов $activeQuestCount',
-      value: semanticsProgress,
-      child: PressFeedback(
-        scale: 0.985,
-        onTap: onTap,
-        child: Container(
-          key: ValueKey('mobile-skill-chip-${skill.id}'),
-          constraints: const BoxConstraints(minHeight: 94),
-          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-          decoration: BoxDecoration(
-            color: _MobileJournalTokens.surfaceColor(isDark),
-            borderRadius: BorderRadius.circular(
-              _MobileJournalTokens.radiusLarge,
-            ),
-            border: Border.all(
-              color: skill.color.withAlpha(progress.isEmpty ? 30 : 62),
-            ),
-          ),
-          child: Row(
-            children: [
-              _MobileGoalRing(
-                value: progress.value,
-                empty: progress.isEmpty,
-                color: skill.color,
-                icon: skill.icon,
-                semanticsLabel: semanticsProgress,
+    ActionPane actions() => ActionPane(
+      motion: const DrawerMotion(),
+      extentRatio: 0.44,
+      children: [
+        SlidableAction(
+          onPressed: (_) => onEdit(),
+          backgroundColor: const Color(0xFF4A9EFF),
+          foregroundColor: Colors.white,
+          icon: Icons.edit_rounded,
+          label: 'Править',
+          borderRadius: BorderRadius.circular(18),
+        ),
+        SlidableAction(
+          onPressed: (_) => onDelete(),
+          backgroundColor: const Color(0xFFFF3B30),
+          foregroundColor: Colors.white,
+          icon: Icons.delete_outline_rounded,
+          label: 'Удалить',
+          borderRadius: BorderRadius.circular(18),
+        ),
+      ],
+    );
+
+    return Slidable(
+      key: ValueKey('mobile-skill-slidable-${skill.id}'),
+      startActionPane: actions(),
+      endActionPane: actions(),
+      child: Semantics(
+        button: true,
+        label:
+            '${skill.name}, уровень ${skill.level}, активных квестов $activeQuestCount',
+        value: semanticsProgress,
+        hint: 'Долгое нажатие открывает действия с навыком',
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onLongPress: onLongPress,
+          child: PressFeedback(
+            scale: 0.985,
+            onTap: onTap,
+            child: Container(
+              key: ValueKey('mobile-skill-chip-${skill.id}'),
+              constraints: const BoxConstraints(minHeight: 94),
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+              decoration: BoxDecoration(
+                color: _MobileJournalTokens.surfaceColor(isDark),
+                borderRadius: BorderRadius.circular(
+                  _MobileJournalTokens.radiusLarge,
+                ),
+                border: Border.all(color: skill.color.withAlpha(62)),
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      skill.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: _MobileJournalTokens.text(isDark),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                      ),
+              child: Row(
+                children: [
+                  _MobileGoalRing(
+                    value: progress,
+                    empty: false,
+                    color: skill.color,
+                    icon: skill.icon,
+                    semanticsLabel: semanticsProgress,
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          skill.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: _MobileJournalTokens.text(isDark),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          'Ур. ${skill.level} · $activeQuestCount ${_questWord(activeQuestCount)}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: _MobileJournalTokens.muted(isDark),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        if (skill.goal.trim().isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            skill.goal,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: _MobileJournalTokens.muted(isDark),
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                    const SizedBox(height: 5),
-                    Text(
-                      'Ур. ${skill.level} · $activeQuestCount ${_questWord(activeQuestCount)}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: _MobileJournalTokens.muted(isDark),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    if (skill.goal.trim().isNotEmpty) ...[
-                      const SizedBox(height: 4),
+                  ),
+                  const SizedBox(width: 8),
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
                       Text(
-                        skill.goal,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        progressLabel,
+                        key: ValueKey('mobile-skill-progress-${skill.id}'),
                         style: TextStyle(
-                          color: _MobileJournalTokens.muted(isDark),
-                          fontSize: 11,
+                          color: skill.color,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      ReorderableDelayedDragStartListener(
+                        key: ValueKey('compact-skill-reorder-${skill.id}'),
+                        index: reorderIndex,
+                        child: Tooltip(
+                          message: 'Переместить навык',
+                          child: SizedBox.square(
+                            dimension: 44,
+                            child: Icon(
+                              Icons.drag_handle_rounded,
+                              color: _MobileJournalTokens.muted(isDark),
+                              size: 20,
+                            ),
+                          ),
                         ),
                       ),
                     ],
-                  ],
-                ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
-              Text(
-                progressLabel,
-                key: ValueKey('mobile-skill-progress-${skill.id}'),
-                style: TextStyle(
-                  color: progress.isEmpty
-                      ? _MobileJournalTokens.muted(isDark)
-                      : skill.color,
-                  fontSize: progress.isEmpty ? 10.5 : 13,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -547,88 +941,6 @@ class _MobileGoalRingPainter extends CustomPainter {
       value != oldDelegate.value ||
       color != oldDelegate.color ||
       empty != oldDelegate.empty;
-}
-
-class _MobileFocusSwitcher extends StatelessWidget {
-  final AppState state;
-  final Skill selectedSkill;
-  final VoidCallback onOverview;
-
-  const _MobileFocusSwitcher({
-    required this.state,
-    required this.selectedSkill,
-    required this.onOverview,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = state.isDark;
-    final largeText = MediaQuery.textScalerOf(context).scale(1) > 1.5;
-    return SizedBox(
-      key: const ValueKey('mobile-focus-switcher'),
-      height: largeText ? 70 : 50,
-      child: Row(
-        children: [
-          OutlinedButton.icon(
-            key: const ValueKey('mobile-overview-action'),
-            onPressed: onOverview,
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size(0, 46),
-              foregroundColor: _MobileJournalTokens.text(isDark),
-              side: BorderSide(color: _MobileJournalTokens.outline(isDark)),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15),
-              ),
-            ),
-            icon: const Icon(Icons.grid_view_rounded, size: 17),
-            label: const Text('Обзор'),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: state.roadmapSkills.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 7),
-              itemBuilder: (context, index) {
-                final skill = state.roadmapSkills[index];
-                final selected = skill.id == selectedSkill.id;
-                return Semantics(
-                  button: true,
-                  selected: selected,
-                  label: 'Открыть навык ${skill.name}',
-                  child: ActionChip(
-                    key: ValueKey('mobile-focus-skill-${skill.id}'),
-                    onPressed: selected
-                        ? () {}
-                        : () => state.selectSkill(skill.id),
-                    avatar: Icon(skill.icon, size: 16, color: skill.color),
-                    label: Text(skill.name, overflow: TextOverflow.ellipsis),
-                    labelStyle: TextStyle(
-                      color: selected
-                          ? skill.color
-                          : _MobileJournalTokens.text(isDark),
-                      fontWeight: FontWeight.w800,
-                    ),
-                    backgroundColor: selected
-                        ? skill.color.withAlpha(isDark ? 26 : 16)
-                        : _MobileJournalTokens.raised(isDark),
-                    side: BorderSide(
-                      color: selected
-                          ? skill.color.withAlpha(100)
-                          : _MobileJournalTokens.outline(isDark),
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _MobileInboxAccordion extends StatelessWidget {

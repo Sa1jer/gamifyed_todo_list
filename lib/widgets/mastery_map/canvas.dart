@@ -614,7 +614,8 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
               if (selectedSkill != null)
                 Positioned(
                   right: 14,
-                  top: 14,
+                  top: constraints.maxWidth < 760 ? null : 14,
+                  bottom: constraints.maxWidth < 760 ? 14 : null,
                   child: _MapCanvasAction(
                     isDark: isDark,
                     label: 'Назад к навыкам',

@@ -491,6 +491,39 @@ void main() {
       expect(state.tasksForSkill(skill.id), [quest]);
       expect(state.inboxTasks, isEmpty);
     });
+
+    test('completed quest archive is explicit and keeps earned XP', () {
+      final quest = Task(
+        id: 'archived-quest',
+        title: 'Убрать выполненный квест',
+        skillId: skill.id,
+        xpReward: 20,
+        type: TaskType.shortTerm,
+      );
+      state.addTask(quest);
+      state.completeTask(quest.id);
+      final profileXp = state.profile.xp;
+      final skillXp = skill.xp;
+
+      state.archiveCompletedTask(quest.id);
+
+      expect(quest.isDone, isTrue);
+      expect(quest.isArchived, isTrue);
+      expect(state.profile.xp, profileXp);
+      expect(skill.xp, skillXp);
+
+      state.restoreArchivedTask(quest.id);
+
+      expect(quest.isDone, isTrue);
+      expect(quest.isArchived, isFalse);
+      expect(state.profile.xp, profileXp);
+
+      state.archiveCompletedTask(quest.id);
+      state.uncompleteTask(quest.id);
+
+      expect(quest.isDone, isFalse);
+      expect(quest.isArchived, isFalse);
+    });
   });
 
   group('next skill goal', () {

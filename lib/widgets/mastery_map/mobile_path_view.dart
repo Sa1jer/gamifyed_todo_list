@@ -210,45 +210,62 @@ class _MobileRoadmapJournalState extends State<_MobileRoadmapJournal> {
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: borderColor(widget.isDark).withAlpha(150)),
       ),
-      child: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(child: _buildProgressCard(skill, snapshot)),
-          if (paths.length > 1)
-            SliverToBoxAdapter(
-              child: _buildBranchSelector(skill, paths, selectedIndex),
-            ),
-          if (selectedPath == null || selectedPath.nodes.isEmpty)
-            SliverFillRemaining(
-              hasScrollBody: false,
-              child: _MobileEmptyPath(
-                skill: skill,
-                isDark: widget.isDark,
-                onAddStage: () => widget.onAddRoot(skill),
-                onTemplates: () => _showTemplates(skill),
-              ),
-            )
-          else
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 20),
-              sliver: SliverList.builder(
-                itemCount: selectedPath.nodes.length,
-                itemBuilder: (context, index) {
-                  final node = selectedPath.nodes[index];
-                  final info = infoById[node.id];
-                  if (info == null) return const SizedBox.shrink();
-                  return _MobileRoadmapStageRow(
-                    key: ValueKey('mobile-path-stage-${node.id}'),
+      child: Stack(
+        children: [
+          CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(child: _buildProgressCard(skill, snapshot)),
+              if (paths.length > 1)
+                SliverToBoxAdapter(
+                  child: _buildBranchSelector(skill, paths, selectedIndex),
+                ),
+              if (selectedPath == null || selectedPath.nodes.isEmpty)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: _MobileEmptyPath(
                     skill: skill,
-                    info: info,
                     isDark: widget.isDark,
-                    alternate: index.isOdd,
-                    first: index == 0,
-                    last: index == selectedPath.nodes.length - 1,
-                    onTap: () => _showStageDetails(skill, node),
-                  );
-                },
+                    onAddStage: () => widget.onAddRoot(skill),
+                    onTemplates: () => _showTemplates(skill),
+                  ),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 76),
+                  sliver: SliverList.builder(
+                    itemCount: selectedPath.nodes.length,
+                    itemBuilder: (context, index) {
+                      final node = selectedPath.nodes[index];
+                      final info = infoById[node.id];
+                      if (info == null) return const SizedBox.shrink();
+                      return _MobileRoadmapStageRow(
+                        key: ValueKey('mobile-path-stage-${node.id}'),
+                        skill: skill,
+                        info: info,
+                        isDark: widget.isDark,
+                        alternate: index.isOdd,
+                        first: index == 0,
+                        last: index == selectedPath.nodes.length - 1,
+                        onTap: () => _showStageDetails(skill, node),
+                      );
+                    },
+                  ),
+                ),
+            ],
+          ),
+          Positioned(
+            right: 12,
+            bottom: 12,
+            child: OutlinedButton.icon(
+              key: const ValueKey('mobile-roadmap-path-back-to-skills'),
+              onPressed: () => widget.onSelectionChanged(null),
+              style: OutlinedButton.styleFrom(
+                backgroundColor: surface(widget.isDark),
               ),
+              icon: const Icon(Icons.keyboard_return_rounded, size: 18),
+              label: const Text('Назад к навыкам'),
             ),
+          ),
         ],
       ),
     );

@@ -434,19 +434,20 @@ Implemented on 2026-07-02:
 
 ### Mobile Visual System Redesign Epic
 
-Implemented on 2026-07-02 without model/storage changes, RoadMap engine changes,
-or goal-progress formula changes. The only product-logic change is the approved
-fixed `+10 XP` reward for quick tasks:
+Implemented on 2026-07-02 without RoadMap engine or goal-progress formula
+changes. The only product-logic change in that batch was the approved fixed
+`+10 XP` reward for quick tasks:
 
 1. The identity header now gives profile XP numeric and visual weight while
    retaining the captured-state overflow sheet, reward badge, and hidden debug
    entry. Draft mobile colors, spacing, radii, and motion live in local
    `MobileJournalTokens`; the global and desktop themes were not migrated.
 2. `Сейчас` has two presentation-only states. Overview contains honest daily
-   momentum, compact full-width skill cards with goal-progress rings, the global
-   next action, and a separate Inbox accordion. Focus replaces that overview
-   with a readable stable-ID skill switcher, explicit `Обзор`, and one task
-   surface with separate skill XP and goal progress.
+   momentum, compact full-width skill cards with level-XP rings, an
+   adaptive focus prompt, and a separate Inbox accordion. Focus
+   replaces that overview with one natural-height task surface; its quiet
+   `Обзор` affordance lives inside the card rather than in a permanent skill
+   switcher.
 3. Inbox is no longer selected as a normal mobile skill. Its low-opacity
    accordion exposes input, all quick tasks, count, and `+10 XP` pills. Quick
    completion and undo update profile XP and today's XP/action count only; they
@@ -497,6 +498,76 @@ Quest Log Presentation Layer remains explicitly deferred. If pursued, it should
 first be a presentation-only view over existing task/skill/stage identities,
 without new persistence entities, XP rules, or RoadMap semantics.
 
+### Corrective Patch v2 — Focus surfaces and rewards
+
+Implemented on 2026-07-03 as a mobile-first visual correction:
+
+1. Removed the standalone `Обзор + skill chips` strip from selected Focus. The
+   existing section-level `AnimatedSwitcher`/`AnimatedSize` now transitions
+   directly between keyed Overview and Focus shells.
+2. Rebuilt selected Focus as a naturally sized dark RPG surface. Skill color is
+   limited to the icon, low-opacity header tint, border, progress, checkbox and
+   add-quest action; warm red/orange colors use an even lower surface opacity.
+3. Quest rows now use a neutral dark surface, readable title/description rhythm,
+   a `44dp` semantic checkbox and responsive reward placement. Existing swipe,
+   minimum-step, edit, delete, completion and undo behavior is preserved.
+4. Added a shared amber `XpRewardPill` for ordinary and quick quests. Reward
+   color no longer follows blue metadata or skill color; Inbox still grants the
+   same isolated `+10 XP` with no domain-logic changes.
+5. Desktop layout was not recomposed. Only its shared primary XP badge adopts
+   the amber reward treatment. RoadMap and AddSkill were intentionally left out
+   of this corrective patch.
+
+Dark mode remains the visual target. The warm light fallback was checked for
+readability only; the full `Light Journal Palette Polish` remains deferred.
+
+### Corrective Patch v3 — Act flow, quest rows and AddSkill
+
+Implemented on 2026-07-03 as a mobile-only polish pass:
+
+1. Removed the standalone `Сейчас · Следующий квест` surface from mobile
+   Overview as well as Focus. The first skill card now carries the existing
+   tutorial target, while desktop `TodayDashboard` remains unchanged.
+2. Overview reserves its remaining height for an adaptive dashed focus prompt
+   and places the Inbox accordion after it, immediately before bottom
+   navigation. The prompt switches between centered and compact forms, then
+   disappears under constrained height or very large text.
+3. Mobile Focus no longer shows goal-progress percentage. It keeps goal copy,
+   level and skill XP, renders active and completed quests in one ordered list,
+   and uses a native dashed add-quest action.
+4. Quest rows now size from their content, use a visibly raised neutral surface,
+   apply a restrained skill tint to completed rows, and open the safe adaptive
+   edit form on long press. Swipe, checkbox, minimum-step and XP callbacks are
+   unchanged.
+5. Mobile AddSkill now opens with twelve curated labelled icon choices. Category
+   filters retain the broader existing catalog, while the color selector is a
+   deterministic two-row grid of six swatches with low glow on every option and
+   stronger selected feedback.
+
+No model, storage, XP, RoadMap, template, package, or desktop composition change
+was introduced. `Light Journal Palette Polish` remains deferred.
+
+### Version 1.3.49 — Editing and completed-quest control
+
+Implemented on 2026-07-03 as a focused interaction and navigation correction:
+
+1. Mobile skill cards expose edit/delete through both swipe directions and a
+   long-press action sheet. Reordering remains available from a dedicated drag
+   handle, and Focus includes a confirmed destructive delete action.
+2. AddSkill no longer repeats field labels. Name and goal guidance now lives in
+   disappearing placeholders, while skill and quest edit routes use the explicit
+   `Сохранить изменения` action.
+3. The mobile skill ring now represents XP progress toward the next skill level;
+   RoadMap goal progress remains unchanged in RoadMap-specific surfaces.
+4. A completed quest stays in the current list until the user swipes it into
+   `Выполнено`. That choice is stored as an additive backward-compatible task
+   flag; restoring from the section keeps XP, while uncompleting clears it.
+5. Mobile Statistics has an explicit close action. Both `Путь навыка` and
+   `Свободная карта` expose a bottom-right return to the skill chooser.
+
+The dark journal remains the polished target. `Light Journal Palette Polish`
+is still deferred in `TODO.md`.
+
 ## Larger Redesign Candidates
 
 These are hypotheses for separate discovery/implementation batches, not
@@ -528,7 +599,7 @@ approved changes:
 - Complete real-device recovery and process-kill tests before claiming storage
   reliability for release.
 
-No P0 core-flow defect was reproduced in the current 291-test suite.
+No P0 core-flow defect was reproduced in the current 296-test suite.
 
 ### P1 — High-Friction Mobile Flows
 

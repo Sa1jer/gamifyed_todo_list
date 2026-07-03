@@ -1,6 +1,6 @@
 # TODO / Living Backlog
 
-Last updated: 2026-07-02
+Last updated: 2026-07-03
 
 This file tracks the active implementation roadmap and completed project work. Update it after every meaningful code or design change.
 
@@ -46,7 +46,7 @@ Do not mix these product decisions into Release / Regression Hardening. Revisit 
 - [x] Surface a compact next-action/minimum-step summary between mobile skills and the task list, with a labelled `48dp` primary action and expandable full dashboard.
 - [x] Add dirty-draft `PopScope` protection to mobile AddSkill/AddTask routes; untouched forms still close directly and keyboard dismissal remains separate from route Back.
 - [x] Replace mobile TopBar/ProfileBar stacking with one SafeArea identity header and captured-state secondary-actions sheet while preserving desktop chrome.
-- [x] Split mobile `Сейчас` into Overview and Skill Focus with reorderable full-width goal-progress cards, a stable-ID switcher, explicit `Обзор`, and one focus surface.
+- [x] Split mobile `Сейчас` into Overview and Skill Focus with reorderable full-width level-XP progress cards, explicit `Обзор`, and one focus surface.
 - [x] Move Inbox out of the mobile skill selector into a separate animated accordion while preserving its system ID and desktop presentation.
 - [x] Add mobile `Путь навыка` as the default scroll route with runtime branch pills, safe details/templates sheets, and the existing canvas as `Свободная карта`.
 - [x] Redesign mobile AddSkill around a live emblem, meaningful icon semantics/runtime categories, squircle colors, dirty-draft safety, and one bottom CTA.
@@ -200,7 +200,12 @@ Manual desktop/QHD checklist:
 
 ## Recently Completed
 
-- Mobile Visual System Redesign Epic: introduced dark-first local journal tokens, Overview/Focus states, honest momentum, goal-progress skill cards, an Inbox accordion with isolated `+10 XP`, mobile path/free-map RoadMap modes, live-emblem AddSkill, lightweight reduced-motion transitions, and `360dp/200%` regression coverage without schema, model, goal-formula, RoadMap-engine, package, or desktop composition changes.
+- `1.3.49`: added mobile skill long-press/swipe edit and delete actions, a safe Focus delete action, explicit edit-mode save copy, XP-based skill rings, mobile statistics close, and bottom-right RoadMap return actions.
+- `1.3.49`: completed quests stay visible until the user swipes them into the persisted `Выполнено` archive; restore keeps earned XP, while uncomplete clears the archive state.
+- `1.3.49`: mobile AddSkill removes duplicate field labels and uses disappearing in-field guidance for skill name and goal.
+- Mobile UI Corrective Patch v3: removed mobile next-action banners, anchored the separate Inbox after an adaptive focus placeholder, animated keyed Overview/Focus transitions, removed goal progress from mobile Focus, unified active/completed compact quest rows with long-press editing and a dashed CTA, and rebuilt AddSkill around a labelled 12-icon catalog plus an exact `6 × 2` glowing color grid without domain or desktop changes.
+- Corrective Patch v2: removed the mobile Focus chip strip and duplicate next-action surface, added a natural-height skill-tinted focus card with neutral quest rows and one CTA, and unified ordinary/Inbox rewards through an amber `XpRewardPill` without changing XP logic, models, storage, RoadMap, AddSkill, or desktop composition.
+- Mobile Visual System Redesign Epic: introduced dark-first local journal tokens, Overview/Focus states, honest momentum, level-XP skill cards, an Inbox accordion with isolated `+10 XP`, mobile path/free-map RoadMap modes, live-emblem AddSkill, lightweight reduced-motion transitions, and `360dp/200%` regression coverage without goal-formula, RoadMap-engine, package, or desktop composition changes.
 - Mobile Visual Hierarchy Redesign MVP: unified the mobile identity header and secondary-actions sheet, separated quick tasks from reorderable skill chips, preserved the global next-action source, consolidated skill focus, calmed RoadMap visuals/templates, improved AddSkill hierarchy/targets, and added responsive dark/light widget coverage without model or storage changes.
 - Mobile UX Quick Wins: mobile Act now shows a compact next action before the task list, minimum steps have a direct `48dp` CTA, empty skills guide quest creation, dirty AddSkill/AddTask routes confirm discard on close/Back, and local save failures use calm device-specific recovery copy with focused widget coverage.
 - Android toolchain revalidation: Flutter now detects SDK/build-tools `36.1`, JDK 21 and accepted licenses; debug APK assembled, installed and launched on an Android 16 emulator without AndroidRuntime/Flutter errors, while release assembly stopped at the intentional private-signing guard.
@@ -218,7 +223,7 @@ Manual desktop/QHD checklist:
 - RoadMap Vertical Mode MVP: desktop now switches between horizontal and vertical canvas layouts from the toolbar and fullscreen, mobile always uses vertical roads, the skill anchors the top while terminal and earlier stages continue downward, vertical bezier links and insertion actions preserve the existing DAG, and adaptive camera auto-fit covers `0`, `1`, `3`, and `10` stage scenarios without model/storage changes.
 - Mobile Skill Experience MVP: mobile Act now starts with informative skill squircles showing level, active quest count and existing RoadMap goal progress; selecting by stable skill ID transitions to compact chips, while “Действовать сегодня” moves below tasks and starts collapsed. Desktop composition and data/storage models remain unchanged.
 - Mobile AddSkill/AddTask creation: routes below `760px` now reuse the existing forms in full-screen `SafeArea` pages with scroll/keyboard safety, visible validation, stable skill/stage context, cancel/save navigation, and desktop dialog preservation.
-- Task Inbox / “Задачник” MVP: added a permanent system skill with stable ID, title-only quick add, isolated completion/undo/delete UI in Act, storage compatibility for legacy tasks, and regression coverage proving quick tasks do not affect skill XP, RoadMap progress, history, daily stats, achievements, rewards, resistance, or normal skill quest counts.
+- Task Inbox / “Задачник” MVP: added a permanent system skill with stable ID, title-only quick add, isolated completion/undo/delete UI in Act, storage compatibility for legacy tasks, and regression coverage proving quick tasks update only profile/today XP and completed-action count without affecting skill XP, RoadMap progress, history, achievements, rewards, resistance, or normal skill quest counts.
 - Milestone Animations MVP: persisted `25%`, `50%`, and `100%` goal milestone thresholds per skill/current goal, detects progress crossings from stage mastery, marks all crossed thresholds while showing only the strongest non-blocking banner for one action, and keeps sound deferred.
 - Start New RoadMap MVP: after setting the next goal, users can keep the current map, add a manual stage, or explicitly create a new empty active RoadMap; the old completed map is stored as an append-only `CompletedRoadmap` snapshot and surfaced in the timeline. Template-based new RoadMap creation remains disabled pending `RoadMapRecord` / `activeRoadMapId` boundaries.
 - Goal History MVP: completed goals are archived as immutable per-skill snapshots during explicit Next Goal confirmation and appear in the existing growth timeline; legacy skills load with an empty archive.

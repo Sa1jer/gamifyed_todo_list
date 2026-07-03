@@ -1083,6 +1083,7 @@ class AppState extends ChangeNotifier {
       if (t.isDone && t.nextResetAt != null && !now.isBefore(t.nextResetAt!)) {
         final resetFrom = t.nextResetAt!;
         t.isDone = false;
+        t.isArchived = false;
         t.earnedXP = 0;
         t.minimumActionDoneAt = null;
         t.minimumActionEarnedXP = 0;
@@ -1509,6 +1510,7 @@ class AppState extends ChangeNotifier {
     final earned = baseEarned + buffOutcome.bonusXp;
 
     task.isDone = true;
+    task.isArchived = false;
     task.earnedXP = alreadyEarned + earned;
     task.bonusXpEarned = buffOutcome.bonusXp;
     task.consumedBuffIds = List.of(buffOutcome.buffIds);
@@ -1558,6 +1560,7 @@ class AppState extends ChangeNotifier {
   String _completeInboxTask(Task task) {
     final now = DateTime.now();
     task.isDone = true;
+    task.isArchived = false;
     task.earnedXP = inboxTaskXp;
     task.bonusXpEarned = 0;
     task.consumedBuffIds = <String>[];
@@ -1602,6 +1605,7 @@ class AppState extends ChangeNotifier {
 
     if (task.type == TaskType.repeating) {
       task.isDone = true;
+      task.isArchived = false;
       task.earnedXP = earned;
       task.lastCompletedAt = now;
       task.streak = nextStreak;
@@ -1784,6 +1788,7 @@ class AppState extends ChangeNotifier {
           task.lastCompletedAt != null &&
           isSameDate(task.lastCompletedAt!, DateTime.now());
       task.isDone = false;
+      task.isArchived = false;
       task.earnedXP = 0;
       task.bonusXpEarned = 0;
       task.consumedBuffIds = <String>[];
@@ -1817,6 +1822,7 @@ class AppState extends ChangeNotifier {
     final skillLevelBefore = skill?.level ?? 1;
 
     task.isDone = false;
+    task.isArchived = false;
     if (task.type == TaskType.repeating) {
       task.streak = math.max(0, task.streak - 1);
     }
@@ -1847,6 +1853,24 @@ class AppState extends ChangeNotifier {
       previousStreak: previousStreak,
     );
     _syncTaskNotification(task);
+    notifyListeners();
+    _saveAll();
+  }
+
+  void archiveCompletedTask(String taskId) {
+    final task = _taskById(taskId);
+    if (task == null || task.isInbox || !task.isDone || task.isArchived) return;
+    task.isArchived = true;
+    task.updatedAt = DateTime.now();
+    notifyListeners();
+    _saveAll();
+  }
+
+  void restoreArchivedTask(String taskId) {
+    final task = _taskById(taskId);
+    if (task == null || !task.isArchived) return;
+    task.isArchived = false;
+    task.updatedAt = DateTime.now();
     notifyListeners();
     _saveAll();
   }
