@@ -10,12 +10,14 @@ class InboxPanel extends StatefulWidget {
   final void Function(String taskId, Offset position) onComplete;
   final bool embedded;
   final bool showHeader;
+  final bool desktopJournal;
 
   const InboxPanel({
     super.key,
     required this.onComplete,
     this.embedded = false,
     this.showHeader = true,
+    this.desktopJournal = false,
   });
 
   @override
@@ -82,6 +84,212 @@ class _InboxPanelState extends State<InboxPanel> {
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(color: accent.withAlpha(170)),
+          ),
+        ),
+      );
+    }
+
+    if (widget.desktopJournal) {
+      final panelColor = isDark
+          ? const Color(0xFF11121A)
+          : const Color(0xFFFFFFFF);
+      final raisedColor = isDark
+          ? const Color(0xFF151620)
+          : const Color(0xFFF0F2F8);
+      final outline = isDark
+          ? const Color(0xFF292B38)
+          : const Color(0xFFD9DCE7);
+      return ColoredBox(
+        key: const ValueKey('desktop-inbox-workspace'),
+        color: isDark ? const Color(0xFF090A11) : const Color(0xFFF8F9FC),
+        child: Scrollbar(
+          child: ListView(
+            key: const ValueKey('desktop-inbox-scroll'),
+            padding: const EdgeInsets.fromLTRB(22, 20, 22, 30),
+            children: [
+              Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1100),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: accent.withAlpha(isDark ? 24 : 18),
+                              borderRadius: BorderRadius.circular(11),
+                              border: Border.all(
+                                color: accent.withAlpha(isDark ? 70 : 90),
+                              ),
+                            ),
+                            child: Icon(
+                              Icons.inbox_rounded,
+                              color: accent,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 11),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Задачник',
+                                  style: TextStyle(
+                                    color: txt,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Быстрые действия · +${AppState.inboxTaskXp} XP · без RoadMap',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: sub,
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          InboxTaskCountBubble(
+                            key: const ValueKey('inbox-active-count'),
+                            count: active.length,
+                            color: accent,
+                            isDark: isDark,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        key: const ValueKey('desktop-inbox-composer'),
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: panelColor,
+                          borderRadius: BorderRadius.circular(13),
+                          border: Border.all(color: outline),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(child: quickAddField(dense: true)),
+                            const SizedBox(width: 9),
+                            FilledButton.icon(
+                              key: const ValueKey('desktop-inbox-add'),
+                              onPressed: () => _addInboxTask(state),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: accent.withAlpha(
+                                  isDark ? 38 : 32,
+                                ),
+                                foregroundColor: isDark
+                                    ? const Color(0xFF67E991)
+                                    : const Color(0xFF116C34),
+                                minimumSize: const Size(148, 38),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  side: BorderSide(
+                                    color: accent.withAlpha(105),
+                                  ),
+                                ),
+                              ),
+                              icon: const Icon(Icons.add_rounded, size: 17),
+                              label: const Text('Быстрая задача'),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (active.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        Text(
+                          'АКТИВНЫЕ · ${active.length}',
+                          style: TextStyle(
+                            color: sub,
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.7,
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        ...active.map(
+                          (task) => _InboxTaskRow(
+                            key: ValueKey('inbox-active-${task.id}'),
+                            task: task,
+                            isDark: isDark,
+                            color: accent,
+                            onComplete: widget.onComplete,
+                            onUndo: () => state.uncompleteTask(task.id),
+                            onDelete: () => state.removeTask(task.id),
+                          ),
+                        ),
+                      ],
+                      if (done.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        Text(
+                          'ГОТОВО · ${done.length}',
+                          style: TextStyle(
+                            color: sub,
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.7,
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        ...done.map(
+                          (task) => _InboxTaskRow(
+                            key: ValueKey('inbox-done-${task.id}'),
+                            task: task,
+                            isDark: isDark,
+                            color: accent,
+                            onComplete: widget.onComplete,
+                            onUndo: () => state.uncompleteTask(task.id),
+                            onDelete: () => state.removeTask(task.id),
+                          ),
+                        ),
+                      ],
+                      if (active.isEmpty && done.isEmpty) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 16,
+                          ),
+                          decoration: BoxDecoration(
+                            color: raisedColor,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: outline),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.bolt_rounded,
+                                color: accent.withAlpha(190),
+                                size: 18,
+                              ),
+                              const SizedBox(width: 9),
+                              Expanded(
+                                child: Text(
+                                  'Добавь короткое дело, которое не требует навыка или RoadMap.',
+                                  style: TextStyle(color: sub, fontSize: 12),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       );
@@ -272,13 +480,22 @@ class _InboxPanelState extends State<InboxPanel> {
       },
     );
     if (widget.embedded) {
+      final edgeColor = Color.alphaBlend(
+        accent.withAlpha(isDark ? 9 : 6),
+        surface(isDark),
+      );
+      final centerColor = Color.alphaBlend(
+        accent.withAlpha(isDark ? 20 : 12),
+        surface(isDark),
+      );
       return Container(
         key: const ValueKey('mobile-inbox-focus'),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [accent.withAlpha(isDark ? 17 : 10), surface(isDark)],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [edgeColor, centerColor, edgeColor],
+            stops: const [0, 0.5, 1],
           ),
           borderRadius: BorderRadius.circular(18),
         ),

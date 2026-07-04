@@ -80,7 +80,11 @@ class _MainPageState extends State<MainPage> {
     showDebugAdminPanel(context, state: state);
   }
 
-  void _showBubble(String message, Offset pos) {
+  void _showBubble(
+    String message,
+    Offset pos, {
+    required CompletionToastColors colors,
+  }) {
     final isMilestone = AppFeedback.isMilestoneMessage(message);
     setState(() {
       _bubbles.add(
@@ -88,6 +92,7 @@ class _MainPageState extends State<MainPage> {
           key: UniqueKey(),
           message: message,
           position: pos,
+          colors: colors,
           showMilestoneConfetti: isMilestone,
           confettiBuilder: (color) =>
               MilestoneConfettiBurst(color: color, particles: 14),
@@ -567,20 +572,33 @@ class _MainPageState extends State<MainPage> {
 
   void _onComplete(String taskId, Offset pos) {
     final s = AppStateProvider.of(context);
+    final colors = _completionToastColors(s, taskId);
     final msg = s.completeTask(taskId);
     if (msg == null) return;
     AppFeedback.questResult(msg);
-    _showBubble(msg, pos);
+    _showBubble(msg, pos, colors: colors);
     _showRewardNotifications(s);
   }
 
   void _onMinimumAction(String taskId, Offset pos) {
     final s = AppStateProvider.of(context);
+    final colors = _completionToastColors(s, taskId);
     final msg = s.completeMinimumAction(taskId);
     if (msg == null) return;
     AppFeedback.questResult(msg, isMinimum: true);
-    _showBubble(msg, pos);
+    _showBubble(msg, pos, colors: colors);
     _showRewardNotifications(s);
+  }
+
+  CompletionToastColors _completionToastColors(AppState state, String taskId) {
+    Task? sourceTask;
+    for (final task in state.tasks) {
+      if (task.id == taskId) {
+        sourceTask = task;
+        break;
+      }
+    }
+    return completionToastColorsForTask(task: sourceTask, skills: state.skills);
   }
 
   void _setFirstRunDialogOpen(bool value) {
@@ -766,7 +784,11 @@ class _MainPageState extends State<MainPage> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final mobileShell = MobileResponsiveMetrics.isMobileWidth(
+        final desktopShell = DesktopResponsiveMetrics.isDesktopWidth(
+          constraints.maxWidth,
+        );
+        final mobileShell = !desktopShell;
+        final desktopMetrics = DesktopResponsiveMetrics.forWidth(
           constraints.maxWidth,
         );
         final displayedMode = !mobileShell && _mode == WorkspaceMode.stats
@@ -801,6 +823,17 @@ class _MainPageState extends State<MainPage> {
           }
         }
 
+        void openProfile() {
+          final capturedState = s;
+          showDialog<void>(
+            context: context,
+            builder: (_) => AppStateProvider(
+              state: capturedState,
+              child: const ProfileDialog(),
+            ),
+          );
+        }
+
         final tutorialStep = _tutorialStepFor(s, mobileShell, openStatistics);
         final tutorialVisible = _shouldShowTutorialOverlay(
           tutorialStep?.id,
@@ -819,82 +852,116 @@ class _MainPageState extends State<MainPage> {
           body: Stack(
             key: _pageStackKey,
             children: [
-              Column(
-                children: [
-                  if (!mobileShell)
-                    TopBar(
+              if (desktopShell)
+                _DesktopWorkspaceShell(
+                  state: s,
+                  mode: displayedMode,
+                  metrics: desktopMetrics,
+                  onModeChanged: changeMode,
+                  onAddSkill: () => _addSkill(context),
+                  onOpenRewards: () => _openRewardsDialog(s),
+                  onOpenStatistics: openStatistics,
+                  onOpenSettings: openProfile,
+                  onDebugAppTap: kDebugMode
+                      ? () => _handleDebugAdminTap(s)
+                      : null,
+                  onOpenRoadmap: (skill) => _openRoadmapForSkill(s, skill),
+                  onComplete: _onComplete,
+                  onMinimumAction: _onMinimumAction,
+                  profileKey: _profileBarKey,
+                  rewardsKey: _rewardsButtonKey,
+                  roadmapKey: _roadmapNavKey,
+                  statsKey: _statsButtonKey,
+                  alternateWorkspace: displayedMode == WorkspaceMode.mastery
+                      ? _MasteryWorkspace(
+                          key: const ValueKey('mastery-workspace'),
+                          isDark: isDark,
+                          focusSkillId: _roadmapFocusSkillId,
+                          canvasTutorialKey: _roadmapCanvasKey,
+                          inspectorTutorialKey: _roadmapInspectorKey,
+                          practiceTutorialKey: _roadmapPracticeKey,
+                          onComplete: _onComplete,
+                          onMinimumAction: _onMinimumAction,
+                        )
+                      : null,
+                )
+              else
+                Column(
+                  children: [
+                    if (!mobileShell)
+                      TopBar(
+                        isDark: isDark,
+                        onToggle: widget.onToggleTheme,
+                        state: s,
+                        mode: displayedMode,
+                        onModeChanged: changeMode,
+                        onStatsTap: openStatistics,
+                        rewardsKey: _rewardsButtonKey,
+                        roadmapKey: _roadmapNavKey,
+                        statsKey: _statsButtonKey,
+                        onRewardsTap: () => _openRewardsDialog(s),
+                        onAppIconTap: kDebugMode
+                            ? () => _handleDebugAdminTap(s)
+                            : null,
+                      ),
+                    ProfileBar(
+                      key: _profileBarKey,
                       isDark: isDark,
-                      onToggle: widget.onToggleTheme,
+                      mobile: mobileShell,
                       state: s,
-                      mode: displayedMode,
-                      onModeChanged: changeMode,
-                      onStatsTap: openStatistics,
-                      rewardsKey: _rewardsButtonKey,
-                      roadmapKey: _roadmapNavKey,
-                      statsKey: _statsButtonKey,
+                      onToggleTheme: widget.onToggleTheme,
                       onRewardsTap: () => _openRewardsDialog(s),
+                      onStatsTap: openStatistics,
                       onAppIconTap: kDebugMode
                           ? () => _handleDebugAdminTap(s)
                           : null,
+                      rewardsKey: mobileShell ? _rewardsButtonKey : null,
+                      statsKey: mobileShell ? _statsButtonKey : null,
                     ),
-                  ProfileBar(
-                    key: _profileBarKey,
-                    isDark: isDark,
-                    mobile: mobileShell,
-                    state: s,
-                    onToggleTheme: widget.onToggleTheme,
-                    onRewardsTap: () => _openRewardsDialog(s),
-                    onStatsTap: openStatistics,
-                    onAppIconTap: kDebugMode
-                        ? () => _handleDebugAdminTap(s)
-                        : null,
-                    rewardsKey: mobileShell ? _rewardsButtonKey : null,
-                    statsKey: mobileShell ? _statsButtonKey : null,
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-                      child: MotionFadeSlideSwitcher(
-                        child: switch (displayedMode) {
-                          WorkspaceMode.act => _ActWorkspace(
-                            key: const ValueKey('act-workspace'),
-                            onComplete: _onComplete,
-                            onMinimumAction: _onMinimumAction,
-                            onCreateFirstSkill: () => _addSkill(context),
-                            onOpenRoadmap: (skill) =>
-                                _openRoadmapForSkill(s, skill),
-                            createFirstSkillButtonKey: _firstSkillCtaKey,
-                            createFirstQuestButtonKey: _firstQuestCtaKey,
-                            nextQuestActionKey: _nextQuestActionKey,
-                          ),
-                          WorkspaceMode.mastery => _MasteryWorkspace(
-                            key: const ValueKey('mastery-workspace'),
-                            isDark: isDark,
-                            focusSkillId: _roadmapFocusSkillId,
-                            canvasTutorialKey: _roadmapCanvasKey,
-                            inspectorTutorialKey: _roadmapInspectorKey,
-                            practiceTutorialKey: _roadmapPracticeKey,
-                            onComplete: _onComplete,
-                            onMinimumAction: _onMinimumAction,
-                          ),
-                          WorkspaceMode.stats => _buildStatisticsWorkspace(
-                            s,
-                            isDark,
-                            showTutorialHint: _statsTutorialActive,
-                          ),
-                        },
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                        child: MotionFadeSlideSwitcher(
+                          child: switch (displayedMode) {
+                            WorkspaceMode.act => _ActWorkspace(
+                              key: const ValueKey('act-workspace'),
+                              onComplete: _onComplete,
+                              onMinimumAction: _onMinimumAction,
+                              onCreateFirstSkill: () => _addSkill(context),
+                              onOpenRoadmap: (skill) =>
+                                  _openRoadmapForSkill(s, skill),
+                              createFirstSkillButtonKey: _firstSkillCtaKey,
+                              createFirstQuestButtonKey: _firstQuestCtaKey,
+                              nextQuestActionKey: _nextQuestActionKey,
+                            ),
+                            WorkspaceMode.mastery => _MasteryWorkspace(
+                              key: const ValueKey('mastery-workspace'),
+                              isDark: isDark,
+                              focusSkillId: _roadmapFocusSkillId,
+                              canvasTutorialKey: _roadmapCanvasKey,
+                              inspectorTutorialKey: _roadmapInspectorKey,
+                              practiceTutorialKey: _roadmapPracticeKey,
+                              onComplete: _onComplete,
+                              onMinimumAction: _onMinimumAction,
+                            ),
+                            WorkspaceMode.stats => _buildStatisticsWorkspace(
+                              s,
+                              isDark,
+                              showTutorialHint: _statsTutorialActive,
+                            ),
+                          },
+                        ),
                       ),
                     ),
-                  ),
-                  if (mobileShell)
-                    _MobileWorkspaceNav(
-                      mode: displayedMode,
-                      isDark: isDark,
-                      onChanged: changeMode,
-                      roadmapKey: _roadmapNavKey,
-                    ),
-                ],
-              ),
+                    if (mobileShell)
+                      _MobileWorkspaceNav(
+                        mode: displayedMode,
+                        isDark: isDark,
+                        onChanged: changeMode,
+                        roadmapKey: _roadmapNavKey,
+                      ),
+                  ],
+                ),
               if (_rewardNotice != null)
                 _RewardNoticePopover(
                   notice: _rewardNotice!,

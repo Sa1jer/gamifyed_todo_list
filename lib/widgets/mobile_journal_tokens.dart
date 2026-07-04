@@ -196,6 +196,47 @@ abstract final class MobileJournalTokens {
   }
 }
 
+@immutable
+class CompletionToastColors {
+  static const fallbackSourceAccent = MobileJournalTokens.rewardGold;
+
+  final Color sourceAccentColor;
+  final Color rewardColor;
+
+  const CompletionToastColors({
+    required this.sourceAccentColor,
+    this.rewardColor = MobileJournalTokens.rewardGold,
+  });
+
+  const CompletionToastColors.fallback()
+    : sourceAccentColor = fallbackSourceAccent,
+      rewardColor = MobileJournalTokens.rewardGold;
+
+  factory CompletionToastColors.resolve({
+    Color? skillColor,
+    bool isInbox = false,
+  }) => CompletionToastColors(
+    sourceAccentColor: isInbox
+        ? MobileJournalTokens.inbox
+        : skillColor ?? fallbackSourceAccent,
+  );
+
+  Color surfaceTint(Color baseColor, {required bool isDark}) =>
+      Color.alphaBlend(
+        sourceAccentColor.withAlpha(isDark ? 14 : 10),
+        baseColor,
+      );
+
+  Color borderColor({required bool isDark}) =>
+      sourceAccentColor.withAlpha(isDark ? 112 : 125);
+
+  Color glowColor({required bool isDark}) =>
+      sourceAccentColor.withAlpha(isDark ? 34 : 28);
+
+  Color rewardSoft({required bool isDark}) =>
+      rewardColor.withAlpha(isDark ? 32 : 24);
+}
+
 class MobileSkillFocusSurface extends StatelessWidget {
   final Color skillColor;
   final bool isDark;

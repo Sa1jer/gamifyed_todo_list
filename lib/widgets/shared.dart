@@ -953,9 +953,24 @@ class TaskTitleWithDescription extends StatelessWidget {
 // FLOATING XP BUBBLE
 // ═══════════════════════════════════════════════════════════════════════════════
 
+CompletionToastColors completionToastColorsForTask({
+  required Task? task,
+  required Iterable<Skill> skills,
+}) {
+  if (task == null) return const CompletionToastColors.fallback();
+  if (task.isInbox) return CompletionToastColors.resolve(isInbox: true);
+  for (final skill in skills) {
+    if (skill.id == task.skillId) {
+      return CompletionToastColors.resolve(skillColor: skill.color);
+    }
+  }
+  return const CompletionToastColors.fallback();
+}
+
 class XPBubble extends StatefulWidget {
   final String message;
   final Offset position;
+  final CompletionToastColors colors;
   final bool showMilestoneConfetti;
   final Widget Function(Color color)? confettiBuilder;
   final Function(Key?) onDone;
@@ -963,6 +978,7 @@ class XPBubble extends StatefulWidget {
     super.key,
     required this.message,
     required this.position,
+    this.colors = const CompletionToastColors.fallback(),
     this.showMilestoneConfetti = false,
     this.confettiBuilder,
     required this.onDone,
@@ -1014,7 +1030,8 @@ class _XPBubbleState extends State<XPBubble>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF15151D) : Colors.white;
+    final baseBg = isDark ? const Color(0xFF15151D) : Colors.white;
+    final bg = widget.colors.surfaceTint(baseBg, isDark: isDark);
     final txt = isDark ? const Color(0xFFF4F4F8) : const Color(0xFF1B1B22);
     final sub = isDark ? const Color(0xFF9A9AA6) : const Color(0xFF5F6370);
     final screen = MediaQuery.sizeOf(context);
@@ -1048,18 +1065,24 @@ class _XPBubbleState extends State<XPBubble>
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 320),
             child: Container(
+              key: const ValueKey('xp-bubble-surface'),
               padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
               decoration: BoxDecoration(
                 color: bg,
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: _tone.color.withAlpha(95)),
+                border: Border.all(
+                  color: widget.colors.borderColor(isDark: isDark),
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withAlpha(isDark ? 95 : 24),
                     blurRadius: 18,
                     offset: const Offset(0, 10),
                   ),
-                  BoxShadow(color: _tone.color.withAlpha(42), blurRadius: 22),
+                  BoxShadow(
+                    color: widget.colors.glowColor(isDark: isDark),
+                    blurRadius: 22,
+                  ),
                 ],
               ),
               child: Row(
@@ -1069,10 +1092,15 @@ class _XPBubbleState extends State<XPBubble>
                     width: 26,
                     height: 26,
                     decoration: BoxDecoration(
-                      color: _tone.color.withAlpha(26),
+                      color: widget.colors.rewardSoft(isDark: isDark),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(_tone.icon, color: _tone.color, size: 15),
+                    child: Icon(
+                      _tone.icon,
+                      key: const ValueKey('xp-bubble-reward-icon'),
+                      color: widget.colors.rewardColor,
+                      size: 15,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Flexible(
@@ -1092,16 +1120,10 @@ class _XPBubbleState extends State<XPBubble>
                           ),
                         ),
                         const SizedBox(height: 2),
-                        Text(
-                          _tone.subtitle,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: sub,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            height: 1,
-                          ),
+                        _XPBubbleSubtitle(
+                          subtitle: _tone.subtitle,
+                          textColor: sub,
+                          rewardColor: widget.colors.rewardColor,
                         ),
                       ],
                     ),
@@ -1117,7 +1139,7 @@ class _XPBubbleState extends State<XPBubble>
               child: SizedBox(
                 width: 1,
                 height: 1,
-                child: widget.confettiBuilder!(_tone.color),
+                child: widget.confettiBuilder!(widget.colors.sourceAccentColor),
               ),
             ),
         ],
@@ -1126,15 +1148,63 @@ class _XPBubbleState extends State<XPBubble>
   }
 }
 
+class _XPBubbleSubtitle extends StatelessWidget {
+  final String subtitle;
+  final Color textColor;
+  final Color rewardColor;
+
+  const _XPBubbleSubtitle({
+    required this.subtitle,
+    required this.textColor,
+    required this.rewardColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final style = TextStyle(
+      color: textColor,
+      fontSize: 11,
+      fontWeight: FontWeight.w600,
+      height: 1,
+    );
+    final matches = RegExp(r'[+-]\d+\s*XP').allMatches(subtitle).toList();
+    final spans = <InlineSpan>[];
+    var cursor = 0;
+    for (final match in matches) {
+      if (match.start > cursor) {
+        spans.add(TextSpan(text: subtitle.substring(cursor, match.start)));
+      }
+      spans.add(
+        TextSpan(
+          text: match.group(0),
+          style: style.copyWith(
+            color: rewardColor,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      );
+      cursor = match.end;
+    }
+    if (cursor < subtitle.length) {
+      spans.add(TextSpan(text: subtitle.substring(cursor)));
+    }
+
+    return Text.rich(
+      TextSpan(style: style, children: spans),
+      key: const ValueKey('xp-bubble-subtitle'),
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+}
+
 class _XPBubbleTone {
   final IconData icon;
-  final Color color;
   final String title;
   final String subtitle;
 
   const _XPBubbleTone({
     required this.icon,
-    required this.color,
     required this.title,
     required this.subtitle,
   });
@@ -1151,13 +1221,16 @@ class _XPBubbleTone {
         .where((line) => line.isNotEmpty)
         .toList();
     final customTitle = lines.length > 1 ? lines.first : null;
-    final customSubtitle = lines.length > 1 ? lines.skip(1).join(' ') : cleaned;
+    final rawSubtitle = lines.length > 1 ? lines.skip(1).join(' ') : cleaned;
+    final customSubtitle = rawSubtitle.replaceFirst(
+      '· быстрое действие',
+      '· Быстрое действие',
+    );
     final lower = cleaned.toLowerCase();
 
     if (lower.contains('ранг')) {
       return _XPBubbleTone(
         icon: Icons.workspace_premium,
-        color: const Color(0xFFFFCC00),
         title: customTitle ?? 'Новый ранг',
         subtitle: customSubtitle,
       );
@@ -1166,7 +1239,6 @@ class _XPBubbleTone {
     if (lower.contains('уровень')) {
       return _XPBubbleTone(
         icon: Icons.workspace_premium,
-        color: const Color(0xFFFFCC00),
         title: customTitle ?? 'Новый рубеж',
         subtitle: customSubtitle,
       );
@@ -1177,7 +1249,6 @@ class _XPBubbleTone {
         lower.contains('→')) {
       return _XPBubbleTone(
         icon: Icons.trending_up,
-        color: const Color(0xFFFF9500),
         title: customTitle ?? 'Навык вырос',
         subtitle: customSubtitle,
       );
@@ -1186,7 +1257,6 @@ class _XPBubbleTone {
     if (lower.contains('босс') || lower.contains('сопротивлен')) {
       return _XPBubbleTone(
         icon: Icons.shield,
-        color: const Color(0xFFFF2D55),
         title: customTitle ?? 'Сопротивление ослабло',
         subtitle: customSubtitle,
       );
@@ -1195,7 +1265,6 @@ class _XPBubbleTone {
     if (lower.contains('старт')) {
       return _XPBubbleTone(
         icon: Icons.play_circle_fill,
-        color: const Color(0xFF4A9EFF),
         title: customTitle ?? 'Лёгкий старт',
         subtitle: customSubtitle,
       );
@@ -1204,7 +1273,6 @@ class _XPBubbleTone {
     if (lower.contains('бафф') || lower.contains('пассивн')) {
       return _XPBubbleTone(
         icon: Icons.bolt,
-        color: const Color(0xFF34C759),
         title: customTitle ?? 'Эффект сработал',
         subtitle: customSubtitle,
       );
@@ -1212,7 +1280,6 @@ class _XPBubbleTone {
 
     return _XPBubbleTone(
       icon: Icons.auto_awesome,
-      color: const Color(0xFF4A9EFF),
       title: customTitle ?? 'Опыт получен',
       subtitle: customSubtitle,
     );
@@ -1255,6 +1322,7 @@ class DlgField extends StatelessWidget {
   final TextEditingController ctrl;
   final Color fBg, txt, sub, bdr;
   final int min;
+  final int? max;
   final bool showLabel;
   final Key? fieldKey;
   final ValueChanged<String>? onChanged;
@@ -1267,6 +1335,7 @@ class DlgField extends StatelessWidget {
     required this.sub,
     required this.bdr,
     this.min = 1,
+    this.max,
     this.hintText,
     this.showLabel = true,
     this.fieldKey,
@@ -1289,7 +1358,7 @@ class DlgField extends StatelessWidget {
           onChanged: onChanged,
           style: TextStyle(color: txt, fontSize: 14),
           minLines: min,
-          maxLines: min == 1 ? 1 : 4,
+          maxLines: max ?? (min == 1 ? 1 : 4),
           decoration: InputDecoration(
             border: InputBorder.none,
             hintText: hintText,
@@ -1317,6 +1386,7 @@ class MobileFormPage extends StatelessWidget {
   final Widget? bottomAction;
   final bool showTopSaveAction;
   final String saveLabel;
+  final TextStyle? titleStyle;
 
   const MobileFormPage({
     super.key,
@@ -1331,6 +1401,7 @@ class MobileFormPage extends StatelessWidget {
     this.bottomAction,
     this.showTopSaveAction = true,
     this.saveLabel = 'Создать',
+    this.titleStyle,
   });
 
   @override
@@ -1348,7 +1419,11 @@ class MobileFormPage extends StatelessWidget {
           onPressed: onCancel ?? () => Navigator.pop(context),
           icon: const Icon(Icons.close_rounded),
         ),
-        title: Text(title),
+        title: Text(
+          title,
+          key: const ValueKey('mobile-form-title'),
+          style: titleStyle,
+        ),
         actions: showTopSaveAction
             ? [
                 TextButton(

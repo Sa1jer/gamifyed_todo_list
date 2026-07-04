@@ -1452,8 +1452,6 @@ class _MobileQuestCopy extends StatelessWidget {
       children: [
         Text(
           task.title,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
           style: TextStyle(
             color: titleColor,
             fontSize: 15.5,
@@ -1467,8 +1465,6 @@ class _MobileQuestCopy extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             description,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: descriptionColor,
               fontSize: 12.5,

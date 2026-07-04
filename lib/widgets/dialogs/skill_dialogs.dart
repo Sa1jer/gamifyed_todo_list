@@ -631,7 +631,6 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
             _MobileSkillFormSection(
               title: 'Название навыка',
               subtitle: '',
-              color: _color,
               isDark: isDark,
             ),
             const SizedBox(height: 9),
@@ -669,7 +668,6 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
             _MobileSkillFormSection(
               title: 'Цель',
               subtitle: '',
-              color: _color,
               isDark: isDark,
             ),
             const SizedBox(height: 9),
@@ -714,7 +712,6 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
             _MobileSkillFormSection(
               title: 'Внешний вид',
               subtitle: 'Цвет связывает навык с квестами и RoadMap.',
-              color: _color,
               isDark: isDark,
             ),
             const SizedBox(height: 12),
@@ -867,7 +864,6 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
                 title: 'Первый этап',
                 subtitle:
                     'Можно оставить пустым и собрать дорожную карту позже.',
-                color: _color,
                 isDark: isDark,
               ),
               const SizedBox(height: 9),
@@ -922,6 +918,10 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
           title: title,
           backgroundColor: bg,
           accentColor: _color,
+          titleStyle: MobileJournalTokens.textTheme(
+            context,
+            isDark,
+          ).headlineSmall,
           onSave: _submitting ? null : _save,
           onCancel: () => unawaited(_requestClose()),
           showTopSaveAction: false,
@@ -1107,57 +1107,42 @@ class _MobileSkillEmblemPreview extends StatelessWidget {
 class _MobileSkillFormSection extends StatelessWidget {
   final String title;
   final String subtitle;
-  final Color color;
   final bool isDark;
 
   const _MobileSkillFormSection({
     required this.title,
     required this.subtitle,
-    required this.color,
     required this.isDark,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    final hasSubtitle = subtitle.isNotEmpty;
+    return Column(
+      key: ValueKey('mobile-skill-section-$title'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 4,
-          height: 34,
-          decoration: BoxDecoration(
-            color: color.withAlpha(190),
-            borderRadius: BorderRadius.circular(99),
+        Text(
+          title,
+          style: TextStyle(
+            color: textColor(isDark),
+            fontSize: hasSubtitle ? 14.5 : 15.5,
+            height: 1.2,
+            fontWeight: FontWeight.w900,
           ),
         ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  color: textColor(isDark),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              if (subtitle.isNotEmpty) ...[
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    color: subtext(isDark),
-                    fontSize: 11.5,
-                    height: 1.25,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ],
+        if (hasSubtitle) ...[
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: TextStyle(
+              color: subtext(isDark),
+              fontSize: 11.5,
+              height: 1.3,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-        ),
+        ],
       ],
     );
   }

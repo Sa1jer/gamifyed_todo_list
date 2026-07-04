@@ -1,6 +1,6 @@
 # TODO / Living Backlog
 
-Last updated: 2026-07-03
+Last updated: 2026-07-04
 
 This file tracks the active implementation roadmap and completed project work. Update it after every meaningful code or design change.
 
@@ -80,6 +80,21 @@ Do not mix these product decisions into Release / Regression Hardening. Revisit 
 - [ ] Persist the desktop layout preference as a local per-device UI setting.
 - [ ] Add keyboard shortcuts for desktop RoadMap orientation only if the toolbar toggle proves insufficient.
 - [ ] Profile orientation transitions with very large multi-road maps and add a reduced-motion fallback if needed.
+
+## P2 — Desktop Visual System
+
+- [x] Replace the desktop Act composition with a reference-led three-panel shell; `761-1023dp` keeps the same system with a collapsed right rail instead of falling back to the legacy dashboard.
+- [x] Add centralized desktop dark/light tokens and responsive sidebar/rail metrics without migrating global theme data.
+- [x] Add real-data daily metrics, dense active/completed quest sections, focus progress, weekly activity, and current-level XP by skill.
+- [x] Preserve profile/tutorial, debug-admin, RoadMap, trophies, statistics, skill reorder/edit/delete, and quest mutation entry points in the new shell.
+- [x] Stabilize right-rail hover with local keyed row state and fixed geometry.
+- [x] Reintegrate desktop Inbox as a content-led neutral workspace with green semantics, gold rewards, dense rows, and Enter submission.
+- [x] Rebalance laptop sidebar width, compact skill rows, and halve the visual Settings footer allocation while preserving scroll ownership.
+- [x] Unify mobile/desktop quest creation order and field anatomy; use a `10-500 XP` grid and move Minimum Step into Settings.
+- [ ] Revisit Smarter Quest product model, value proposition, and UX before re-enabling its creation/edit controls.
+- [ ] Perform physical Windows QHD validation at 125% and 150% scaling, including pointer hover, drag handles, popup placement, and text density.
+- [ ] Perform native macOS screenshot comparison at 1440/1920/2560 widths and tune only presentation tokens/spacing.
+- [ ] Profile sidebar/main/right-rail rebuild cost with 20+ skills and a large completion history before adding selectors or state decomposition.
 
 ## P3 — Skill Goal Progress
 
@@ -201,6 +216,8 @@ Manual desktop/QHD checklist:
 
 ## Recently Completed
 
+- `1.3.51`: completed Desktop Continuity & Quest Creation Refinement with stable right-rail hover, content-led desktop Inbox, unified quest form order, `10-500 XP` selection, nested Minimum Step settings, hidden SMARTER controls, continuous desktop breakpoints and denser laptop sidebar proportions.
+- Desktop Visual System Redesign Epic: added an adaptive `>=761dp` desktop workspace, compact profile/navigation/skill sidebar, real daily metrics, skill-XP header, dense active/completed quest rows, and a contextual focus/history/skill-XP rail while preserving the existing mobile shell, domain logic, dialogs, RoadMap, and storage.
 - Mobile Polish Audit: added device-local reduced motion, shared `360/393/430/760` metrics and mobile typography tokens, warm Light Journal surfaces, stronger light reward/accent contrast, selected bottom-navigation semantics, reading-order form traversal, and accessibility regression coverage. Physical TalkBack/profile-mode validation remains pending.
 - `1.3.49`: added mobile skill long-press/swipe edit and delete actions, a safe Focus delete action, explicit edit-mode save copy, XP-based skill rings, mobile statistics close, and bottom-right RoadMap return actions.
 - `1.3.49`: completed quests stay visible until the user swipes them into the persisted `Выполнено` archive; restore keeps earned XP, while uncomplete clears the archive state.

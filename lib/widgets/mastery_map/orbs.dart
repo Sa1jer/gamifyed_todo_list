@@ -104,9 +104,7 @@ class _SkillOrbButtonState extends State<_SkillOrbButton> {
           child: AnimatedScale(
             duration: kMotionSlow,
             curve: kMotionCurve,
-            scale:
-                (widget.hiddenInFocus ? 0.82 : 1) *
-                (_hovered && !widget.hiddenInFocus ? 1.05 : 1),
+            scale: widget.hiddenInFocus ? 0.82 : 1,
             child: PressFeedback(
               scale: 0.95,
               onTap: widget.onTap,

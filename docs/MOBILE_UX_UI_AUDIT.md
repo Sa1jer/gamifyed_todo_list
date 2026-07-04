@@ -682,6 +682,15 @@ Run a focused **Mobile Accessibility + Large Text Hardening** batch:
 5. Keep notification/exact-alarm behavior in a separate Android permissions
    batch because it changes platform behavior and store policy.
 
+## Quest Creation Continuity
+
+Mobile and desktop quest creation now share the same field anatomy and order:
+title, bounded multiline description, reward XP, and expandable settings.
+Minimum Step moved into settings, while SMARTER controls are hidden without
+changing persisted task data. New XP choices use a `10-500` grid; existing
+non-grid values remain load-safe until explicitly edited. Mobile remains a
+keyboard-safe full-screen route and desktop remains a controlled dialog.
+
 ## Reference Checklist
 
 - Flutter adaptive layout: <https://docs.flutter.dev/ui/adaptive-responsive/general>

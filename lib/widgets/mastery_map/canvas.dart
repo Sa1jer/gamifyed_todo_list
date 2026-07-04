@@ -380,7 +380,6 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
       clipBehavior: Clip.hardEdge,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final calmMobile = mobilePresentation;
           final layout = _buildOrbLayout(
             state,
             Size(constraints.maxWidth, constraints.maxHeight),
@@ -388,6 +387,8 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
             textScaler: MediaQuery.textScalerOf(context),
             textDirection: Directionality.of(context),
           );
+          final calmMobile = mobilePresentation;
+          final compactCanvas = layout.compactVisuals;
           final selectedSkill = layout.selectedSkill;
           final templatePanelCollapsed =
               _templatePanelHidden ||
@@ -446,13 +447,13 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
                           final orbDiameter = roadFocus
                               ? layout.focusedSkillOrbDiameter
                               : selected
-                              ? calmMobile
+                              ? compactCanvas
                                     ? 86.0
                                     : 98.0
-                              : calmMobile
+                              : compactCanvas
                               ? 78.0
                               : 89.0;
-                          final focusedWidth = calmMobile ? 216.0 : 264.0;
+                          final focusedWidth = compactCanvas ? 216.0 : 264.0;
                           return AnimatedPositioned(
                             key: ValueKey('map-skill-orb-${skill.id}'),
                             duration: kMotionSlow,
@@ -473,7 +474,7 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
                               roadFocus: roadFocus,
                               hiddenInFocus: hiddenInFocus,
                               dimmed: selectedSkill != null && !selected,
-                              compactVisuals: calmMobile,
+                              compactVisuals: compactCanvas,
                               onTap: () => widget.onSelectSkill(skill),
                             ),
                           );
@@ -1016,7 +1017,11 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
     final terminalRight =
         terminalPosition.dx +
         _roadmapNodeOrbDiameter(terminalNode.questTarget) / 2;
-    final skillLeft = skillCenter.dx - _roadmapFocusedSkillOrbDiameter / 2;
+    const focusedSkillVisualInset = 12.0;
+    final skillLeft =
+        skillCenter.dx -
+        _roadmapFocusedSkillOrbDiameter / 2 +
+        focusedSkillVisualInset;
     return Offset(
       (terminalRight + skillLeft) / 2,
       (terminalPosition.dy + skillCenter.dy) / 2,

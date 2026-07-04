@@ -1138,14 +1138,26 @@ class _MobileInboxAccordion extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(_MobileJournalTokens.radiusLarge),
       child: DecoratedBox(
+        key: const ValueKey('mobile-inbox-accordion-surface'),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
             colors: [
-              _MobileJournalTokens.inbox.withAlpha(isDark ? 14 : 9),
-              _MobileJournalTokens.surfaceColor(isDark),
+              Color.alphaBlend(
+                _MobileJournalTokens.inbox.withAlpha(isDark ? 10 : 7),
+                _MobileJournalTokens.surfaceColor(isDark),
+              ),
+              Color.alphaBlend(
+                _MobileJournalTokens.inbox.withAlpha(isDark ? 24 : 14),
+                _MobileJournalTokens.surfaceColor(isDark),
+              ),
+              Color.alphaBlend(
+                _MobileJournalTokens.inbox.withAlpha(isDark ? 10 : 7),
+                _MobileJournalTokens.surfaceColor(isDark),
+              ),
             ],
+            stops: const [0, 0.5, 1],
           ),
           border: Border.all(
             color: _MobileJournalTokens.inbox.withAlpha(isDark ? 48 : 60),
@@ -1158,7 +1170,7 @@ class _MobileInboxAccordion extends StatelessWidget {
               button: true,
               expanded: expanded,
               label: 'Задачник, быстрых задач $taskCount',
-              child: InkWell(
+              child: _MobileInboxPressFeedback(
                 key: const ValueKey('mobile-inbox-accordion-toggle'),
                 onTap: onToggle,
                 child: ConstrainedBox(
@@ -1293,6 +1305,58 @@ class _MobileInboxAccordion extends StatelessWidget {
                   : const SizedBox.shrink(),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MobileInboxPressFeedback extends StatefulWidget {
+  final VoidCallback onTap;
+  final Widget child;
+
+  const _MobileInboxPressFeedback({
+    super.key,
+    required this.onTap,
+    required this.child,
+  });
+
+  @override
+  State<_MobileInboxPressFeedback> createState() =>
+      _MobileInboxPressFeedbackState();
+}
+
+class _MobileInboxPressFeedbackState extends State<_MobileInboxPressFeedback> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final duration = MobileMotion.duration(
+      context,
+      appReducedMotion:
+          AppStateProvider.maybeOf(context)?.reducedMotion ?? false,
+      normal: const Duration(milliseconds: 110),
+    );
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) => setState(() => _pressed = false),
+        onTapCancel: () => setState(() => _pressed = false),
+        onTap: widget.onTap,
+        child: AnimatedScale(
+          key: const ValueKey('mobile-inbox-accordion-press-scale'),
+          scale: _pressed ? 0.985 : 1,
+          duration: duration,
+          curve: _MobileJournalTokens.curve,
+          child: AnimatedOpacity(
+            opacity: _pressed ? 0.97 : 1,
+            duration: duration,
+            curve: _MobileJournalTokens.curve,
+            child: widget.child,
+          ),
         ),
       ),
     );

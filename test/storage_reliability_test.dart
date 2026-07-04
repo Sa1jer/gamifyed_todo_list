@@ -263,7 +263,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Не удалось загрузить данные'), findsNothing);
-      expect(find.text('RPG To-Do List'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('desktop-three-panel-shell')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('startup recovery retries storage initialization', (
