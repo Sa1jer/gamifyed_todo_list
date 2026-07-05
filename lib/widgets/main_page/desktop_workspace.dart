@@ -11,6 +11,7 @@ class _DesktopWorkspaceShell extends StatelessWidget {
   final VoidCallback onOpenRewards;
   final VoidCallback onOpenStatistics;
   final VoidCallback onOpenSettings;
+  final VoidCallback onOpenProfile;
   final VoidCallback? onDebugAppTap;
   final ValueChanged<Skill> onOpenRoadmap;
   final void Function(String taskId, Offset position) onComplete;
@@ -30,6 +31,7 @@ class _DesktopWorkspaceShell extends StatelessWidget {
     required this.onOpenRewards,
     required this.onOpenStatistics,
     required this.onOpenSettings,
+    required this.onOpenProfile,
     this.onDebugAppTap,
     required this.onOpenRoadmap,
     required this.onComplete,
@@ -69,6 +71,7 @@ class _DesktopWorkspaceShell extends StatelessWidget {
                 onOpenRewards: onOpenRewards,
                 onOpenStatistics: onOpenStatistics,
                 onOpenSettings: onOpenSettings,
+                onOpenProfile: onOpenProfile,
                 onDebugAppTap: onDebugAppTap,
                 onEditSkill: (skill) =>
                     _showDesktopEditSkill(context, state, skill),
@@ -132,6 +135,7 @@ class _DesktopSidebar extends StatelessWidget {
   final VoidCallback onOpenRewards;
   final VoidCallback onOpenStatistics;
   final VoidCallback onOpenSettings;
+  final VoidCallback onOpenProfile;
   final VoidCallback? onDebugAppTap;
   final ValueChanged<Skill> onEditSkill;
   final ValueChanged<Skill> onDeleteSkill;
@@ -151,6 +155,7 @@ class _DesktopSidebar extends StatelessWidget {
     required this.onOpenRewards,
     required this.onOpenStatistics,
     required this.onOpenSettings,
+    required this.onOpenProfile,
     this.onDebugAppTap,
     required this.onEditSkill,
     required this.onDeleteSkill,
@@ -178,7 +183,7 @@ class _DesktopSidebar extends StatelessWidget {
             key: profileKey,
             state: state,
             tokens: tokens,
-            onTap: onOpenSettings,
+            onTap: onOpenProfile,
           ),
           Divider(height: 1, color: tokens.subtleOutline),
           Padding(
@@ -210,7 +215,7 @@ class _DesktopSidebar extends StatelessWidget {
                     key: const ValueKey('desktop-nav-trophies'),
                     icon: Icons.emoji_events_outlined,
                     label: 'Трофеи',
-                    selected: false,
+                    selected: mode == WorkspaceMode.rewards,
                     tokens: tokens,
                     onTap: onOpenRewards,
                   ),
@@ -221,7 +226,7 @@ class _DesktopSidebar extends StatelessWidget {
                     key: const ValueKey('desktop-nav-statistics'),
                     icon: Icons.query_stats,
                     label: 'Статистика',
-                    selected: false,
+                    selected: mode == WorkspaceMode.stats,
                     tokens: tokens,
                     onTap: onOpenStatistics,
                   ),
@@ -283,6 +288,9 @@ class _DesktopSidebar extends StatelessWidget {
                               if (state.selectedSkillId != skill.id) {
                                 state.selectSkill(skill.id);
                               }
+                              if (mode == WorkspaceMode.mastery) {
+                                onOpenRoadmap(skill);
+                              }
                             },
                             onEdit: () => onEditSkill(skill),
                             onDelete: () => onDeleteSkill(skill),
@@ -301,7 +309,7 @@ class _DesktopSidebar extends StatelessWidget {
               key: const ValueKey('desktop-settings'),
               icon: Icons.settings_outlined,
               label: 'Настройки',
-              selected: false,
+              selected: mode == WorkspaceMode.settings,
               tokens: tokens,
               compact: true,
               onTap: onOpenSettings,
@@ -737,37 +745,41 @@ class _DesktopSkillRowState extends State<_DesktopSkillRow> {
                         ),
                       ),
                     ),
-                  SizedBox(
-                    width: 28,
-                    child: PopupMenuButton<String>(
-                      tooltip: 'Действия с навыком ${skill.name}',
-                      padding: EdgeInsets.zero,
-                      icon: Icon(
-                        Icons.drag_handle_rounded,
-                        size: 17,
-                        color: tokens.mutedText,
+                  AnimatedOpacity(
+                    duration: DesktopJournalTokens.fastMotion,
+                    opacity: _hovered || selected ? 1 : 0,
+                    child: SizedBox(
+                      width: 28,
+                      child: PopupMenuButton<String>(
+                        tooltip: 'Действия с навыком ${skill.name}',
+                        padding: EdgeInsets.zero,
+                        icon: Icon(
+                          Icons.more_vert_rounded,
+                          size: 17,
+                          color: tokens.mutedText,
+                        ),
+                        color: tokens.raisedSurface,
+                        onSelected: (value) {
+                          if (value == 'edit') widget.onEdit();
+                          if (value == 'delete') widget.onDelete();
+                        },
+                        itemBuilder: (_) => [
+                          PopupMenuItem(
+                            value: 'edit',
+                            child: Text(
+                              'Редактировать навык',
+                              style: TextStyle(color: tokens.text),
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: 'delete',
+                            child: Text(
+                              'Удалить навык',
+                              style: TextStyle(color: tokens.danger),
+                            ),
+                          ),
+                        ],
                       ),
-                      color: tokens.raisedSurface,
-                      onSelected: (value) {
-                        if (value == 'edit') widget.onEdit();
-                        if (value == 'delete') widget.onDelete();
-                      },
-                      itemBuilder: (_) => [
-                        PopupMenuItem(
-                          value: 'edit',
-                          child: Text(
-                            'Редактировать навык',
-                            style: TextStyle(color: tokens.text),
-                          ),
-                        ),
-                        PopupMenuItem(
-                          value: 'delete',
-                          child: Text(
-                            'Удалить навык',
-                            style: TextStyle(color: tokens.danger),
-                          ),
-                        ),
-                      ],
                     ),
                   ),
                 ],
@@ -1030,20 +1042,26 @@ class _DesktopMainWorkspace extends StatelessWidget {
                           onAddTask: () => onAddTask(currentSkill),
                         ),
                         const SizedBox(height: 24),
-                        _DesktopQuestSectionTitle(
-                          label: 'АКТИВНЫЕ',
-                          count: active.length,
-                          tokens: tokens,
-                        ),
-                        const SizedBox(height: 10),
-                        if (active.isEmpty)
-                          _DesktopInlineEmpty(
+                        if (active.isEmpty && completed.isEmpty)
+                          _DesktopFirstQuestEmpty(
                             tokens: tokens,
-                            text: 'Активных квестов пока нет',
-                            actionLabel: 'Добавить квест',
-                            onAction: () => onAddTask(currentSkill),
+                            color: currentSkill.color,
                           )
-                        else
+                        else ...[
+                          _DesktopQuestSectionTitle(
+                            label: 'АКТИВНЫЕ',
+                            count: active.length,
+                            tokens: tokens,
+                          ),
+                          const SizedBox(height: 10),
+                          if (active.isEmpty)
+                            Text(
+                              'Активных квестов пока нет.',
+                              style: TextStyle(
+                                color: tokens.mutedText,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ...active.map(
                             (task) => Padding(
                               padding: const EdgeInsets.only(bottom: 9),
@@ -1059,23 +1077,22 @@ class _DesktopMainWorkspace extends StatelessWidget {
                               ),
                             ),
                           ),
-                        const SizedBox(height: 18),
-                        _DesktopQuestSectionTitle(
-                          label: 'ВЫПОЛНЕНО',
-                          count: completed.length,
-                          tokens: tokens,
-                        ),
-                        const SizedBox(height: 10),
-                        if (completed.isEmpty)
-                          Text(
-                            'Завершённые квесты появятся здесь.',
-                            style: TextStyle(
-                              color: tokens.mutedText,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
+                          const SizedBox(height: 18),
+                          _DesktopQuestSectionTitle(
+                            label: 'ВЫПОЛНЕНО',
+                            count: completed.length,
+                            tokens: tokens,
+                          ),
+                          const SizedBox(height: 10),
+                          if (completed.isEmpty)
+                            Text(
+                              'Завершённые квесты появятся здесь.',
+                              style: TextStyle(
+                                color: tokens.mutedText,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                          )
-                        else
                           ...completed.map(
                             (task) => Padding(
                               padding: const EdgeInsets.only(bottom: 9),
@@ -1093,6 +1110,7 @@ class _DesktopMainWorkspace extends StatelessWidget {
                               ),
                             ),
                           ),
+                        ],
                       ],
                     ),
             ),
@@ -1317,6 +1335,46 @@ class _DesktopQuestSectionTitle extends StatelessWidget {
   }
 }
 
+class _DesktopFirstQuestEmpty extends StatelessWidget {
+  final DesktopJournalTokens tokens;
+  final Color color;
+
+  const _DesktopFirstQuestEmpty({required this.tokens, required this.color});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    key: const ValueKey('desktop-first-quest-empty'),
+    constraints: const BoxConstraints(minHeight: 150),
+    padding: const EdgeInsets.all(28),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.035),
+      borderRadius: BorderRadius.circular(DesktopJournalTokens.taskRadius),
+      border: Border.all(color: color.withValues(alpha: 0.16)),
+    ),
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.task_alt_rounded, color: color, size: 34),
+        const SizedBox(height: 12),
+        Text(
+          'Добавь свой первый квест',
+          style: TextStyle(
+            color: tokens.text,
+            fontSize: 17,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Кнопка «Новый квест» выше запустит первое действие.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: tokens.mutedText, height: 1.35),
+        ),
+      ],
+    ),
+  );
+}
+
 class _DesktopQuestRow extends StatefulWidget {
   final AppState state;
   final Task task;
@@ -1461,61 +1519,65 @@ class _DesktopQuestRowState extends State<_DesktopQuestRow> {
               ),
               const SizedBox(width: 10),
               _DesktopRewardPill(value: reward, tokens: tokens),
-              SizedBox(
-                width: 34,
-                child: PopupMenuButton<_DesktopTaskMenuAction>(
-                  tooltip: 'Действия с квестом ${task.title}',
-                  icon: Icon(
-                    Icons.more_horiz_rounded,
-                    color: tokens.mutedText,
-                    size: 19,
-                  ),
-                  color: tokens.raisedSurface,
-                  onSelected: (action) {
-                    switch (action) {
-                      case _DesktopTaskMenuAction.edit:
-                        widget.onEdit();
-                      case _DesktopTaskMenuAction.archive:
-                        widget.state.archiveCompletedTask(task.id);
-                      case _DesktopTaskMenuAction.restore:
-                        widget.state.restoreArchivedTask(task.id);
-                      case _DesktopTaskMenuAction.delete:
-                        widget.state.removeTask(task.id);
-                    }
-                  },
-                  itemBuilder: (_) => [
-                    if (!done)
-                      PopupMenuItem(
-                        value: _DesktopTaskMenuAction.edit,
-                        child: Text(
-                          'Редактировать',
-                          style: TextStyle(color: tokens.text),
-                        ),
-                      ),
-                    if (done && !task.isArchived)
-                      PopupMenuItem(
-                        value: _DesktopTaskMenuAction.archive,
-                        child: Text(
-                          'Убрать в выполнено',
-                          style: TextStyle(color: tokens.text),
-                        ),
-                      ),
-                    if (done && task.isArchived)
-                      PopupMenuItem(
-                        value: _DesktopTaskMenuAction.restore,
-                        child: Text(
-                          'Вернуть из выполненных',
-                          style: TextStyle(color: tokens.text),
-                        ),
-                      ),
-                    PopupMenuItem(
-                      value: _DesktopTaskMenuAction.delete,
-                      child: Text(
-                        'Удалить',
-                        style: TextStyle(color: tokens.danger),
-                      ),
+              AnimatedOpacity(
+                duration: DesktopJournalTokens.fastMotion,
+                opacity: _hovered ? 1 : 0,
+                child: SizedBox(
+                  width: 34,
+                  child: PopupMenuButton<_DesktopTaskMenuAction>(
+                    tooltip: 'Действия с квестом ${task.title}',
+                    icon: Icon(
+                      Icons.more_vert_rounded,
+                      color: tokens.mutedText,
+                      size: 19,
                     ),
-                  ],
+                    color: tokens.raisedSurface,
+                    onSelected: (action) {
+                      switch (action) {
+                        case _DesktopTaskMenuAction.edit:
+                          widget.onEdit();
+                        case _DesktopTaskMenuAction.archive:
+                          widget.state.archiveCompletedTask(task.id);
+                        case _DesktopTaskMenuAction.restore:
+                          widget.state.restoreArchivedTask(task.id);
+                        case _DesktopTaskMenuAction.delete:
+                          widget.state.removeTask(task.id);
+                      }
+                    },
+                    itemBuilder: (_) => [
+                      if (!done)
+                        PopupMenuItem(
+                          value: _DesktopTaskMenuAction.edit,
+                          child: Text(
+                            'Редактировать',
+                            style: TextStyle(color: tokens.text),
+                          ),
+                        ),
+                      if (done && !task.isArchived)
+                        PopupMenuItem(
+                          value: _DesktopTaskMenuAction.archive,
+                          child: Text(
+                            'Убрать в выполнено',
+                            style: TextStyle(color: tokens.text),
+                          ),
+                        ),
+                      if (done && task.isArchived)
+                        PopupMenuItem(
+                          value: _DesktopTaskMenuAction.restore,
+                          child: Text(
+                            'Вернуть из выполненных',
+                            style: TextStyle(color: tokens.text),
+                          ),
+                        ),
+                      PopupMenuItem(
+                        value: _DesktopTaskMenuAction.delete,
+                        child: Text(
+                          'Удалить',
+                          style: TextStyle(color: tokens.danger),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],

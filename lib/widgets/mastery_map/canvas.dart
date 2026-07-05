@@ -761,7 +761,7 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
     final selectedCenter = selectedSkill == null
         ? null
         : vertical
-        ? _verticalRoadmapSkillCenter(Size(width, height))
+        ? _verticalRoadmapSkillCenter(Size(width, height), stageCount)
         : _roadmapSkillCenter(Size(width, height), focusLeftSafe, visualSpan);
     final skillPositions = <Skill, Offset>{};
 
@@ -811,7 +811,10 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
     );
   }
 
-  Offset _verticalRoadmapSkillCenter(Size size) => Offset(size.width / 2, 180);
+  Offset _verticalRoadmapSkillCenter(Size size, int stageCount) => Offset(
+    size.width / 2,
+    stageCount <= 2 ? math.min(260.0, size.height * 0.34) : 200,
+  );
 
   Rect _roadmapGoalAnchorRect(_OrbCanvasLayout layout, Offset skillCenter) {
     final skill = layout.selectedSkill;
@@ -840,7 +843,10 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
     double visualSpan,
   ) {
     final workRight = size.width - 188.0;
-    final workCenter = Offset((focusLeftSafe + workRight) / 2, size.height / 2);
+    final workCenter = Offset(
+      (focusLeftSafe + workRight) / 2,
+      size.height / 2 + 28,
+    );
     if (visualSpan <= 0) return workCenter;
     final skillX = (workCenter.dx + visualSpan / 2).clamp(
       focusLeftSafe + visualSpan + 112.0,

@@ -35,5 +35,6 @@ part 'main_page/workspaces.dart';
 part 'main_page/compact_skill_selector.dart';
 part 'main_page/mobile_journal.dart';
 part 'main_page/desktop_workspace.dart';
+part 'main_page/desktop_secondary_workspaces.dart';
 part 'main_page/reward_notice.dart';
 part 'main_page/first_run_tutorial.dart';

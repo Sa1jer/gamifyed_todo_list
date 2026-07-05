@@ -251,23 +251,18 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
-  void _openStatisticsDialog(AppState state, {bool showTutorialHint = false}) {
-    AppFeedback.selection();
-    if (showTutorialHint) {
-      setState(() => _statsTutorialActive = true);
-    }
-    showDialog(
+  void _openStatisticsTutorial(AppState state) {
+    setState(() => _statsTutorialActive = true);
+    showDialog<void>(
       context: context,
       builder: (_) => ProgressHubDialog(
         state: state,
         isDark: state.isDark,
-        showTutorialHint: showTutorialHint,
-        onTutorialComplete: showTutorialHint
-            ? () {
-                _completeStatisticsTutorial(state);
-                if (mounted) setState(() => _statsTutorialActive = false);
-              }
-            : null,
+        showTutorialHint: true,
+        onTutorialComplete: () {
+          _completeStatisticsTutorial(state);
+          if (mounted) setState(() => _statsTutorialActive = false);
+        },
         onOpenDailyVictories: () => _openDailyVictoriesDialog(state),
         onOpenCharacterTimeline: () => _openCharacterTimelineDialog(state),
         onOpenWeekly: () => _openWeeklyDialog(state),
@@ -279,9 +274,7 @@ class _MainPageState extends State<MainPage> {
         onOpenRewards: () => _openRewardsDialog(state),
       ),
     ).whenComplete(() {
-      if (showTutorialHint && mounted) {
-        setState(() => _statsTutorialActive = false);
-      }
+      if (mounted) setState(() => _statsTutorialActive = false);
     });
   }
 
@@ -791,9 +784,7 @@ class _MainPageState extends State<MainPage> {
         final desktopMetrics = DesktopResponsiveMetrics.forWidth(
           constraints.maxWidth,
         );
-        final displayedMode = !mobileShell && _mode == WorkspaceMode.stats
-            ? WorkspaceMode.act
-            : _mode;
+        final displayedMode = _mode;
 
         void changeMode(WorkspaceMode mode) {
           if (_mode == mode) return;
@@ -818,8 +809,13 @@ class _MainPageState extends State<MainPage> {
               _mode = WorkspaceMode.stats;
               _statsTutorialActive = tutorial;
             });
+          } else if (tutorial) {
+            _openStatisticsTutorial(s);
           } else {
-            _openStatisticsDialog(s, showTutorialHint: tutorial);
+            setState(() {
+              _mode = WorkspaceMode.stats;
+              _statsTutorialActive = false;
+            });
           }
         }
 
@@ -859,9 +855,10 @@ class _MainPageState extends State<MainPage> {
                   metrics: desktopMetrics,
                   onModeChanged: changeMode,
                   onAddSkill: () => _addSkill(context),
-                  onOpenRewards: () => _openRewardsDialog(s),
+                  onOpenRewards: () => changeMode(WorkspaceMode.rewards),
                   onOpenStatistics: openStatistics,
-                  onOpenSettings: openProfile,
+                  onOpenSettings: () => changeMode(WorkspaceMode.settings),
+                  onOpenProfile: openProfile,
                   onDebugAppTap: kDebugMode
                       ? () => _handleDebugAdminTap(s)
                       : null,
@@ -872,18 +869,35 @@ class _MainPageState extends State<MainPage> {
                   rewardsKey: _rewardsButtonKey,
                   roadmapKey: _roadmapNavKey,
                   statsKey: _statsButtonKey,
-                  alternateWorkspace: displayedMode == WorkspaceMode.mastery
-                      ? _MasteryWorkspace(
-                          key: const ValueKey('mastery-workspace'),
-                          isDark: isDark,
-                          focusSkillId: _roadmapFocusSkillId,
-                          canvasTutorialKey: _roadmapCanvasKey,
-                          inspectorTutorialKey: _roadmapInspectorKey,
-                          practiceTutorialKey: _roadmapPracticeKey,
-                          onComplete: _onComplete,
-                          onMinimumAction: _onMinimumAction,
-                        )
-                      : null,
+                  alternateWorkspace: switch (displayedMode) {
+                    WorkspaceMode.mastery => _MasteryWorkspace(
+                      key: const ValueKey('mastery-workspace'),
+                      isDark: isDark,
+                      focusSkillId: _roadmapFocusSkillId,
+                      canvasTutorialKey: _roadmapCanvasKey,
+                      inspectorTutorialKey: _roadmapInspectorKey,
+                      practiceTutorialKey: _roadmapPracticeKey,
+                      onComplete: _onComplete,
+                      onMinimumAction: _onMinimumAction,
+                    ),
+                    WorkspaceMode.rewards => _DesktopRewardsWorkspace(
+                      key: const ValueKey('desktop-rewards-workspace'),
+                      state: s,
+                      tokens: DesktopJournalTokens.resolve(isDark),
+                    ),
+                    WorkspaceMode.stats => _buildStatisticsWorkspace(
+                      s,
+                      isDark,
+                      showTutorialHint: _statsTutorialActive,
+                    ),
+                    WorkspaceMode.settings => _DesktopSettingsWorkspace(
+                      key: const ValueKey('desktop-settings-workspace'),
+                      state: s,
+                      tokens: DesktopJournalTokens.resolve(isDark),
+                      onOpenProfile: openProfile,
+                    ),
+                    WorkspaceMode.act => null,
+                  },
                 )
               else
                 Column(
@@ -949,6 +963,8 @@ class _MainPageState extends State<MainPage> {
                               isDark,
                               showTutorialHint: _statsTutorialActive,
                             ),
+                            WorkspaceMode.rewards => const SizedBox.shrink(),
+                            WorkspaceMode.settings => const SizedBox.shrink(),
                           },
                         ),
                       ),

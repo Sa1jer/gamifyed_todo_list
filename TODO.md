@@ -1,6 +1,6 @@
 # TODO / Living Backlog
 
-Last updated: 2026-07-04
+Last updated: 2026-07-05
 
 This file tracks the active implementation roadmap and completed project work. Update it after every meaningful code or design change.
 
@@ -91,6 +91,9 @@ Do not mix these product decisions into Release / Regression Hardening. Revisit 
 - [x] Reintegrate desktop Inbox as a content-led neutral workspace with green semantics, gold rewards, dense rows, and Enter submission.
 - [x] Rebalance laptop sidebar width, compact skill rows, and halve the visual Settings footer allocation while preserving scroll ownership.
 - [x] Unify mobile/desktop quest creation order and field anatomy; use a `10-500 XP` grid and move Minimum Step into Settings.
+- [x] Migrate desktop Trophies, Statistics, and Settings into the persistent shell while preserving mobile/tutorial dialog flows.
+- [x] Synchronize RoadMap focus with sidebar skill selection, refine camera centering, and preserve the approved canvas painter.
+- [x] Replace persistent row action glyphs with stable hover/focus ellipsis menus and simplify the first-quest empty state.
 - [ ] Revisit Smarter Quest product model, value proposition, and UX before re-enabling its creation/edit controls.
 - [ ] Perform physical Windows QHD validation at 125% and 150% scaling, including pointer hover, drag handles, popup placement, and text density.
 - [ ] Perform native macOS screenshot comparison at 1440/1920/2560 widths and tune only presentation tokens/spacing.
@@ -216,6 +219,7 @@ Manual desktop/QHD checklist:
 
 ## Recently Completed
 
+- `1.3.52`: completed the application-wide desktop continuity migration with shell-native Trophies, Statistics and Settings, synchronized RoadMap focus/centering, stable context menus, and a single first-quest empty state.
 - `1.3.51`: completed Desktop Continuity & Quest Creation Refinement with stable right-rail hover, content-led desktop Inbox, unified quest form order, `10-500 XP` selection, nested Minimum Step settings, hidden SMARTER controls, continuous desktop breakpoints and denser laptop sidebar proportions.
 - Desktop Visual System Redesign Epic: added an adaptive `>=761dp` desktop workspace, compact profile/navigation/skill sidebar, real daily metrics, skill-XP header, dense active/completed quest rows, and a contextual focus/history/skill-XP rail while preserving the existing mobile shell, domain logic, dialogs, RoadMap, and storage.
 - Mobile Polish Audit: added device-local reduced motion, shared `360/393/430/760` metrics and mobile typography tokens, warm Light Journal surfaces, stronger light reward/accent contrast, selected bottom-navigation semantics, reading-order form traversal, and accessibility regression coverage. Physical TalkBack/profile-mode validation remains pending.

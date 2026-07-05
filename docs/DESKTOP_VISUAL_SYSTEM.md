@@ -107,8 +107,29 @@ the XP control.
   correctly show zero activity.
 - The system Inbox remains available as a compact sidebar shortcut to preserve
   existing desktop functionality.
-- RoadMap, trophies, and statistics retain their existing internal designs;
-  this epic only integrates their entry points into the new shell.
+- RoadMap keeps its approved canvas painter and graph visuals while its shell
+  participates in the persistent desktop workspace. Trophies and Statistics
+  now open as first-class shell pages; their mobile/tutorial dialogs remain
+  available where modal focus is intentional.
+
+## Desktop Secondary Workspaces
+
+`WorkspaceMode` now covers Act, RoadMap, Trophies, Statistics, and Settings.
+Desktop navigation changes the center workspace instead of opening legacy
+windows. Statistics reuses `ProgressHubContent`; Trophies reads the existing
+buff/chest state directly; Settings exposes common interface preferences and
+keeps the richer profile editor as an explicit secondary action.
+
+RoadMap selection stays synchronized with the sidebar skill ID. Camera
+centering was adjusted without changing canvas paint, node geometry, graph
+ordering, or persistence. Short vertical paths receive additional top space,
+while horizontal paths sit slightly lower in the available canvas.
+
+Skill and quest context actions use stable vertical-ellipsis hit regions that
+fade on hover/focus without changing row geometry. Reordering remains on the
+existing delayed-drag gesture. A skill that has never contained a quest shows
+one compact first-quest explanation and relies on the header CTA, avoiding a
+second competing action.
 
 ## Follow-up Validation
 

@@ -130,24 +130,26 @@ class _ProgressWorkspace extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox.expand(
-      child: ProgressHubContent(
-        state: state,
-        isDark: isDark,
-        showTutorialHint: showTutorialHint,
-        showCloseButton: true,
-        onClose: onClose,
-        onTutorialComplete: onTutorialComplete,
-        subtitle: 'Что получилось, какой навык вырос и что продолжить.',
-        onOpenDailyVictories: onOpenDailyVictories,
-        onOpenCharacterTimeline: onOpenCharacterTimeline,
-        onOpenWeekly: onOpenWeekly,
-        onOpenStats: onOpenStats,
-        onOpenCalendar: onOpenCalendar,
-        onOpenBosses: onOpenBosses,
-        onOpenAchievements: onOpenAchievements,
-        onOpenHistory: onOpenHistory,
-        onOpenRewards: onOpenRewards,
+    return LayoutBuilder(
+      builder: (context, constraints) => SizedBox.expand(
+        child: ProgressHubContent(
+          state: state,
+          isDark: isDark,
+          showTutorialHint: showTutorialHint,
+          showCloseButton: constraints.maxWidth < 761,
+          onClose: onClose,
+          onTutorialComplete: onTutorialComplete,
+          subtitle: 'Что получилось, какой навык вырос и что продолжить.',
+          onOpenDailyVictories: onOpenDailyVictories,
+          onOpenCharacterTimeline: onOpenCharacterTimeline,
+          onOpenWeekly: onOpenWeekly,
+          onOpenStats: onOpenStats,
+          onOpenCalendar: onOpenCalendar,
+          onOpenBosses: onOpenBosses,
+          onOpenAchievements: onOpenAchievements,
+          onOpenHistory: onOpenHistory,
+          onOpenRewards: onOpenRewards,
+        ),
       ),
     );
   }

@@ -241,12 +241,13 @@ void main() {
     expect(find.byIcon(Icons.edit_note), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('desktop-nav-statistics')));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(find.text('История роста'), findsWidgets);
 
-    await tester.tap(find.byIcon(Icons.close).last);
-    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('desktop-nav-trophies')));
+    await tester.pumpAndSettle();
+    expect(find.text('Трофеи после действий'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('desktop-nav-map')));
     await tester.pump();
@@ -255,9 +256,13 @@ void main() {
     expect(find.textContaining('Сначала создай первый навык'), findsWidgets);
 
     await tester.tap(find.byKey(const ValueKey('desktop-settings')));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
-    expect(find.byType(ProfileDialog), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('desktop-settings-workspace')),
+      findsOneWidget,
+    );
+    expect(find.byType(ProfileDialog), findsNothing);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
