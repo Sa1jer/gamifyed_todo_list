@@ -26,6 +26,7 @@ import 'daily_victories_dialog.dart';
 import 'goal_milestone_banner.dart';
 import 'reward_animations.dart';
 import 'weekly_analytics_dialog.dart';
+import '../engines/course_nudge_engine.dart';
 
 part 'main_page/mode.dart';
 part 'main_page/top_bar.dart';
@@ -36,5 +37,6 @@ part 'main_page/compact_skill_selector.dart';
 part 'main_page/mobile_journal.dart';
 part 'main_page/desktop_workspace.dart';
 part 'main_page/desktop_secondary_workspaces.dart';
+part 'main_page/desktop_statistics_workspace.dart';
 part 'main_page/reward_notice.dart';
 part 'main_page/first_run_tutorial.dart';

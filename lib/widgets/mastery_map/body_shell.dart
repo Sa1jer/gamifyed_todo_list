@@ -2,20 +2,26 @@ part of '../mastery_map_workspace.dart';
 
 class _MasteryMapHero extends StatelessWidget {
   final bool isDark;
+  final Skill? selectedSkill;
   final _RoadmapLayoutAxis layoutAxis;
   final ValueChanged<_RoadmapLayoutAxis> onLayoutAxisChanged;
+  final VoidCallback onCenter;
+  final VoidCallback? onTemplates;
   final VoidCallback onFullscreen;
 
   const _MasteryMapHero({
     required this.isDark,
+    required this.selectedSkill,
     required this.layoutAxis,
     required this.onLayoutAxisChanged,
+    required this.onCenter,
+    required this.onTemplates,
     required this.onFullscreen,
   });
 
   @override
   Widget build(BuildContext context) {
-    const color = Color(0xFF4A9EFF);
+    final color = selectedSkill?.color ?? const Color(0xFF765BFF);
     final mobile = MobileResponsiveMetrics.isMobileWidth(
       MediaQuery.sizeOf(context).width,
     );
@@ -96,7 +102,44 @@ class _MasteryMapHero extends StatelessWidget {
         child: content,
       );
     }
-    return AppPanel(isDark: isDark, child: content);
+    return Container(
+      key: const ValueKey('desktop-roadmap-toolbar'),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF11121A) : const Color(0xFFFFFFFF),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.22)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(4, 0, 4, 0),
+        child: Row(
+          children: [
+            Expanded(child: content),
+            _MapCanvasAction(
+              isDark: isDark,
+              label: 'Центр',
+              icon: Icons.center_focus_strong,
+              color: color,
+              onTap: onCenter,
+            ),
+            const SizedBox(width: 8),
+            Opacity(
+              opacity: onTemplates == null ? 0.45 : 1,
+              child: IgnorePointer(
+                ignoring: onTemplates == null,
+                child: _MapCanvasAction(
+                  isDark: isDark,
+                  label: 'Шаблоны',
+                  icon: Icons.layers_outlined,
+                  color: color,
+                  onTap: onTemplates ?? () {},
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -208,6 +251,7 @@ class _MasteryMapBody extends StatelessWidget {
   final _RoadmapLayoutAxis layoutAxis;
   final bool fullscreen;
   final GlobalKey? canvasTutorialKey;
+  final GlobalKey<_OrbMasteryMapCanvasState>? canvasControlKey;
   final GlobalKey? inspectorTutorialKey;
   final GlobalKey? practiceTutorialKey;
   final ValueChanged<_MasterySelection?> onSelectionChanged;
@@ -236,6 +280,7 @@ class _MasteryMapBody extends StatelessWidget {
     required this.selection,
     required this.layoutAxis,
     this.canvasTutorialKey,
+    this.canvasControlKey,
     this.inspectorTutorialKey,
     this.practiceTutorialKey,
     required this.onSelectionChanged,
@@ -259,8 +304,8 @@ class _MasteryMapBody extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final narrow = constraints.maxWidth < 980;
-        final canvas = _OrbMasteryMapCanvas(
-          key: canvasTutorialKey,
+        final canvasWidget = _OrbMasteryMapCanvas(
+          key: canvasControlKey ?? canvasTutorialKey,
           state: state,
           isDark: isDark,
           selection: selection,
@@ -287,6 +332,9 @@ class _MasteryMapBody extends StatelessWidget {
             onSelectionChanged(_MasterySelection.node(skill.id, node.id));
           },
         );
+        final canvas = canvasControlKey != null && canvasTutorialKey != null
+            ? KeyedSubtree(key: canvasTutorialKey, child: canvasWidget)
+            : canvasWidget;
         if (narrow) {
           final canvasHeight = fullscreen
               ? (constraints.maxHeight * 0.68).clamp(420.0, 680.0).toDouble()
@@ -384,6 +432,7 @@ class _MasteryMapBody extends StatelessWidget {
             Expanded(child: canvas),
             const SizedBox(width: 10),
             SizedBox(
+              key: const ValueKey('desktop-roadmap-context-rail'),
               width: fullscreen ? 380 : 340,
               child: KeyedSubtree(key: inspectorTutorialKey, child: inspector),
             ),

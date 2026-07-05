@@ -48,6 +48,20 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
         ..addListener(_handleRoadmapCameraTick);
   Matrix4Tween? _roadmapCameraTween;
   String? _lastRoadmapCameraSignature;
+  _OrbCanvasLayout? _lastLayout;
+  Size? _lastViewport;
+
+  void centerContent() {
+    final layout = _lastLayout;
+    final viewport = _lastViewport;
+    if (layout == null || viewport == null) return;
+    _centerRoadmapOverviewCamera(layout, viewport);
+  }
+
+  void showTemplates() {
+    if (widget.selection == null) return;
+    setState(() => _templatePanelHidden = false);
+  }
 
   @override
   void dispose() {
@@ -223,32 +237,8 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
         .min(1.0, math.min(scaleX, scaleY))
         .clamp(_roadmapCameraMinScale, 1.0)
         .toDouble();
-    final selectedCenter = selectedSkill == null
-        ? null
-        : layout.skillPositions[selectedSkill];
-
-    final dx =
-        selectedSkill != null &&
-            hasStages &&
-            layout.layoutAxis == _RoadmapLayoutAxis.horizontal
-        ? target.right - bounds.right * scale
-        : selectedCenter != null &&
-              layout.layoutAxis == _RoadmapLayoutAxis.vertical
-        ? target.center.dx - selectedCenter.dx * scale
-        : target.center.dx - bounds.center.dx * scale;
-    final horizontalYOffset =
-        selectedSkill != null &&
-            layout.layoutAxis == _RoadmapLayoutAxis.horizontal
-        ? -60.0
-        : 0.0;
-
-    final dy =
-        (selectedSkill != null &&
-                hasStages &&
-                layout.layoutAxis == _RoadmapLayoutAxis.vertical
-            ? target.top - bounds.top * scale
-            : target.center.dy - bounds.center.dy * scale) +
-        horizontalYOffset;
+    final dx = target.center.dx - bounds.center.dx * scale;
+    final dy = target.center.dy - bounds.center.dy * scale;
 
     return Matrix4.identity()
       ..translateByDouble(dx, dy, 0, 1)
@@ -387,6 +377,8 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
             textScaler: MediaQuery.textScalerOf(context),
             textDirection: Directionality.of(context),
           );
+          _lastLayout = layout;
+          _lastViewport = Size(constraints.maxWidth, constraints.maxHeight);
           final calmMobile = mobilePresentation;
           final compactCanvas = layout.compactVisuals;
           final selectedSkill = layout.selectedSkill;
@@ -598,21 +590,7 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
                   width: 214,
                   child: _SelectSkillHint(isDark: isDark),
                 ),
-              if (selectedSkill == null)
-                Positioned(
-                  right: 14,
-                  top: 14,
-                  child: _MapCanvasAction(
-                    isDark: isDark,
-                    label: 'Отцентровать',
-                    icon: Icons.center_focus_strong,
-                    onTap: () => _centerRoadmapOverviewCamera(
-                      layout,
-                      Size(constraints.maxWidth, constraints.maxHeight),
-                    ),
-                  ),
-                ),
-              if (selectedSkill != null)
+              if (selectedSkill != null && constraints.maxWidth < 760)
                 Positioned(
                   right: 14,
                   top: constraints.maxWidth < 760 ? null : 14,
@@ -658,34 +636,38 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
                       );
                     },
                     child: templatePanelCollapsed
-                        ? Align(
-                            key: const ValueKey('roadmap-template-show'),
-                            alignment: Alignment.centerLeft,
-                            child: _MapCanvasAction(
-                              isDark: isDark,
-                              label: 'Шаблоны',
-                              icon: Icons.route,
-                              color: selectedSkill.color,
-                              onTap: () {
-                                if (calmMobile) {
-                                  if (selection?.type !=
-                                      _MasterySelectionType.skill) {
-                                    widget.onSelectSkill(selectedSkill);
-                                  }
-                                  _showRoadmapTemplateSheet(
-                                    context,
-                                    selectedSkill,
-                                  );
-                                  return;
-                                }
-                                setState(() => _templatePanelHidden = false);
-                                if (selection?.type !=
-                                    _MasterySelectionType.skill) {
-                                  widget.onSelectSkill(selectedSkill);
-                                }
-                              },
-                            ),
-                          )
+                        ? calmMobile
+                              ? Align(
+                                  key: const ValueKey('roadmap-template-show'),
+                                  alignment: Alignment.centerLeft,
+                                  child: _MapCanvasAction(
+                                    isDark: isDark,
+                                    label: 'Шаблоны',
+                                    icon: Icons.route,
+                                    color: selectedSkill.color,
+                                    onTap: () {
+                                      if (calmMobile) {
+                                        if (selection?.type !=
+                                            _MasterySelectionType.skill) {
+                                          widget.onSelectSkill(selectedSkill);
+                                        }
+                                        _showRoadmapTemplateSheet(
+                                          context,
+                                          selectedSkill,
+                                        );
+                                        return;
+                                      }
+                                      setState(
+                                        () => _templatePanelHidden = false,
+                                      );
+                                      if (selection?.type !=
+                                          _MasterySelectionType.skill) {
+                                        widget.onSelectSkill(selectedSkill);
+                                      }
+                                    },
+                                  ),
+                                )
+                              : const SizedBox.shrink()
                         : _RoadmapTemplatePanel(
                             key: const ValueKey('roadmap-template-panel'),
                             skill: selectedSkill,
@@ -811,10 +793,8 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
     );
   }
 
-  Offset _verticalRoadmapSkillCenter(Size size, int stageCount) => Offset(
-    size.width / 2,
-    stageCount <= 2 ? math.min(260.0, size.height * 0.34) : 200,
-  );
+  Offset _verticalRoadmapSkillCenter(Size size, int stageCount) =>
+      Offset(size.width / 2, 200);
 
   Rect _roadmapGoalAnchorRect(_OrbCanvasLayout layout, Offset skillCenter) {
     final skill = layout.selectedSkill;
@@ -843,10 +823,7 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
     double visualSpan,
   ) {
     final workRight = size.width - 188.0;
-    final workCenter = Offset(
-      (focusLeftSafe + workRight) / 2,
-      size.height / 2 + 28,
-    );
+    final workCenter = Offset((focusLeftSafe + workRight) / 2, size.height / 2);
     if (visualSpan <= 0) return workCenter;
     final skillX = (workCenter.dx + visualSpan / 2).clamp(
       focusLeftSafe + visualSpan + 112.0,

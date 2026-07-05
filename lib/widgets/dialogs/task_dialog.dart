@@ -320,10 +320,14 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     }
 
     return Dialog(
+      key: const ValueKey('desktop-add-task-dialog'),
       backgroundColor: bg,
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: SizedBox(width: 460, child: form),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 620, maxHeight: 820),
+        child: SizedBox(width: 620, child: form),
+      ),
     );
   }
 

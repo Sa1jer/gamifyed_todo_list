@@ -72,6 +72,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
   _MasterySelection? _selection;
   _RoadmapLayoutAxis _desktopLayoutAxis = _RoadmapLayoutAxis.horizontal;
   String? _lastAppliedFocusSkillId;
+  final GlobalKey<_OrbMasteryMapCanvasState> _desktopCanvasKey = GlobalKey();
 
   @override
   void initState() {
@@ -128,6 +129,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
       isDark: isDark,
       selection: selection,
       layoutAxis: layoutAxis,
+      canvasControlKey: mobile ? null : _desktopCanvasKey,
       canvasTutorialKey: widget.canvasTutorialKey,
       inspectorTutorialKey: widget.inspectorTutorialKey,
       practiceTutorialKey: widget.practiceTutorialKey,
@@ -191,15 +193,25 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
       );
     }
 
+    final selectedSkill = selection == null
+        ? null
+        : state.roadmapSkills
+              .where((skill) => skill.id == selection.skillId)
+              .firstOrNull;
     return Column(
       children: [
         _MasteryMapHero(
           isDark: isDark,
+          selectedSkill: selectedSkill,
           layoutAxis: layoutAxis,
           onLayoutAxisChanged: (next) {
             if (mobile || next == _desktopLayoutAxis) return;
             setState(() => _desktopLayoutAxis = next);
           },
+          onCenter: () => _desktopCanvasKey.currentState?.centerContent(),
+          onTemplates: selectedSkill == null
+              ? null
+              : () => _desktopCanvasKey.currentState?.showTemplates(),
           onFullscreen: () => _openFullscreen(context, selection),
         ),
         const SizedBox(height: 10),

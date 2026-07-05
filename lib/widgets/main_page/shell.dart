@@ -12,7 +12,7 @@ class MainPage extends StatefulWidget {
 }
 
 class _MainPageState extends State<MainPage> {
-  static const _debugAdminTapWindow = Duration(seconds: 2);
+  static const _debugAdminTapWindow = Duration(seconds: 4);
   static const _debugAdminRequiredTaps = 5;
 
   final List<XPBubble> _bubbles = [];
@@ -33,7 +33,7 @@ class _MainPageState extends State<MainPage> {
   AppState? _eventState;
   Offset? _rewardNoticeAnchor;
   int _debugAdminTapCount = 0;
-  DateTime? _lastDebugAdminTapAt;
+  Timer? _debugAdminTapResetTimer;
   bool _firstRunDialogOpen = false;
   bool _statsTutorialActive = false;
   bool _rewardsTutorialActive = false;
@@ -56,26 +56,26 @@ class _MainPageState extends State<MainPage> {
   @override
   void dispose() {
     _eventState?.removeListener(_handleStateEvents);
+    _debugAdminTapResetTimer?.cancel();
     _tutorialStepDelayTimer?.cancel();
     super.dispose();
   }
 
   void _handleDebugAdminTap(AppState state) {
-    if (!kDebugMode) return;
-
-    final now = DateTime.now();
-    final lastTap = _lastDebugAdminTapAt;
-    if (lastTap == null || now.difference(lastTap) > _debugAdminTapWindow) {
-      _debugAdminTapCount = 0;
-    }
-
-    _lastDebugAdminTapAt = now;
+    if (kReleaseMode) return;
+    _debugAdminTapResetTimer?.cancel();
     _debugAdminTapCount++;
 
-    if (_debugAdminTapCount < _debugAdminRequiredTaps) return;
+    if (_debugAdminTapCount < _debugAdminRequiredTaps) {
+      _debugAdminTapResetTimer = Timer(_debugAdminTapWindow, () {
+        _debugAdminTapCount = 0;
+        _debugAdminTapResetTimer = null;
+      });
+      return;
+    }
 
     _debugAdminTapCount = 0;
-    _lastDebugAdminTapAt = null;
+    _debugAdminTapResetTimer = null;
     AppFeedback.selection();
     showDebugAdminPanel(context, state: state);
   }
@@ -859,7 +859,7 @@ class _MainPageState extends State<MainPage> {
                   onOpenStatistics: openStatistics,
                   onOpenSettings: () => changeMode(WorkspaceMode.settings),
                   onOpenProfile: openProfile,
-                  onDebugAppTap: kDebugMode
+                  onDebugAppTap: !kReleaseMode
                       ? () => _handleDebugAdminTap(s)
                       : null,
                   onOpenRoadmap: (skill) => _openRoadmapForSkill(s, skill),
@@ -885,10 +885,10 @@ class _MainPageState extends State<MainPage> {
                       state: s,
                       tokens: DesktopJournalTokens.resolve(isDark),
                     ),
-                    WorkspaceMode.stats => _buildStatisticsWorkspace(
-                      s,
-                      isDark,
-                      showTutorialHint: _statsTutorialActive,
+                    WorkspaceMode.stats => _DesktopStatisticsWorkspace(
+                      key: const ValueKey('desktop-statistics-workspace'),
+                      state: s,
+                      tokens: DesktopJournalTokens.resolve(isDark),
                     ),
                     WorkspaceMode.settings => _DesktopSettingsWorkspace(
                       key: const ValueKey('desktop-settings-workspace'),
@@ -914,7 +914,7 @@ class _MainPageState extends State<MainPage> {
                         roadmapKey: _roadmapNavKey,
                         statsKey: _statsButtonKey,
                         onRewardsTap: () => _openRewardsDialog(s),
-                        onAppIconTap: kDebugMode
+                        onAppIconTap: !kReleaseMode
                             ? () => _handleDebugAdminTap(s)
                             : null,
                       ),
@@ -926,7 +926,7 @@ class _MainPageState extends State<MainPage> {
                       onToggleTheme: widget.onToggleTheme,
                       onRewardsTap: () => _openRewardsDialog(s),
                       onStatsTap: openStatistics,
-                      onAppIconTap: kDebugMode
+                      onAppIconTap: !kReleaseMode
                           ? () => _handleDebugAdminTap(s)
                           : null,
                       rewardsKey: mobileShell ? _rewardsButtonKey : null,

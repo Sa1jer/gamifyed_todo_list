@@ -98,6 +98,7 @@ Do not mix these product decisions into Release / Regression Hardening. Revisit 
 - [ ] Perform physical Windows QHD validation at 125% and 150% scaling, including pointer hover, drag handles, popup placement, and text density.
 - [ ] Perform native macOS screenshot comparison at 1440/1920/2560 widths and tune only presentation tokens/spacing.
 - [ ] Profile sidebar/main/right-rail rebuild cost with 20+ skills and a large completion history before adding selectors or state decomposition.
+- [ ] Complete native visual recovery QA for `1.3.53`: RoadMap at 1/2/many stages and 1024/1366/1920 widths, all eight Statistics details, Trophies/Settings, rapid skill switching, and five-click Admin entry on macOS plus Windows QHD.
 
 ## P3 — Skill Goal Progress
 
@@ -217,9 +218,17 @@ Manual desktop/QHD checklist:
 - [ ] Complete task/stage, inspect progress/milestone once, set next goal and verify archived goal history after restart.
 - [ ] Verify release build has no debug-admin entry, debug logs or debug storage access.
 
+## 1.3.52 Recovery Audit
+
+- `1.3.52` audit result: RoadMap shell/templates, Trophies, Statistics/details, Settings, raised skill header, history-aware empty state, Admin entry, and centering were PARTIAL or MISSING despite completed TODO marks.
+- `1.3.53` recovery: implemented dedicated presentation compositions over existing domain sources, bounds-based RoadMap camera fit, fixed action geometry and transitions, and an explicit non-release Admin policy.
+- Automated verification is complete; native side-by-side screenshot and pointer QA remains MANUAL QA PENDING and is not counted as completed.
+- Full requirement/evidence/status matrix: `docs/1.3.52_RECOVERY_AUDIT.md`.
+
 ## Recently Completed
 
-- `1.3.52`: completed the application-wide desktop continuity migration with shell-native Trophies, Statistics and Settings, synchronized RoadMap focus/centering, stable context menus, and a single first-quest empty state.
+- `1.3.53`: recovered the incomplete `1.3.52` visual migration with a real RoadMap shell/templates/context rail, complete Trophies and Statistics ecosystems, full existing Settings coverage, responsive raised skill headers, history-aware empty states, stable overflow geometry, bounds-based camera fitting, and tested debug/profile Admin entry.
+- `1.3.52`: introduced workspace routes and initial wrappers, but its visual migration remained incomplete; superseded by the audited `1.3.53` recovery.
 - `1.3.51`: completed Desktop Continuity & Quest Creation Refinement with stable right-rail hover, content-led desktop Inbox, unified quest form order, `10-500 XP` selection, nested Minimum Step settings, hidden SMARTER controls, continuous desktop breakpoints and denser laptop sidebar proportions.
 - Desktop Visual System Redesign Epic: added an adaptive `>=761dp` desktop workspace, compact profile/navigation/skill sidebar, real daily metrics, skill-XP header, dense active/completed quest rows, and a contextual focus/history/skill-XP rail while preserving the existing mobile shell, domain logic, dialogs, RoadMap, and storage.
 - Mobile Polish Audit: added device-local reduced motion, shared `360/393/430/760` metrics and mobile typography tokens, warm Light Journal surfaces, stronger light reward/accent contrast, selected bottom-navigation semantics, reading-order form traversal, and accessibility regression coverage. Physical TalkBack/profile-mode validation remains pending.

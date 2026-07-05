@@ -51,12 +51,12 @@ void main() {
       final panel = _read('lib/debug/debug_admin_panel.dart');
 
       expect(panel, contains('Future<void> showDebugAdminPanel'));
-      expect(panel, contains('if (!kDebugMode)'));
+      expect(panel, contains('if (kReleaseMode)'));
       expect(
         panel,
-        contains("throw StateError('Debug Admin must not be used outside"),
+        contains("throw StateError('Debug Admin must not be used in release"),
       );
-      expect(panel, contains('assert(kDebugMode'));
+      expect(panel, contains('assert(!kReleaseMode'));
     });
 
     test('debug admin controller actions have runtime guards', () {
@@ -65,19 +65,19 @@ void main() {
       expect(controller, contains('Future<void> applyScenario'));
       expect(controller, contains('Future<void> clearDebugDraftState'));
       expect(
-        'if (!kDebugMode)'.allMatches(controller),
+        'if (kReleaseMode)'.allMatches(controller),
         hasLength(greaterThanOrEqualTo(2)),
       );
       expect(
         controller,
-        contains("throw StateError('Debug scenarios must not run outside"),
+        contains("throw StateError('Debug scenarios must not run in release"),
       );
       expect(
         controller,
-        contains("throw StateError('Debug tools must not run outside"),
+        contains("throw StateError('Debug tools must not run in release"),
       );
       expect(
-        'assert(kDebugMode'.allMatches(controller),
+        'assert(!kReleaseMode'.allMatches(controller),
         hasLength(greaterThanOrEqualTo(2)),
       );
     });
@@ -87,12 +87,12 @@ void main() {
 
       expect(service, contains("static const boxName = '__debug__'"));
       expect(service, contains('Future<void> init() async'));
-      expect(service, contains('if (!kDebugMode)'));
+      expect(service, contains('if (kReleaseMode)'));
       expect(
         service,
-        contains("throw StateError('DebugService must not be used outside"),
+        contains("throw StateError('DebugService must not be used in release"),
       );
-      expect(service, contains('assert(kDebugMode'));
+      expect(service, contains('assert(!kReleaseMode'));
       expect(service, contains('Hive.openBox<String>(boxName)'));
     });
 
@@ -139,9 +139,9 @@ void main() {
       expect(mainPage, contains("import '../debug/debug_admin_panel.dart';"));
       expect(showPanelCallsites, ['lib/widgets/main_page/shell.dart']);
       expect(shell, contains('void _handleDebugAdminTap(AppState state)'));
-      expect(shell, contains('if (!kDebugMode) return;'));
+      expect(shell, contains('if (kReleaseMode) return;'));
       expect(shell, contains('showDebugAdminPanel(context, state: state)'));
-      expect(shell, contains('onAppIconTap: kDebugMode'));
+      expect(shell, contains('onAppIconTap: !kReleaseMode'));
       expect(shell, contains('? () => _handleDebugAdminTap(s)'));
       expect(shell, contains(': null'));
     });

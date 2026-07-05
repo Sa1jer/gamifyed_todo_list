@@ -158,7 +158,7 @@ class ProgressHubContent extends StatelessWidget {
         : state.activeBosses.isNotEmpty
         ? 'события пути'
         : 'спокойно';
-    final courseNudge = _visiblePrimaryCourseNudge(state);
+    final courseNudge = visiblePrimaryCourseNudge(state);
     final tutorialTargetKey = GlobalKey();
 
     return Stack(
@@ -310,7 +310,7 @@ class ProgressHubContent extends StatelessWidget {
                           nudge: courseNudge,
                           onApplyNudge: courseNudge == null
                               ? null
-                              : () => _handleCourseNudge(
+                              : () => handleCourseNudge(
                                   context,
                                   state,
                                   isDark,
@@ -324,8 +324,8 @@ class ProgressHubContent extends StatelessWidget {
                             isDark: isDark,
                             autoExpandWhenDue: true,
                             buildNudgeForSkill: (skill) =>
-                                _visibleCourseNudgeForSkill(state, skill),
-                            onApplyNudge: (nudge) => _handleCourseNudge(
+                                visibleCourseNudgeForSkill(state, skill),
+                            onApplyNudge: (nudge) => handleCourseNudge(
                               context,
                               state,
                               isDark,
@@ -690,9 +690,9 @@ void _showGoalReviewSheet(
               initiallyExpanded: true,
               showSavedNudge: true,
               buildNudgeForSkill: (skill) =>
-                  _visibleCourseNudgeForSkill(state, skill),
+                  visibleCourseNudgeForSkill(state, skill),
               onApplyNudge: (nudge) =>
-                  _handleCourseNudge(context, state, isDark, nudge),
+                  handleCourseNudge(context, state, isDark, nudge),
               onDismissNudge: (nudge) => state.dismissCourseNudge(nudge.key),
             ),
           ),
@@ -702,7 +702,7 @@ void _showGoalReviewSheet(
   );
 }
 
-CourseNudge? _visiblePrimaryCourseNudge(AppState state) {
+CourseNudge? visiblePrimaryCourseNudge(AppState state) {
   final nudge = const CourseNudgeEngine().suggestPrimary(
     state.skills,
     state.tasks,
@@ -711,13 +711,13 @@ CourseNudge? _visiblePrimaryCourseNudge(AppState state) {
   return nudge;
 }
 
-CourseNudge? _visibleCourseNudgeForSkill(AppState state, Skill skill) {
+CourseNudge? visibleCourseNudgeForSkill(AppState state, Skill skill) {
   final nudge = const CourseNudgeEngine().suggestForSkill(skill, state.tasks);
   if (nudge == null || state.isCourseNudgeDismissed(nudge.key)) return null;
   return nudge;
 }
 
-void _handleCourseNudge(
+void handleCourseNudge(
   BuildContext context,
   AppState state,
   bool isDark,

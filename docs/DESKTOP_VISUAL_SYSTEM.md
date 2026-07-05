@@ -1,6 +1,6 @@
 # Desktop Visual System
 
-Last updated: 2026-07-04
+Last updated: 2026-07-05
 
 ## Scope
 
@@ -116,20 +116,44 @@ the XP control.
 
 `WorkspaceMode` now covers Act, RoadMap, Trophies, Statistics, and Settings.
 Desktop navigation changes the center workspace instead of opening legacy
-windows. Statistics reuses `ProgressHubContent`; Trophies reads the existing
-buff/chest state directly; Settings exposes common interface preferences and
-keeps the richer profile editor as an explicit secondary action.
+windows. Statistics uses a dedicated shell-native overview and eight
+in-workspace detail pages while reusing existing history, goal, resistance,
+achievement, and course-nudge data. Trophies combines real progress, effects,
+chests, and earning rules. Settings groups every existing profile/interface/
+local-data preference and keeps the richer profile editor as a secondary
+action.
 
 RoadMap selection stays synchronized with the sidebar skill ID. Camera
-centering was adjusted without changing canvas paint, node geometry, graph
-ordering, or persistence. Short vertical paths receive additional top space,
-while horizontal paths sit slightly lower in the available canvas.
+centering fits measured content bounds into the actual target viewport without
+changing canvas paint, node geometry, graph ordering, or persistence. The
+desktop toolbar controls layout, templates, centering, and expansion; the
+context rail and template cards use the selected skill accent.
 
 Skill and quest context actions use stable vertical-ellipsis hit regions that
 fade on hover/focus without changing row geometry. Reordering remains on the
 existing delayed-drag gesture. A skill that has never contained a quest shows
 one compact first-quest explanation and relies on the header CTA, avoiding a
 second competing action.
+
+## 1.3.52 Recovery
+
+The `1.3.52` commit established routes and wrappers but left several target
+flows as old content inside a new shell. `1.3.53` replaces those partial paths:
+
+- RoadMap now owns a compact toolbar, contextual rail, migrated templates, and
+  bounds-based camera fit while preserving the approved canvas renderer.
+- Trophies now exposes real in-progress, effects, chest, and earning sections.
+- Statistics no longer embeds `ProgressHubContent`; all eight primary detail
+  entries remain inside the desktop shell.
+- Settings exposes the full existing preference surface and local persistence
+  status without inventing controls.
+- Selected skills use a responsive raised header, history-aware empty state,
+  stable action slots, and top-left aligned transitions.
+- Admin entry uses a stable four-second five-tap window in debug/profile builds;
+  release builds retain runtime guards at the entry, controller, and storage.
+
+The complete audit and evidence matrix is in
+`docs/1.3.52_RECOVERY_AUDIT.md`.
 
 ## Follow-up Validation
 

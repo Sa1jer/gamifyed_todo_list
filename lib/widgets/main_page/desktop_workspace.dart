@@ -640,149 +640,182 @@ class _DesktopSkillRow extends StatefulWidget {
 
 class _DesktopSkillRowState extends State<_DesktopSkillRow> {
   bool _hovered = false;
+  bool _focused = false;
+  bool _menuOpen = false;
 
   @override
   Widget build(BuildContext context) {
     final skill = widget.skill;
     final tokens = widget.tokens;
     final selected = widget.selected;
+    final actionsVisible = _hovered || _focused || _menuOpen;
     return Semantics(
       button: true,
       selected: selected,
       label:
           '${skill.name}, уровень ${skill.level}, ${widget.activeCount} активных квестов',
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: widget.onTap,
-            borderRadius: BorderRadius.circular(
-              DesktopJournalTokens.skillRadius,
-            ),
-            overlayColor: const WidgetStatePropertyAll(Colors.transparent),
-            child: AnimatedContainer(
-              duration: DesktopJournalTokens.fastMotion,
-              curve: DesktopJournalTokens.motionCurve,
-              height: 62,
-              padding: const EdgeInsets.fromLTRB(10, 5, 7, 5),
-              decoration: BoxDecoration(
-                color: selected
-                    ? skill.color.withValues(alpha: 0.11)
-                    : _hovered
-                    ? tokens.raisedSurface
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(
-                  DesktopJournalTokens.skillRadius,
-                ),
-                border: Border.all(
-                  color: selected
-                      ? skill.color.withValues(alpha: 0.42)
-                      : Colors.transparent,
-                ),
+      child: Focus(
+        onFocusChange: (value) => setState(() => _focused = value),
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          onEnter: (_) => setState(() => _hovered = true),
+          onExit: (_) => setState(() => _hovered = false),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: widget.onTap,
+              borderRadius: BorderRadius.circular(
+                DesktopJournalTokens.skillRadius,
               ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: skill.color.withValues(alpha: 0.14),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(skill.icon, color: skill.color, size: 19),
+              overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+              child: AnimatedContainer(
+                duration: DesktopJournalTokens.fastMotion,
+                curve: DesktopJournalTokens.motionCurve,
+                height: 62,
+                padding: const EdgeInsets.fromLTRB(10, 5, 7, 5),
+                decoration: BoxDecoration(
+                  color: selected
+                      ? skill.color.withValues(alpha: 0.11)
+                      : _hovered
+                      ? tokens.raisedSurface
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(
+                    DesktopJournalTokens.skillRadius,
                   ),
-                  const SizedBox(width: 9),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          skill.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: selected ? tokens.text : tokens.text,
-                            fontSize: 12.5,
-                            height: 1,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          'Ур. ${skill.level} · ${widget.activeCount} кв.',
-                          style: TextStyle(
-                            color: selected ? skill.color : tokens.mutedText,
-                            fontSize: 10.5,
-                            height: 1,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        _DesktopProgressBar(
-                          value: skill.progress,
-                          color: skill.color,
-                          background: skill.color.withValues(alpha: 0.12),
-                          height: 4,
-                        ),
-                      ],
-                    ),
+                  border: Border.all(
+                    color: selected
+                        ? skill.color.withValues(alpha: 0.42)
+                        : Colors.transparent,
                   ),
-                  if (_hovered)
-                    SizedBox(
-                      width: 28,
-                      child: IconButton(
-                        tooltip: 'Открыть путь навыка в RoadMap',
-                        padding: EdgeInsets.zero,
-                        onPressed: widget.onRoadmap,
-                        icon: Icon(
-                          Icons.route_rounded,
-                          size: 16,
-                          color: skill.color,
-                        ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: skill.color.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(10),
                       ),
+                      child: Icon(skill.icon, color: skill.color, size: 19),
                     ),
-                  AnimatedOpacity(
-                    duration: DesktopJournalTokens.fastMotion,
-                    opacity: _hovered || selected ? 1 : 0,
-                    child: SizedBox(
-                      width: 28,
-                      child: PopupMenuButton<String>(
-                        tooltip: 'Действия с навыком ${skill.name}',
-                        padding: EdgeInsets.zero,
-                        icon: Icon(
-                          Icons.more_vert_rounded,
-                          size: 17,
-                          color: tokens.mutedText,
-                        ),
-                        color: tokens.raisedSurface,
-                        onSelected: (value) {
-                          if (value == 'edit') widget.onEdit();
-                          if (value == 'delete') widget.onDelete();
-                        },
-                        itemBuilder: (_) => [
-                          PopupMenuItem(
-                            value: 'edit',
-                            child: Text(
-                              'Редактировать навык',
-                              style: TextStyle(color: tokens.text),
+                    const SizedBox(width: 9),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            skill.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: selected ? tokens.text : tokens.text,
+                              fontSize: 12.5,
+                              height: 1,
+                              fontWeight: FontWeight.w900,
                             ),
                           ),
-                          PopupMenuItem(
-                            value: 'delete',
-                            child: Text(
-                              'Удалить навык',
-                              style: TextStyle(color: tokens.danger),
+                          const SizedBox(height: 3),
+                          Text(
+                            'Ур. ${skill.level} · ${widget.activeCount} кв.',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: selected ? skill.color : tokens.mutedText,
+                              fontSize: 10.5,
+                              height: 1,
+                              fontWeight: FontWeight.w700,
                             ),
+                          ),
+                          const SizedBox(height: 4),
+                          _DesktopProgressBar(
+                            value: skill.progress,
+                            color: skill.color,
+                            background: skill.color.withValues(alpha: 0.12),
+                            height: 4,
                           ),
                         ],
                       ),
                     ),
-                  ),
-                ],
+                    AnimatedOpacity(
+                      key: ValueKey('desktop-skill-roadmap-${skill.id}'),
+                      duration: DesktopJournalTokens.fastMotion,
+                      opacity: actionsVisible ? 1 : 0,
+                      child: IgnorePointer(
+                        ignoring: !actionsVisible,
+                        child: SizedBox(
+                          width: 28,
+                          child: IconButton(
+                            tooltip: 'Открыть путь навыка в RoadMap',
+                            padding: EdgeInsets.zero,
+                            onPressed: widget.onRoadmap,
+                            icon: Icon(
+                              Icons.route_rounded,
+                              size: 16,
+                              color: skill.color,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 22,
+                      child: Tooltip(
+                        message: 'Перетащите навык долгим нажатием',
+                        child: Icon(
+                          Icons.drag_indicator_rounded,
+                          size: 16,
+                          color: tokens.mutedText.withValues(alpha: 0.72),
+                        ),
+                      ),
+                    ),
+                    AnimatedOpacity(
+                      key: ValueKey('desktop-skill-overflow-${skill.id}'),
+                      duration: DesktopJournalTokens.fastMotion,
+                      opacity: actionsVisible ? 1 : 0,
+                      child: IgnorePointer(
+                        ignoring: !actionsVisible,
+                        child: SizedBox(
+                          width: 28,
+                          child: PopupMenuButton<String>(
+                            tooltip: 'Действия с навыком ${skill.name}',
+                            padding: EdgeInsets.zero,
+                            icon: Icon(
+                              Icons.more_vert_rounded,
+                              size: 17,
+                              color: tokens.mutedText,
+                            ),
+                            color: tokens.raisedSurface,
+                            onOpened: () => setState(() => _menuOpen = true),
+                            onCanceled: () => setState(() => _menuOpen = false),
+                            onSelected: (value) {
+                              setState(() => _menuOpen = false);
+                              if (value == 'edit') widget.onEdit();
+                              if (value == 'delete') widget.onDelete();
+                            },
+                            itemBuilder: (_) => [
+                              PopupMenuItem(
+                                value: 'edit',
+                                child: Text(
+                                  'Редактировать навык',
+                                  style: TextStyle(color: tokens.text),
+                                ),
+                              ),
+                              PopupMenuItem(
+                                value: 'delete',
+                                child: Text(
+                                  'Удалить навык',
+                                  style: TextStyle(color: tokens.danger),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -935,6 +968,10 @@ class _DesktopMainWorkspace extends StatelessWidget {
             return bAt.compareTo(aAt);
           });
     final reduceMotion = MediaQuery.of(context).disableAnimations;
+    final hasQuestHistory =
+        currentSkill != null &&
+        (tasks.isNotEmpty ||
+            state.history.any((entry) => entry.skillId == currentSkill.id));
 
     return ColoredBox(
       color: tokens.mainSurface,
@@ -1026,6 +1063,12 @@ class _DesktopMainWorkspace extends StatelessWidget {
                   : DesktopJournalTokens.standardMotion,
               switchInCurve: DesktopJournalTokens.motionCurve,
               switchOutCurve: Curves.easeIn,
+              layoutBuilder: (currentChild, previousChildren) => Stack(
+                alignment: Alignment.topLeft,
+                children: [...previousChildren, ?currentChild],
+              ),
+              transitionBuilder: (child, animation) =>
+                  FadeTransition(opacity: animation, child: child),
               child: currentSkill == null
                   ? _DesktopNoSkillMain(
                       key: const ValueKey('desktop-no-skill'),
@@ -1039,10 +1082,18 @@ class _DesktopMainWorkspace extends StatelessWidget {
                         _DesktopSelectedSkillHeader(
                           skill: currentSkill,
                           tokens: tokens,
+                          activeQuestCount: active.length,
+                          activeStage: currentSkill.treeNodes
+                              .where(
+                                (node) =>
+                                    currentSkill.treeNodeStatus(node) ==
+                                    SkillTreeNodeStatus.active,
+                              )
+                              .firstOrNull,
                           onAddTask: () => onAddTask(currentSkill),
                         ),
                         const SizedBox(height: 24),
-                        if (active.isEmpty && completed.isEmpty)
+                        if (!hasQuestHistory)
                           _DesktopFirstQuestEmpty(
                             tokens: tokens,
                             color: currentSkill.color,
@@ -1199,115 +1250,240 @@ class _DesktopSelectedSkillHeader extends StatelessWidget {
   final Skill skill;
   final DesktopJournalTokens tokens;
   final VoidCallback onAddTask;
+  final int activeQuestCount;
+  final SkillTreeNode? activeStage;
 
   const _DesktopSelectedSkillHeader({
     required this.skill,
     required this.tokens,
+    required this.activeQuestCount,
+    required this.activeStage,
     required this.onAddTask,
   });
 
   @override
   Widget build(BuildContext context) {
+    Widget identity({required bool compact}) => Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        SizedBox(
+          width: compact ? 50 : 58,
+          height: compact ? 50 : 58,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              CircularProgressIndicator(
+                value: skill.progress,
+                strokeWidth: 4,
+                backgroundColor: skill.color.withValues(alpha: 0.12),
+                valueColor: AlwaysStoppedAnimation(skill.color),
+              ),
+              Icon(skill.icon, color: skill.color, size: compact ? 21 : 24),
+            ],
+          ),
+        ),
+        SizedBox(width: compact ? 12 : 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      skill.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: tokens.text,
+                        fontSize: compact ? 17 : 20,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  _DesktopLevelPill(
+                    level: skill.level,
+                    color: skill.color,
+                    tokens: tokens,
+                  ),
+                ],
+              ),
+              if (skill.goal.trim().isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  skill.goal,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: tokens.mutedText,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+
+    Widget progress() => Row(
+      children: [
+        Expanded(
+          child: _DesktopProgressBar(
+            value: skill.progress,
+            color: skill.color,
+            background: tokens.raisedSurface,
+            height: 7,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          '${skill.xp} / ${skill.xpNeeded} XP',
+          style: TextStyle(
+            color: tokens.mutedText,
+            fontSize: 11.5,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+
+    Widget metadata() => Wrap(
+      spacing: 7,
+      runSpacing: 6,
+      children: [
+        _DesktopHeaderMeta(
+          label: '$activeQuestCount активных',
+          icon: Icons.task_alt_outlined,
+          color: skill.color,
+          tokens: tokens,
+        ),
+        if (activeStage != null)
+          _DesktopHeaderMeta(
+            label: activeStage!.title,
+            icon: Icons.route_outlined,
+            color: skill.color,
+            tokens: tokens,
+          ),
+      ],
+    );
+
     return Semantics(
       container: true,
       label:
           '${skill.name}, уровень ${skill.level}, ${skill.xp} из ${skill.xpNeeded} XP',
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: 58,
-            height: 58,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                CircularProgressIndicator(
-                  value: skill.progress,
-                  strokeWidth: 4,
-                  backgroundColor: skill.color.withValues(alpha: 0.12),
-                  valueColor: AlwaysStoppedAnimation(skill.color),
-                ),
-                Icon(skill.icon, color: skill.color, size: 24),
-              ],
+      child: Container(
+        key: ValueKey('desktop-raised-skill-header-${skill.id}'),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: skill.color.withValues(alpha: 0.045),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: skill.color.withValues(alpha: 0.24)),
+          boxShadow: [
+            BoxShadow(
+              color: skill.color.withValues(alpha: 0.035),
+              blurRadius: 18,
             ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        skill.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: tokens.text,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    _DesktopLevelPill(
-                      level: skill.level,
-                      color: skill.color,
-                      tokens: tokens,
-                    ),
-                  ],
-                ),
-                if (skill.goal.trim().isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    skill.goal,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: tokens.mutedText,
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w600,
-                    ),
+          ],
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 720;
+            final button = _DesktopPrimaryButton(
+              key: ValueKey('desktop-add-task-${skill.id}'),
+              label: 'Новый квест',
+              icon: Icons.add_rounded,
+              color: skill.color,
+              onTap: onAddTask,
+            );
+            if (compact) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  identity(compact: true),
+                  const SizedBox(height: 12),
+                  progress(),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(child: metadata()),
+                      const SizedBox(width: 10),
+                      button,
+                    ],
                   ),
                 ],
-                const SizedBox(height: 9),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _DesktopProgressBar(
-                        value: skill.progress,
-                        color: skill.color,
-                        background: tokens.raisedSurface,
-                        height: 7,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      '${skill.xp} / ${skill.xpNeeded} XP',
-                      style: TextStyle(
-                        color: tokens.mutedText,
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
+              );
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      identity(compact: false),
+                      const SizedBox(height: 9),
+                      progress(),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 16),
+                metadata(),
+                const SizedBox(width: 16),
+                button,
               ],
-            ),
-          ),
-          const SizedBox(width: 18),
-          _DesktopPrimaryButton(
-            key: ValueKey('desktop-add-task-${skill.id}'),
-            label: 'Новый квест',
-            icon: Icons.add_rounded,
-            color: skill.color,
-            onTap: onAddTask,
-          ),
-        ],
+            );
+          },
+        ),
       ),
     );
   }
+}
+
+class _DesktopHeaderMeta extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final DesktopJournalTokens tokens;
+
+  const _DesktopHeaderMeta({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.tokens,
+  });
+
+  @override
+  Widget build(BuildContext context) => Container(
+    constraints: const BoxConstraints(maxWidth: 150),
+    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.09),
+      borderRadius: BorderRadius.circular(999),
+      border: Border.all(color: color.withValues(alpha: 0.18)),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: color, size: 14),
+        const SizedBox(width: 5),
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: tokens.text,
+              fontSize: 10.5,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _DesktopQuestSectionTitle extends StatelessWidget {
@@ -1401,6 +1577,8 @@ class _DesktopQuestRow extends StatefulWidget {
 
 class _DesktopQuestRowState extends State<_DesktopQuestRow> {
   bool _hovered = false;
+  bool _focused = false;
+  bool _menuOpen = false;
 
   Offset _anchor() {
     final box = context.findRenderObject();
@@ -1421,166 +1599,185 @@ class _DesktopQuestRowState extends State<_DesktopQuestRow> {
         : widget.state.previewEarnedXP(task);
     final type = typeLabel[task.type] ?? 'Квест';
     final badgeColor = typeColor[task.type] ?? widget.skill.color;
+    final actionsVisible = _hovered || _focused || _menuOpen;
     return Semantics(
       button: true,
       label:
           '${task.title}, ${done ? 'выполненный' : 'активный'} квест, награда $reward XP',
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: AnimatedContainer(
-          duration: DesktopJournalTokens.fastMotion,
-          curve: DesktopJournalTokens.motionCurve,
-          constraints: const BoxConstraints(minHeight: 72),
-          padding: const EdgeInsets.fromLTRB(14, 11, 10, 11),
-          decoration: BoxDecoration(
-            color: done
-                ? tokens.successGreen.withValues(alpha: 0.045)
-                : _hovered
-                ? tokens.raisedSurface
-                : tokens.cardSurface,
-            borderRadius: BorderRadius.circular(
-              DesktopJournalTokens.taskRadius,
-            ),
-            border: Border.all(
+      child: Focus(
+        onFocusChange: (value) => setState(() => _focused = value),
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          onEnter: (_) => setState(() => _hovered = true),
+          onExit: (_) => setState(() => _hovered = false),
+          child: AnimatedContainer(
+            duration: DesktopJournalTokens.fastMotion,
+            curve: DesktopJournalTokens.motionCurve,
+            constraints: const BoxConstraints(minHeight: 72),
+            padding: const EdgeInsets.fromLTRB(14, 11, 10, 11),
+            decoration: BoxDecoration(
               color: done
-                  ? tokens.successGreen.withValues(alpha: 0.18)
+                  ? tokens.successGreen.withValues(alpha: 0.045)
                   : _hovered
-                  ? widget.skill.color.withValues(alpha: 0.22)
-                  : tokens.outline,
-            ),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              _DesktopQuestCheck(
-                done: done,
-                color: done ? tokens.successGreen : widget.skill.color,
-                onTap: () {
-                  if (done) {
-                    widget.state.uncompleteTask(task.id);
-                  } else {
-                    widget.onComplete(task.id, _anchor());
-                  }
-                },
+                  ? tokens.raisedSurface
+                  : tokens.cardSurface,
+              borderRadius: BorderRadius.circular(
+                DesktopJournalTokens.taskRadius,
               ),
-              const SizedBox(width: 13),
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      task.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: done ? tokens.mutedText : tokens.text,
-                        fontSize: 14,
-                        height: 1.2,
-                        fontWeight: FontWeight.w800,
-                        decoration: done ? TextDecoration.lineThrough : null,
+              border: Border.all(
+                color: done
+                    ? tokens.successGreen.withValues(alpha: 0.18)
+                    : _hovered
+                    ? widget.skill.color.withValues(alpha: 0.22)
+                    : tokens.outline,
+              ),
+              boxShadow: done
+                  ? null
+                  : [
+                      BoxShadow(
+                        color: widget.skill.color.withValues(alpha: 0.022),
+                        blurRadius: 12,
                       ),
-                    ),
-                    if (task.description.trim().isNotEmpty) ...[
-                      const SizedBox(height: 3),
+                    ],
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                _DesktopQuestCheck(
+                  done: done,
+                  color: done ? tokens.successGreen : widget.skill.color,
+                  onTap: () {
+                    if (done) {
+                      widget.state.uncompleteTask(task.id);
+                    } else {
+                      widget.onComplete(task.id, _anchor());
+                    }
+                  },
+                ),
+                const SizedBox(width: 13),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        task.description,
+                        task.title,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: tokens.mutedText,
-                          fontSize: 11.5,
-                          height: 1.25,
-                          fontWeight: FontWeight.w600,
+                          color: done ? tokens.mutedText : tokens.text,
+                          fontSize: 14,
+                          height: 1.2,
+                          fontWeight: FontWeight.w800,
+                          decoration: done ? TextDecoration.lineThrough : null,
                         ),
                       ),
-                    ],
-                    const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      children: [
-                        _DesktopTypeBadge(label: type, color: badgeColor),
-                        if (!done &&
-                            task.hasMinimumAction &&
-                            !task.isMinimumActionDone)
-                          _DesktopMiniAction(
-                            label: 'Минимальный шаг',
-                            color: widget.skill.color,
-                            onTap: () =>
-                                widget.onMinimumAction(task.id, _anchor()),
+                      if (task.description.trim().isNotEmpty) ...[
+                        const SizedBox(height: 3),
+                        Text(
+                          task.description,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: tokens.mutedText,
+                            fontSize: 11.5,
+                            height: 1.25,
+                            fontWeight: FontWeight.w600,
                           ),
+                        ),
                       ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 10),
-              _DesktopRewardPill(value: reward, tokens: tokens),
-              AnimatedOpacity(
-                duration: DesktopJournalTokens.fastMotion,
-                opacity: _hovered ? 1 : 0,
-                child: SizedBox(
-                  width: 34,
-                  child: PopupMenuButton<_DesktopTaskMenuAction>(
-                    tooltip: 'Действия с квестом ${task.title}',
-                    icon: Icon(
-                      Icons.more_vert_rounded,
-                      color: tokens.mutedText,
-                      size: 19,
-                    ),
-                    color: tokens.raisedSurface,
-                    onSelected: (action) {
-                      switch (action) {
-                        case _DesktopTaskMenuAction.edit:
-                          widget.onEdit();
-                        case _DesktopTaskMenuAction.archive:
-                          widget.state.archiveCompletedTask(task.id);
-                        case _DesktopTaskMenuAction.restore:
-                          widget.state.restoreArchivedTask(task.id);
-                        case _DesktopTaskMenuAction.delete:
-                          widget.state.removeTask(task.id);
-                      }
-                    },
-                    itemBuilder: (_) => [
-                      if (!done)
-                        PopupMenuItem(
-                          value: _DesktopTaskMenuAction.edit,
-                          child: Text(
-                            'Редактировать',
-                            style: TextStyle(color: tokens.text),
-                          ),
-                        ),
-                      if (done && !task.isArchived)
-                        PopupMenuItem(
-                          value: _DesktopTaskMenuAction.archive,
-                          child: Text(
-                            'Убрать в выполнено',
-                            style: TextStyle(color: tokens.text),
-                          ),
-                        ),
-                      if (done && task.isArchived)
-                        PopupMenuItem(
-                          value: _DesktopTaskMenuAction.restore,
-                          child: Text(
-                            'Вернуть из выполненных',
-                            style: TextStyle(color: tokens.text),
-                          ),
-                        ),
-                      PopupMenuItem(
-                        value: _DesktopTaskMenuAction.delete,
-                        child: Text(
-                          'Удалить',
-                          style: TextStyle(color: tokens.danger),
-                        ),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: [
+                          _DesktopTypeBadge(label: type, color: badgeColor),
+                          if (!done &&
+                              task.hasMinimumAction &&
+                              !task.isMinimumActionDone)
+                            _DesktopMiniAction(
+                              label: 'Минимальный шаг',
+                              color: widget.skill.color,
+                              onTap: () =>
+                                  widget.onMinimumAction(task.id, _anchor()),
+                            ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(width: 10),
+                _DesktopRewardPill(value: reward, tokens: tokens),
+                AnimatedOpacity(
+                  key: ValueKey('desktop-task-overflow-${task.id}'),
+                  duration: DesktopJournalTokens.fastMotion,
+                  opacity: actionsVisible ? 1 : 0,
+                  child: IgnorePointer(
+                    ignoring: !actionsVisible,
+                    child: SizedBox(
+                      width: 34,
+                      child: PopupMenuButton<_DesktopTaskMenuAction>(
+                        tooltip: 'Действия с квестом ${task.title}',
+                        icon: Icon(
+                          Icons.more_vert_rounded,
+                          color: tokens.mutedText,
+                          size: 19,
+                        ),
+                        color: tokens.raisedSurface,
+                        onOpened: () => setState(() => _menuOpen = true),
+                        onCanceled: () => setState(() => _menuOpen = false),
+                        onSelected: (action) {
+                          setState(() => _menuOpen = false);
+                          switch (action) {
+                            case _DesktopTaskMenuAction.edit:
+                              widget.onEdit();
+                            case _DesktopTaskMenuAction.archive:
+                              widget.state.archiveCompletedTask(task.id);
+                            case _DesktopTaskMenuAction.restore:
+                              widget.state.restoreArchivedTask(task.id);
+                            case _DesktopTaskMenuAction.delete:
+                              widget.state.removeTask(task.id);
+                          }
+                        },
+                        itemBuilder: (_) => [
+                          if (!done)
+                            PopupMenuItem(
+                              value: _DesktopTaskMenuAction.edit,
+                              child: Text(
+                                'Редактировать',
+                                style: TextStyle(color: tokens.text),
+                              ),
+                            ),
+                          if (done && !task.isArchived)
+                            PopupMenuItem(
+                              value: _DesktopTaskMenuAction.archive,
+                              child: Text(
+                                'Убрать в выполнено',
+                                style: TextStyle(color: tokens.text),
+                              ),
+                            ),
+                          if (done && task.isArchived)
+                            PopupMenuItem(
+                              value: _DesktopTaskMenuAction.restore,
+                              child: Text(
+                                'Вернуть из выполненных',
+                                style: TextStyle(color: tokens.text),
+                              ),
+                            ),
+                          PopupMenuItem(
+                            value: _DesktopTaskMenuAction.delete,
+                            child: Text(
+                              'Удалить',
+                              style: TextStyle(color: tokens.danger),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

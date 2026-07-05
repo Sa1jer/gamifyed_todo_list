@@ -168,7 +168,7 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
       stagesPerPath: _stagesPerPath,
     );
     final content = Padding(
-      padding: const EdgeInsets.all(10.5),
+      padding: EdgeInsets.all(widget.sheetMode ? 18 : 16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -191,7 +191,7 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'Шаблон RoadMap',
+                      'Шаблоны путей',
                       style: TextStyle(
                         color: textColor(isDark),
                         fontSize: 13.0,
@@ -213,48 +213,64 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
             ],
           ),
           const SizedBox(height: 9),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              _RoadmapTemplateChip(
-                label: 'Простой',
-                selected: _template == RoadmapTemplate.simple,
-                isDark: isDark,
-                color: color,
-                onTap: () => setState(() {
-                  _template = RoadmapTemplate.simple;
-                  _customPathCount = 1;
-                }),
-              ),
-              _RoadmapTemplateChip(
-                label: 'Нормальный',
-                selected: _template == RoadmapTemplate.normal,
-                isDark: isDark,
-                color: color,
-                onTap: () => setState(() {
-                  _template = RoadmapTemplate.normal;
-                  _customPathCount = 2;
-                }),
-              ),
-              _RoadmapTemplateChip(
-                label: 'Сложный',
-                selected: _template == RoadmapTemplate.hard,
-                isDark: isDark,
-                color: color,
-                onTap: () => setState(() {
-                  _template = RoadmapTemplate.hard;
-                  _customPathCount = 3;
-                }),
-              ),
-              _RoadmapTemplateChip(
-                label: 'Свой',
-                selected: _template == RoadmapTemplate.custom,
-                isDark: isDark,
-                color: color,
-                onTap: () => setState(() => _template = RoadmapTemplate.custom),
-              ),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) => GridView.count(
+              key: const ValueKey('desktop-roadmap-template-grid'),
+              crossAxisCount: constraints.maxWidth >= 430 ? 4 : 2,
+              childAspectRatio: 1.75,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              children: [
+                _RoadmapTemplateChoice(
+                  label: 'Простой',
+                  subtitle: '1 дорога',
+                  icon: Icons.linear_scale_rounded,
+                  selected: _template == RoadmapTemplate.simple,
+                  isDark: isDark,
+                  color: color,
+                  onTap: () => setState(() {
+                    _template = RoadmapTemplate.simple;
+                    _customPathCount = 1;
+                  }),
+                ),
+                _RoadmapTemplateChoice(
+                  label: 'Нормальный',
+                  subtitle: '2 дороги',
+                  icon: Icons.call_split_rounded,
+                  selected: _template == RoadmapTemplate.normal,
+                  isDark: isDark,
+                  color: color,
+                  onTap: () => setState(() {
+                    _template = RoadmapTemplate.normal;
+                    _customPathCount = 2;
+                  }),
+                ),
+                _RoadmapTemplateChoice(
+                  label: 'Сложный',
+                  subtitle: '3 дороги',
+                  icon: Icons.hub_outlined,
+                  selected: _template == RoadmapTemplate.hard,
+                  isDark: isDark,
+                  color: color,
+                  onTap: () => setState(() {
+                    _template = RoadmapTemplate.hard;
+                    _customPathCount = 3;
+                  }),
+                ),
+                _RoadmapTemplateChoice(
+                  label: 'Свой',
+                  subtitle: 'Точная настройка',
+                  icon: Icons.tune_rounded,
+                  selected: _template == RoadmapTemplate.custom,
+                  isDark: isDark,
+                  color: color,
+                  onTap: () =>
+                      setState(() => _template = RoadmapTemplate.custom),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 9),
           _RoadmapCounterControl(
@@ -364,19 +380,31 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
     if (widget.sheetMode) {
       return Material(color: Colors.transparent, child: content);
     }
-    return AppPanel(isDark: isDark, child: content);
+    return Container(
+      key: const ValueKey('desktop-roadmap-template-surface'),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF11121A) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: content,
+    );
   }
 }
 
-class _RoadmapTemplateChip extends StatelessWidget {
+class _RoadmapTemplateChoice extends StatelessWidget {
   final String label;
+  final String subtitle;
+  final IconData icon;
   final bool selected;
   final bool isDark;
   final Color color;
   final VoidCallback onTap;
 
-  const _RoadmapTemplateChip({
+  const _RoadmapTemplateChoice({
     required this.label,
+    required this.subtitle,
+    required this.icon,
     required this.selected,
     required this.isDark,
     required this.color,
@@ -384,33 +412,62 @@ class _RoadmapTemplateChip extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return PressFeedback(
-      scale: 0.96,
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    selected: selected,
+    label: '$label, $subtitle',
+    child: PressFeedback(
+      scale: 0.98,
       onTap: onTap,
       child: AnimatedContainer(
         duration: kMotionStandard,
         curve: kMotionCurve,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        padding: const EdgeInsets.all(9),
         decoration: BoxDecoration(
-          color: selected ? color.withAlpha(34) : surface(isDark),
-          borderRadius: BorderRadius.circular(999),
+          color: selected
+              ? color.withValues(alpha: 0.13)
+              : isDark
+              ? const Color(0xFF171821)
+              : const Color(0xFFF4F5F9),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: selected ? color : borderColor(isDark),
-            width: selected ? 1.3 : 1,
+            width: selected ? 1.4 : 1,
           ),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selected ? color : subtext(isDark),
-            fontSize: 11,
-            fontWeight: FontWeight.w900,
-          ),
+        child: Row(
+          children: [
+            Icon(icon, color: selected ? color : subtext(isDark), size: 18),
+            const SizedBox(width: 7),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: selected ? color : textColor(isDark),
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: subtext(isDark), fontSize: 9.5),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
-    );
-  }
+    ),
+  );
 }
 
 class _RoadmapCounterControl extends StatelessWidget {

@@ -537,6 +537,320 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('desktop RoadMap uses recovered shell and synchronized context', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    Skill skill(String id, String name, Color color) => Skill(
+      id: id,
+      name: name,
+      goal: 'Освоить путь $name',
+      color: color,
+      icon: Icons.route_rounded,
+      treeNodes: [SkillTreeNode(id: '$id-stage', title: 'Основа $name')],
+    );
+    final storage = InMemoryStorageService()
+      .._onboardingSeen = true
+      ..skills = [
+        skill('road-shell-a', 'Альфа', const Color(0xFFFF6B2C)),
+        skill('road-shell-b', 'Бета', const Color(0xFFB84DFF)),
+      ];
+    await storage.init();
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    await tester.tap(find.byKey(const ValueKey('desktop-nav-map')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('desktop-roadmap-toolbar')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('desktop-roadmap-context-rail')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('desktop-roadmap-empty-context')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('roadmap-canvas-horizontal')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('desktop-skill-road-shell-a')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('desktop-roadmap-context-road-shell-a')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('desktop-roadmap-skill-summary')),
+      findsOneWidget,
+    );
+
+    final toolbar = find.byKey(const ValueKey('desktop-roadmap-toolbar'));
+    await tester.tap(
+      find.descendant(of: toolbar, matching: find.text('Шаблоны')),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('desktop-roadmap-template-surface')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('desktop-roadmap-template-grid')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('desktop-skill-road-shell-b')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('desktop-roadmap-context-road-shell-b')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('desktop-roadmap-template-surface')),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('desktop secondary workspaces expose complete page ecosystems', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final now = DateTime.now();
+    final skill = Skill(
+      id: 'ecosystem-skill',
+      name: 'Экосистема',
+      goal: 'Проверить все страницы',
+      color: const Color(0xFF34C759),
+      icon: Icons.eco_rounded,
+      treeNodes: [SkillTreeNode(id: 'ecosystem-stage', title: 'Основа')],
+    );
+    final storage = InMemoryStorageService()
+      .._onboardingSeen = true
+      ..skills = [skill]
+      ..dailyStats = DailyStats(date: now, tasksCompleted: 1, xpEarned: 20)
+      ..history = [
+        HistoryEntry(
+          id: 'ecosystem-history',
+          taskTitle: 'Проверить детали',
+          taskId: 'ecosystem-task',
+          skillId: skill.id,
+          skillName: skill.name,
+          skillColor: skill.color,
+          skillIcon: skill.icon,
+          xp: 20,
+          isCompletion: true,
+          at: now,
+        ),
+      ];
+    await storage.init();
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    await tester.tap(find.byKey(const ValueKey('desktop-nav-trophies')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('desktop-trophies-in-progress')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('desktop-rewards-effects')),
+      findsOneWidget,
+    );
+    expect(find.text('НОВЫЕ СУНДУКИ'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('desktop-trophies-how-to')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('desktop-nav-statistics')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('desktop-statistics-summary-strip')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('desktop-statistics-growth-history')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('desktop-statistics-right-rail')),
+      findsOneWidget,
+    );
+    expect(find.text('Цели и путь'), findsOneWidget);
+    expect(find.text('Что продолжить'), findsOneWidget);
+
+    final detailEntries = <(String, String)>[
+      ('Победы дня', 'daily'),
+      ('Неделя', 'weekly'),
+      ('Летопись', 'timeline'),
+      ('Срез роста', 'growth'),
+      ('Календарь квестов', 'calendar'),
+      ('Журнал XP', 'xpLog'),
+      ('Достижения', 'achievements'),
+      ('Сопротивление', 'resistance'),
+    ];
+    for (final entry in detailEntries) {
+      final opener = switch (entry.$2) {
+        'daily' || 'weekly' || 'timeline' => find.descendant(
+          of: find.byKey(const ValueKey('desktop-statistics-growth-history')),
+          matching: find.text(entry.$1),
+        ),
+        _ => find.text(entry.$1),
+      };
+      await tester.ensureVisible(opener.first);
+      await tester.pump();
+      await tester.tap(opener.first);
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(ValueKey('desktop-statistics-detail-${entry.$2}')),
+        findsOneWidget,
+        reason: entry.$1,
+      );
+      expect(find.byType(Dialog), findsNothing, reason: entry.$1);
+      await tester.tap(
+        find.byKey(const ValueKey('desktop-statistics-detail-back')),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    await tester.tap(find.byKey(const ValueKey('desktop-settings')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('desktop-settings-workspace')),
+      findsOneWidget,
+    );
+    expect(find.text('ПРОФИЛЬ'), findsOneWidget);
+    expect(find.text('ВНЕШНИЙ ВИД И ДВИЖЕНИЕ'), findsOneWidget);
+    expect(find.text('ЗВУК И ПОМОЩЬ'), findsOneWidget);
+    expect(find.text('ДАННЫЕ НА УСТРОЙСТВЕ'), findsOneWidget);
+    expect(find.text('О ПРИЛОЖЕНИИ'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('desktop-settings-theme')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('desktop-settings-motion')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('desktop-settings-sound')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('desktop-settings-tooltips')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'desktop skill actions keep geometry and history-aware empty state',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1440, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final used = Skill(
+        id: 'used-empty-skill',
+        name: 'Использованный навык',
+        goal: 'Сохранить историю',
+        color: const Color(0xFFFF6B2C),
+        icon: Icons.history_rounded,
+      );
+      final fresh = Skill(
+        id: 'fresh-empty-skill',
+        name: 'Новый навык',
+        goal: 'Начать с нуля',
+        color: const Color(0xFF4A9EFF),
+        icon: Icons.auto_awesome_rounded,
+      );
+      final storage = InMemoryStorageService()
+        .._onboardingSeen = true
+        ..skills = [used, fresh]
+        ..history = [
+          HistoryEntry(
+            id: 'used-history',
+            taskTitle: 'Старый квест',
+            skillId: used.id,
+            skillName: used.name,
+            skillColor: used.color,
+            skillIcon: used.icon,
+            xp: 20,
+            isCompletion: true,
+            at: DateTime.now(),
+          ),
+        ];
+      await storage.init();
+      await tester.pumpWidget(RPGApp(storage: storage));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(
+        find.byKey(const ValueKey('desktop-first-quest-empty')),
+        findsNothing,
+      );
+      expect(find.text('АКТИВНЫЕ · 0'), findsOneWidget);
+      expect(find.text('ВЫПОЛНЕНО · 0'), findsOneWidget);
+
+      final row = find.byKey(const ValueKey('desktop-skill-used-empty-skill'));
+      final overflow = find.byKey(
+        const ValueKey('desktop-skill-overflow-used-empty-skill'),
+      );
+      final roadmap = find.byKey(
+        const ValueKey('desktop-skill-roadmap-used-empty-skill'),
+      );
+      final initialRect = tester.getRect(row);
+      expect(tester.widget<AnimatedOpacity>(overflow).opacity, 0);
+      expect(tester.widget<AnimatedOpacity>(roadmap).opacity, 0);
+
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: const Offset(1, 1));
+      addTearDown(mouse.removePointer);
+      await mouse.moveTo(initialRect.center);
+      await tester.pump(const Duration(milliseconds: 140));
+      expect(tester.getRect(row), initialRect);
+      expect(tester.widget<AnimatedOpacity>(overflow).opacity, 1);
+      expect(tester.widget<AnimatedOpacity>(roadmap).opacity, 1);
+
+      await tester.tap(find.byTooltip('Действия с навыком ${used.name}'));
+      await tester.pumpAndSettle();
+      await mouse.moveTo(const Offset(1000, 700));
+      await tester.pump(const Duration(milliseconds: 140));
+      expect(tester.widget<AnimatedOpacity>(overflow).opacity, 1);
+      expect(find.text('Редактировать навык'), findsOneWidget);
+      await tester.tapAt(const Offset(1000, 700));
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.byKey(const ValueKey('desktop-skill-fresh-empty-skill')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('desktop-first-quest-empty')),
+        findsOneWidget,
+      );
+      expect(find.text('АКТИВНЫЕ · 0'), findsNothing);
+      expect(find.text('ВЫПОЛНЕНО · 0'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets(
     'compact width uses the modern mobile shell, not legacy desktop',
     (WidgetTester tester) async {
@@ -1454,6 +1768,13 @@ void main() {
     final appMark = find.byKey(const ValueKey('top-bar-app-mark'));
     expect(appMark, findsOneWidget);
     expect(find.text('DEBUG ADMIN'), findsNothing);
+
+    await tester.tap(appMark);
+    await tester.pump(const Duration(milliseconds: 4100));
+    await tester.tap(appMark);
+    await tester.pump();
+    expect(find.text('DEBUG ADMIN'), findsNothing);
+    await tester.pump(const Duration(milliseconds: 4100));
 
     for (var i = 0; i < 4; i++) {
       await tester.tap(appMark);
@@ -2680,11 +3001,13 @@ void main() {
     expect(find.text('Шаблоны'), findsOneWidget);
     await tester.tap(find.text('Шаблоны'));
     await tester.pumpAndSettle();
-    expect(find.text('Шаблон RoadMap'), findsOneWidget);
+    expect(find.text('Шаблоны путей'), findsOneWidget);
     expect(
       find.byKey(const ValueKey('roadmap-template-bottom-sheet')),
       findsNothing,
     );
+    await tester.tap(find.text('Скрыть'));
+    await tester.pumpAndSettle();
     expect(find.text('Назад к навыкам'), findsOneWidget);
     expect(find.text('Квесты без этапа'), findsOneWidget);
     expect(find.text('Свободный квест навыка'), findsOneWidget);
@@ -2993,6 +3316,90 @@ void main() {
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
+  });
+
+  testWidgets('RoadMap camera keeps one and two stage paths in the viewport', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1366, 820);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    Skill skill(String id, int count) {
+      final stages = <SkillTreeNode>[];
+      for (var index = 0; index < count; index++) {
+        stages.add(
+          SkillTreeNode(
+            id: '$id-stage-$index',
+            title: 'Этап ${index + 1}',
+            prerequisiteIds: index == 0 ? [] : ['$id-stage-${index - 1}'],
+          ),
+        );
+      }
+      return Skill(
+        id: id,
+        name: '$count этапа',
+        goal: 'Проверить короткий путь',
+        color: const Color(0xFF4A9EFF),
+        icon: Icons.route_rounded,
+        treeNodes: stages,
+      );
+    }
+
+    final storage = InMemoryStorageService()
+      .._onboardingSeen = true
+      ..skills = [skill('short-one', 1), skill('short-two', 2)];
+    await storage.init();
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(find.byKey(const ValueKey('desktop-nav-map')));
+    await tester.pumpAndSettle();
+
+    Rect contentBounds(String skillId, int count) {
+      var bounds = tester.getRect(
+        find.byKey(ValueKey('map-skill-surface-$skillId')),
+      );
+      for (var index = 0; index < count; index++) {
+        bounds = bounds.expandToInclude(
+          tester.getRect(
+            find.byKey(
+              ValueKey('map-node-surface-$skillId-$skillId-stage-$index'),
+            ),
+          ),
+        );
+      }
+      return bounds;
+    }
+
+    void expectVisibleAndCentered(String skillId, int count, String axis) {
+      final canvas = tester.getRect(
+        find.byKey(ValueKey('roadmap-canvas-$axis')),
+      );
+      final content = contentBounds(skillId, count);
+      expect(canvas.overlaps(content), isTrue);
+      expect(
+        (content.center.dx - canvas.center.dx).abs(),
+        lessThan(canvas.width * 0.28),
+      );
+      expect(
+        (content.center.dy - canvas.center.dy).abs(),
+        lessThan(canvas.height * 0.28),
+      );
+    }
+
+    for (final entry in [('short-one', 1), ('short-two', 2)]) {
+      await tester.tap(find.byKey(ValueKey('desktop-skill-${entry.$1}')));
+      await tester.pumpAndSettle();
+      expectVisibleAndCentered(entry.$1, entry.$2, 'horizontal');
+      await tester.tap(find.byKey(const ValueKey('roadmap-layout-vertical')));
+      await tester.pumpAndSettle();
+      expectVisibleAndCentered(entry.$1, entry.$2, 'vertical');
+      await tester.tap(find.byKey(const ValueKey('roadmap-layout-horizontal')));
+      await tester.pumpAndSettle();
+    }
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('RoadMap skill orb separates goal and level progress', (
@@ -3449,7 +3856,7 @@ void main() {
       find.byKey(const ValueKey('mobile-roadmap-template-sheet')),
       findsOneWidget,
     );
-    expect(find.text('Шаблон RoadMap'), findsOneWidget);
+    expect(find.text('Шаблоны путей'), findsOneWidget);
     await tester.tap(find.text('Закрыть'));
     await tester.pumpAndSettle();
 
@@ -4346,6 +4753,8 @@ void main() {
       find.byType(TextField).at(1),
       'Оставить короткую заметку к квесту',
     );
+    await tester.ensureVisible(find.text('Создать'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Создать'));
     await tester.pumpAndSettle();
 
@@ -4571,6 +4980,8 @@ void main() {
     expect(find.text('прочитать 20 страниц'), findsOneWidget);
     expect(find.text('Открыть книгу на 5 минут'), findsOneWidget);
 
+    await tester.ensureVisible(find.text('Создать'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Создать'));
     await tester.pumpAndSettle();
 

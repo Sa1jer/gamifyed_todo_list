@@ -691,6 +691,15 @@ changing persisted task data. New XP choices use a `10-500` grid; existing
 non-grid values remain load-safe until explicitly edited. Mobile remains a
 keyboard-safe full-screen route and desktop remains a controlled dialog.
 
+## 1.3.53 Desktop Recovery Regression Note
+
+The `1.3.53` recovery rebuilds desktop RoadMap, Trophies, Statistics, Settings,
+and selected-skill presentation without broad mobile changes. Mobile keeps its
+accepted Overview/Focus, Inbox, AddSkill, and vertical RoadMap compositions.
+Shared Quest Creation behavior remains covered on both platforms; the desktop
+dialog width changed, but mobile field order, dirty Back protection, XP grid,
+and settings behavior did not.
+
 ## Reference Checklist
 
 - Flutter adaptive layout: <https://docs.flutter.dev/ui/adaptive-responsive/general>

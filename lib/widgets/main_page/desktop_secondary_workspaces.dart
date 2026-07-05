@@ -23,6 +23,7 @@ class _DesktopPageScaffold extends StatelessWidget {
       color: tokens.mainSurface,
       child: CustomScrollView(
         key: ValueKey('desktop-page-$title'),
+        primary: false,
         slivers: [
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(28, 26, 28, 14),
@@ -101,6 +102,32 @@ class _DesktopRewardsWorkspaceState extends State<_DesktopRewardsWorkspace> {
     final tokens = widget.tokens;
     final buffs = state.activeBuffs;
     final chests = state.unopenedRewardChests;
+    final progress = <_DesktopTrophyProgress>[
+      _DesktopTrophyProgress(
+        icon: Icons.local_fire_department_outlined,
+        color: tokens.streakAmber,
+        title: 'Серия 7 дней',
+        condition: 'Повторяющиеся квесты подряд',
+        current: math.min(state.bestStreak, 7),
+        target: 7,
+      ),
+      _DesktopTrophyProgress(
+        icon: Icons.trending_up_rounded,
+        color: tokens.rewardGold,
+        title: 'Первый рубеж',
+        condition: 'Достигнуть 5 уровня персонажа',
+        current: math.min(state.profile.level, 5),
+        target: 5,
+      ),
+      _DesktopTrophyProgress(
+        icon: Icons.bolt_rounded,
+        color: tokens.danger,
+        title: 'Сильный день',
+        condition: 'Закрыть 5 квестов за один день',
+        current: math.min(state.todayStats?.tasksCompleted ?? 0, 5),
+        target: 5,
+      ),
+    ];
     return _DesktopPageScaffold(
       tokens: tokens,
       icon: Icons.emoji_events_outlined,
@@ -110,6 +137,36 @@ class _DesktopRewardsWorkspaceState extends State<_DesktopRewardsWorkspace> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text(
+            'В ПРОЦЕССЕ',
+            style: TextStyle(
+              color: tokens.mutedText,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.7,
+            ),
+          ),
+          const SizedBox(height: 10),
+          LayoutBuilder(
+            builder: (context, constraints) => GridView.count(
+              key: const ValueKey('desktop-trophies-in-progress'),
+              crossAxisCount: constraints.maxWidth >= 900 ? 3 : 1,
+              childAspectRatio: constraints.maxWidth >= 900 ? 2.25 : 4.8,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              children: progress
+                  .map(
+                    (item) => _DesktopTrophyProgressCard(
+                      progress: item,
+                      tokens: tokens,
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+          const SizedBox(height: 22),
           _DesktopSectionCard(
             tokens: tokens,
             child: Column(
@@ -239,10 +296,214 @@ class _DesktopRewardsWorkspaceState extends State<_DesktopRewardsWorkspace> {
                 ),
               ),
             ),
+          const SizedBox(height: 24),
+          Text(
+            'КАК ПОЛУЧИТЬ ТРОФЕИ',
+            style: TextStyle(
+              color: tokens.mutedText,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.7,
+            ),
+          ),
+          const SizedBox(height: 10),
+          LayoutBuilder(
+            builder: (context, constraints) => GridView.count(
+              key: const ValueKey('desktop-trophies-how-to'),
+              crossAxisCount: constraints.maxWidth >= 720 ? 3 : 1,
+              childAspectRatio: constraints.maxWidth >= 720 ? 2.35 : 4.8,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              children: [
+                _DesktopTrophyHowToCard(
+                  tokens: tokens,
+                  icon: Icons.bolt_rounded,
+                  color: tokens.streakAmber,
+                  title: 'Сильный день',
+                  description:
+                      'Закрой 5 квестов за день, чтобы получить сундук дисциплины.',
+                ),
+                _DesktopTrophyHowToCard(
+                  tokens: tokens,
+                  icon: Icons.local_fire_department_outlined,
+                  color: tokens.rewardGold,
+                  title: 'Серия дней',
+                  description:
+                      'Удерживай повторяющийся квест 7 или 30 дней для редких сундуков.',
+                ),
+                _DesktopTrophyHowToCard(
+                  tokens: tokens,
+                  icon: Icons.shield_outlined,
+                  color: tokens.danger,
+                  title: 'Победа над сопротивлением',
+                  description:
+                      'Заверши активное событие сопротивления, чтобы открыть трофей.',
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
+}
+
+class _DesktopTrophyProgress {
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String condition;
+  final int current;
+  final int target;
+
+  const _DesktopTrophyProgress({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.condition,
+    required this.current,
+    required this.target,
+  });
+
+  double get value => target <= 0 ? 0 : (current / target).clamp(0, 1);
+}
+
+class _DesktopTrophyProgressCard extends StatelessWidget {
+  final _DesktopTrophyProgress progress;
+  final DesktopJournalTokens tokens;
+
+  const _DesktopTrophyProgressCard({
+    required this.progress,
+    required this.tokens,
+  });
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    label:
+        '${progress.title}: ${progress.current} из ${progress.target}, ${(progress.value * 100).round()} процентов',
+    child: Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: progress.color.withValues(alpha: 0.055),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: progress.color.withValues(alpha: 0.22)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(progress.icon, color: progress.color, size: 19),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  progress.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: tokens.text,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              Text(
+                '${(progress.value * 100).round()}%',
+                style: TextStyle(
+                  color: progress.color,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 5),
+          Text(
+            '${progress.current}/${progress.target} · ${progress.condition}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: tokens.mutedText, fontSize: 10.5),
+          ),
+          const SizedBox(height: 9),
+          _DesktopProgressBar(
+            value: progress.value,
+            color: progress.color,
+            background: progress.color.withValues(alpha: 0.12),
+            height: 6,
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _DesktopTrophyHowToCard extends StatelessWidget {
+  final DesktopJournalTokens tokens;
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String description;
+
+  const _DesktopTrophyHowToCard({
+    required this.tokens,
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.description,
+  });
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: tokens.cardSurface,
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: color.withValues(alpha: 0.18)),
+    ),
+    child: Row(
+      children: [
+        Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: color, size: 19),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: tokens.text,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                description,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: tokens.mutedText,
+                  fontSize: 10.5,
+                  height: 1.25,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _DesktopSettingsWorkspace extends StatelessWidget {
@@ -264,50 +525,120 @@ class _DesktopSettingsWorkspace extends StatelessWidget {
       icon: Icons.settings_outlined,
       color: tokens.profilePurple,
       title: 'Настройки',
-      subtitle: 'Профиль, звук и комфорт интерфейса.',
+      subtitle:
+          'Профиль, внешний вид, движение, звук и состояние локальных данных.',
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 760),
-        child: _DesktopSectionCard(
-          tokens: tokens,
-          child: Column(
-            children: [
-              _DesktopSettingsTile(
+        constraints: const BoxConstraints(maxWidth: 860),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _DesktopSettingsSection(
+              tokens: tokens,
+              title: 'Профиль',
+              child: _DesktopSettingsTile(
                 tokens: tokens,
                 icon: Icons.person_outline,
                 title: 'Профиль персонажа',
-                subtitle: 'Имя, аватар и обучение',
+                subtitle:
+                    '${state.profile.name} · уровень ${state.profile.level} · аватар и обучение',
                 onTap: onOpenProfile,
               ),
-              _DesktopSettingsSwitch(
-                tokens: tokens,
-                icon: Icons.volume_up_outlined,
-                title: 'Звуки интерфейса',
-                value: state.sfxEnabled,
-                onChanged: (_) => state.toggleSfxEnabled(),
+            ),
+            const SizedBox(height: 18),
+            _DesktopSettingsSection(
+              tokens: tokens,
+              title: 'Внешний вид и движение',
+              child: Column(
+                children: [
+                  _DesktopSettingsSwitch(
+                    key: const ValueKey('desktop-settings-theme'),
+                    tokens: tokens,
+                    icon: Icons.dark_mode_outlined,
+                    title: 'Тёмная тема',
+                    subtitle: 'Переключается сразу и сохраняется на устройстве',
+                    value: state.isDark,
+                    onChanged: (_) => state.toggleTheme(),
+                  ),
+                  _DesktopSettingsSwitch(
+                    key: const ValueKey('desktop-settings-motion'),
+                    tokens: tokens,
+                    icon: Icons.motion_photos_off_outlined,
+                    title: 'Сокращать анимации',
+                    subtitle: 'Убирает необязательные перемещения и переходы',
+                    value: state.reducedMotion,
+                    onChanged: (_) => state.toggleReducedMotion(),
+                  ),
+                ],
               ),
-              _DesktopSettingsSwitch(
-                tokens: tokens,
-                icon: Icons.lightbulb_outline,
-                title: 'Подсказки',
-                value: state.tooltipsEnabled,
-                onChanged: (_) => state.toggleTooltipsEnabled(),
+            ),
+            const SizedBox(height: 18),
+            _DesktopSettingsSection(
+              tokens: tokens,
+              title: 'Звук и помощь',
+              child: Column(
+                children: [
+                  _DesktopSettingsSwitch(
+                    key: const ValueKey('desktop-settings-sound'),
+                    tokens: tokens,
+                    icon: Icons.volume_up_outlined,
+                    title: 'Звуки интерфейса',
+                    subtitle: 'Отклик за действия, XP и награды',
+                    value: state.sfxEnabled,
+                    onChanged: (_) => state.toggleSfxEnabled(),
+                  ),
+                  _DesktopSettingsSwitch(
+                    key: const ValueKey('desktop-settings-tooltips'),
+                    tokens: tokens,
+                    icon: Icons.lightbulb_outline,
+                    title: 'Подсказки интерфейса',
+                    subtitle: 'Пояснения к иконкам и сложным действиям',
+                    value: state.tooltipsEnabled,
+                    onChanged: (_) => state.toggleTooltipsEnabled(),
+                  ),
+                ],
               ),
-              _DesktopSettingsSwitch(
+            ),
+            const SizedBox(height: 18),
+            _DesktopSettingsSection(
+              tokens: tokens,
+              title: 'Данные на устройстве',
+              child: _DesktopSettingsStatus(
                 tokens: tokens,
-                icon: Icons.motion_photos_off_outlined,
-                title: 'Сокращать анимации',
-                value: state.reducedMotion,
-                onChanged: (_) => state.toggleReducedMotion(),
+                hasError: state.hasPersistenceError,
+                dirty: state.persistenceStatus.isDirty,
               ),
-              _DesktopSettingsSwitch(
-                tokens: tokens,
-                icon: Icons.dark_mode_outlined,
-                title: 'Тёмная тема',
-                value: state.isDark,
-                onChanged: (_) => state.toggleTheme(),
+            ),
+            const SizedBox(height: 18),
+            _DesktopSettingsSection(
+              tokens: tokens,
+              title: 'О приложении',
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: tokens.mutedText),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'RPG To-Do List',
+                        style: TextStyle(
+                          color: tokens.text,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      kAppVersionLabel,
+                      style: TextStyle(
+                        color: tokens.mutedText,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -422,17 +753,118 @@ class _DesktopSettingsTile extends StatelessWidget {
   );
 }
 
+class _DesktopSettingsSection extends StatelessWidget {
+  final DesktopJournalTokens tokens;
+  final String title;
+  final Widget child;
+
+  const _DesktopSettingsSection({
+    required this.tokens,
+    required this.title,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Padding(
+        padding: const EdgeInsets.only(left: 2, bottom: 8),
+        child: Text(
+          title.toUpperCase(),
+          style: TextStyle(
+            color: tokens.mutedText,
+            fontSize: 11,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0.7,
+          ),
+        ),
+      ),
+      _DesktopSectionCard(tokens: tokens, child: child),
+    ],
+  );
+}
+
+class _DesktopSettingsStatus extends StatelessWidget {
+  final DesktopJournalTokens tokens;
+  final bool hasError;
+  final bool dirty;
+
+  const _DesktopSettingsStatus({
+    required this.tokens,
+    required this.hasError,
+    required this.dirty,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = hasError
+        ? tokens.danger
+        : dirty
+        ? tokens.streakAmber
+        : tokens.successGreen;
+    final title = hasError
+        ? 'Требуется повтор сохранения'
+        : dirty
+        ? 'Изменения ещё сохраняются'
+        : 'Данные сохранены локально';
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              hasError ? Icons.warning_amber_rounded : Icons.save_outlined,
+              color: color,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: tokens.text,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'Хранилище работает на этом устройстве; cloud sync не включён.',
+                  style: TextStyle(color: tokens.mutedText, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _DesktopSettingsSwitch extends StatelessWidget {
   final DesktopJournalTokens tokens;
   final IconData icon;
   final String title;
+  final String? subtitle;
   final bool value;
   final ValueChanged<bool> onChanged;
 
   const _DesktopSettingsSwitch({
+    super.key,
     required this.tokens,
     required this.icon,
     required this.title,
+    this.subtitle,
     required this.value,
     required this.onChanged,
   });
@@ -441,6 +873,9 @@ class _DesktopSettingsSwitch extends StatelessWidget {
   Widget build(BuildContext context) => SwitchListTile(
     secondary: Icon(icon, color: tokens.mutedText),
     title: Text(title, style: TextStyle(color: tokens.text)),
+    subtitle: subtitle == null
+        ? null
+        : Text(subtitle!, style: TextStyle(color: tokens.mutedText)),
     value: value,
     onChanged: onChanged,
   );

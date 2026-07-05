@@ -12,10 +12,10 @@ class DebugAdminController {
   const DebugAdminController({required this.state, required this.debugService});
 
   Future<void> applyScenario(DebugScenarioDef scenario) async {
-    if (!kDebugMode) {
-      throw StateError('Debug scenarios must not run outside debug mode.');
+    if (kReleaseMode) {
+      throw StateError('Debug scenarios must not run in release mode.');
     }
-    assert(kDebugMode, 'Debug scenarios must not run outside debug mode');
+    assert(!kReleaseMode, 'Debug scenarios must not run in release mode');
     scenario.apply(state);
     state.normalizeAfterBulkStateChange(
       resetBestStreak: scenario.resetBestStreak,
@@ -32,22 +32,20 @@ class DebugAdminController {
   }
 
   Future<void> clearDebugDraftState() {
-    if (!kDebugMode) {
-      throw StateError('Debug tools must not run outside debug mode.');
+    if (kReleaseMode) {
+      throw StateError('Debug tools must not run in release mode.');
     }
-    assert(kDebugMode, 'Debug tools must not run outside debug mode');
+    assert(!kReleaseMode, 'Debug tools must not run in release mode');
     return debugService.clear();
   }
 
   Future<void> setAchievementUnlocked(String id, bool unlocked) async {
-    if (!kDebugMode) {
-      throw StateError(
-        'Debug achievement tools must not run outside debug mode.',
-      );
+    if (kReleaseMode) {
+      throw StateError('Debug achievement tools must not run in release mode.');
     }
     assert(
-      kDebugMode,
-      'Debug achievement tools must not run outside debug mode',
+      !kReleaseMode,
+      'Debug achievement tools must not run in release mode',
     );
     _ensureAchievements();
     final achievement = _achievementById(id);
@@ -56,14 +54,12 @@ class DebugAdminController {
   }
 
   Future<void> setAllAchievementsUnlocked(bool unlocked) async {
-    if (!kDebugMode) {
-      throw StateError(
-        'Debug achievement tools must not run outside debug mode.',
-      );
+    if (kReleaseMode) {
+      throw StateError('Debug achievement tools must not run in release mode.');
     }
     assert(
-      kDebugMode,
-      'Debug achievement tools must not run outside debug mode',
+      !kReleaseMode,
+      'Debug achievement tools must not run in release mode',
     );
     _ensureAchievements();
     await _applyAchievementOverrides({

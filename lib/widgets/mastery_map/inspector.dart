@@ -290,8 +290,10 @@ class _MasteryMapInspector extends StatelessWidget {
   Widget build(BuildContext context) {
     final currentSelection = selection;
     if (currentSelection == null) {
-      return AppPanel(
+      return _RoadmapInspectorSurface(
+        key: const ValueKey('desktop-roadmap-empty-context'),
         isDark: isDark,
+        color: const Color(0xFF765BFF),
         child: Padding(
           padding: const EdgeInsets.all(18),
           child: _EmptyMapInspector(
@@ -307,8 +309,9 @@ class _MasteryMapInspector extends StatelessWidget {
         .where((candidate) => candidate.id == currentSelection.skillId)
         .firstOrNull;
     if (skill == null) {
-      return AppPanel(
+      return _RoadmapInspectorSurface(
         isDark: isDark,
+        color: const Color(0xFF765BFF),
         child: Padding(
           padding: const EdgeInsets.all(18),
           child: _EmptyMapInspector(
@@ -327,8 +330,10 @@ class _MasteryMapInspector extends StatelessWidget {
         .where((candidate) => candidate.id == currentSelection.taskId)
         .firstOrNull;
 
-    return AppPanel(
+    return _RoadmapInspectorSurface(
+      key: ValueKey('desktop-roadmap-context-${skill.id}'),
       isDark: isDark,
+      color: skill.color,
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: switch (currentSelection.type) {
@@ -371,6 +376,36 @@ class _MasteryMapInspector extends StatelessWidget {
       ),
     );
   }
+}
+
+class _RoadmapInspectorSurface extends StatelessWidget {
+  final bool isDark;
+  final Color color;
+  final Widget child;
+
+  const _RoadmapInspectorSurface({
+    super.key,
+    required this.isDark,
+    required this.color,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) => Container(
+    decoration: BoxDecoration(
+      color: isDark ? const Color(0xFF11121A) : Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: color.withValues(alpha: 0.28)),
+      boxShadow: [
+        BoxShadow(
+          color: color.withValues(alpha: isDark ? 0.045 : 0.025),
+          blurRadius: 18,
+        ),
+      ],
+    ),
+    clipBehavior: Clip.antiAlias,
+    child: child,
+  );
 }
 
 class _EmptyMapInspector extends StatelessWidget {
@@ -513,6 +548,11 @@ class _SkillInspector extends StatelessWidget {
     }
     final hasFreeTasks =
         activeFreeTasks.isNotEmpty || completedFreeTasks.isNotEmpty;
+    final activeStage = skill.treeNodes
+        .where(
+          (node) => skill.treeNodeStatus(node) == SkillTreeNodeStatus.active,
+        )
+        .firstOrNull;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -525,6 +565,42 @@ class _SkillInspector extends StatelessWidget {
               ? 'Цель пути пока не задана'
               : 'Цель пути: ${skill.goal}',
           isDark: isDark,
+        ),
+        const SizedBox(height: 12),
+        Container(
+          key: const ValueKey('desktop-roadmap-skill-summary'),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: skill.color.withValues(alpha: 0.055),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: skill.color.withValues(alpha: 0.18)),
+          ),
+          child: Row(
+            children: [
+              _InspectorMiniMetric(
+                label: 'Уровень',
+                value: '${skill.level}',
+                color: skill.color,
+                isDark: isDark,
+              ),
+              _InspectorMiniMetric(
+                label: 'Этапы',
+                value:
+                    '${skill.masteredTreeNodeCount}/${skill.treeNodes.length}',
+                color: skill.color,
+                isDark: isDark,
+              ),
+              Expanded(
+                child: _InspectorMiniMetric(
+                  label: 'Текущий этап',
+                  value: activeStage?.title ?? 'Нет',
+                  color: skill.color,
+                  isDark: isDark,
+                  alignEnd: true,
+                ),
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 12),
         SkillGoalProgress(
@@ -615,6 +691,55 @@ class _SkillInspector extends StatelessWidget {
       ],
     );
   }
+}
+
+class _InspectorMiniMetric extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+  final bool isDark;
+  final bool alignEnd;
+
+  const _InspectorMiniMetric({
+    required this.label,
+    required this.value,
+    required this.color,
+    required this.isDark,
+    this.alignEnd = false,
+  });
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(right: 14),
+    child: Column(
+      crossAxisAlignment: alignEnd
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: subtext(isDark),
+            fontSize: 9.5,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: color,
+            fontSize: 12,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _StageQuestGroup {
