@@ -163,3 +163,15 @@ The complete audit and evidence matrix is in
   shows frame pressure.
 - Revisit minor visual spacing only after side-by-side native screenshots; do
   not alter domain behavior during that polish.
+
+## 1.3.54 Stability Boundary
+
+The architecture audit removed the unreachable legacy `TopBar` branch that
+could no longer be selected by the centralized desktop breakpoint resolver.
+The live mobile bottom navigation was extracted and retained. Desktop and
+mobile therefore keep their approved compositions without carrying an unused
+596-line legacy header implementation.
+
+Flutter `3.44.3` is now the minimum project SDK because reorderable skill lists
+use `ReorderableListView.onReorderItem`. This prevents older Windows analyzer
+instances from reporting source errors against a newer framework API.

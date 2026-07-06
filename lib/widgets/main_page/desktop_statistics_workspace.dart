@@ -749,8 +749,7 @@ class _DesktopWeekSnapshot {
   int get totalTasks => entries.length;
 
   factory _DesktopWeekSnapshot.fromState(AppState state) {
-    final today = dateOnly(DateTime.now());
-    final start = today.subtract(Duration(days: today.weekday - 1));
+    final start = startOfWeek(DateTime.now());
     final daily = <int>[];
     final entries = <HistoryEntry>[];
     final bySkill = <String, int>{};

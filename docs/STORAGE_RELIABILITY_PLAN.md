@@ -18,7 +18,7 @@ Detected stack:
 - Dart `3.12.2`
 - DevTools `2.57.0`
 - Hive `2.2.3` with `hive_flutter 1.1.0`
-- Application version `1.3.53+1`
+- Application version `1.3.54+1`
 
 ## Characterized Legacy Flow
 

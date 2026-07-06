@@ -44,11 +44,35 @@ SMARTER в проекте не является обязательным wizard-
 
 ## Development
 
+Требуемый toolchain:
+
+- Flutter `3.44.3` stable или новее в пределах Flutter `3.x`;
+- Dart `3.12.2` (поставляется с Flutter `3.44.3`).
+
+Ограничение также зафиксировано в `pubspec.yaml`. Это важно для API
+`ReorderableListView.onReorderItem`, которого нет в старых Flutter SDK.
+
 ```bash
 dart format lib test
 flutter analyze
 flutter test -r expanded --timeout 30s
 ```
+
+Если VSCode на Windows показывает ошибки про `onReorderItem`, хотя Git чистый,
+сначала проверьте SDK, который использует именно расширение Flutter:
+
+```powershell
+flutter --version
+dart --version
+where.exe flutter
+git rev-parse HEAD
+flutter pub get
+```
+
+Для этого репозитория Flutter должен быть не старее `3.44.3`. В VSCode
+выберите тот же путь через `Flutter: Change SDK`, затем выполните
+`Dart: Restart Analysis Server`. `pubspec.lock` фиксирует пакеты, но не может
+сам обновить Flutter SDK на другой машине.
 
 Перед release-pass дополнительно стоит пройти fresh-state flow:
 

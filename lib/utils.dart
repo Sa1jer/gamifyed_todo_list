@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
-const String kAppVersionLabel = 'v1.3.53+1';
+const String kAppVersionLabel = 'v1.3.54+1';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ID GENERATOR
@@ -225,8 +225,50 @@ DateTime nextResetFrom(DateTime from, RepeatFrequency freq, int customDays) {
   return DateTime(d.year, d.month, d.day, 3, 0, 0);
 }
 
+({DateTime nextResetAt, int elapsedPeriods}) advanceRecurringReset({
+  required DateTime nextResetAt,
+  required DateTime now,
+  required RepeatFrequency frequency,
+  required int customDays,
+}) {
+  if (now.isBefore(nextResetAt)) {
+    return (nextResetAt: nextResetAt, elapsedPeriods: 0);
+  }
+
+  final intervalDays = freqDays(frequency, customDays);
+  final scheduledDay = DateTime.utc(
+    nextResetAt.year,
+    nextResetAt.month,
+    nextResetAt.day,
+  );
+  final currentDay = DateTime.utc(now.year, now.month, now.day);
+  final calendarDays = currentDay.difference(scheduledDay).inDays;
+  var elapsedPeriods = math.max(1, calendarDays ~/ intervalDays);
+
+  DateTime candidateFor(int periods) {
+    final day = DateTime(
+      nextResetAt.year,
+      nextResetAt.month,
+      nextResetAt.day + intervalDays * periods,
+    );
+    return DateTime(day.year, day.month, day.day, 3);
+  }
+
+  var candidate = candidateFor(elapsedPeriods);
+  if (!now.isBefore(candidate)) {
+    elapsedPeriods++;
+    candidate = candidateFor(elapsedPeriods);
+  }
+  return (nextResetAt: candidate, elapsedPeriods: elapsedPeriods);
+}
+
 DateTime dateOnly(DateTime dateTime) =>
     DateTime(dateTime.year, dateTime.month, dateTime.day);
+
+DateTime startOfWeek(DateTime dateTime) {
+  final day = dateOnly(dateTime);
+  return day.subtract(Duration(days: day.weekday - DateTime.monday));
+}
 
 bool isSameDate(DateTime a, DateTime b) {
   return a.year == b.year && a.month == b.month && a.day == b.day;

@@ -92,5 +92,40 @@ void main() {
         isFalse,
       );
     });
+
+    test('deadline evaluation is deterministic with an injected clock', () {
+      final goal = GoalSpec(
+        text: 'Complete 12 repetitions',
+        targetValue: 12,
+        currentValue: 10,
+        deadline: DateTime.utc(2026, 7, 20),
+      );
+
+      final beforeDeadline = engine.analyze(
+        goal,
+        now: DateTime.utc(2026, 7, 6),
+      );
+      final afterDeadline = engine.analyze(
+        goal,
+        now: DateTime.utc(2026, 7, 21),
+      );
+
+      expect(
+        beforeDeadline.checks
+            .firstWhere(
+              (check) => check.criterion == SmarterCriterion.achievable,
+            )
+            .passed,
+        isTrue,
+      );
+      expect(
+        afterDeadline.checks
+            .firstWhere(
+              (check) => check.criterion == SmarterCriterion.achievable,
+            )
+            .passed,
+        isFalse,
+      );
+    });
   });
 }

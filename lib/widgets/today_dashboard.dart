@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app_state.dart';
+import '../engines/task_ordering.dart';
 import '../models.dart';
 import '../utils.dart';
 import 'shared.dart';
@@ -69,9 +70,9 @@ class TodayDashboard extends StatefulWidget {
       final byRepeating = _repeatingScore(a).compareTo(_repeatingScore(b));
       if (byRepeating != 0) return byRepeating;
 
-      final byPriority = _priorityScore(
+      final byPriority = prioritySortRank(
         a.priority,
-      ).compareTo(_priorityScore(b.priority));
+      ).compareTo(prioritySortRank(b.priority));
       if (byPriority != 0) return byPriority;
 
       final byXp = state.previewEarnedXP(b).compareTo(state.previewEarnedXP(a));
@@ -100,12 +101,6 @@ class TodayDashboard extends StatefulWidget {
     result.sort((a, b) => a.nextResetAt!.compareTo(b.nextResetAt!));
     return result;
   }
-
-  static int _priorityScore(Priority priority) => switch (priority) {
-    Priority.high => 0,
-    Priority.medium => 1,
-    Priority.low => 2,
-  };
 
   static int _riskScore(Task task) {
     final resetAt = task.nextResetAt;

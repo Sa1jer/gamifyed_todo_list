@@ -45,7 +45,11 @@ class SmarterReadiness {
 class GoalEngine {
   const GoalEngine();
 
-  SmarterReadiness analyze(GoalSpec goal, {bool hasSkill = true}) {
+  SmarterReadiness analyze(
+    GoalSpec goal, {
+    bool hasSkill = true,
+    DateTime? now,
+  }) {
     final text = goal.text.trim();
     final hasDeadline = goal.deadline != null;
     final hasMetric =
@@ -72,7 +76,7 @@ class GoalEngine {
         SmarterCheck(
           criterion: SmarterCriterion.achievable,
           label: 'Посильно',
-          passed: _isAchievable(goal),
+          passed: _isAchievable(goal, now ?? DateTime.now()),
           hint: 'Добавь промежуточный этап, если цель выглядит резкой.',
         ),
         SmarterCheck(
@@ -104,11 +108,11 @@ class GoalEngine {
     );
   }
 
-  List<String> hints(GoalSpec goal, {bool hasSkill = true}) =>
-      analyze(goal, hasSkill: hasSkill).topHints;
+  List<String> hints(GoalSpec goal, {bool hasSkill = true, DateTime? now}) =>
+      analyze(goal, hasSkill: hasSkill, now: now).topHints;
 
-  int readinessScore(GoalSpec goal, {bool hasSkill = true}) =>
-      analyze(goal, hasSkill: hasSkill).score;
+  int readinessScore(GoalSpec goal, {bool hasSkill = true, DateTime? now}) =>
+      analyze(goal, hasSkill: hasSkill, now: now).score;
 
   bool _isSpecific(String text) {
     if (text.length < 8) return false;
@@ -127,14 +131,14 @@ class GoalEngine {
 
   bool _containsNumber(String text) => RegExp(r'\d').hasMatch(text);
 
-  bool _isAchievable(GoalSpec goal) {
+  bool _isAchievable(GoalSpec goal, DateTime now) {
     if (goal.deadline == null ||
         goal.targetValue == null ||
         goal.currentValue == null) {
       return true;
     }
 
-    final remainingDays = goal.deadline!.difference(DateTime.now()).inDays;
+    final remainingDays = goal.deadline!.difference(now).inDays;
     if (remainingDays <= 0) return false;
 
     final remaining = goal.targetValue! - goal.currentValue!;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app_state.dart';
+import '../engines/task_ordering.dart';
 import '../feedback_service.dart';
 import '../models.dart';
 import '../utils.dart';
@@ -20,7 +21,7 @@ class _WeeklyAnalyticsDialogState extends State<WeeklyAnalyticsDialog> {
   @override
   void initState() {
     super.initState();
-    _weekStart = _startOfWeek(DateTime.now());
+    _weekStart = startOfWeek(DateTime.now());
   }
 
   @override
@@ -30,7 +31,7 @@ class _WeeklyAnalyticsDialogState extends State<WeeklyAnalyticsDialog> {
     final bdr = borderColor(isDark);
     final bg = surface(isDark);
     final summary = _WeeklySummary.fromState(state, _weekStart);
-    final canGoNext = _weekStart.isBefore(_startOfWeek(DateTime.now()));
+    final canGoNext = _weekStart.isBefore(startOfWeek(DateTime.now()));
     final size = MediaQuery.sizeOf(context);
     final availableWidth = size.width - 36;
     final availableHeight = size.height - 40;
@@ -2262,9 +2263,9 @@ class _ProcrastinationInsights {
           ..sort((a, b) {
             final byDays = b.daysSinceActivity.compareTo(a.daysSinceActivity);
             if (byDays != 0) return byDays;
-            return _priorityScore(
+            return prioritySortRank(
               a.task.priority,
-            ).compareTo(_priorityScore(b.task.priority));
+            ).compareTo(prioritySortRank(b.task.priority));
           });
 
     final oversized =
@@ -2285,9 +2286,9 @@ class _ProcrastinationInsights {
           ..sort((a, b) {
             final byXp = b.task.xpReward.compareTo(a.task.xpReward);
             if (byXp != 0) return byXp;
-            return _priorityScore(
+            return prioritySortRank(
               a.task.priority,
-            ).compareTo(_priorityScore(b.task.priority));
+            ).compareTo(prioritySortRank(b.task.priority));
           });
 
     final minimumStarts =
@@ -2305,9 +2306,9 @@ class _ProcrastinationInsights {
             )
             .toList()
           ..sort((a, b) {
-            final byPriority = _priorityScore(
+            final byPriority = prioritySortRank(
               a.task.priority,
-            ).compareTo(_priorityScore(b.task.priority));
+            ).compareTo(prioritySortRank(b.task.priority));
             if (byPriority != 0) return byPriority;
             final byStalled = b.daysSinceActivity.compareTo(
               a.daysSinceActivity,
@@ -2370,12 +2371,6 @@ class _ProcrastinationInsights {
   static int _daysSince(DateTime date, DateTime now) {
     return dateOnly(now).difference(dateOnly(date)).inDays.clamp(0, 9999);
   }
-
-  static int _priorityScore(Priority priority) => switch (priority) {
-    Priority.high => 0,
-    Priority.medium => 1,
-    Priority.low => 2,
-  };
 }
 
 class _TaskInsight {
@@ -2420,11 +2415,6 @@ class _SkillWeekStat {
     required this.icon,
     required this.color,
   });
-}
-
-DateTime _startOfWeek(DateTime date) {
-  final day = dateOnly(date);
-  return day.subtract(Duration(days: day.weekday - 1));
 }
 
 String _weekdayShort(DateTime date) {

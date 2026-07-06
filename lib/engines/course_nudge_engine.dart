@@ -1,5 +1,6 @@
 import '../models.dart';
 import 'goal_engine.dart';
+import 'task_ordering.dart';
 
 enum CourseNudgeKind {
   createFocusQuest,
@@ -222,23 +223,15 @@ class CourseNudgeEngine {
         .toList();
     if (candidates.isEmpty) return null;
     candidates.sort((a, b) {
-      final byPriority = _taskPriority(
+      final byPriority = prioritySortRank(
         a.priority,
-      ).compareTo(_taskPriority(b.priority));
+      ).compareTo(prioritySortRank(b.priority));
       if (byPriority != 0) return byPriority;
       final byXp = b.xpReward.compareTo(a.xpReward);
       if (byXp != 0) return byXp;
       return b.updatedAt.compareTo(a.updatedAt);
     });
     return candidates.first;
-  }
-
-  int _taskPriority(Priority priority) {
-    return switch (priority) {
-      Priority.high => 0,
-      Priority.medium => 1,
-      Priority.low => 2,
-    };
   }
 
   SkillTreeNode? _activeStage(Skill skill) {

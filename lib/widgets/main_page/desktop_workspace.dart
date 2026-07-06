@@ -2718,8 +2718,7 @@ class _DesktopInteractiveSurfaceState
 }
 
 List<int> _desktopWeekActivity(AppState state, DateTime now) {
-  final today = dateOnly(now);
-  final start = today.subtract(Duration(days: today.weekday - 1));
+  final start = startOfWeek(now);
   return List.generate(7, (index) {
     final day = start.add(Duration(days: index));
     return state.completionHistoryByDate[day]?.length ?? 0;

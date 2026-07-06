@@ -2671,4 +2671,51 @@ void main() {
       expect(state.activeBuffs.map((buff) => buff.id), ['buff-3']);
     });
   });
+
+  group('selection and skill-count invariants', () {
+    test('Inbox is not counted as an actively studied skill', () {
+      final state = AppState(
+        storage: _InMemoryStorageService(),
+        seedDefaults: false,
+      );
+      addTearDown(state.dispose);
+
+      expect(state.activeSkillCount, 0);
+      state.addSkill(
+        Skill(
+          id: 'real-skill',
+          name: 'Real skill',
+          goal: '',
+          color: Colors.blue,
+          icon: Icons.star,
+        ),
+      );
+
+      expect(state.activeSkillCount, 1);
+    });
+
+    test('invalid skill ids cannot become selected state', () {
+      final state = AppState(
+        storage: _InMemoryStorageService(),
+        seedDefaults: false,
+      );
+      addTearDown(state.dispose);
+      final skill = Skill(
+        id: 'valid-skill',
+        name: 'Valid skill',
+        goal: '',
+        color: Colors.blue,
+        icon: Icons.star,
+      );
+      state.addSkill(skill);
+
+      state.selectSkill('missing-skill');
+      expect(state.selectedSkillId, isNull);
+
+      state.selectSkill(skill.id);
+      expect(state.selectedSkillId, skill.id);
+      state.clearSkillSelection();
+      expect(state.selectedSkillId, isNull);
+    });
+  });
 }

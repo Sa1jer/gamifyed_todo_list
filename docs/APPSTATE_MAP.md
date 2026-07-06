@@ -1,6 +1,6 @@
 # AppState Map
 
-Last updated: 2026-06-23
+Last updated: 2026-07-06
 
 This document maps the current responsibilities and mutation boundaries inside
 `AppState`. It is a planning artifact for safe decomposition, not a refactor
@@ -9,7 +9,7 @@ introduced by this document.
 
 ## Current Shape
 
-- `lib/app_state.dart` is the main runtime facade: roughly 2700 lines.
+- `lib/app_state.dart` is the main runtime facade: roughly 3500 lines.
 - `StorageService` owns Hive/local persistence and schema migration.
 - Existing pure engines already cover some evaluation/layout concerns:
   `BossEngine`, `CourseNudgeEngine`, `GoalEngine`, `ProgressEngine`,
@@ -35,6 +35,10 @@ introduced by this document.
 | Notifications | Owns task notification scheduling/canceling through `NotificationService`. | Local-device side effect; future sync should not depend on notification state. |
 | Debug bulk normalization | `normalizeAfterBulkStateChange` repairs state after debug scenarios and saves. | Debug code calls AppState, but production AppState does not import debug code. |
 
+Selection now rejects unknown skill IDs and exposes an explicit
+`clearSkillSelection()` path while retaining the legacy toggle behavior of
+`selectSkill`. `activeSkillCount` excludes the permanent Inbox skill.
+
 ## Mutation Boundary Map
 
 | Method group | Main mutations | Side effects and boundaries |
@@ -43,7 +47,7 @@ introduced by this document.
 | `_saveAll` / `_writeAllUnlocked` | Writes every persisted domain. | Debounced full-write pipeline; no per-entity save boundary yet. |
 | UI settings toggles | Theme, sound, tooltips. | Direct meta save + notify. Sound also updates `SfxService`. |
 | Tutorial methods | `TutorialProgress`, `onboardingSeen`, replay flags. | Persist tutorial progress/meta and notify. Uses `DateTime.now()` for `updatedAt`. |
-| `checkResets` / `_resetExpiredTasks` | Repeating task reset state, streak protection, daily stats. | Can notify/save from background timer. Time-sensitive. |
+| `checkResets` / `_resetExpiredTasks` | Repeating task reset state, streak protection, daily stats. | Can notify/save from background timer. Missed periods use bounded calendar arithmetic rather than one loop per period. |
 | Weekly goals | `weeklyGoals`, key result completion timestamps. | Updates `updatedAt`, saves, notifies. |
 | `completeTask` | Task completion, XP/profile/skill, streaks, daily stats, history, buffs, rewards, bosses, achievements, tutorial. | Syncs notification, notifies, full save. High-risk extraction zone. |
 | `completeMinimumAction` | Minimum progress, optional repeating completion, XP/profile/skill, stats/history for repeating tasks, bosses/achievements/tutorial. | Syncs notification, notifies, full save. High-risk extraction zone. |
@@ -93,6 +97,8 @@ The future sync boundary should be planned without implementing Firebase/cloud.
   not exist yet.
 - Notification scheduling is a local-device side effect and should remain
   outside any future shared cloud state.
+- Snapshot loads treat an empty history as authoritative and invalidate derived
+  history caches, preventing stale analytics after recovery/reload.
 
 ## Extraction Risk Map
 

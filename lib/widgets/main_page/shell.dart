@@ -902,26 +902,10 @@ class _MainPageState extends State<MainPage> {
               else
                 Column(
                   children: [
-                    if (!mobileShell)
-                      TopBar(
-                        isDark: isDark,
-                        onToggle: widget.onToggleTheme,
-                        state: s,
-                        mode: displayedMode,
-                        onModeChanged: changeMode,
-                        onStatsTap: openStatistics,
-                        rewardsKey: _rewardsButtonKey,
-                        roadmapKey: _roadmapNavKey,
-                        statsKey: _statsButtonKey,
-                        onRewardsTap: () => _openRewardsDialog(s),
-                        onAppIconTap: !kReleaseMode
-                            ? () => _handleDebugAdminTap(s)
-                            : null,
-                      ),
                     ProfileBar(
                       key: _profileBarKey,
                       isDark: isDark,
-                      mobile: mobileShell,
+                      mobile: true,
                       state: s,
                       onToggleTheme: widget.onToggleTheme,
                       onRewardsTap: () => _openRewardsDialog(s),
@@ -929,8 +913,8 @@ class _MainPageState extends State<MainPage> {
                       onAppIconTap: !kReleaseMode
                           ? () => _handleDebugAdminTap(s)
                           : null,
-                      rewardsKey: mobileShell ? _rewardsButtonKey : null,
-                      statsKey: mobileShell ? _statsButtonKey : null,
+                      rewardsKey: _rewardsButtonKey,
+                      statsKey: _statsButtonKey,
                     ),
                     Expanded(
                       child: Padding(
@@ -969,13 +953,13 @@ class _MainPageState extends State<MainPage> {
                         ),
                       ),
                     ),
-                    if (mobileShell)
-                      _MobileWorkspaceNav(
-                        mode: displayedMode,
-                        isDark: isDark,
-                        onChanged: changeMode,
-                        roadmapKey: _roadmapNavKey,
-                      ),
+                    _MobileWorkspaceNav(
+                      mode: displayedMode,
+                      isDark: isDark,
+                      reducedMotion: s.reducedMotion,
+                      onChanged: changeMode,
+                      roadmapKey: _roadmapNavKey,
+                    ),
                   ],
                 ),
               if (_rewardNotice != null)

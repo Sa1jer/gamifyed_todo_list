@@ -29,8 +29,8 @@ import 'weekly_analytics_dialog.dart';
 import '../engines/course_nudge_engine.dart';
 
 part 'main_page/mode.dart';
-part 'main_page/top_bar.dart';
 part 'main_page/profile_bar.dart';
+part 'main_page/mobile_workspace_nav.dart';
 part 'main_page/shell.dart';
 part 'main_page/workspaces.dart';
 part 'main_page/compact_skill_selector.dart';

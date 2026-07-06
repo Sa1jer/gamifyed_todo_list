@@ -194,6 +194,34 @@ void main() {
       expect(state.profile.name, 'Snapshot current');
     });
 
+    test('empty committed history replaces stale in-memory history', () async {
+      final storage = FaultInjectingStorageService(snapshotSupport: true)
+        ..committedSnapshot = CommittedSnapshot(
+          snapshot: snapshot('empty-history'),
+          source: SnapshotLoadSource.current,
+        );
+      final state = AppState(storage: storage)
+        ..history.add(
+          HistoryEntry(
+            id: 'stale-history',
+            taskTitle: 'Stale task',
+            skillId: 'stale-skill',
+            skillName: 'Stale skill',
+            skillColor: Colors.red,
+            skillIcon: Icons.warning,
+            xp: 100,
+            isCompletion: true,
+            at: DateTime.utc(2026, 6, 30),
+          ),
+        );
+      addTearDown(state.dispose);
+
+      await state.loadSavedData();
+
+      expect(state.history, isEmpty);
+      expect(state.totalTasksCompleted, 0);
+    });
+
     test('snapshot commit failure remains dirty and retryable', () async {
       final storage = FaultInjectingStorageService(snapshotSupport: true)
         ..committedSnapshot = CommittedSnapshot(

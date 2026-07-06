@@ -700,6 +700,14 @@ Shared Quest Creation behavior remains covered on both platforms; the desktop
 dialog width changed, but mobile field order, dirty Back protection, XP grid,
 and settings behavior did not.
 
+## 1.3.54 Stability Regression Note
+
+The global stability pass preserves the mobile journal presentation. Mobile
+navigation now receives only the reduced-motion value it needs instead of
+reading broad AppState, system Inbox selection clears through an explicit
+selection API, and delayed root storage initialization stops when the app is
+disposed. No mobile visual redesign or product rule changed.
+
 ## Reference Checklist
 
 - Flutter adaptive layout: <https://docs.flutter.dev/ui/adaptive-responsive/general>

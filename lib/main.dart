@@ -85,9 +85,11 @@ class _RPGAppState extends State<RPGApp>
     try {
       await widget.storage.init();
     } catch (error, stackTrace) {
+      if (!mounted) return;
       _state.reportStartupStorageFailure(error, stackTrace);
       return;
     }
+    if (!mounted) return;
     await _state.retryLoadSavedData();
   }
 

@@ -70,7 +70,7 @@ class _MobileActJournalState extends State<_MobileActJournal> {
     if (selected?.id == kInboxSkillId) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && state.selectedSkillId == kInboxSkillId) {
-          state.selectSkill(kInboxSkillId);
+          state.clearSkillSelection();
         }
       });
     }

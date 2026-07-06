@@ -1577,8 +1577,7 @@ class _ProgressContinueCard extends StatelessWidget {
 
 List<HistoryEntry> _currentWeekEntries(AppState state) {
   final now = DateTime.now();
-  final today = dateOnly(now);
-  final weekStart = today.subtract(Duration(days: today.weekday - 1));
+  final weekStart = startOfWeek(now);
   final completionHistoryByDate = state.completionHistoryByDate;
   final entries = <HistoryEntry>[];
 

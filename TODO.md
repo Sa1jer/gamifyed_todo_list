@@ -1,6 +1,6 @@
 # TODO / Living Backlog
 
-Last updated: 2026-07-05
+Last updated: 2026-07-06
 
 This file tracks the active implementation roadmap and completed project work. Update it after every meaningful code or design change.
 
@@ -26,6 +26,8 @@ This file tracks the active implementation roadmap and completed project work. U
 - [ ] Bound or downsample profile image input before loading full bytes to avoid memory pressure from very large files.
 - [ ] Validate native Windows/macOS pointer tracking after skill-card hit-region alignment; capture a platform repro if compositor hover still differs.
 - [ ] Profile mobile theme switching after the `2x` snapshot cap and add a reduced-motion fallback only if frame timings still show jank.
+- [ ] Add a sustained-mutation storage stress test to characterize repeated save follow-up passes and lifecycle flush completion.
+- [ ] Add native startup-dispose/background-foreground regression checks around slow storage and plugin initialization.
 
 ## Reminder — Product Follow-ups After Hardening
 
@@ -98,6 +100,9 @@ Do not mix these product decisions into Release / Regression Hardening. Revisit 
 - [ ] Perform physical Windows QHD validation at 125% and 150% scaling, including pointer hover, drag handles, popup placement, and text density.
 - [ ] Perform native macOS screenshot comparison at 1440/1920/2560 widths and tune only presentation tokens/spacing.
 - [ ] Profile sidebar/main/right-rail rebuild cost with 20+ skills and a large completion history before adding selectors or state decomposition.
+- [ ] Profile Statistics history scans and extract a shared `StatisticsSnapshot` only if native frame evidence shows repeated expensive aggregation.
+- [ ] Decide whether the currently unreachable `PlanningWorkspace` is a future product surface or removable legacy code.
+- [ ] Characterize reward/chest/buff decision idempotency before extracting a pure `RewardEngine`; keep mutations in AppState initially.
 - [ ] Complete native visual recovery QA for `1.3.53`: RoadMap at 1/2/many stages and 1024/1366/1920 widths, all eight Statistics details, Trophies/Settings, rapid skill switching, and five-click Admin entry on macOS plus Windows QHD.
 
 ## P3 — Skill Goal Progress
@@ -226,6 +231,8 @@ Manual desktop/QHD checklist:
 - Full requirement/evidence/status matrix: `docs/1.3.52_RECOVERY_AUDIT.md`.
 
 ## Recently Completed
+
+- `1.3.54`: completed the application-wide stability/SOLID audit; fixed stale empty-snapshot history, post-dispose startup loading, invalid skill selection and Inbox skill counts; replaced linear repeat catch-up, centralized week/priority rules, pinned Flutter `3.44.3`, removed the unreachable legacy desktop header, and added evidence-based architecture documentation/tests.
 
 - `1.3.53`: recovered the incomplete `1.3.52` visual migration with a real RoadMap shell/templates/context rail, complete Trophies and Statistics ecosystems, full existing Settings coverage, responsive raised skill headers, history-aware empty states, stable overflow geometry, bounds-based camera fitting, and tested debug/profile Admin entry.
 - `1.3.52`: introduced workspace routes and initial wrappers, but its visual migration remained incomplete; superseded by the audited `1.3.53` recovery.

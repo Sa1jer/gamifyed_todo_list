@@ -6,10 +6,25 @@ import 'package:todo_list_app/app_state.dart';
 import 'package:todo_list_app/main.dart';
 import 'package:todo_list_app/models.dart';
 import 'package:todo_list_app/persistence_status.dart';
+import 'package:todo_list_app/storage_service.dart';
 import 'package:todo_list_app/utils.dart';
 import 'package:todo_list_app/widgets/persistence_recovery.dart';
 
 import 'support/fault_injecting_storage.dart';
+
+class _DelayedInitStorage extends StorageService {
+  final Completer<void> initGate = Completer<void>();
+  bool loadAttempted = false;
+
+  @override
+  Future<void> init() => initGate.future;
+
+  @override
+  Future<List<Skill>> loadSkills() async {
+    loadAttempted = true;
+    return const <Skill>[];
+  }
+}
 
 void main() {
   Skill skill(String id) => Skill(
@@ -29,6 +44,21 @@ void main() {
   );
 
   group('storage reliability characterization', () {
+    testWidgets('disposed app does not continue startup loading', (
+      tester,
+    ) async {
+      final storage = _DelayedInitStorage();
+
+      await tester.pumpWidget(RPGApp(storage: storage));
+      await tester.pump();
+      await tester.pumpWidget(const SizedBox.shrink());
+      storage.initGate.complete();
+      await tester.pump();
+
+      expect(storage.loadAttempted, isFalse);
+      expect(tester.takeException(), isNull);
+    });
+
     test('successful load reports ready state', () async {
       final storage = FaultInjectingStorageService();
       final state = AppState(storage: storage);

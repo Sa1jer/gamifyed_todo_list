@@ -605,11 +605,10 @@ class AppState extends ChangeNotifier {
     profile = loadedProfile;
     final protectionChanged = _refillStreakProtectionIfNeeded();
 
-    if (loadedHistory.isNotEmpty) {
-      history.clear();
-      history.addAll(loadedHistory);
-      _invalidateHistoryCaches();
-    }
+    history
+      ..clear()
+      ..addAll(loadedHistory);
+    _invalidateHistoryCaches();
 
     if (loadedAchievements.isNotEmpty) {
       achievements.clear();
@@ -1110,17 +1109,14 @@ class AppState extends ChangeNotifier {
       }
 
       if (!t.isDone && t.nextResetAt != null) {
-        var missedPeriods = 0;
-        var guard = 0;
-        while (!now.isBefore(t.nextResetAt!) && guard < 3700) {
-          missedPeriods++;
-          t.nextResetAt = nextResetFrom(
-            t.nextResetAt!,
-            t.repeatFrequency,
-            t.repeatCustomDays,
-          );
-          guard++;
-        }
+        final reset = advanceRecurringReset(
+          nextResetAt: t.nextResetAt!,
+          now: now,
+          frequency: t.repeatFrequency,
+          customDays: t.repeatCustomDays,
+        );
+        final missedPeriods = reset.elapsedPeriods;
+        t.nextResetAt = reset.nextResetAt;
 
         if (missedPeriods > 0) {
           if (t.streak != 0 && !_protectMissedStreak(t, missedPeriods, now)) {
@@ -1139,9 +1135,9 @@ class AppState extends ChangeNotifier {
 
   bool _refillStreakProtectionIfNeeded([DateTime? at]) {
     final now = at ?? DateTime.now();
-    final weekStart = _startOfWeek(now);
+    final weekStart = startOfWeek(now);
     final refilledAt = profile.streakProtectionRefilledAt;
-    final refilledWeek = refilledAt == null ? null : _startOfWeek(refilledAt);
+    final refilledWeek = refilledAt == null ? null : startOfWeek(refilledAt);
     var changed = false;
 
     if (profile.streakProtectionCharges < 0) {
@@ -1345,7 +1341,7 @@ class AppState extends ChangeNotifier {
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
   WeeklyGoal? weeklyGoalForWeek(DateTime weekStart) {
-    final normalizedStart = _startOfWeek(weekStart);
+    final normalizedStart = startOfWeek(weekStart);
     return weeklyGoals
         .where((goal) => isSameDate(goal.weekStart, normalizedStart))
         .firstOrNull;
@@ -1356,7 +1352,7 @@ class AppState extends ChangeNotifier {
     required String title,
     required List<WeeklyKeyResult> keyResults,
   }) {
-    final normalizedStart = _startOfWeek(weekStart);
+    final normalizedStart = startOfWeek(weekStart);
     final normalizedTitle = title.trim();
     final normalizedResults = keyResults
         .map(
@@ -1450,7 +1446,7 @@ class AppState extends ChangeNotifier {
     return _skillById(selectedSkillId!);
   }
 
-  int get activeSkillCount => skills.length;
+  int get activeSkillCount => roadmapSkills.length;
 
   int previewEarnedXP(Task task) {
     if (task.isInbox) return 0;
@@ -1941,9 +1937,18 @@ class AppState extends ChangeNotifier {
   // ── CRUD ─────────────────────────────────────────────────────────────────────
 
   void selectSkill(String id) {
+    if (_skillById(id) == null) return;
     final next = selectedSkillId == id ? null : id;
-    if (selectedSkillId == next) return;
-    selectedSkillId = next;
+    _setSelectedSkill(next);
+  }
+
+  void clearSkillSelection() {
+    _setSelectedSkill(null);
+  }
+
+  void _setSelectedSkill(String? id) {
+    if (selectedSkillId == id) return;
+    selectedSkillId = id;
     notifyListeners();
   }
 
@@ -3343,11 +3348,6 @@ class AppState extends ChangeNotifier {
 
   String _historyTaskKey(HistoryEntry entry) {
     return entry.taskId ?? '${entry.skillId}::${entry.taskTitle}';
-  }
-
-  DateTime _startOfWeek(DateTime date) {
-    final day = dateOnly(date);
-    return day.subtract(Duration(days: day.weekday - 1));
   }
 
   int _notificationId(String taskId) {
