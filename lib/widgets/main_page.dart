@@ -8,6 +8,7 @@ import '../debug/debug_admin_panel.dart';
 import '../app_state.dart';
 import '../feedback_service.dart';
 import '../models.dart';
+import '../theme/app_typography.dart';
 import '../utils.dart';
 import 'shared.dart';
 import 'dialogs.dart';

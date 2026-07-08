@@ -50,6 +50,7 @@ class MasteryMapWorkspace extends StatefulWidget {
   final GlobalKey? canvasTutorialKey;
   final GlobalKey? inspectorTutorialKey;
   final GlobalKey? practiceTutorialKey;
+  final ValueChanged<String?>? onFocusSkillChanged;
   final void Function(String taskId, Offset position) onCompleteTask;
   final void Function(String taskId, Offset position) onMinimumAction;
 
@@ -60,6 +61,7 @@ class MasteryMapWorkspace extends StatefulWidget {
     this.canvasTutorialKey,
     this.inspectorTutorialKey,
     this.practiceTutorialKey,
+    this.onFocusSkillChanged,
     required this.onCompleteTask,
     required this.onMinimumAction,
   });
@@ -94,9 +96,31 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
       _selection = null;
       return;
     }
-    if (skillId == _lastAppliedFocusSkillId) return;
+    if (skillId == _lastAppliedFocusSkillId || skillId == _selection?.skillId) {
+      _lastAppliedFocusSkillId = skillId;
+      return;
+    }
     _lastAppliedFocusSkillId = skillId;
     _selection = _MasterySelection.skill(skillId);
+  }
+
+  void _setSelection(_MasterySelection? next) {
+    final current = _selection;
+    final unchanged =
+        current?.type == next?.type &&
+        current?.skillId == next?.skillId &&
+        current?.nodeId == next?.nodeId &&
+        current?.taskId == next?.taskId;
+    if (unchanged) return;
+
+    final skillChanged = current?.skillId != next?.skillId;
+    setState(() {
+      _selection = next;
+      _lastAppliedFocusSkillId = next?.skillId;
+    });
+    if (skillChanged) {
+      widget.onFocusSkillChanged?.call(next?.skillId);
+    }
   }
 
   @override
@@ -133,7 +157,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
       canvasTutorialKey: widget.canvasTutorialKey,
       inspectorTutorialKey: widget.inspectorTutorialKey,
       practiceTutorialKey: widget.practiceTutorialKey,
-      onSelectionChanged: (next) => setState(() => _selection = next),
+      onSelectionChanged: _setSelection,
       onAddRoot: (skill) => _addNode(context, skill),
       onExtendPath: (skill, node) => _extendPath(context, skill, node),
       onRenameNode: (skill, node) => _renameNode(context, skill, node),
@@ -142,7 +166,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
       onAddQuest: (skill, node) => _addQuest(context, skill, node: node),
       onApplyRoadmapTemplate: (skill, config) {
         state.applyRoadmapTemplate(skill.id, config);
-        setState(() => _selection = _MasterySelection.skill(skill.id));
+        _setSelection(_MasterySelection.skill(skill.id));
       },
       onToggleQuest: _toggleQuestFromMap,
       onMinimumAction: _minimumActionFromMap,
@@ -150,13 +174,13 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
       onDeleteQuest: (task) {
         final skillId = task.skillId;
         state.removeTask(task.id);
-        setState(() => _selection = _MasterySelection.skill(skillId));
+        _setSelection(_MasterySelection.skill(skillId));
       },
       onMasterNode: (skill, node) =>
           state.masterSkillTreeNode(skill.id, node.id),
       onDeleteNode: (skill, node) {
         state.removeSkillTreeNode(skill.id, node.id);
-        setState(() => _selection = _MasterySelection.skill(skill.id));
+        _setSelection(_MasterySelection.skill(skill.id));
       },
     );
 
@@ -167,14 +191,14 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
         selection: selection,
         freeMap: buildMapBody(),
         practiceTutorialKey: widget.practiceTutorialKey,
-        onSelectionChanged: (next) => setState(() => _selection = next),
+        onSelectionChanged: _setSelection,
         onAddRoot: (skill) => _addNode(context, skill),
         onExtendPath: (skill, node) => _extendPath(context, skill, node),
         onRenameNode: (skill, node) => _renameNode(context, skill, node),
         onAddQuest: (skill, node) => _addQuest(context, skill, node: node),
         onApplyRoadmapTemplate: (skill, config) {
           state.applyRoadmapTemplate(skill.id, config);
-          setState(() => _selection = _MasterySelection.skill(skill.id));
+          _setSelection(_MasterySelection.skill(skill.id));
         },
         onToggleQuest: _toggleQuestFromMap,
         onMinimumAction: _minimumActionFromMap,
@@ -182,13 +206,13 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
         onDeleteQuest: (task) {
           final skillId = task.skillId;
           state.removeTask(task.id);
-          setState(() => _selection = _MasterySelection.skill(skillId));
+          _setSelection(_MasterySelection.skill(skillId));
         },
         onMasterNode: (skill, node) =>
             state.masterSkillTreeNode(skill.id, node.id),
         onDeleteNode: (skill, node) {
           state.removeSkillTreeNode(skill.id, node.id);
-          setState(() => _selection = _MasterySelection.skill(skill.id));
+          _setSelection(_MasterySelection.skill(skill.id));
         },
       );
     }
@@ -294,7 +318,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
             ),
           );
           final nextSelection = _MasterySelection.node(skill.id, nodeId);
-          setState(() => _selection = nextSelection);
+          _setSelection(nextSelection);
           onCreated?.call(nextSelection);
         },
       ),
@@ -327,7 +351,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
           );
           if (created == null) return;
           final nextSelection = _MasterySelection.node(skill.id, created.id);
-          setState(() => _selection = nextSelection);
+          _setSelection(nextSelection);
           onCreated?.call(nextSelection);
         },
       ),
@@ -355,7 +379,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
             state.renameSkillTreeNode(skill.id, node.id, nextTitle);
             final nextSelection = _MasterySelection.node(skill.id, node.id);
             if (mounted) {
-              setState(() => _selection = nextSelection);
+              _setSelection(nextSelection);
             }
             onSaved?.call(nextSelection);
           });
@@ -390,7 +414,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
           );
           if (created == null) return;
           final nextSelection = _MasterySelection.node(skill.id, created.id);
-          setState(() => _selection = nextSelection);
+          _setSelection(nextSelection);
           onCreated?.call(nextSelection);
         },
       ),
@@ -453,7 +477,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
               final nextSelection = treeNodeId == null
                   ? _MasterySelection.skill(skill.id)
                   : _MasterySelection.node(skill.id, treeNodeId);
-              setState(() => _selection = nextSelection);
+              _setSelection(nextSelection);
               onCreated?.call(nextSelection);
             },
       ),
@@ -511,7 +535,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
               final nextSelection = treeNodeId == null
                   ? _MasterySelection.skill(skill.id)
                   : _MasterySelection.quest(skill.id, treeNodeId, task.id);
-              setState(() => _selection = nextSelection);
+              _setSelection(nextSelection);
               onSaved?.call(nextSelection);
             },
       ),
@@ -530,7 +554,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
           builder: (dialogContext, setDialogState) {
             void updateSelection(_MasterySelection? next) {
               setDialogState(() => fullscreenSelection = next);
-              setState(() => _selection = next);
+              _setSelection(next);
             }
 
             void updateLayoutAxis(_RoadmapLayoutAxis next) {

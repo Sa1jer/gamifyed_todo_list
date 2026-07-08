@@ -1,6 +1,6 @@
 # TODO / Living Backlog
 
-Last updated: 2026-07-06
+Last updated: 2026-07-08
 
 This file tracks the active implementation roadmap and completed project work. Update it after every meaningful code or design change.
 
@@ -96,7 +96,10 @@ Do not mix these product decisions into Release / Regression Hardening. Revisit 
 - [x] Migrate desktop Trophies, Statistics, and Settings into the persistent shell while preserving mobile/tutorial dialog flows.
 - [x] Synchronize RoadMap focus with sidebar skill selection, refine camera centering, and preserve the approved canvas painter.
 - [x] Replace persistent row action glyphs with stable hover/focus ellipsis menus and simplify the first-quest empty state.
+- [x] Add the semantic `AppTypography`/`AppTextRoles` foundation, nested-theme fallback, and adaptive-content tests for desktop focus, sidebar and RoadMap template surfaces.
 - [ ] Revisit Smarter Quest product model, value proposition, and UX before re-enabling its creation/edit controls.
+- [ ] Continue reducing remaining hardcoded `fontSize` values by subsystem; keep canvas-geometry labels as explicit exceptions until RoadMap painter metrics move to tokens.
+- [ ] Add screenshot-based native typography QA for Windows/macOS at `100%/125%/150%` scale and `200%` text size.
 - [ ] Perform physical Windows QHD validation at 125% and 150% scaling, including pointer hover, drag handles, popup placement, and text density.
 - [ ] Perform native macOS screenshot comparison at 1440/1920/2560 widths and tune only presentation tokens/spacing.
 - [ ] Profile sidebar/main/right-rail rebuild cost with 20+ skills and a large completion history before adding selectors or state decomposition.
@@ -233,6 +236,7 @@ Manual desktop/QHD checklist:
 ## Recently Completed
 
 - `1.3.54`: completed the application-wide stability/SOLID audit; fixed stale empty-snapshot history, post-dispose startup loading, invalid skill selection and Inbox skill counts; replaced linear repeat catch-up, centralized week/priority rules, pinned Flutter `3.44.3`, removed the unreachable legacy desktop header, and added evidence-based architecture documentation/tests.
+- `1.3.55`: added the semantic typography foundation, repaired nested-theme `AppTextRoles` fallback, synchronized RoadMap canvas/sidebar focus, improved adaptive desktop content at large text scale, and documented typography/content adaptation policy.
 
 - `1.3.53`: recovered the incomplete `1.3.52` visual migration with a real RoadMap shell/templates/context rail, complete Trophies and Statistics ecosystems, full existing Settings coverage, responsive raised skill headers, history-aware empty states, stable overflow geometry, bounds-based camera fitting, and tested debug/profile Admin entry.
 - `1.3.52`: introduced workspace routes and initial wrappers, but its visual migration remained incomplete; superseded by the audited `1.3.53` recovery.

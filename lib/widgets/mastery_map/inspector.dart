@@ -1064,8 +1064,6 @@ class _InspectorTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final titleFontSize = _adaptiveInspectorTitleFontSize(title);
-
     return Row(
       children: [
         Container(
@@ -1091,9 +1089,8 @@ class _InspectorTitle extends StatelessWidget {
                       title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
+                      style: context.appTextTheme.titleLarge?.copyWith(
                         color: textColor(isDark),
-                        fontSize: titleFontSize,
                         height: 1.08,
                         fontWeight: FontWeight.w900,
                       ),
@@ -1110,9 +1107,8 @@ class _InspectorTitle extends StatelessWidget {
                 subtitle,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
+                style: context.appTextTheme.bodySmall?.copyWith(
                   color: subtext(isDark),
-                  fontSize: 12,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -1455,8 +1451,6 @@ class _InspectorQuestRow extends StatelessWidget {
       priorityLabel[task.priority]!,
       if (task.hasMinimumAction) 'минимум есть',
     ].join(' · ');
-    final titleFontSize = _adaptiveQuestTitleFontSize(task.title);
-
     return AnimatedContainer(
       duration: kMotionStandard,
       curve: kMotionCurve,
@@ -1495,9 +1489,8 @@ class _InspectorQuestRow extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   softWrap: true,
-                  style: TextStyle(
+                  style: context.appTextTheme.titleSmall?.copyWith(
                     color: done ? sub : textColor(isDark),
-                    fontSize: titleFontSize,
                     height: 1.12,
                     fontWeight: FontWeight.w900,
                     decoration: done
@@ -1510,9 +1503,8 @@ class _InspectorQuestRow extends StatelessWidget {
                   done ? 'Завершено' : metadata,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
+                  style: context.appTextRoles.compactMetadata.copyWith(
                     color: sub,
-                    fontSize: 10.8,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -1536,10 +1528,8 @@ class _InspectorQuestRow extends StatelessWidget {
               ],
               Text(
                 '+${task.xpReward} XP',
-                style: TextStyle(
+                style: context.appTextRoles.reward.copyWith(
                   color: done ? sub : rowColor,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w900,
                 ),
               ),
               const SizedBox(width: 8),

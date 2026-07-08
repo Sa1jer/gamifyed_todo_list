@@ -8,6 +8,7 @@ import 'package:flutter/rendering.dart';
 import 'storage_service.dart';
 import 'notification_service.dart';
 import 'app_state.dart';
+import 'theme/app_typography.dart';
 import 'utils.dart';
 import 'widgets/main_page.dart';
 import 'widgets/persistence_recovery.dart';
@@ -142,19 +143,26 @@ class _RPGAppState extends State<RPGApp>
     }
   }
 
-  static ThemeData _buildTheme(bool dark) => ThemeData(
-    brightness: dark ? Brightness.dark : Brightness.light,
-    splashFactory: InkRipple.splashFactory,
-    scaffoldBackgroundColor: dark
-        ? const Color(0xFF0F0F13)
-        : const Color(0xFFF0F2F8),
-    colorScheme: ColorScheme.fromSeed(
+  static ThemeData _buildTheme(bool dark) {
+    final brightness = dark ? Brightness.dark : Brightness.light;
+    final colorScheme = ColorScheme.fromSeed(
       seedColor: const Color(0xFF4A9EFF),
-      brightness: dark ? Brightness.dark : Brightness.light,
-    ).copyWith(surface: surface(dark)),
-    cardColor: surface(dark),
-    dividerColor: borderColor(dark),
-  );
+      brightness: brightness,
+    ).copyWith(surface: surface(dark));
+    final textTheme = AppTypography.textTheme(colorScheme);
+    return ThemeData(
+      brightness: brightness,
+      splashFactory: InkRipple.splashFactory,
+      scaffoldBackgroundColor: dark
+          ? const Color(0xFF0F0F13)
+          : const Color(0xFFF0F2F8),
+      colorScheme: colorScheme,
+      textTheme: textTheme,
+      extensions: [AppTextRoles.fromTheme(textTheme, brightness: brightness)],
+      cardColor: surface(dark),
+      dividerColor: borderColor(dark),
+    );
+  }
 
   Future<ui.Image?> _captureCurrentFrame() async {
     try {

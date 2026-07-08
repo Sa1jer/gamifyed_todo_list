@@ -166,20 +166,6 @@ double _adaptiveSkillLabelFontSize(String text, bool selected) {
   return base - 3.0;
 }
 
-double _adaptiveQuestTitleFontSize(String text) {
-  final length = text.trim().length;
-  if (length <= 24) return 13.2;
-  if (length <= 42) return 12.6;
-  return 12.0;
-}
-
-double _adaptiveInspectorTitleFontSize(String text) {
-  final length = text.trim().length;
-  if (length <= 18) return 17.0;
-  if (length <= 32) return 15.8;
-  return 14.8;
-}
-
 double _adaptiveNodeLabelFontSize(String text) {
   final length = text.trim().length;
   if (length <= 10) return 12.0;

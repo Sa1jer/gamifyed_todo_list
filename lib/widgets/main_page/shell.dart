@@ -656,6 +656,26 @@ class _MainPageState extends State<MainPage> {
     });
   }
 
+  void _syncRoadmapFocusSkill(AppState state, String? skillId) {
+    final validSkillId =
+        skillId != null &&
+            state.roadmapSkills.any((skill) => skill.id == skillId)
+        ? skillId
+        : null;
+    final selected = state.selectedSkill;
+
+    if (validSkillId == null) {
+      if (selected != null && selected.id != kInboxSkillId) {
+        state.clearSkillSelection();
+      }
+    } else if (state.selectedSkillId != validSkillId) {
+      state.selectSkill(validSkillId);
+    }
+
+    if (_roadmapFocusSkillId == validSkillId) return;
+    setState(() => _roadmapFocusSkillId = validSkillId);
+  }
+
   void _addSkill(BuildContext context, {bool showTutorialHints = false}) {
     final state = AppStateProvider.of(context);
     if (showTutorialHints) {
@@ -785,6 +805,11 @@ class _MainPageState extends State<MainPage> {
           constraints.maxWidth,
         );
         final displayedMode = _mode;
+        final validRoadmapFocusSkillId =
+            _roadmapFocusSkillId != null &&
+                s.roadmapSkills.any((skill) => skill.id == _roadmapFocusSkillId)
+            ? _roadmapFocusSkillId
+            : null;
 
         void changeMode(WorkspaceMode mode) {
           if (_mode == mode) return;
@@ -873,10 +898,12 @@ class _MainPageState extends State<MainPage> {
                     WorkspaceMode.mastery => _MasteryWorkspace(
                       key: const ValueKey('mastery-workspace'),
                       isDark: isDark,
-                      focusSkillId: _roadmapFocusSkillId,
+                      focusSkillId: validRoadmapFocusSkillId,
                       canvasTutorialKey: _roadmapCanvasKey,
                       inspectorTutorialKey: _roadmapInspectorKey,
                       practiceTutorialKey: _roadmapPracticeKey,
+                      onFocusSkillChanged: (skillId) =>
+                          _syncRoadmapFocusSkill(s, skillId),
                       onComplete: _onComplete,
                       onMinimumAction: _onMinimumAction,
                     ),
@@ -935,10 +962,12 @@ class _MainPageState extends State<MainPage> {
                             WorkspaceMode.mastery => _MasteryWorkspace(
                               key: const ValueKey('mastery-workspace'),
                               isDark: isDark,
-                              focusSkillId: _roadmapFocusSkillId,
+                              focusSkillId: validRoadmapFocusSkillId,
                               canvasTutorialKey: _roadmapCanvasKey,
                               inspectorTutorialKey: _roadmapInspectorKey,
                               practiceTutorialKey: _roadmapPracticeKey,
+                              onFocusSkillChanged: (skillId) =>
+                                  _syncRoadmapFocusSkill(s, skillId),
                               onComplete: _onComplete,
                               onMinimumAction: _onMinimumAction,
                             ),

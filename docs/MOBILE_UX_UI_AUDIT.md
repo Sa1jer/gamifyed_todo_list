@@ -708,6 +708,15 @@ reading broad AppState, system Inbox selection clears through an explicit
 selection API, and delayed root storage initialization stops when the app is
 disposed. No mobile visual redesign or product rule changed.
 
+## 1.3.55 Typography Regression Note
+
+The shared `AppTypography` / `AppTextRoles` foundation is installed at the root
+theme level and is safe across nested/local `ThemeData` overrides. This batch
+does not redesign mobile screens, but it gives mobile polish follow-ups a
+single semantic text scale to adopt instead of adding more per-widget
+font-size heuristics. Large-text and responsive policy details live in
+`docs/TYPOGRAPHY_SYSTEM.md` and `docs/CONTENT_ADAPTATION_POLICY.md`.
+
 ## Reference Checklist
 
 - Flutter adaptive layout: <https://docs.flutter.dev/ui/adaptive-responsive/general>

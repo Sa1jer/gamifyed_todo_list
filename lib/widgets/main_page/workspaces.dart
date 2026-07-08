@@ -66,6 +66,7 @@ class _MasteryWorkspace extends StatelessWidget {
   final GlobalKey? canvasTutorialKey;
   final GlobalKey? inspectorTutorialKey;
   final GlobalKey? practiceTutorialKey;
+  final ValueChanged<String?>? onFocusSkillChanged;
   final Function(String taskId, Offset pos) onComplete;
   final Function(String taskId, Offset pos) onMinimumAction;
 
@@ -76,6 +77,7 @@ class _MasteryWorkspace extends StatelessWidget {
     this.canvasTutorialKey,
     this.inspectorTutorialKey,
     this.practiceTutorialKey,
+    this.onFocusSkillChanged,
     required this.onComplete,
     required this.onMinimumAction,
   });
@@ -88,6 +90,7 @@ class _MasteryWorkspace extends StatelessWidget {
       canvasTutorialKey: canvasTutorialKey,
       inspectorTutorialKey: inspectorTutorialKey,
       practiceTutorialKey: practiceTutorialKey,
+      onFocusSkillChanged: onFocusSkillChanged,
       onCompleteTask: onComplete,
       onMinimumAction: onMinimumAction,
     );

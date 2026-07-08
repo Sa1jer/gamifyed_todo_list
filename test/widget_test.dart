@@ -339,6 +339,28 @@ void main() {
     expect(find.text('4 дн.'), findsOneWidget);
     expect(find.text('340 / 1000 XP'), findsOneWidget);
     expect(find.text('+80 XP'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('desktop-weekly-xp-divider')),
+      findsOneWidget,
+    );
+    expect(
+      tester.getSize(find.byKey(const ValueKey('desktop-weekly-chart'))).height,
+      66,
+    );
+    expect(
+      tester
+          .getTopLeft(
+            find.byKey(const ValueKey('desktop-skill-xp-section-title')),
+          )
+          .dy,
+      greaterThan(
+        tester
+            .getBottomLeft(
+              find.byKey(const ValueKey('desktop-weekly-xp-divider')),
+            )
+            .dy,
+      ),
+    );
     expect(tester.takeException(), isNull);
 
     await tester.tap(find.byKey(const ValueKey('desktop-skill-desktop-two')));
@@ -378,6 +400,7 @@ void main() {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
 
       for (final width in [
         900.0,
@@ -490,6 +513,61 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('desktop focus preserves long titles and reflows large text', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+    const longTitle =
+        'Сделать пятнадцать чистых повторений и записать подробный результат тренировки';
+    final storage = InMemoryStorageService()
+      .._onboardingSeen = true
+      ..skills = [
+        Skill(
+          id: 'focus-readable-skill',
+          name: 'Очень длинное название речевого навыка',
+          goal: 'Читать важное без случайного уменьшения шрифта',
+          color: const Color(0xFFFF6B2C),
+          icon: Icons.record_voice_over_rounded,
+        ),
+      ]
+      ..tasks = [
+        Task(
+          id: 'focus-readable-task',
+          title: longTitle,
+          skillId: 'focus-readable-skill',
+          xpReward: 500,
+          type: TaskType.shortTerm,
+        ),
+      ];
+    await storage.init();
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    final titleFinder = find.byKey(
+      const ValueKey('desktop-focus-title-focus-readable-task'),
+    );
+    final surfaceFinder = find.byKey(
+      const ValueKey('desktop-focus-surface-focus-readable-task'),
+    );
+    expect(tester.widget<Text>(titleFinder).maxLines, 2);
+    expect(find.text('+500'), findsOneWidget);
+    final normalHeight = tester.getSize(surfaceFinder).height;
+
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<Text>(titleFinder).maxLines, 3);
+    expect(tester.getSize(surfaceFinder).height, greaterThan(normalHeight));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('desktop Inbox is content-led and submits with Enter', (
     WidgetTester tester,
   ) async {
@@ -583,6 +661,26 @@ void main() {
       findsOneWidget,
     );
 
+    await tester.tap(find.byKey(const ValueKey('map-skill-orb-road-shell-b')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('desktop-roadmap-context-road-shell-b')),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .getSemantics(
+            find.byKey(const ValueKey('desktop-skill-semantics-road-shell-b')),
+          )
+          .flagsCollection
+          .isSelected,
+      Tristate.isTrue,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('desktop-skill-road-shell-b')));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+
     await tester.tap(find.byKey(const ValueKey('desktop-skill-road-shell-a')));
     await tester.pumpAndSettle();
     expect(
@@ -607,6 +705,24 @@ void main() {
       find.byKey(const ValueKey('desktop-roadmap-template-grid')),
       findsOneWidget,
     );
+    final desktopTemplateGrid = tester.widget<GridView>(
+      find.byKey(const ValueKey('desktop-roadmap-template-grid')),
+    );
+    expect(
+      (desktopTemplateGrid.gridDelegate
+              as SliverGridDelegateWithFixedCrossAxisCount)
+          .crossAxisCount,
+      1,
+    );
+    for (final title in ['Простой', 'Нормальный', 'Сложный', 'Свой путь']) {
+      expect(find.text(title), findsOneWidget);
+      expect(
+        tester
+            .widget<Text>(find.byKey(ValueKey('roadmap-template-title-$title')))
+            .maxLines,
+        2,
+      );
+    }
 
     await tester.tap(find.byKey(const ValueKey('desktop-skill-road-shell-b')));
     await tester.pumpAndSettle();
@@ -765,6 +881,7 @@ void main() {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
 
       final used = Skill(
         id: 'used-empty-skill',
@@ -815,9 +932,23 @@ void main() {
       final roadmap = find.byKey(
         const ValueKey('desktop-skill-roadmap-used-empty-skill'),
       );
+      final content = find.byKey(
+        const ValueKey('desktop-skill-content-used-empty-skill'),
+      );
       final initialRect = tester.getRect(row);
       expect(tester.widget<AnimatedOpacity>(overflow).opacity, 0);
       expect(tester.widget<AnimatedOpacity>(roadmap).opacity, 0);
+      expect(
+        (tester.widget<AnimatedPadding>(content).padding as EdgeInsets).right,
+        0,
+      );
+      expect(
+        find.descendant(
+          of: row,
+          matching: find.byIcon(Icons.drag_indicator_rounded),
+        ),
+        findsNothing,
+      );
 
       final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
       await mouse.addPointer(location: const Offset(1, 1));
@@ -827,8 +958,13 @@ void main() {
       expect(tester.getRect(row), initialRect);
       expect(tester.widget<AnimatedOpacity>(overflow).opacity, 1);
       expect(tester.widget<AnimatedOpacity>(roadmap).opacity, 1);
+      expect(
+        (tester.widget<AnimatedPadding>(content).padding as EdgeInsets).right,
+        58,
+      );
 
-      await tester.tap(find.byTooltip('Действия с навыком ${used.name}'));
+      await tester.pumpAndSettle();
+      await tester.tap(overflow);
       await tester.pumpAndSettle();
       await mouse.moveTo(const Offset(1000, 700));
       await tester.pump(const Duration(milliseconds: 140));
@@ -836,6 +972,26 @@ void main() {
       expect(find.text('Редактировать навык'), findsOneWidget);
       await tester.tapAt(const Offset(1000, 700));
       await tester.pumpAndSettle();
+
+      final skillList = tester.widget<ReorderableListView>(
+        find.byKey(const ValueKey('desktop-skill-list')),
+      );
+      skillList.onReorderItem!.call(0, 1);
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .getTopLeft(
+              find.byKey(const ValueKey('desktop-skill-fresh-empty-skill')),
+            )
+            .dy,
+        lessThan(
+          tester
+              .getTopLeft(
+                find.byKey(const ValueKey('desktop-skill-used-empty-skill')),
+              )
+              .dy,
+        ),
+      );
 
       await tester.tap(
         find.byKey(const ValueKey('desktop-skill-fresh-empty-skill')),
@@ -847,6 +1003,19 @@ void main() {
       );
       expect(find.text('АКТИВНЫЕ · 0'), findsNothing);
       expect(find.text('ВЫПОЛНЕНО · 0'), findsNothing);
+
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .getSize(
+              find.byKey(
+                const ValueKey('desktop-skill-surface-fresh-empty-skill'),
+              ),
+            )
+            .height,
+        greaterThanOrEqualTo(62),
+      );
       expect(tester.takeException(), isNull);
     },
   );
@@ -3857,6 +4026,19 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Шаблоны путей'), findsOneWidget);
+    final mobileTemplateGrid = tester.widget<GridView>(
+      find.byKey(const ValueKey('desktop-roadmap-template-grid')),
+    );
+    expect(
+      (mobileTemplateGrid.gridDelegate
+              as SliverGridDelegateWithFixedCrossAxisCount)
+          .crossAxisCount,
+      1,
+    );
+    expect(find.text('Простой'), findsOneWidget);
+    expect(find.text('Нормальный'), findsOneWidget);
+    expect(find.text('Сложный'), findsOneWidget);
+    expect(find.text('Свой путь'), findsOneWidget);
     await tester.tap(find.text('Закрыть'));
     await tester.pumpAndSettle();
 

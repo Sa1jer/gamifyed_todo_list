@@ -47,8 +47,12 @@ class _DesktopWorkspaceShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = DesktopJournalTokens.resolve(state.isDark);
     final selected = state.selectedSkill;
-    final effectiveSkill = selected ?? state.roadmapSkills.firstOrNull;
     final actMode = mode == WorkspaceMode.act;
+    final effectiveSkill = mode == WorkspaceMode.mastery
+        ? selected?.id == kInboxSkillId
+              ? null
+              : selected
+        : selected ?? state.roadmapSkills.firstOrNull;
 
     return ColoredBox(
       key: const ValueKey('desktop-three-panel-shell'),
@@ -242,11 +246,8 @@ class _DesktopSidebar extends StatelessWidget {
                 Expanded(
                   child: Text(
                     'НАВЫКИ',
-                    style: TextStyle(
+                    style: context.appTextRoles.sectionEyebrow.copyWith(
                       color: tokens.mutedText,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0.8,
                     ),
                   ),
                 ),
@@ -334,8 +335,8 @@ class _DesktopBrand extends StatelessWidget {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: SizedBox(
-          height: 64,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 64),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
@@ -359,9 +360,8 @@ class _DesktopBrand extends StatelessWidget {
                     'RPG To-Do',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
+                    style: context.appTextTheme.titleMedium?.copyWith(
                       color: tokens.text,
-                      fontSize: 16,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -553,8 +553,13 @@ class _DesktopNavItemState extends State<_DesktopNavItem> {
               child: AnimatedContainer(
                 duration: DesktopJournalTokens.fastMotion,
                 curve: DesktopJournalTokens.motionCurve,
-                height: widget.compact ? 36 : 42,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
+                constraints: BoxConstraints(
+                  minHeight: widget.compact ? 36 : 42,
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: active
                       ? tokens.profilePurple.withValues(alpha: 0.16)
@@ -583,9 +588,8 @@ class _DesktopNavItemState extends State<_DesktopNavItem> {
                         widget.label,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
+                        style: context.appTextTheme.labelLarge?.copyWith(
                           color: active ? tokens.text : tokens.mutedText,
-                          fontSize: 13,
                           fontWeight: active
                               ? FontWeight.w800
                               : FontWeight.w700,
@@ -649,11 +653,18 @@ class _DesktopSkillRowState extends State<_DesktopSkillRow> {
     final tokens = widget.tokens;
     final selected = widget.selected;
     final actionsVisible = _hovered || _focused || _menuOpen;
+    final textTheme = context.appTextTheme;
+    final roles = context.appTextRoles;
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
+    final allowSecondTitleLine = textScale >= 1.6;
+    const actionTrayWidth = 58.0;
     return Semantics(
+      key: ValueKey('desktop-skill-semantics-${skill.id}'),
       button: true,
       selected: selected,
       label:
           '${skill.name}, уровень ${skill.level}, ${widget.activeCount} активных квестов',
+      hint: 'Удерживайте и перетащите, чтобы изменить порядок',
       child: Focus(
         onFocusChange: (value) => setState(() => _focused = value),
         child: MouseRegion(
@@ -669,10 +680,11 @@ class _DesktopSkillRowState extends State<_DesktopSkillRow> {
               ),
               overlayColor: const WidgetStatePropertyAll(Colors.transparent),
               child: AnimatedContainer(
+                key: ValueKey('desktop-skill-surface-${skill.id}'),
                 duration: DesktopJournalTokens.fastMotion,
                 curve: DesktopJournalTokens.motionCurve,
-                height: 62,
-                padding: const EdgeInsets.fromLTRB(10, 5, 7, 5),
+                constraints: const BoxConstraints(minHeight: 62),
+                padding: const EdgeInsets.fromLTRB(10, 7, 7, 7),
                 decoration: BoxDecoration(
                   color: selected
                       ? skill.color.withValues(alpha: 0.11)
@@ -688,129 +700,163 @@ class _DesktopSkillRowState extends State<_DesktopSkillRow> {
                         : Colors.transparent,
                   ),
                 ),
-                child: Row(
+                child: Stack(
+                  alignment: Alignment.centerRight,
                   children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: skill.color.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(10),
+                    AnimatedPadding(
+                      key: ValueKey('desktop-skill-content-${skill.id}'),
+                      duration: DesktopJournalTokens.fastMotion,
+                      curve: DesktopJournalTokens.motionCurve,
+                      padding: EdgeInsets.only(
+                        right: actionsVisible ? actionTrayWidth : 0,
                       ),
-                      child: Icon(skill.icon, color: skill.color, size: 19),
-                    ),
-                    const SizedBox(width: 9),
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Row(
                         children: [
-                          Text(
-                            skill.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: selected ? tokens.text : tokens.text,
-                              fontSize: 12.5,
-                              height: 1,
-                              fontWeight: FontWeight.w900,
+                          Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: skill.color.withValues(alpha: 0.14),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(
+                              skill.icon,
+                              color: skill.color,
+                              size: 19,
                             ),
                           ),
-                          const SizedBox(height: 3),
-                          Text(
-                            'Ур. ${skill.level} · ${widget.activeCount} кв.',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: selected ? skill.color : tokens.mutedText,
-                              fontSize: 10.5,
-                              height: 1,
-                              fontWeight: FontWeight.w700,
+                          const SizedBox(width: 9),
+                          Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  skill.name,
+                                  maxLines: allowSecondTitleLine ? 2 : 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: textTheme.titleSmall?.copyWith(
+                                    color: tokens.text,
+                                    height: 1.08,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  'Ур. ${skill.level} · ${widget.activeCount} кв.',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: roles.compactMetadata.copyWith(
+                                    color: selected
+                                        ? skill.color
+                                        : tokens.mutedText,
+                                    height: 1,
+                                  ),
+                                ),
+                                const SizedBox(height: 5),
+                                _DesktopProgressBar(
+                                  value: skill.progress,
+                                  color: skill.color,
+                                  background: skill.color.withValues(
+                                    alpha: 0.12,
+                                  ),
+                                  height: 4,
+                                ),
+                              ],
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          _DesktopProgressBar(
-                            value: skill.progress,
-                            color: skill.color,
-                            background: skill.color.withValues(alpha: 0.12),
-                            height: 4,
                           ),
                         ],
                       ),
                     ),
-                    AnimatedOpacity(
-                      key: ValueKey('desktop-skill-roadmap-${skill.id}'),
-                      duration: DesktopJournalTokens.fastMotion,
-                      opacity: actionsVisible ? 1 : 0,
-                      child: IgnorePointer(
-                        ignoring: !actionsVisible,
-                        child: SizedBox(
-                          width: 28,
-                          child: IconButton(
-                            tooltip: 'Открыть путь навыка в RoadMap',
-                            padding: EdgeInsets.zero,
-                            onPressed: widget.onRoadmap,
-                            icon: Icon(
-                              Icons.route_rounded,
-                              size: 16,
-                              color: skill.color,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    SizedBox(
-                      width: 22,
-                      child: Tooltip(
-                        message: 'Перетащите навык долгим нажатием',
-                        child: Icon(
-                          Icons.drag_indicator_rounded,
-                          size: 16,
-                          color: tokens.mutedText.withValues(alpha: 0.72),
-                        ),
-                      ),
-                    ),
-                    AnimatedOpacity(
-                      key: ValueKey('desktop-skill-overflow-${skill.id}'),
-                      duration: DesktopJournalTokens.fastMotion,
-                      opacity: actionsVisible ? 1 : 0,
-                      child: IgnorePointer(
-                        ignoring: !actionsVisible,
-                        child: SizedBox(
-                          width: 28,
-                          child: PopupMenuButton<String>(
-                            tooltip: 'Действия с навыком ${skill.name}',
-                            padding: EdgeInsets.zero,
-                            icon: Icon(
-                              Icons.more_vert_rounded,
-                              size: 17,
-                              color: tokens.mutedText,
-                            ),
-                            color: tokens.raisedSurface,
-                            onOpened: () => setState(() => _menuOpen = true),
-                            onCanceled: () => setState(() => _menuOpen = false),
-                            onSelected: (value) {
-                              setState(() => _menuOpen = false);
-                              if (value == 'edit') widget.onEdit();
-                              if (value == 'delete') widget.onDelete();
-                            },
-                            itemBuilder: (_) => [
-                              PopupMenuItem(
-                                value: 'edit',
-                                child: Text(
-                                  'Редактировать навык',
-                                  style: TextStyle(color: tokens.text),
+                    IgnorePointer(
+                      ignoring: !actionsVisible,
+                      child: AnimatedSlide(
+                        duration: DesktopJournalTokens.fastMotion,
+                        curve: DesktopJournalTokens.motionCurve,
+                        offset: actionsVisible
+                            ? Offset.zero
+                            : const Offset(0.28, 0),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            AnimatedOpacity(
+                              key: ValueKey(
+                                'desktop-skill-roadmap-${skill.id}',
+                              ),
+                              duration: DesktopJournalTokens.fastMotion,
+                              opacity: actionsVisible ? 1 : 0,
+                              child: SizedBox(
+                                width: 28,
+                                child: IconButton(
+                                  tooltip: 'Открыть путь навыка в RoadMap',
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints.tightFor(
+                                    width: 28,
+                                    height: 40,
+                                  ),
+                                  onPressed: widget.onRoadmap,
+                                  icon: Icon(
+                                    Icons.route_rounded,
+                                    size: 16,
+                                    color: skill.color,
+                                  ),
                                 ),
                               ),
-                              PopupMenuItem(
-                                value: 'delete',
-                                child: Text(
-                                  'Удалить навык',
-                                  style: TextStyle(color: tokens.danger),
+                            ),
+                            AnimatedOpacity(
+                              key: ValueKey(
+                                'desktop-skill-overflow-${skill.id}',
+                              ),
+                              duration: DesktopJournalTokens.fastMotion,
+                              opacity: actionsVisible ? 1 : 0,
+                              child: SizedBox(
+                                width: 28,
+                                child: PopupMenuButton<String>(
+                                  tooltip: 'Действия с навыком ${skill.name}',
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints.tightFor(
+                                    width: 28,
+                                    height: 40,
+                                  ),
+                                  icon: Icon(
+                                    Icons.more_vert_rounded,
+                                    size: 17,
+                                    color: tokens.mutedText,
+                                  ),
+                                  color: tokens.raisedSurface,
+                                  onOpened: () =>
+                                      setState(() => _menuOpen = true),
+                                  onCanceled: () =>
+                                      setState(() => _menuOpen = false),
+                                  onSelected: (value) {
+                                    setState(() => _menuOpen = false);
+                                    if (value == 'edit') widget.onEdit();
+                                    if (value == 'delete') widget.onDelete();
+                                  },
+                                  itemBuilder: (_) => [
+                                    PopupMenuItem(
+                                      value: 'edit',
+                                      child: Text(
+                                        'Редактировать навык',
+                                        style: textTheme.bodyMedium?.copyWith(
+                                          color: tokens.text,
+                                        ),
+                                      ),
+                                    ),
+                                    PopupMenuItem(
+                                      value: 'delete',
+                                      child: Text(
+                                        'Удалить навык',
+                                        style: textTheme.bodyMedium?.copyWith(
+                                          color: tokens.danger,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -860,18 +906,16 @@ class _DesktopInboxShortcut extends StatelessWidget {
               Expanded(
                 child: Text(
                   'Задачник',
-                  style: TextStyle(
+                  style: context.appTextTheme.labelLarge?.copyWith(
                     color: tokens.text,
-                    fontSize: 12,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
               Text(
                 '$active',
-                style: const TextStyle(
+                style: context.appTextRoles.compactMetadata.copyWith(
                   color: Color(0xFF2ED36F),
-                  fontSize: 11,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -891,31 +935,41 @@ class _DesktopSidebarEmpty extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.bolt_rounded, color: tokens.mutedText, size: 24),
-          const SizedBox(height: 8),
-          Text(
-            'Создай первый навык',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: tokens.text,
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxHeight < 86) {
+          return const SizedBox.shrink();
+        }
+        return Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.bolt_rounded, color: tokens.mutedText, size: 24),
+                const SizedBox(height: 8),
+                Text(
+                  'Создай первый навык',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: context.appTextTheme.bodySmall?.copyWith(
+                    color: tokens.text,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _DesktopCompactButton(
+                  label: 'Навык',
+                  icon: Icons.add_rounded,
+                  color: tokens.profilePurple,
+                  onTap: onAdd,
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 8),
-          _DesktopCompactButton(
-            label: 'Навык',
-            icon: Icons.add_rounded,
-            color: tokens.profilePurple,
-            onTap: onAdd,
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -1015,10 +1069,14 @@ class _DesktopMainWorkspace extends StatelessWidget {
             LayoutBuilder(
               builder: (context, constraints) {
                 final columns = constraints.maxWidth >= 690 ? 4 : 2;
+                final textScale = MediaQuery.textScalerOf(context).scale(1);
+                final childAspectRatio = textScale >= 1.6
+                    ? (columns == 4 ? 1.25 : 1.6)
+                    : (columns == 4 ? 2.25 : 2.7);
                 return GridView.count(
                   key: const ValueKey('desktop-today-stats'),
                   crossAxisCount: columns,
-                  childAspectRatio: columns == 4 ? 2.25 : 2.7,
+                  childAspectRatio: childAspectRatio,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
                   shrinkWrap: true,
@@ -1518,37 +1576,48 @@ class _DesktopFirstQuestEmpty extends StatelessWidget {
   const _DesktopFirstQuestEmpty({required this.tokens, required this.color});
 
   @override
-  Widget build(BuildContext context) => Container(
-    key: const ValueKey('desktop-first-quest-empty'),
-    constraints: const BoxConstraints(minHeight: 150),
-    padding: const EdgeInsets.all(28),
-    decoration: BoxDecoration(
-      color: color.withValues(alpha: 0.035),
-      borderRadius: BorderRadius.circular(DesktopJournalTokens.taskRadius),
-      border: Border.all(color: color.withValues(alpha: 0.16)),
-    ),
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(Icons.task_alt_rounded, color: color, size: 34),
-        const SizedBox(height: 12),
-        Text(
-          'Добавь свой первый квест',
-          style: TextStyle(
-            color: tokens.text,
-            fontSize: 17,
-            fontWeight: FontWeight.w900,
+  Widget build(BuildContext context) {
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
+    final largeText = textScale >= 1.6;
+    return Container(
+      key: const ValueKey('desktop-first-quest-empty'),
+      constraints: BoxConstraints(minHeight: largeText ? 205 : 150),
+      padding: EdgeInsets.all(largeText ? 22 : 28),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.035),
+        borderRadius: BorderRadius.circular(DesktopJournalTokens.taskRadius),
+        border: Border.all(color: color.withValues(alpha: 0.16)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.task_alt_rounded, color: color, size: largeText ? 30 : 34),
+          const SizedBox(height: 12),
+          Text(
+            'Добавь свой первый квест',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: context.appTextTheme.titleMedium?.copyWith(
+              color: tokens.text,
+              fontWeight: FontWeight.w900,
+            ),
           ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'Кнопка «Новый квест» выше запустит первое действие.',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: tokens.mutedText, height: 1.35),
-        ),
-      ],
-    ),
-  );
+          const SizedBox(height: 6),
+          Text(
+            'Кнопка «Новый квест» выше запустит первое действие.',
+            maxLines: largeText ? 3 : 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: context.appTextTheme.bodySmall?.copyWith(
+              color: tokens.mutedText,
+              height: 1.35,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _DesktopQuestRow extends StatefulWidget {
@@ -1911,10 +1980,8 @@ class _DesktopRewardPill extends StatelessWidget {
             const SizedBox(width: 4),
             Text(
               '+$value XP',
-              style: TextStyle(
+              style: context.appTextRoles.reward.copyWith(
                 color: tokens.rewardGold,
-                fontSize: 10.5,
-                fontWeight: FontWeight.w900,
               ),
             ),
           ],
@@ -1937,6 +2004,8 @@ class _DesktopRightRail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = context.appTextTheme;
+    final roles = context.appTextRoles;
     final today = DateTime.now();
     final completedToday = state.tasks
         .where(
@@ -1996,10 +2065,8 @@ class _DesktopRightRail extends StatelessWidget {
                         Center(
                           child: Text(
                             '${(focusProgress * 100).round()}%',
-                            style: TextStyle(
+                            style: roles.numericRing.copyWith(
                               color: tokens.text,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w900,
                             ),
                           ),
                         ),
@@ -2013,19 +2080,13 @@ class _DesktopRightRail extends StatelessWidget {
                       children: [
                         Text(
                           '$completedCount/$totalCount',
-                          style: TextStyle(
-                            color: tokens.text,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                          ),
+                          style: roles.statValue.copyWith(color: tokens.text),
                         ),
                         const SizedBox(height: 3),
                         Text(
                           'квестов выполнено',
-                          style: TextStyle(
+                          style: roles.compactMetadata.copyWith(
                             color: tokens.mutedText,
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ],
@@ -2062,14 +2123,10 @@ class _DesktopRightRail extends StatelessWidget {
             const SizedBox(height: 18),
             Text(
               'ЗА НЕДЕЛЮ',
-              style: TextStyle(
-                color: tokens.mutedText,
-                fontSize: 10.5,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0.7,
-              ),
+              key: const ValueKey('desktop-weekly-section-title'),
+              style: roles.sectionEyebrow.copyWith(color: tokens.mutedText),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 10),
             _DesktopWeeklyBars(
               values: weekly,
               maxValue: maxWeekly,
@@ -2077,14 +2134,16 @@ class _DesktopRightRail extends StatelessWidget {
               tokens: tokens,
             ),
             const SizedBox(height: 20),
+            Divider(
+              key: const ValueKey('desktop-weekly-xp-divider'),
+              height: 1,
+              color: tokens.subtleOutline,
+            ),
+            const SizedBox(height: 20),
             Text(
               'XP ПО НАВЫКАМ',
-              style: TextStyle(
-                color: tokens.mutedText,
-                fontSize: 10.5,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0.7,
-              ),
+              key: const ValueKey('desktop-skill-xp-section-title'),
+              style: roles.sectionEyebrow.copyWith(color: tokens.mutedText),
             ),
             const SizedBox(height: 12),
             if (skills.isEmpty)
@@ -2114,18 +2173,16 @@ class _DesktopRightRail extends StatelessWidget {
                             skill.name,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
+                            style: textTheme.bodySmall?.copyWith(
                               color: tokens.mutedText,
-                              fontSize: 11,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
                         ),
                         Text(
                           '${skill.xp}',
-                          style: TextStyle(
+                          style: roles.compactMetadata.copyWith(
                             color: skill.color,
-                            fontSize: 11,
                             fontWeight: FontWeight.w900,
                           ),
                         ),
@@ -2171,9 +2228,8 @@ class _DesktopRailHeading extends StatelessWidget {
         Expanded(
           child: Text(
             title,
-            style: TextStyle(
+            style: context.appTextTheme.titleMedium?.copyWith(
               color: tokens.text,
-              fontSize: 14,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -2218,6 +2274,8 @@ class _DesktopFocusTaskState extends State<_DesktopFocusTask> {
         : state.previewEarnedXP(task);
     final active = _hovered || _focused;
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final textTheme = context.appTextTheme;
+    final roles = context.appTextRoles;
     void activate() {
       if (task.isDone) {
         state.uncompleteTask(task.id);
@@ -2281,87 +2339,125 @@ class _DesktopFocusTaskState extends State<_DesktopFocusTask> {
                     : tokens.outline,
               ),
             ),
-            child: Row(
-              children: [
-                Container(
-                  width: 26,
-                  height: 26,
-                  decoration: BoxDecoration(
-                    color: task.isDone
-                        ? tokens.successGreen
-                        : color.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: task.isDone ? tokens.successGreen : color,
-                    ),
-                  ),
-                  child: task.isDone
-                      ? const Icon(
-                          Icons.check_rounded,
-                          color: Colors.white,
-                          size: 15,
-                        )
-                      : null,
-                ),
-                const SizedBox(width: 9),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        task.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final textScale = MediaQuery.textScalerOf(context).scale(1);
+                final reflowReward =
+                    constraints.maxWidth < 205 || textScale >= 1.6;
+                final compact = constraints.maxWidth < 188 && textScale < 1.6;
+                final titleMaxLines = textScale >= 1.6
+                    ? 3
+                    : compact
+                    ? 1
+                    : 2;
+                final titleStyle =
+                    (compact ? textTheme.labelLarge : textTheme.titleSmall)
+                        ?.copyWith(
                           color: task.isDone ? tokens.mutedText : tokens.text,
-                          fontSize: 11.5,
                           fontWeight: FontWeight.w800,
                           decoration: task.isDone
                               ? TextDecoration.lineThrough
                               : null,
+                        );
+                final metadata = Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 5,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    Flexible(
+                      child: Text(
+                        skill?.name ?? 'Навык',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: roles.compactMetadata.copyWith(
+                          color: tokens.mutedText,
                         ),
                       ),
-                      const SizedBox(height: 3),
-                      Row(
-                        children: [
-                          Container(
-                            width: 5,
-                            height: 5,
-                            decoration: BoxDecoration(
-                              color: color,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 5),
-                          Expanded(
-                            child: Text(
-                              skill?.name ?? 'Навык',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: tokens.mutedText,
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Text(
+                    ),
+                  ],
+                );
+                final rewardText = Text(
                   '+$reward',
-                  style: TextStyle(
+                  key: ValueKey('desktop-focus-reward-${task.id}'),
+                  maxLines: 1,
+                  style: roles.reward.copyWith(
                     color: task.isDone
                         ? tokens.successGreen
                         : tokens.rewardGold,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w900,
                   ),
-                ),
-              ],
+                );
+                final title = Text(
+                  task.title,
+                  key: ValueKey('desktop-focus-title-${task.id}'),
+                  maxLines: titleMaxLines,
+                  overflow: TextOverflow.ellipsis,
+                  style: titleStyle,
+                );
+
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 26,
+                      height: 26,
+                      margin: const EdgeInsets.only(top: 1),
+                      decoration: BoxDecoration(
+                        color: task.isDone
+                            ? tokens.successGreen
+                            : color.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: task.isDone ? tokens.successGreen : color,
+                        ),
+                      ),
+                      child: task.isDone
+                          ? const Icon(
+                              Icons.check_rounded,
+                              color: Colors.white,
+                              size: 15,
+                            )
+                          : null,
+                    ),
+                    const SizedBox(width: 9),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          title,
+                          const SizedBox(height: 4),
+                          if (reflowReward)
+                            Row(
+                              children: [
+                                Expanded(child: metadata),
+                                const SizedBox(width: 8),
+                                rewardText,
+                              ],
+                            )
+                          else
+                            metadata,
+                        ],
+                      ),
+                    ),
+                    if (!reflowReward) ...[
+                      const SizedBox(width: 8),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(minWidth: 32),
+                        child: Align(
+                          alignment: Alignment.topRight,
+                          child: rewardText,
+                        ),
+                      ),
+                    ],
+                  ],
+                );
+              },
             ),
           ),
         ),
@@ -2386,6 +2482,8 @@ class _DesktopWeeklyBars extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const labels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
+    final chartHeight = textScale >= 1.6 ? 104.0 : 66.0;
     final summary = List.generate(
       7,
       (index) => '${labels[index]}: ${values[index]}',
@@ -2393,7 +2491,8 @@ class _DesktopWeeklyBars extends StatelessWidget {
     return Semantics(
       label: 'Активность за неделю: $summary',
       child: SizedBox(
-        height: 82,
+        key: const ValueKey('desktop-weekly-chart'),
+        height: chartHeight,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: List.generate(7, (index) {
@@ -2412,7 +2511,7 @@ class _DesktopWeeklyBars extends StatelessWidget {
                         duration: DesktopJournalTokens.standardMotion,
                         curve: DesktopJournalTokens.motionCurve,
                         width: 8,
-                        height: 8 + 42 * fraction,
+                        height: 7 + 32 * fraction,
                         decoration: BoxDecoration(
                           color: isToday
                               ? tokens.profilePurple
@@ -2424,11 +2523,11 @@ class _DesktopWeeklyBars extends StatelessWidget {
                     const SizedBox(height: 7),
                     Text(
                       labels[index],
-                      style: TextStyle(
+                      style: context.appTextTheme.labelSmall?.copyWith(
                         color: isToday
                             ? tokens.profilePurple
                             : tokens.mutedText,
-                        fontSize: 9,
+                        letterSpacing: 0,
                         fontWeight: isToday ? FontWeight.w900 : FontWeight.w700,
                       ),
                     ),
@@ -2453,9 +2552,8 @@ class _DesktopRailEmpty extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: TextStyle(
+      style: context.appTextTheme.bodySmall?.copyWith(
         color: tokens.mutedText,
-        fontSize: 10.5,
         fontWeight: FontWeight.w600,
       ),
     );

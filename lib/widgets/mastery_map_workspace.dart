@@ -9,6 +9,7 @@ import '../engines/roadmap_engine.dart';
 import '../engines/goal_progress_engine.dart';
 import '../feedback_service.dart';
 import '../models.dart';
+import '../theme/app_typography.dart';
 import '../utils.dart';
 import 'dialogs.dart';
 import 'shared.dart';

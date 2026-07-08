@@ -154,38 +154,13 @@ abstract final class MobileJournalTokens {
     final base = Theme.of(context).textTheme;
     final strong = text(isDark);
     final secondary = muted(isDark);
-    return base.copyWith(
-      headlineSmall: base.headlineSmall?.copyWith(
-        color: strong,
-        fontSize: 20,
-        fontWeight: FontWeight.w900,
-      ),
-      titleLarge: base.titleLarge?.copyWith(
-        color: strong,
-        fontSize: 18,
-        fontWeight: FontWeight.w900,
-      ),
-      titleMedium: base.titleMedium?.copyWith(
-        color: strong,
-        fontSize: 16,
-        fontWeight: FontWeight.w900,
-      ),
-      bodyMedium: base.bodyMedium?.copyWith(
-        color: strong,
-        fontSize: 13,
-        height: 1.35,
-      ),
-      bodySmall: base.bodySmall?.copyWith(
-        color: secondary,
-        fontSize: 11.5,
-        height: 1.3,
-      ),
-      labelLarge: base.labelLarge?.copyWith(
-        color: strong,
-        fontSize: 13,
-        fontWeight: FontWeight.w800,
-      ),
-    );
+    return base
+        .apply(displayColor: strong, bodyColor: strong)
+        .copyWith(
+          bodySmall: base.bodySmall?.copyWith(color: secondary),
+          labelMedium: base.labelMedium?.copyWith(color: secondary),
+          labelSmall: base.labelSmall?.copyWith(color: secondary),
+        );
   }
 
   static Color skillAccentSurfaceTint(Color skillColor, bool isDark) {

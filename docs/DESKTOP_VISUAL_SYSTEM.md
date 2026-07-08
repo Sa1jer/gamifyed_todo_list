@@ -175,3 +175,23 @@ mobile therefore keep their approved compositions without carrying an unused
 Flutter `3.44.3` is now the minimum project SDK because reorderable skill lists
 use `ReorderableListView.onReorderItem`. This prevents older Windows analyzer
 instances from reporting source errors against a newer framework API.
+
+## 1.3.55 Typography And Adaptive Content
+
+The desktop shell now uses the shared `AppTypography` / `AppTextRoles`
+foundation for new and migrated surfaces. The rule is to keep semantic text
+sizes stable and adapt layout instead of shrinking strings ad hoc.
+
+The practical desktop fixes in this boundary are:
+
+- nested or local `ThemeData` can no longer crash when `AppTextRoles` is absent;
+- RoadMap canvas selection now updates the sidebar selected skill, and sidebar
+  selection still updates the canvas without loops;
+- right-rail focus rows reflow long titles and XP at large text scale;
+- weekly activity grows vertically for large text labels;
+- skill rows reveal action menus on hover/focus without a permanent drag glyph;
+- RoadMap template cards wrap stable titles and switch to one column in narrow
+  or large-text panels.
+
+Detailed rules live in `docs/TYPOGRAPHY_SYSTEM.md` and
+`docs/CONTENT_ADAPTATION_POLICY.md`.

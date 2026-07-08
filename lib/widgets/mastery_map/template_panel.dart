@@ -6,6 +6,7 @@ const _roadmapGoalAnchorEstimatedHeight = 120.0;
 const _roadmapGoalAnchorHorizontalPadding = 20.0;
 const _roadmapGoalAnchorHeaderFontSize = 14.0;
 const _roadmapGoalAnchorHeaderIconSize = 17.0;
+const _roadmapGoalAnchorGoalFontSize = 16.0;
 
 Offset _feedbackOriginFor(BuildContext context) {
   final box = context.findRenderObject() as RenderBox?;
@@ -16,7 +17,6 @@ Offset _feedbackOriginFor(BuildContext context) {
 
 double _roadmapGoalAnchorWidth(String text) {
   final goal = text.trim();
-  final goalFontSize = _roadmapGoalAnchorGoalFontSize(goal);
   final headerWidth =
       _roadmapGoalAnchorHeaderIconSize +
       8 +
@@ -24,17 +24,13 @@ double _roadmapGoalAnchorWidth(String text) {
         'Цель пути',
         fontSize: _roadmapGoalAnchorHeaderFontSize,
       );
-  final goalWidth = _measureRoadmapAnchorText(goal, fontSize: goalFontSize);
+  final goalWidth = _measureRoadmapAnchorText(
+    goal,
+    fontSize: _roadmapGoalAnchorGoalFontSize,
+  );
   final contentWidth = math.max(headerWidth, goalWidth);
   final width = contentWidth + _roadmapGoalAnchorHorizontalPadding * 2;
   return width.clamp(178.0, 340.0).toDouble();
-}
-
-double _roadmapGoalAnchorGoalFontSize(String text) {
-  final length = text.trim().length;
-  if (length <= 28) return 17.7;
-  if (length <= 44) return 16.4;
-  return 15.4;
 }
 
 double _measureRoadmapAnchorText(String text, {required double fontSize}) {
@@ -96,9 +92,8 @@ class _RoadmapGoalAnchor extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text(
                     'Цель пути',
-                    style: TextStyle(
+                    style: context.appTextTheme.titleSmall?.copyWith(
                       color: skill.color,
-                      fontSize: _roadmapGoalAnchorHeaderFontSize,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 0.2,
                     ),
@@ -111,9 +106,8 @@ class _RoadmapGoalAnchor extends StatelessWidget {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: context.appTextTheme.titleMedium?.copyWith(
                   color: textColor(isDark),
-                  fontSize: _roadmapGoalAnchorGoalFontSize(goal),
                   height: 1.15,
                   fontWeight: FontWeight.w900,
                 ),
@@ -192,18 +186,16 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
                   children: [
                     Text(
                       'Шаблоны путей',
-                      style: TextStyle(
+                      style: context.appTextTheme.titleSmall?.copyWith(
                         color: textColor(isDark),
-                        fontSize: 13.0,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
                     const SizedBox(height: 1),
                     Text(
                       'Выберите одну структуру пути для навыка.',
-                      style: TextStyle(
+                      style: context.appTextTheme.bodySmall?.copyWith(
                         color: subtext(isDark),
-                        fontSize: 10.8,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -214,19 +206,19 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
           ),
           const SizedBox(height: 9),
           LayoutBuilder(
-            builder: (context, constraints) => GridView.count(
-              key: const ValueKey('desktop-roadmap-template-grid'),
-              crossAxisCount: constraints.maxWidth >= 430 ? 4 : 2,
-              childAspectRatio: 1.75,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
+            builder: (context, constraints) {
+              final textScale = MediaQuery.textScalerOf(context).scale(1);
+              final twoColumns = constraints.maxWidth >= 320 && textScale < 1.8;
+              final extent = twoColumns
+                  ? (112 + (textScale - 1) * 28).clamp(112, 136).toDouble()
+                  : (76 + (textScale - 1) * 34).clamp(76, 112).toDouble();
+              final choices = [
                 _RoadmapTemplateChoice(
+                  key: const ValueKey('roadmap-template-choice-simple'),
                   label: 'Простой',
                   subtitle: '1 дорога',
                   icon: Icons.linear_scale_rounded,
+                  vertical: twoColumns,
                   selected: _template == RoadmapTemplate.simple,
                   isDark: isDark,
                   color: color,
@@ -236,9 +228,11 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
                   }),
                 ),
                 _RoadmapTemplateChoice(
+                  key: const ValueKey('roadmap-template-choice-normal'),
                   label: 'Нормальный',
                   subtitle: '2 дороги',
                   icon: Icons.call_split_rounded,
+                  vertical: twoColumns,
                   selected: _template == RoadmapTemplate.normal,
                   isDark: isDark,
                   color: color,
@@ -248,9 +242,11 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
                   }),
                 ),
                 _RoadmapTemplateChoice(
+                  key: const ValueKey('roadmap-template-choice-hard'),
                   label: 'Сложный',
                   subtitle: '3 дороги',
                   icon: Icons.hub_outlined,
+                  vertical: twoColumns,
                   selected: _template == RoadmapTemplate.hard,
                   isDark: isDark,
                   color: color,
@@ -260,17 +256,32 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
                   }),
                 ),
                 _RoadmapTemplateChoice(
-                  label: 'Свой',
+                  key: const ValueKey('roadmap-template-choice-custom'),
+                  label: 'Свой путь',
                   subtitle: 'Точная настройка',
                   icon: Icons.tune_rounded,
+                  vertical: twoColumns,
                   selected: _template == RoadmapTemplate.custom,
                   isDark: isDark,
                   color: color,
                   onTap: () =>
                       setState(() => _template = RoadmapTemplate.custom),
                 ),
-              ],
-            ),
+              ];
+              return GridView.builder(
+                key: const ValueKey('desktop-roadmap-template-grid'),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: twoColumns ? 2 : 1,
+                  mainAxisExtent: extent,
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
+                ),
+                itemCount: choices.length,
+                itemBuilder: (context, index) => choices[index],
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+              );
+            },
           ),
           const SizedBox(height: 9),
           _RoadmapCounterControl(
@@ -396,15 +407,18 @@ class _RoadmapTemplateChoice extends StatelessWidget {
   final String label;
   final String subtitle;
   final IconData icon;
+  final bool vertical;
   final bool selected;
   final bool isDark;
   final Color color;
   final VoidCallback onTap;
 
   const _RoadmapTemplateChoice({
+    super.key,
     required this.label,
     required this.subtitle,
     required this.icon,
+    required this.vertical,
     required this.selected,
     required this.isDark,
     required this.color,
@@ -435,36 +449,74 @@ class _RoadmapTemplateChoice extends StatelessWidget {
             width: selected ? 1.4 : 1,
           ),
         ),
-        child: Row(
-          children: [
-            Icon(icon, color: selected ? color : subtext(isDark), size: 18),
-            const SizedBox(width: 7),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+        child: vertical
+            ? Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Icon(
+                    icon,
+                    color: selected ? color : subtext(isDark),
+                    size: 20,
+                  ),
+                  const Spacer(),
                   Text(
                     label,
-                    maxLines: 1,
+                    key: ValueKey('roadmap-template-title-$label'),
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
+                    style: context.appTextTheme.titleSmall?.copyWith(
                       color: selected ? color : textColor(isDark),
-                      fontSize: 11.5,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
+                  const SizedBox(height: 2),
                   Text(
                     subtitle,
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: subtext(isDark), fontSize: 9.5),
+                    style: context.appTextTheme.bodySmall?.copyWith(
+                      color: subtext(isDark),
+                    ),
+                  ),
+                ],
+              )
+            : Row(
+                children: [
+                  Icon(
+                    icon,
+                    color: selected ? color : subtext(isDark),
+                    size: 20,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          label,
+                          key: ValueKey('roadmap-template-title-$label'),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: context.appTextTheme.titleSmall?.copyWith(
+                            color: selected ? color : textColor(isDark),
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: context.appTextTheme.bodySmall?.copyWith(
+                            color: subtext(isDark),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
-            ),
-          ],
-        ),
       ),
     ),
   );

@@ -1070,9 +1070,8 @@ class _MobileMasteryQuestRow extends StatelessWidget {
                   task.title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
+                  style: context.appTextTheme.titleSmall?.copyWith(
                     color: task.isDone ? sub : textColor(isDark),
-                    fontSize: _adaptiveQuestTitleFontSize(task.title),
                     height: 1.12,
                     fontWeight: FontWeight.w900,
                     decoration: task.isDone
@@ -1089,9 +1088,8 @@ class _MobileMasteryQuestRow extends StatelessWidget {
                       : typeLabel[task.type]!,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
+                  style: context.appTextRoles.compactMetadata.copyWith(
                     color: sub,
-                    fontSize: 10.8,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
