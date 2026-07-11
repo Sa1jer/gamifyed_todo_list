@@ -50,7 +50,7 @@ Do not mix these product decisions into Release / Regression Hardening. Revisit 
 - [x] Replace mobile TopBar/ProfileBar stacking with one SafeArea identity header and captured-state secondary-actions sheet while preserving desktop chrome.
 - [x] Split mobile `Сейчас` into Overview and Skill Focus with reorderable full-width level-XP progress cards, explicit `Обзор`, and one focus surface.
 - [x] Move Inbox out of the mobile skill selector into a separate animated accordion while preserving its system ID and desktop presentation.
-- [x] Add mobile `Путь навыка` as the default scroll route with runtime branch pills, safe details/templates sheets, and the existing canvas as `Свободная карта`.
+- [x] Replace the two mobile RoadMap modes with one vertical graph route: runtime branch pills, circular stage nodes, alternating stage cards, safe details/templates sheets, and no mobile free-map canvas.
 - [x] Redesign mobile AddSkill around a live emblem, meaningful icon semantics/runtime categories, squircle colors, dirty-draft safety, and one bottom CTA.
 - [ ] Extend automated accessibility gates beyond the journal: minimum tap targets, focus order, screen-reader traversal, and `200%` text scaling across dialogs/statistics/rewards at `360/393/430dp`.
 - [ ] Add a device-local last-active skill/resumption context with an obvious return to the skill chooser; do not mix it into cloud-conflict domain state.
@@ -241,6 +241,7 @@ Manual desktop/QHD checklist:
 - `1.3.55`: added the semantic typography foundation, repaired nested-theme `AppTextRoles` fallback, synchronized RoadMap canvas/sidebar focus, improved adaptive desktop content at large text scale, and documented typography/content adaptation policy.
 - `1.3.56`: debounced RoadMap camera fitting during desktop resize, introduced constraint-aware empty RoadMap and mobile focus states, centered first-quest guidance in available desktop space, removed empty active-quest header metadata, and made Effects/Chests content-led instead of accordion/fixed-height surfaces.
 - `1.3.57`: corrected the incomplete adaptive recovery: Effects and Chests now use bounded content-led empty states, desktop first-quest guidance has landscape geometry, and mobile Focus uses local Full/Compact/Minimal/Hidden variants with a compact section-level Add Skill action.
+- `1.3.58`: unified the mobile RoadMap into one top-to-bottom graph, removed the free-map mode switch and floating return action, retained branch paths/templates/details, and finalized the compact mobile Focus placeholder.
 
 - `1.3.53`: recovered the incomplete `1.3.52` visual migration with a real RoadMap shell/templates/context rail, complete Trophies and Statistics ecosystems, full existing Settings coverage, responsive raised skill headers, history-aware empty states, stable overflow geometry, bounds-based camera fitting, and tested debug/profile Admin entry.
 - `1.3.52`: introduced workspace routes and initial wrappers, but its visual migration remained incomplete; superseded by the audited `1.3.53` recovery.

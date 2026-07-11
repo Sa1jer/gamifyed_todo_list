@@ -210,6 +210,12 @@ falls back to scrolling only at short window heights. Effects and unopened
 chests share one natural-height collection anatomy. Secondary shell navigation
 returns to the last normal workspace when its active item is selected again.
 
+## 1.3.58 Desktop RoadMap Freeze Contract
+
+The unified mobile RoadMap is presentation-only and does not reuse the desktop
+InteractiveViewer route. Desktop canvas, toolbar, context rail, template panel,
+selection synchronization, camera fit, and graph order remain unchanged.
+
 ## 1.3.57 Content-Driven Empty-State Recovery
 
 The Trophies Effects and New Chests sections now share the same full-width

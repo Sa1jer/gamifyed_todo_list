@@ -73,6 +73,15 @@ height rather than the full screen size.
 This policy is currently implemented only for the surfaces above. Other empty
 states require their own local audit before adopting the same rules.
 
+## Unified Mobile RoadMap
+
+Mobile RoadMap is one vertical, scroll-led graph. It uses local width for
+branch pills/cards and keeps graph height content-driven in the page scroll
+view. The mobile route does not reuse desktop free-pan canvas geometry.
+Circular nodes and adjacent descriptions follow source graph order
+top-to-bottom; branch paths are selected from existing `RoadmapEngine` output
+without changing graph data.
+
 ## Testing Matrix
 
 Before accepting a typography/layout batch, verify at least:

@@ -1,12 +1,9 @@
 part of '../mastery_map_workspace.dart';
 
-enum _MobileRoadmapMode { path, freeMap }
-
 class _MobileRoadmapJournal extends StatefulWidget {
   final AppState state;
   final bool isDark;
   final _MasterySelection? selection;
-  final Widget freeMap;
   final GlobalKey? practiceTutorialKey;
   final ValueChanged<_MasterySelection?> onSelectionChanged;
   final ValueChanged<Skill> onAddRoot;
@@ -26,7 +23,6 @@ class _MobileRoadmapJournal extends StatefulWidget {
     required this.state,
     required this.isDark,
     required this.selection,
-    required this.freeMap,
     this.practiceTutorialKey,
     required this.onSelectionChanged,
     required this.onAddRoot,
@@ -47,8 +43,41 @@ class _MobileRoadmapJournal extends StatefulWidget {
 }
 
 class _MobileRoadmapJournalState extends State<_MobileRoadmapJournal> {
-  _MobileRoadmapMode _mode = _MobileRoadmapMode.path;
   final Map<String, int> _pathIndexBySkill = {};
+  final GlobalKey _currentStageKey = GlobalKey();
+  String? _queuedFocusSkillId;
+
+  @override
+  void initState() {
+    super.initState();
+    _queueCurrentStageFocus();
+  }
+
+  @override
+  void didUpdateWidget(covariant _MobileRoadmapJournal oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selection?.skillId != widget.selection?.skillId) {
+      _queueCurrentStageFocus();
+    }
+  }
+
+  void _queueCurrentStageFocus() {
+    final skillId = widget.selection?.skillId;
+    if (skillId == null || _queuedFocusSkillId == skillId) return;
+    _queuedFocusSkillId = skillId;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || widget.selection?.skillId != skillId) return;
+      final stageContext = _currentStageKey.currentContext;
+      if (stageContext == null) return;
+      Scrollable.ensureVisible(
+        stageContext,
+        alignment: 0.28,
+        duration: _roadmapMotionDuration(context),
+        curve: Curves.easeOutCubic,
+      );
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,7 +91,10 @@ class _MobileRoadmapJournalState extends State<_MobileRoadmapJournal> {
     return Column(
       key: const ValueKey('mobile-roadmap-journal'),
       children: [
-        _MobileRoadmapHeader(isDark: widget.isDark),
+        _MobileRoadmapHeader(
+          isDark: widget.isDark,
+          onTemplates: skill == null ? null : () => _showTemplates(skill),
+        ),
         const SizedBox(height: 10),
         if (skill == null)
           Expanded(
@@ -77,17 +109,31 @@ class _MobileRoadmapJournalState extends State<_MobileRoadmapJournal> {
         else ...[
           _buildSkillSwitcher(skill),
           const SizedBox(height: 8),
-          _buildModeSwitcher(skill),
-          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              key: const ValueKey('mobile-roadmap-back-to-skills'),
+              onPressed: () => widget.onSelectionChanged(null),
+              icon: const Icon(Icons.keyboard_return_rounded, size: 17),
+              label: const Text('К навыкам'),
+            ),
+          ),
           Expanded(
             child: AnimatedSwitcher(
               duration: _roadmapMotionDuration(context),
-              child: _mode == _MobileRoadmapMode.freeMap
-                  ? KeyedSubtree(
-                      key: const ValueKey('mobile-roadmap-free-map'),
-                      child: widget.freeMap,
-                    )
-                  : _buildPathView(skill),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeIn,
+              transitionBuilder: (child, animation) => FadeTransition(
+                opacity: animation,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0.025, 0),
+                    end: Offset.zero,
+                  ).animate(animation),
+                  child: child,
+                ),
+              ),
+              child: _buildUnifiedGraph(skill),
             ),
           ),
         ],
@@ -139,50 +185,7 @@ class _MobileRoadmapJournalState extends State<_MobileRoadmapJournal> {
     );
   }
 
-  Widget _buildModeSwitcher(Skill skill) {
-    return Row(
-      children: [
-        Expanded(
-          child: SegmentedButton<_MobileRoadmapMode>(
-            key: const ValueKey('mobile-roadmap-mode-switcher'),
-            segments: const [
-              ButtonSegment(
-                value: _MobileRoadmapMode.path,
-                icon: Icon(Icons.route_rounded, size: 18),
-                label: Text('Путь навыка'),
-              ),
-              ButtonSegment(
-                value: _MobileRoadmapMode.freeMap,
-                icon: Icon(Icons.hub_outlined, size: 18),
-                label: Text('Свободная карта'),
-              ),
-            ],
-            selected: {_mode},
-            showSelectedIcon: false,
-            onSelectionChanged: (value) => setState(() => _mode = value.first),
-            style: ButtonStyle(
-              visualDensity: VisualDensity.compact,
-              foregroundColor: WidgetStateProperty.resolveWith(
-                (states) => states.contains(WidgetState.selected)
-                    ? skill.color
-                    : MobileJournalTokens.muted(widget.isDark),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 7),
-        IconButton.outlined(
-          key: const ValueKey('mobile-roadmap-templates'),
-          tooltip: 'Шаблоны путей',
-          onPressed: () => _showTemplates(skill),
-          style: IconButton.styleFrom(minimumSize: const Size.square(44)),
-          icon: const Icon(Icons.layers_outlined, size: 19),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPathView(Skill skill) {
+  Widget _buildUnifiedGraph(Skill skill) {
     final completedCounts = {
       for (final node in skill.treeNodes)
         node.id: widget.state.completedTasksForTreeNode(skill.id, node.id),
@@ -207,7 +210,7 @@ class _MobileRoadmapJournalState extends State<_MobileRoadmapJournal> {
     };
 
     return DecoratedBox(
-      key: ValueKey('mobile-roadmap-path-${skill.id}'),
+      key: ValueKey('mobile-roadmap-unified-${skill.id}'),
       decoration: BoxDecoration(
         color: widget.isDark
             ? const Color(0xFF0D0E15)
@@ -217,62 +220,52 @@ class _MobileRoadmapJournalState extends State<_MobileRoadmapJournal> {
           color: MobileJournalTokens.outline(widget.isDark).withAlpha(150),
         ),
       ),
-      child: Stack(
-        children: [
-          CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(child: _buildProgressCard(skill, snapshot)),
-              if (paths.length > 1)
-                SliverToBoxAdapter(
-                  child: _buildBranchSelector(skill, paths, selectedIndex),
-                ),
-              if (selectedPath == null || selectedPath.nodes.isEmpty)
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: _MobileEmptyPath(
-                    skill: skill,
-                    isDark: widget.isDark,
-                    onAddStage: () => widget.onAddRoot(skill),
-                    onTemplates: () => _showTemplates(skill),
-                  ),
-                )
-              else
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 76),
-                  sliver: SliverList.builder(
-                    itemCount: selectedPath.nodes.length,
-                    itemBuilder: (context, index) {
-                      final node = selectedPath.nodes[index];
-                      final info = infoById[node.id];
-                      if (info == null) return const SizedBox.shrink();
-                      return _MobileRoadmapStageRow(
-                        key: ValueKey('mobile-path-stage-${node.id}'),
-                        skill: skill,
-                        info: info,
-                        isDark: widget.isDark,
-                        alternate: index.isOdd,
-                        first: index == 0,
-                        last: index == selectedPath.nodes.length - 1,
-                        onTap: () => _showStageDetails(skill, node),
-                      );
-                    },
-                  ),
-                ),
-            ],
-          ),
-          Positioned(
-            right: 12,
-            bottom: 12,
-            child: OutlinedButton.icon(
-              key: const ValueKey('mobile-roadmap-path-back-to-skills'),
-              onPressed: () => widget.onSelectionChanged(null),
-              style: OutlinedButton.styleFrom(
-                backgroundColor: MobileJournalTokens.surface(widget.isDark),
-              ),
-              icon: const Icon(Icons.keyboard_return_rounded, size: 18),
-              label: const Text('Назад к навыкам'),
+      child: CustomScrollView(
+        key: ValueKey('mobile-roadmap-graph-scroll-${skill.id}'),
+        slivers: [
+          SliverToBoxAdapter(child: _buildProgressCard(skill, snapshot)),
+          if (paths.length > 1)
+            SliverToBoxAdapter(
+              child: _buildBranchSelector(skill, paths, selectedIndex),
             ),
-          ),
+          if (selectedPath == null || selectedPath.nodes.isEmpty)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: _MobileEmptyPath(
+                skill: skill,
+                isDark: widget.isDark,
+                onAddStage: () => widget.onAddRoot(skill),
+                onTemplates: () => _showTemplates(skill),
+              ),
+            )
+          else
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 18),
+              sliver: SliverList.builder(
+                itemCount: selectedPath.nodes.length,
+                itemBuilder: (context, index) {
+                  final node = selectedPath.nodes[index];
+                  final info = infoById[node.id];
+                  if (info == null) return const SizedBox.shrink();
+                  final isFocusTarget =
+                      info.isCurrent ||
+                      (snapshot.currentStage == null && index == 0);
+                  return KeyedSubtree(
+                    key: isFocusTarget ? _currentStageKey : null,
+                    child: _MobileRoadmapStageRow(
+                      key: ValueKey('mobile-path-stage-${node.id}'),
+                      skill: skill,
+                      info: info,
+                      isDark: widget.isDark,
+                      alternate: index.isOdd,
+                      first: index == 0,
+                      last: index == selectedPath.nodes.length - 1,
+                      onTap: () => _showStageDetails(skill, node),
+                    ),
+                  );
+                },
+              ),
+            ),
         ],
       ),
     );
@@ -544,13 +537,14 @@ class _MobileRoadmapJournalState extends State<_MobileRoadmapJournal> {
 
 class _MobileRoadmapHeader extends StatelessWidget {
   final bool isDark;
+  final VoidCallback? onTemplates;
 
-  const _MobileRoadmapHeader({required this.isDark});
+  const _MobileRoadmapHeader({required this.isDark, this.onTemplates});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF151426) : const Color(0xFFF3EFFB),
         borderRadius: BorderRadius.circular(20),
@@ -569,7 +563,7 @@ class _MobileRoadmapHeader extends StatelessWidget {
             ),
             child: const Icon(Icons.map_outlined, color: Color(0xFF7562FF)),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -583,7 +577,7 @@ class _MobileRoadmapHeader extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  'Путь навыка: этапы, связи и цели',
+                  'Этапы, связи и путь развития навыка',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -594,6 +588,16 @@ class _MobileRoadmapHeader extends StatelessWidget {
               ],
             ),
           ),
+          if (onTemplates != null) ...[
+            const SizedBox(width: 8),
+            IconButton.outlined(
+              key: const ValueKey('mobile-roadmap-templates'),
+              tooltip: 'Шаблоны путей',
+              onPressed: onTemplates,
+              style: IconButton.styleFrom(minimumSize: const Size.square(44)),
+              icon: const Icon(Icons.layers_outlined, size: 19),
+            ),
+          ],
         ],
       ),
     );

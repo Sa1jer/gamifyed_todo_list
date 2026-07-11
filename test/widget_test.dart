@@ -1271,17 +1271,14 @@ void main() {
           findsOneWidget,
         );
         expect(
-          find.byKey(const ValueKey('focus-placeholder-full')),
+          find.byKey(const ValueKey('focus-placeholder-compact')),
           findsNothing,
         );
         expect(
           find.byKey(const ValueKey('focus-placeholder-hidden')),
           findsNothing,
         );
-        expect(
-          find.text('Выбери навык для фокуса'),
-          findsOneWidget,
-        );
+        expect(find.text('Выбери навык для фокуса'), findsOneWidget);
       }
       expect(tester.takeException(), isNull, reason: 'overview width: $width');
       await tester.tap(find.byKey(ValueKey('mobile-skill-chip-$skillId')));
@@ -1329,74 +1326,67 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets(
-    'single skill placeholder uses bounded full compact and hidden variants',
-    (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(360, 1000);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
+  testWidgets('single skill placeholder uses compact and hidden variants', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
 
-      final storage = InMemoryStorageService()
-        .._onboardingSeen = true
-        ..skills = [
-          Skill(
-            id: 'adaptive-placeholder',
-            name: 'Один навык',
-            goal: '',
-            color: const Color(0xFF4A9EFF),
-            icon: Icons.explore_rounded,
-          ),
-        ];
-      await storage.init();
-      await tester.pumpWidget(RPGApp(storage: storage));
-      await tester.pumpAndSettle();
+    final storage = InMemoryStorageService()
+      .._onboardingSeen = true
+      ..skills = [
+        Skill(
+          id: 'adaptive-placeholder',
+          name: 'Один навык',
+          goal: '',
+          color: const Color(0xFF4A9EFF),
+          icon: Icons.explore_rounded,
+        ),
+      ];
+    await storage.init();
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pumpAndSettle();
 
-      final skill = find.byKey(
-        const ValueKey('mobile-skill-chip-adaptive-placeholder'),
-      );
-      final placeholder = find.byKey(
-        const ValueKey('mobile-focus-placeholder'),
-      );
-      final inbox = find.byKey(const ValueKey('mobile-inbox-accordion-toggle'));
-      expect(
-        find.byKey(const ValueKey('focus-placeholder-full')),
-        findsOneWidget,
-      );
-      expect(tester.getSize(placeholder).height, lessThanOrEqualTo(250));
-      expect(
-        tester.getBottomLeft(skill).dy,
-        lessThan(tester.getTopLeft(placeholder).dy),
-      );
-      expect(
-        tester.getBottomLeft(placeholder).dy,
-        lessThan(tester.getTopLeft(inbox).dy),
-      );
+    final skill = find.byKey(
+      const ValueKey('mobile-skill-chip-adaptive-placeholder'),
+    );
+    final placeholder = find.byKey(const ValueKey('mobile-focus-placeholder'));
+    final inbox = find.byKey(const ValueKey('mobile-inbox-accordion-toggle'));
+    expect(
+      find.byKey(const ValueKey('focus-placeholder-compact')),
+      findsOneWidget,
+    );
+    expect(tester.getSize(placeholder).height, lessThanOrEqualTo(120));
+    expect(
+      tester.getBottomLeft(skill).dy,
+      lessThan(tester.getTopLeft(placeholder).dy),
+    );
+    expect(
+      tester.getBottomLeft(placeholder).dy,
+      lessThan(tester.getTopLeft(inbox).dy),
+    );
 
-      tester.view.physicalSize = const Size(360, 760);
-      await tester.pumpAndSettle();
-      expect(
-        find.byKey(const ValueKey('focus-placeholder-full')),
-        findsNothing,
-      );
-      expect(
-        find.byKey(const ValueKey('mobile-focus-placeholder')),
-        findsOneWidget,
-      );
-      expect(
-        find.byKey(const ValueKey('focus-placeholder-compact')),
-        findsOneWidget,
-      );
+    tester.view.physicalSize = const Size(360, 760);
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('mobile-focus-placeholder')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('focus-placeholder-compact')),
+      findsOneWidget,
+    );
 
-      tester.view.physicalSize = const Size(360, 580);
-      await tester.pumpAndSettle();
-      expect(
-        find.byKey(const ValueKey('focus-placeholder-hidden')),
-        findsOneWidget,
-      );
-      expect(tester.takeException(), isNull);
-    },
-  );
+    tester.view.physicalSize = const Size(360, 580);
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('focus-placeholder-hidden')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('mobile skill focus transition moves surrounding cards', (
     WidgetTester tester,
@@ -3979,17 +3969,17 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(
-      find.byKey(const ValueKey('mobile-roadmap-path-empty-roadmap')),
+      find.byKey(const ValueKey('mobile-roadmap-unified-empty-roadmap')),
       findsOneWidget,
     );
     expect(find.text('У пути пока нет этапов'), findsOneWidget);
     expect(find.text('Добавить этап'), findsOneWidget);
     expect(
-      find.byKey(const ValueKey('mobile-roadmap-path-back-to-skills')),
+      find.byKey(const ValueKey('mobile-roadmap-back-to-skills')),
       findsOneWidget,
     );
     await tester.tap(
-      find.byKey(const ValueKey('mobile-roadmap-path-back-to-skills')),
+      find.byKey(const ValueKey('mobile-roadmap-back-to-skills')),
     );
     await tester.pumpAndSettle();
     expect(
@@ -4007,7 +3997,7 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.byKey(const ValueKey('mobile-roadmap-path-single-roadmap')),
+      find.byKey(const ValueKey('mobile-roadmap-unified-single-roadmap')),
       findsOneWidget,
     );
     expect(tester.takeException(), isNull);
@@ -4097,7 +4087,7 @@ void main() {
     expect(find.text('Развернуть'), findsNothing);
     expect(find.byType(InteractiveViewer), findsNothing);
     expect(
-      find.byKey(const ValueKey('mobile-roadmap-path-mobile-skill')),
+      find.byKey(const ValueKey('mobile-roadmap-unified-mobile-skill')),
       findsOneWidget,
     );
     expect(
@@ -4136,20 +4126,12 @@ void main() {
     await tester.tap(find.text('Закрыть'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Свободная карта'));
-    await tester.pumpAndSettle();
-    final viewerFinder = find.byType(InteractiveViewer).first;
-    expect(viewerFinder, findsOneWidget);
-
     expect(
-      find.byKey(const ValueKey('roadmap-canvas-vertical')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const ValueKey('roadmap-layout-horizontal')),
+      find.byKey(const ValueKey('mobile-roadmap-mode-switcher')),
       findsNothing,
     );
-    expect(find.byKey(const ValueKey('roadmap-layout-vertical')), findsNothing);
+    expect(find.text('Свободная карта'), findsNothing);
+    expect(find.byType(InteractiveViewer), findsNothing);
     expect(tester.takeException(), isNull);
 
     await tester.pumpWidget(const SizedBox.shrink());

@@ -18,7 +18,7 @@ application ID.
 | Android Gradle Plugin | `8.11.1` | Ready |
 | Kotlin Gradle Plugin | `2.2.20` | Works with deferred migration warning |
 | Flutter Android defaults | compile/target `36`, min `24`, NDK `28.2.13676358` | Inherited from Flutter SDK |
-| App version | `1.3.57+1` | Maps to versionName `1.3.57`, versionCode `1` |
+| App version | `1.3.58+1` | Maps to versionName `1.3.58`, versionCode `1` |
 
 Direct `./gradlew` requires `JAVA_HOME` in the current shell. Flutter already
 uses the Android Studio JDK. A reproducible direct-wrapper command is:

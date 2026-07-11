@@ -738,6 +738,20 @@ fully selected skill styling while the focus chooser is visible; selecting a
 skill replaces the overview guidance with its focus workspace. Native Android
 and large-text visual QA remains manual work.
 
+## 1.3.58 Unified Mobile RoadMap
+
+Mobile no longer exposes `Путь навыка` and `Свободная карта` as competing
+modes. A single vertical graph owns the selected skill, branch-path choice,
+templates, stage details, and top-to-bottom progression. Circular nodes and
+alternating stage cards retain the readable path language; templates and
+details keep their existing SafeArea sheets. This is presentation-only:
+RoadmapEngine semantics, persistence, graph order, and desktop canvas remain
+unchanged.
+
+The selected graph replaces smoothly using the existing reduced-motion-aware
+`MobileMotion` duration. Native animation and 2.0x text-scale QA remain manual
+work.
+
 ## Reference Checklist
 
 - Flutter adaptive layout: <https://docs.flutter.dev/ui/adaptive-responsive/general>

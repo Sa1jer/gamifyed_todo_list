@@ -578,13 +578,10 @@ class _MobileFocusPlaceholder extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = AppStateProvider.of(context).isDark;
     final textScale = MediaQuery.textScalerOf(context).scale(1);
-    final variant = switch ((availableHeight, availableWidth, textScale)) {
-      (final height, final width, final scale)
-          when scale < 1.7 && height >= 280 && width >= 320 =>
-        _MobileFocusPlaceholderVariant.full,
-      (final height, _, final scale) when scale < 1.9 && height >= 118 =>
+    final variant = switch ((availableHeight, textScale)) {
+      (final height, final scale) when scale < 1.9 && height >= 86 =>
         _MobileFocusPlaceholderVariant.compact,
-      (final height, _, _) when height >= 58 =>
+      (final height, _) when height >= 58 =>
         _MobileFocusPlaceholderVariant.minimal,
       _ => _MobileFocusPlaceholderVariant.hidden,
     };
@@ -599,17 +596,11 @@ class _MobileFocusPlaceholder extends StatelessWidget {
         children: [...previous, ?current],
       ),
       child: switch (variant) {
-        _MobileFocusPlaceholderVariant.full => _MobileFocusPlaceholderSurface(
-          key: const ValueKey('focus-placeholder-full'),
-          isDark: isDark,
-          constraints: const BoxConstraints(minHeight: 220, maxHeight: 250),
-          child: _MobileFocusPlaceholderLarge(isDark: isDark),
-        ),
         _MobileFocusPlaceholderVariant.compact =>
           _MobileFocusPlaceholderSurface(
             key: const ValueKey('focus-placeholder-compact'),
             isDark: isDark,
-            constraints: const BoxConstraints(minHeight: 106, maxHeight: 146),
+            constraints: const BoxConstraints(minHeight: 82),
             child: _MobileFocusPlaceholderCompact(isDark: isDark),
           ),
         _MobileFocusPlaceholderVariant.minimal =>
@@ -622,7 +613,7 @@ class _MobileFocusPlaceholder extends StatelessWidget {
   }
 }
 
-enum _MobileFocusPlaceholderVariant { full, compact, minimal, hidden }
+enum _MobileFocusPlaceholderVariant { compact, minimal, hidden }
 
 class _MobileFocusPlaceholderSurface extends StatelessWidget {
   final bool isDark;
@@ -641,7 +632,7 @@ class _MobileFocusPlaceholderSurface extends StatelessWidget {
     key: const ValueKey('mobile-focus-placeholder'),
     constraints: constraints,
     width: double.infinity,
-    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
     decoration: BoxDecoration(
       color: _MobileJournalTokens.surfaceColor(isDark),
       borderRadius: BorderRadius.circular(_MobileJournalTokens.radiusLarge),
@@ -691,39 +682,6 @@ class _MobileFocusPlaceholderMinimal extends StatelessWidget {
   );
 }
 
-class _MobileFocusPlaceholderLarge extends StatelessWidget {
-  final bool isDark;
-
-  const _MobileFocusPlaceholderLarge({required this.isDark});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Container(
-          width: 58,
-          height: 58,
-          decoration: BoxDecoration(
-            color: _MobileJournalTokens.violet.withAlpha(isDark ? 20 : 14),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: _MobileJournalTokens.violet.withAlpha(70),
-            ),
-          ),
-          child: const Icon(
-            Icons.adjust_rounded,
-            color: _MobileJournalTokens.violet,
-            size: 28,
-          ),
-        ),
-        const SizedBox(height: 14),
-        _MobileFocusPlaceholderCopy(isDark: isDark, centered: true),
-      ],
-    );
-  }
-}
-
 class _MobileFocusPlaceholderCompact extends StatelessWidget {
   final bool isDark;
 
@@ -754,33 +712,27 @@ class _MobileFocusPlaceholderCompact extends StatelessWidget {
 
 class _MobileFocusPlaceholderCopy extends StatelessWidget {
   final bool isDark;
-  final bool centered;
 
-  const _MobileFocusPlaceholderCopy({
-    required this.isDark,
-    this.centered = false,
-  });
+  const _MobileFocusPlaceholderCopy({required this.isDark});
 
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: centered
-          ? CrossAxisAlignment.center
-          : CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Выбери навык для фокуса',
-          textAlign: centered ? TextAlign.center : TextAlign.start,
+          textAlign: TextAlign.start,
           style: TextStyle(
             color: _MobileJournalTokens.text(isDark),
-            fontSize: centered ? 16 : 15,
+            fontSize: 15,
             fontWeight: FontWeight.w900,
           ),
         ),
         const SizedBox(height: 4),
         Text(
           'Здесь появятся квесты, прогресс и цели',
-          textAlign: centered ? TextAlign.center : TextAlign.start,
+          textAlign: TextAlign.start,
           style: TextStyle(
             color: _MobileJournalTokens.muted(isDark),
             fontSize: 11.5,

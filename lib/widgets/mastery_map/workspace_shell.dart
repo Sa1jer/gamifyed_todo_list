@@ -183,7 +183,6 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
         state: state,
         isDark: isDark,
         selection: selection,
-        freeMap: buildMapBody(),
         practiceTutorialKey: widget.practiceTutorialKey,
         onSelectionChanged: _setSelection,
         onAddRoot: (skill) => _addNode(context, skill),
