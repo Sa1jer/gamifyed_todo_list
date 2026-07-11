@@ -216,6 +216,13 @@ The unified mobile RoadMap is presentation-only and does not reuse the desktop
 InteractiveViewer route. Desktop canvas, toolbar, context rail, template panel,
 selection synchronization, camera fit, and graph order remain unchanged.
 
+## 1.3.59 Desktop RoadMap Freeze Contract
+
+`MobileRoadMapAscentLayout` is imported only by the mobile RoadMap journal.
+It projects existing snapshots into a mobile-only root-sphere ascent and does
+not participate in desktop canvas geometry, camera fitting, toolbar controls,
+template application, or selection synchronization.
+
 ## 1.3.57 Content-Driven Empty-State Recovery
 
 The Trophies Effects and New Chests sections now share the same full-width

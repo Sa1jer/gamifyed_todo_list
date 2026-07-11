@@ -3965,7 +3965,19 @@ void main() {
     );
     expect(find.byType(InteractiveViewer), findsNothing);
     await tester.tap(
-      find.byKey(const ValueKey('mobile-roadmap-choose-empty-roadmap')),
+      find.byKey(const ValueKey('mobile-roadmap-choose-single-roadmap')),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('mobile-roadmap-unified-single-roadmap')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('mobile-roadmap-root-single-roadmap')),
+      findsOneWidget,
+    );
+    await tester.tap(
+      find.byKey(const ValueKey('mobile-roadmap-skill-empty-roadmap')),
     );
     await tester.pumpAndSettle();
     expect(
@@ -3974,32 +3986,6 @@ void main() {
     );
     expect(find.text('У пути пока нет этапов'), findsOneWidget);
     expect(find.text('Добавить этап'), findsOneWidget);
-    expect(
-      find.byKey(const ValueKey('mobile-roadmap-back-to-skills')),
-      findsOneWidget,
-    );
-    await tester.tap(
-      find.byKey(const ValueKey('mobile-roadmap-back-to-skills')),
-    );
-    await tester.pumpAndSettle();
-    expect(
-      find.byKey(const ValueKey('mobile-roadmap-skill-chooser')),
-      findsOneWidget,
-    );
-    expect(tester.takeException(), isNull);
-
-    await tester.tap(
-      find.byKey(const ValueKey('mobile-roadmap-choose-single-roadmap')),
-    );
-    await tester.pumpAndSettle();
-    expect(
-      find.byKey(const ValueKey('mobile-path-stage-single-stage')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const ValueKey('mobile-roadmap-unified-single-roadmap')),
-      findsOneWidget,
-    );
     expect(tester.takeException(), isNull);
 
     await tester.pumpWidget(const SizedBox.shrink());
@@ -4091,15 +4077,15 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.byKey(const ValueKey('mobile-path-stage-mobile-stage')),
+      find.byKey(const ValueKey('mobile-ascent-stage-mobile-stage')),
       findsOneWidget,
     );
     expect(
-      find.byKey(const ValueKey('mobile-path-stage-mobile-stage-middle')),
+      find.byKey(const ValueKey('mobile-ascent-stage-mobile-stage-middle')),
       findsOneWidget,
     );
     expect(
-      find.byKey(const ValueKey('mobile-path-stage-mobile-stage-terminal')),
+      find.byKey(const ValueKey('mobile-ascent-stage-mobile-stage-terminal')),
       findsOneWidget,
     );
     expect(find.text('Шаблон RoadMap'), findsNothing);
@@ -4138,74 +4124,71 @@ void main() {
     await tester.pump();
   });
 
-  testWidgets(
-    'mobile RoadMap switches runtime branches without graph changes',
-    (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(360, 800);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
+  testWidgets('mobile RoadMap renders runtime branches without graph changes', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
 
-      final storage = InMemoryStorageService()
-        .._onboardingSeen = true
-        ..skills = [
-          Skill(
-            id: 'branching-mobile',
-            name: 'Ветвящийся путь',
-            goal: 'Проверить две дороги',
-            color: const Color(0xFFFF3B70),
-            icon: Icons.call_split_rounded,
-            treeNodes: [
-              SkillTreeNode(id: 'shared-root', title: 'Общая основа'),
-              SkillTreeNode(
-                id: 'left-branch',
-                title: 'Левая ветка',
-                prerequisiteIds: ['shared-root'],
-              ),
-              SkillTreeNode(
-                id: 'right-branch',
-                title: 'Правая ветка',
-                prerequisiteIds: ['shared-root'],
-              ),
-            ],
-          ),
-        ];
-      await storage.init();
-      await tester.pumpWidget(RPGApp(storage: storage));
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
+    final storage = InMemoryStorageService()
+      .._onboardingSeen = true
+      ..skills = [
+        Skill(
+          id: 'branching-mobile',
+          name: 'Ветвящийся путь',
+          goal: 'Проверить две дороги',
+          color: const Color(0xFFFF3B70),
+          icon: Icons.call_split_rounded,
+          treeNodes: [
+            SkillTreeNode(id: 'shared-root', title: 'Общая основа'),
+            SkillTreeNode(
+              id: 'left-branch',
+              title: 'Левая ветка',
+              prerequisiteIds: ['shared-root'],
+            ),
+            SkillTreeNode(
+              id: 'right-branch',
+              title: 'Правая ветка',
+              prerequisiteIds: ['shared-root'],
+            ),
+          ],
+        ),
+      ];
+    await storage.init();
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
 
-      await tester.tap(find.text('Карта').last);
-      await tester.pumpAndSettle();
-      await tester.tap(
-        find.byKey(const ValueKey('mobile-roadmap-choose-branching-mobile')),
-      );
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('Карта').last);
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('mobile-roadmap-choose-branching-mobile')),
+    );
+    await tester.pumpAndSettle();
 
-      expect(find.text('Есть развилки'), findsOneWidget);
-      expect(find.text('Путь 1'), findsOneWidget);
-      expect(find.text('Путь 2'), findsOneWidget);
-      expect(
-        find.byKey(const ValueKey('mobile-path-stage-left-branch')),
-        findsOneWidget,
-      );
-
-      await tester.tap(find.text('Путь 2'));
-      await tester.pumpAndSettle();
-      expect(
-        find.byKey(const ValueKey('mobile-path-stage-right-branch')),
-        findsOneWidget,
-      );
-      expect(
-        storage.skills
-            .where((skill) => skill.id == 'branching-mobile')
-            .single
-            .treeNodes,
-        hasLength(3),
-      );
-      expect(tester.takeException(), isNull);
-    },
-  );
+    expect(
+      find.byKey(const ValueKey('mobile-ascent-stage-shared-root')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('mobile-ascent-stage-left-branch')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('mobile-ascent-stage-right-branch')),
+      findsOneWidget,
+    );
+    expect(
+      storage.skills
+          .where((skill) => skill.id == 'branching-mobile')
+          .single
+          .treeNodes,
+      hasLength(3),
+    );
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('mobile Act keeps next action inside selected skill focus', (
     WidgetTester tester,

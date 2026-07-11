@@ -479,11 +479,9 @@ changes. The only product-logic change in that batch was the approved fixed
    completion and undo update profile XP and today's XP/action count only; they
    remain isolated from skill XP, RoadMap, history, buffs, achievements, chests,
    and milestones. Desktop keeps the system-skill layout and shared XP copy.
-4. Mobile RoadMap defaults to `Путь навыка`: a scroll route built from the
-   existing `RoadmapEngine` snapshot/path layout, runtime branch pills, semantic
-   stage states, compact progress, and safe details/templates sheets. The
-   unchanged InteractiveViewer is available as `Свободная карта`; desktop keeps
-   canvas-first behavior.
+4. Mobile RoadMap is one presentation-only ascent graph: a root skill sphere,
+   upward connectors, topology-aware branch placement, alternating stage cards,
+   and safe details/templates sheets. Desktop keeps canvas-first behavior.
 5. Mobile AddSkill now has a live emblem rather than a fake skill card,
    meaningful icon semantics, non-persisted category filters, squircle color
    swatches, dirty-draft protection, and one bottom SafeArea CTA. Desktop and
@@ -588,8 +586,9 @@ Implemented on 2026-07-03 as a focused interaction and navigation correction:
 4. A completed quest stays in the current list until the user swipes it into
    `Выполнено`. That choice is stored as an additive backward-compatible task
    flag; restoring from the section keeps XP, while uncompleting clears it.
-5. Mobile Statistics has an explicit close action. Both `Путь навыка` and
-   `Свободная карта` expose a bottom-right return to the skill chooser.
+5. Mobile Statistics has an explicit close action. Mobile RoadMap selection is
+   retained through the compact horizontal skill selector without a redundant
+   return action.
 
 The dark journal remains the polished target. `Light Journal Palette Polish`
 is still deferred in `TODO.md`.
@@ -738,19 +737,21 @@ fully selected skill styling while the focus chooser is visible; selecting a
 skill replaces the overview guidance with its focus workspace. Native Android
 and large-text visual QA remains manual work.
 
-## 1.3.58 Unified Mobile RoadMap
+## 1.3.59 Bottom-Up Mobile RoadMap
 
-Mobile no longer exposes `Путь навыка` and `Свободная карта` as competing
-modes. A single vertical graph owns the selected skill, branch-path choice,
-templates, stage details, and top-to-bottom progression. Circular nodes and
-alternating stage cards retain the readable path language; templates and
-details keep their existing SafeArea sheets. This is presentation-only:
-RoadmapEngine semantics, persistence, graph order, and desktop canvas remain
-unchanged.
+Mobile RoadMap no longer reuses the former top-down path list. A pure
+`MobileRoadMapAscentLayout` projects existing RoadMap data into a bottom-up
+graph: the selected skill is the root sphere at the base; prerequisite stages
+rise above it; and arrows point upward. The projection preserves domain order,
+branch/merge edges, templates, quest links, and desktop rendering because it
+does not mutate `RoadmapEngine` or persisted topology.
 
-The selected graph replaces smoothly using the existing reduced-motion-aware
-`MobileMotion` duration. Native animation and 2.0x text-scale QA remain manual
-work.
+Stage cards alternate around their corresponding circles for a linear route;
+branched depths receive independent lanes to prevent card overlap. Root and
+stage details open contextually in existing SafeArea sheets. Initial focus runs
+once when a skill is selected and then leaves scrolling to the user. The graph
+uses reduced-motion-aware switch timing; native animation and 2.0x text-scale
+QA remain manual work.
 
 ## Reference Checklist
 

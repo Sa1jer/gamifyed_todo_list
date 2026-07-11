@@ -75,9 +75,11 @@ states require their own local audit before adopting the same rules.
 
 ## Unified Mobile RoadMap
 
-Mobile RoadMap is one vertical, scroll-led graph. It uses local width for
-branch pills/cards and keeps graph height content-driven in the page scroll
-view. The mobile route does not reuse desktop free-pan canvas geometry.
+Mobile RoadMap is one vertical, scroll-led bottom-up ascent graph. A local,
+pure layout calculator uses available width and text scale to place the skill
+root at the bottom, topology depths above it, and branch cards in non-overlapping
+lanes. The mobile route does not reuse desktop free-pan canvas geometry or
+mutate stored RoadMap order.
 Circular nodes and adjacent descriptions follow source graph order
 top-to-bottom; branch paths are selected from existing `RoadmapEngine` output
 without changing graph data.

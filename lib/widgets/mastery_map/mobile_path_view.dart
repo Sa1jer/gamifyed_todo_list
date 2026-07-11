@@ -43,8 +43,7 @@ class _MobileRoadmapJournal extends StatefulWidget {
 }
 
 class _MobileRoadmapJournalState extends State<_MobileRoadmapJournal> {
-  final Map<String, int> _pathIndexBySkill = {};
-  final GlobalKey _currentStageKey = GlobalKey();
+  final GlobalKey _initialFocusKey = GlobalKey();
   String? _queuedFocusSkillId;
 
   @override
@@ -57,6 +56,8 @@ class _MobileRoadmapJournalState extends State<_MobileRoadmapJournal> {
   void didUpdateWidget(covariant _MobileRoadmapJournal oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.selection?.skillId != widget.selection?.skillId) {
+      // One focus request per explicit skill change, never on ordinary rebuilds.
+      _queuedFocusSkillId = null;
       _queueCurrentStageFocus();
     }
   }
@@ -68,7 +69,7 @@ class _MobileRoadmapJournalState extends State<_MobileRoadmapJournal> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || widget.selection?.skillId != skillId) return;
-      final stageContext = _currentStageKey.currentContext;
+      final stageContext = _initialFocusKey.currentContext;
       if (stageContext == null) return;
       Scrollable.ensureVisible(
         stageContext,
@@ -95,7 +96,7 @@ class _MobileRoadmapJournalState extends State<_MobileRoadmapJournal> {
           isDark: widget.isDark,
           onTemplates: skill == null ? null : () => _showTemplates(skill),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 6),
         if (skill == null)
           Expanded(
             child: _MobileRoadmapSkillChooser(
@@ -108,16 +109,7 @@ class _MobileRoadmapJournalState extends State<_MobileRoadmapJournal> {
           )
         else ...[
           _buildSkillSwitcher(skill),
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              key: const ValueKey('mobile-roadmap-back-to-skills'),
-              onPressed: () => widget.onSelectionChanged(null),
-              icon: const Icon(Icons.keyboard_return_rounded, size: 17),
-              label: const Text('К навыкам'),
-            ),
-          ),
+          const SizedBox(height: 5),
           Expanded(
             child: AnimatedSwitcher(
               duration: _roadmapMotionDuration(context),
@@ -127,7 +119,7 @@ class _MobileRoadmapJournalState extends State<_MobileRoadmapJournal> {
                 opacity: animation,
                 child: SlideTransition(
                   position: Tween<Offset>(
-                    begin: const Offset(0.025, 0),
+                    begin: const Offset(0, 0.035),
                     end: Offset.zero,
                   ).animate(animation),
                   child: child,
@@ -194,232 +186,27 @@ class _MobileRoadmapJournalState extends State<_MobileRoadmapJournal> {
       skill,
       completedQuestCountsByNodeId: completedCounts,
     );
-    final layout = const RoadmapEngine().buildPathLayout(skill);
-    final paths = layout.paths;
-    var selectedIndex = _pathIndexBySkill.putIfAbsent(skill.id, () {
-      final currentId = snapshot.currentStage?.node.id;
-      if (currentId == null) return 0;
-      return paths
-          .indexWhere((path) => path.nodes.any((n) => n.id == currentId))
-          .clamp(0, math.max(0, paths.length - 1));
-    });
-    if (selectedIndex >= paths.length) selectedIndex = 0;
-    final selectedPath = paths.isEmpty ? null : paths[selectedIndex];
-    final infoById = {
-      for (final stage in snapshot.stages) stage.node.id: stage,
-    };
+    if (snapshot.isEmpty) {
+      return _MobileEmptyPath(
+        key: ValueKey('mobile-roadmap-unified-${skill.id}'),
+        skill: skill,
+        isDark: widget.isDark,
+        onAddStage: () => widget.onAddRoot(skill),
+        onTemplates: () => _showTemplates(skill),
+      );
+    }
 
-    return DecoratedBox(
+    final initialFocusId =
+        snapshot.currentStage?.node.id ?? snapshot.stages.firstOrNull?.node.id;
+    return _MobileRoadmapAscentGraph(
       key: ValueKey('mobile-roadmap-unified-${skill.id}'),
-      decoration: BoxDecoration(
-        color: widget.isDark
-            ? const Color(0xFF0D0E15)
-            : const Color(0xFFF6F0E5),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: MobileJournalTokens.outline(widget.isDark).withAlpha(150),
-        ),
-      ),
-      child: CustomScrollView(
-        key: ValueKey('mobile-roadmap-graph-scroll-${skill.id}'),
-        slivers: [
-          SliverToBoxAdapter(child: _buildProgressCard(skill, snapshot)),
-          if (paths.length > 1)
-            SliverToBoxAdapter(
-              child: _buildBranchSelector(skill, paths, selectedIndex),
-            ),
-          if (selectedPath == null || selectedPath.nodes.isEmpty)
-            SliverFillRemaining(
-              hasScrollBody: false,
-              child: _MobileEmptyPath(
-                skill: skill,
-                isDark: widget.isDark,
-                onAddStage: () => widget.onAddRoot(skill),
-                onTemplates: () => _showTemplates(skill),
-              ),
-            )
-          else
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 18),
-              sliver: SliverList.builder(
-                itemCount: selectedPath.nodes.length,
-                itemBuilder: (context, index) {
-                  final node = selectedPath.nodes[index];
-                  final info = infoById[node.id];
-                  if (info == null) return const SizedBox.shrink();
-                  final isFocusTarget =
-                      info.isCurrent ||
-                      (snapshot.currentStage == null && index == 0);
-                  return KeyedSubtree(
-                    key: isFocusTarget ? _currentStageKey : null,
-                    child: _MobileRoadmapStageRow(
-                      key: ValueKey('mobile-path-stage-${node.id}'),
-                      skill: skill,
-                      info: info,
-                      isDark: widget.isDark,
-                      alternate: index.isOdd,
-                      first: index == 0,
-                      last: index == selectedPath.nodes.length - 1,
-                      onTap: () => _showStageDetails(skill, node),
-                    ),
-                  );
-                },
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProgressCard(Skill skill, RoadmapSnapshot snapshot) {
-    final progress = const GoalProgressEngine().snapshotForSkill(skill);
-    return Container(
-      margin: const EdgeInsets.fromLTRB(12, 12, 12, 4),
-      padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(
-        color: skill.color.withAlpha(widget.isDark ? 15 : 10),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: skill.color.withAlpha(50)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: skill.color.withAlpha(25),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(skill.icon, color: skill.color, size: 20),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Путь: ${skill.name}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: MobileJournalTokens.text(widget.isDark),
-                        fontSize: 15,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    Text(
-                      snapshot.currentStage == null
-                          ? 'Выбери следующий этап пути'
-                          : 'Сейчас: ${snapshot.currentStage!.node.title}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: MobileJournalTokens.muted(widget.isDark),
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              TextButton(
-                onPressed: () => _showSkillDetails(skill),
-                child: const Text('Детали'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Semantics(
-            label: 'Прогресс цели ${skill.name}',
-            value: progress.percentLabel,
-            child: Row(
-              children: [
-                Expanded(
-                  child: LinearProgressIndicator(
-                    value: progress.value,
-                    minHeight: 7,
-                    borderRadius: BorderRadius.circular(99),
-                    backgroundColor: skill.color.withAlpha(25),
-                    color: skill.color,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  progress.isEmpty ? 'Нет пути' : progress.percentLabel,
-                  style: TextStyle(
-                    color: progress.isEmpty
-                        ? MobileJournalTokens.muted(widget.isDark)
-                        : MobileJournalTokens.readableAccent(
-                            skill.color,
-                            widget.isDark,
-                          ),
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBranchSelector(
-    Skill skill,
-    List<RoadmapPath> paths,
-    int selectedIndex,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 2),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.call_split_rounded, color: skill.color, size: 16),
-              const SizedBox(width: 6),
-              Text(
-                'Есть развилки',
-                style: TextStyle(
-                  color: MobileJournalTokens.muted(widget.isDark),
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: paths.map((path) {
-                final selected = path.index == selectedIndex;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: ChoiceChip(
-                    selected: selected,
-                    showCheckmark: false,
-                    label: Text('Путь ${path.index + 1}'),
-                    onSelected: (_) => setState(
-                      () => _pathIndexBySkill[skill.id] = path.index,
-                    ),
-                    selectedColor: skill.color.withAlpha(
-                      widget.isDark ? 30 : 18,
-                    ),
-                    side: BorderSide(
-                      color: selected
-                          ? skill.color.withAlpha(100)
-                          : MobileJournalTokens.outline(widget.isDark),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-        ],
-      ),
+      skill: skill,
+      snapshot: snapshot,
+      isDark: widget.isDark,
+      initialFocusId: initialFocusId,
+      initialFocusKey: _initialFocusKey,
+      onTapRoot: () => _showSkillDetails(skill),
+      onTapStage: (node) => _showStageDetails(skill, node),
     );
   }
 
@@ -535,6 +322,373 @@ class _MobileRoadmapJournalState extends State<_MobileRoadmapJournal> {
   }
 }
 
+class _MobileRoadmapAscentGraph extends StatelessWidget {
+  final Skill skill;
+  final RoadmapSnapshot snapshot;
+  final bool isDark;
+  final String? initialFocusId;
+  final GlobalKey initialFocusKey;
+  final VoidCallback onTapRoot;
+  final ValueChanged<SkillTreeNode> onTapStage;
+
+  const _MobileRoadmapAscentGraph({
+    super.key,
+    required this.skill,
+    required this.snapshot,
+    required this.isDark,
+    required this.initialFocusId,
+    required this.initialFocusKey,
+    required this.onTapRoot,
+    required this.onTapStage,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final layout = const MobileRoadMapAscentLayout().calculate(
+          viewport: Size(constraints.maxWidth, constraints.maxHeight),
+          stages: snapshot.stages,
+          textScale: textScale,
+        );
+        final progress = const GoalProgressEngine().snapshotForSkill(skill);
+        return RepaintBoundary(
+          child: SingleChildScrollView(
+            key: ValueKey('mobile-roadmap-graph-scroll-${skill.id}'),
+            clipBehavior: Clip.none,
+            padding: const EdgeInsets.only(bottom: 18),
+            child: SizedBox(
+              width: layout.size.width,
+              height: layout.size.height,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Positioned.fill(
+                    child: CustomPaint(
+                      painter: _MobileRoadmapConnectionsPainter(
+                        layout: layout,
+                        skill: skill,
+                      ),
+                    ),
+                  ),
+                  for (final geometry in layout.nodes.values) ...[
+                    Positioned.fromRect(
+                      rect: geometry.cardRect,
+                      child: _MobileRoadmapStageCard(
+                        geometry: geometry,
+                        skill: skill,
+                        isDark: isDark,
+                        onTap: () => onTapStage(geometry.stage.node),
+                      ),
+                    ),
+                    Positioned(
+                      left: geometry.center.dx - geometry.radius,
+                      top: geometry.center.dy - geometry.radius,
+                      width: geometry.radius * 2,
+                      height: geometry.radius * 2,
+                      child: KeyedSubtree(
+                        key: geometry.stage.node.id == initialFocusId
+                            ? initialFocusKey
+                            : null,
+                        child: _MobileRoadmapStageNode(
+                          geometry: geometry,
+                          skill: skill,
+                          onTap: () => onTapStage(geometry.stage.node),
+                        ),
+                      ),
+                    ),
+                  ],
+                  Positioned(
+                    left: layout.rootCenter.dx - layout.rootRadius,
+                    top: layout.rootCenter.dy - layout.rootRadius,
+                    width: layout.rootRadius * 2,
+                    height: layout.rootRadius * 2,
+                    child: _MobileRoadmapRootNode(
+                      skill: skill,
+                      progressLabel: progress.isEmpty
+                          ? 'Нет пути'
+                          : progress.percentLabel,
+                      progressValue: progress.value,
+                      onTap: onTapRoot,
+                    ),
+                  ),
+                  Positioned(
+                    left: 12,
+                    right: 12,
+                    top: layout.rootCenter.dy + layout.rootRadius + 4,
+                    child: Semantics(
+                      label:
+                          'Навык ${skill.name}, уровень ${skill.level}, прогресс пути ${progress.percentLabel}. Открыть детали.',
+                      button: true,
+                      child: GestureDetector(
+                        onTap: onTapRoot,
+                        child: Column(
+                          children: [
+                            Text(
+                              skill.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: MobileJournalTokens.text(isDark),
+                                fontWeight: FontWeight.w900,
+                                fontSize: 14,
+                              ),
+                            ),
+                            Text(
+                              'Ур. ${skill.level} · ${progress.isEmpty ? "Нет пути" : progress.percentLabel}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: MobileJournalTokens.muted(isDark),
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _MobileRoadmapRootNode extends StatelessWidget {
+  final Skill skill;
+  final String progressLabel;
+  final double progressValue;
+  final VoidCallback onTap;
+
+  const _MobileRoadmapRootNode({
+    required this.skill,
+    required this.progressLabel,
+    required this.progressValue,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label:
+          'Навык ${skill.name}, уровень ${skill.level}, прогресс пути $progressLabel. Открыть детали.',
+      child: PressFeedback(
+        key: ValueKey('mobile-roadmap-root-${skill.id}'),
+        scale: 0.95,
+        onTap: onTap,
+        child: CustomPaint(
+          painter: _MobileRoadmapRootRingPainter(
+            color: skill.color,
+            value: progressValue,
+          ),
+          child: Center(child: Icon(skill.icon, color: skill.color, size: 34)),
+        ),
+      ),
+    );
+  }
+}
+
+class _MobileRoadmapStageNode extends StatelessWidget {
+  final MobileRoadMapNodeGeometry geometry;
+  final Skill skill;
+  final VoidCallback onTap;
+
+  const _MobileRoadmapStageNode({
+    required this.geometry,
+    required this.skill,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final visual = _stageVisual(geometry.stage, skill);
+    return Semantics(
+      button: true,
+      label:
+          '${geometry.stage.node.title}, ${visual.label}, ${geometry.stage.completedLinkedQuests} из ${geometry.stage.questTarget} квестов. Открыть этап.',
+      child: PressFeedback(
+        key: ValueKey('mobile-ascent-stage-${geometry.stage.node.id}'),
+        scale: 0.93,
+        onTap: onTap,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: visual.color.withAlpha(geometry.stage.isCurrent ? 36 : 12),
+            border: Border.all(
+              color: visual.color,
+              width: geometry.stage.isCurrent ? 3 : 2,
+            ),
+            boxShadow: geometry.stage.isCurrent
+                ? [BoxShadow(color: visual.color.withAlpha(76), blurRadius: 18)]
+                : null,
+          ),
+          child: Icon(visual.icon, color: visual.color, size: 24),
+        ),
+      ),
+    );
+  }
+}
+
+class _MobileRoadmapStageCard extends StatelessWidget {
+  final MobileRoadMapNodeGeometry geometry;
+  final Skill skill;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  const _MobileRoadmapStageCard({
+    required this.geometry,
+    required this.skill,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final visual = _stageVisual(geometry.stage, skill);
+    return Semantics(
+      button: true,
+      label:
+          '${geometry.stage.node.title}, ${visual.label}, ${geometry.stage.completedLinkedQuests} из ${geometry.stage.questTarget} квестов. Открыть этап.',
+      child: InkWell(
+        key: ValueKey('mobile-ascent-card-${geometry.stage.node.id}'),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(15),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: visual.color.withAlpha(geometry.stage.isCurrent ? 22 : 9),
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: visual.color.withAlpha(60)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  geometry.stage.node.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: geometry.stage.role == RoadmapStageRole.locked
+                        ? MobileJournalTokens.muted(isDark)
+                        : MobileJournalTokens.text(isDark),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '${visual.label} · ${geometry.stage.completedLinkedQuests}/${geometry.stage.questTarget}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: visual.color, fontSize: 10.5),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MobileRoadmapConnectionsPainter extends CustomPainter {
+  final MobileRoadMapLayoutResult layout;
+  final Skill skill;
+
+  const _MobileRoadmapConnectionsPainter({
+    required this.layout,
+    required this.skill,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (final edge in layout.edges) {
+      final destination = layout.nodes[edge.toId];
+      if (destination == null || !edge.pointsUpward) continue;
+      final sourceRadius = edge.fromId == MobileRoadMapLayoutResult.rootId
+          ? layout.rootRadius
+          : layout.nodes[edge.fromId]?.radius ?? 0;
+      final delta = edge.to - edge.from;
+      final length = delta.distance;
+      if (length < 1) continue;
+      final direction = delta / length;
+      final start = edge.from + direction * sourceRadius;
+      final end = edge.to - direction * destination.radius;
+      final visual = _stageVisual(destination.stage, skill);
+      final paint = Paint()
+        ..color = visual.color.withAlpha(destination.stage.isCurrent ? 140 : 72)
+        ..strokeWidth = destination.stage.isCurrent ? 3 : 2
+        ..strokeCap = StrokeCap.round;
+      canvas.drawLine(start, end, paint);
+      final normal = Offset(-direction.dy, direction.dx);
+      final wing = 7.0;
+      final arrow = Path()
+        ..moveTo(end.dx, end.dy)
+        ..lineTo(
+          end.dx - direction.dx * wing + normal.dx * wing * .58,
+          end.dy - direction.dy * wing + normal.dy * wing * .58,
+        )
+        ..moveTo(end.dx, end.dy)
+        ..lineTo(
+          end.dx - direction.dx * wing - normal.dx * wing * .58,
+          end.dy - direction.dy * wing - normal.dy * wing * .58,
+        );
+      canvas.drawPath(arrow, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _MobileRoadmapConnectionsPainter oldDelegate) {
+    return oldDelegate.layout != layout || oldDelegate.skill.id != skill.id;
+  }
+}
+
+class _MobileRoadmapRootRingPainter extends CustomPainter {
+  final Color color;
+  final double value;
+
+  const _MobileRoadmapRootRingPainter({
+    required this.color,
+    required this.value,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final radius = size.shortestSide / 2 - 4;
+    final track = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 5
+      ..color = color.withAlpha(38);
+    final progress = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 5
+      ..strokeCap = StrokeCap.round
+      ..color = color;
+    canvas.drawCircle(center, radius, track);
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -math.pi / 2,
+      math.pi * 2 * value.clamp(0.0, 1.0),
+      false,
+      progress,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _MobileRoadmapRootRingPainter oldDelegate) {
+    return oldDelegate.color != color || oldDelegate.value != value;
+  }
+}
+
 class _MobileRoadmapHeader extends StatelessWidget {
   final bool isDark;
   final VoidCallback? onTemplates;
@@ -544,10 +698,10 @@ class _MobileRoadmapHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF151426) : const Color(0xFFF3EFFB),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: const Color(0xFF7562FF).withAlpha(isDark ? 65 : 75),
         ),
@@ -555,11 +709,11 @@ class _MobileRoadmapHeader extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 44,
-            height: 44,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
               color: const Color(0xFF7562FF).withAlpha(26),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(Icons.map_outlined, color: Color(0xFF7562FF)),
           ),
@@ -692,175 +846,6 @@ class _MobileRoadmapSkillChooser extends StatelessWidget {
   }
 }
 
-class _MobileRoadmapStageRow extends StatelessWidget {
-  final Skill skill;
-  final RoadmapStageInfo info;
-  final bool isDark;
-  final bool alternate;
-  final bool first;
-  final bool last;
-  final VoidCallback onTap;
-
-  const _MobileRoadmapStageRow({
-    super.key,
-    required this.skill,
-    required this.info,
-    required this.isDark,
-    required this.alternate,
-    required this.first,
-    required this.last,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final visual = _stageVisual(info, skill);
-    return Semantics(
-      button: true,
-      label:
-          '${info.node.title}, ${visual.label}, ${info.completedLinkedQuests} из ${info.questTarget} квестов',
-      child: SizedBox(
-        height: 104,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Positioned(
-              top: first ? 52 : 0,
-              bottom: last ? 52 : 0,
-              width: 3,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: visual.color.withAlpha(info.isCurrent ? 110 : 48),
-                  borderRadius: BorderRadius.circular(99),
-                ),
-              ),
-            ),
-            Row(
-              children: [
-                Expanded(
-                  child: alternate
-                      ? _StageLabelCard(
-                          info: info,
-                          visual: visual,
-                          isDark: isDark,
-                          onTap: onTap,
-                        )
-                      : const SizedBox.shrink(),
-                ),
-                const SizedBox(width: 10),
-                _StageNode(info: info, visual: visual, onTap: onTap),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: alternate
-                      ? const SizedBox.shrink()
-                      : _StageLabelCard(
-                          info: info,
-                          visual: visual,
-                          isDark: isDark,
-                          onTap: onTap,
-                        ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StageNode extends StatelessWidget {
-  final RoadmapStageInfo info;
-  final _StageVisual visual;
-  final VoidCallback onTap;
-
-  const _StageNode({
-    required this.info,
-    required this.visual,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return PressFeedback(
-      scale: 0.94,
-      onTap: onTap,
-      child: Container(
-        width: 64,
-        height: 64,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: visual.color.withAlpha(info.isCurrent ? 35 : 13),
-          border: Border.all(
-            color: visual.color,
-            width: info.isCurrent ? 3 : 2,
-          ),
-          boxShadow: info.isCurrent
-              ? [BoxShadow(color: visual.color.withAlpha(80), blurRadius: 18)]
-              : null,
-        ),
-        child: Icon(visual.icon, color: visual.color, size: 25),
-      ),
-    );
-  }
-}
-
-class _StageLabelCard extends StatelessWidget {
-  final RoadmapStageInfo info;
-  final _StageVisual visual;
-  final bool isDark;
-  final VoidCallback onTap;
-
-  const _StageLabelCard({
-    required this.info,
-    required this.visual,
-    required this.isDark,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(15),
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 64),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(
-          color: visual.color.withAlpha(info.isCurrent ? 20 : 8),
-          borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: visual.color.withAlpha(55)),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              info.node.title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: info.role == RoadmapStageRole.locked
-                    ? MobileJournalTokens.muted(isDark)
-                    : MobileJournalTokens.text(isDark),
-                fontSize: 12,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              '${visual.label} · ${info.completedLinkedQuests}/${info.questTarget}',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: visual.color, fontSize: 10.5),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _MobileEmptyPath extends StatelessWidget {
   final Skill skill;
   final bool isDark;
@@ -868,6 +853,7 @@ class _MobileEmptyPath extends StatelessWidget {
   final VoidCallback onTemplates;
 
   const _MobileEmptyPath({
+    super.key,
     required this.skill,
     required this.isDark,
     required this.onAddStage,

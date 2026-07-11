@@ -57,9 +57,10 @@ badges that require a fixed visual measurement; document those exceptions.
 
 ## Current Exceptions
 
-The RoadMap painter still has a few geometry-linked labels whose size is tied
-to node/canvas metrics. Those should be moved to explicit painter metrics in a
-future RoadMap token pass rather than mixed into product text roles.
+Desktop RoadMap painter labels remain geometry-linked. The mobile ascent graph
+uses bounded two-line stage titles and increases card height at larger text
+scales rather than shrinking title text. A future RoadMap token pass can unify
+the remaining desktop canvas label metrics.
 
 ## Tests
 
