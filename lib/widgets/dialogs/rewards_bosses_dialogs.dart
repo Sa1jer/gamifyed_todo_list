@@ -17,7 +17,6 @@ class RewardsDialog extends StatefulWidget {
 
 class _RewardsDialogState extends State<RewardsDialog> {
   _RewardReveal? _lastReveal;
-  bool _buffsExpanded = true;
 
   @override
   Widget build(BuildContext context) {
@@ -194,91 +193,59 @@ class _RewardsDialogState extends State<RewardsDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        GestureDetector(
+        Row(
           key: const ValueKey('rewards-effects-section'),
-          behavior: HitTestBehavior.opaque,
-          onTap: () => setState(() => _buffsExpanded = !_buffsExpanded),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 2),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.bolt,
-                  color: const Color(0xFF34C759).withAlpha(190),
-                  size: 16,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Эффекты',
-                    style: TextStyle(
-                      color: txt,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                TaskBadge(
-                  label: '${buffs.length}',
-                  color: const Color(0xFF34C759),
-                ),
-                const SizedBox(width: 8),
-                Icon(
-                  _buffsExpanded ? Icons.expand_less : Icons.expand_more,
-                  color: sub,
-                  size: 18,
-                ),
-              ],
+          children: [
+            Icon(
+              Icons.bolt,
+              color: const Color(0xFF34C759).withAlpha(190),
+              size: 16,
             ),
-          ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Эффекты',
+                style: TextStyle(
+                  color: txt,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            TaskBadge(label: '${buffs.length}', color: const Color(0xFF34C759)),
+          ],
         ),
-        MotionExpandable(
-          expanded: _buffsExpanded,
-          collapsedChild: Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(
-              buffs.isEmpty
-                  ? 'Эффектов сейчас нет. Они появятся после открытия сундуков.'
-                  : 'Эффекты применятся сами, когда подойдут к квесту.',
-              style: TextStyle(color: sub, fontSize: 11.5, height: 1.35),
-            ),
-          ),
-          expandedChild: Padding(
-            padding: const EdgeInsets.only(top: 10),
-            child: MotionFadeSlideSwitcher(
-              child: buffs.isEmpty
-                  ? _RewardsEmptyState(
-                      key: const ValueKey('empty-buffs'),
-                      icon: Icons.bolt_outlined,
-                      title: 'Нет эффектов',
-                      subtitle:
-                          'Открой сундук, и здесь появится временное усиление для следующих квестов.',
-                      isDark: isDark,
-                    )
-                  : Column(
-                      key: const ValueKey('buff-list'),
-                      children: buffs.asMap().entries.map((entry) {
-                        final buff = entry.value;
-                        return MotionListItem(
-                          key: ValueKey('buff-${buff.id}'),
-                          index: entry.key,
-                          slide: 5,
-                          child: _ActiveBuffCard(
-                            buff: buff,
-                            skill: buff.skillId == null
-                                ? null
-                                : widget.state.skills
-                                      .where(
-                                        (skill) => skill.id == buff.skillId,
-                                      )
-                                      .firstOrNull,
-                            isDark: isDark,
-                          ),
-                        );
-                      }).toList(),
-                    ),
-            ),
-          ),
+        const SizedBox(height: 10),
+        MotionFadeSlideSwitcher(
+          child: buffs.isEmpty
+              ? _RewardsEmptyState(
+                  key: const ValueKey('empty-buffs'),
+                  icon: Icons.bolt_outlined,
+                  title: 'Нет эффектов',
+                  subtitle:
+                      'Открой сундук, и здесь появится временное усиление для следующих квестов.',
+                  isDark: isDark,
+                )
+              : Column(
+                  key: const ValueKey('buff-list'),
+                  children: buffs.asMap().entries.map((entry) {
+                    final buff = entry.value;
+                    return MotionListItem(
+                      key: ValueKey('buff-${buff.id}'),
+                      index: entry.key,
+                      slide: 5,
+                      child: _ActiveBuffCard(
+                        buff: buff,
+                        skill: buff.skillId == null
+                            ? null
+                            : widget.state.skills
+                                  .where((skill) => skill.id == buff.skillId)
+                                  .firstOrNull,
+                        isDark: isDark,
+                      ),
+                    );
+                  }).toList(),
+                ),
         ),
       ],
     );

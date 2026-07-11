@@ -173,151 +173,175 @@ class _DesktopSidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final skills = state.roadmapSkills;
-    return ColoredBox(
-      color: tokens.sidebarSurface,
-      child: Column(
-        children: [
-          _DesktopBrand(
-            key: const ValueKey('top-bar-app-mark'),
-            tokens: tokens,
-            onTap: onDebugAppTap,
-          ),
-          Divider(height: 1, color: tokens.subtleOutline),
-          _DesktopProfileSummary(
-            key: profileKey,
-            state: state,
-            tokens: tokens,
-            onTap: onOpenProfile,
-          ),
-          Divider(height: 1, color: tokens.subtleOutline),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
-            child: Column(
-              children: [
-                _DesktopNavItem(
-                  key: const ValueKey('desktop-nav-act'),
-                  icon: Icons.bolt_rounded,
-                  label: 'Действовать',
-                  selected: mode == WorkspaceMode.act,
-                  tokens: tokens,
-                  onTap: () => onModeChanged(WorkspaceMode.act),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compactHeight = constraints.maxHeight < 620;
+        return ColoredBox(
+          color: tokens.sidebarSurface,
+          child: Column(
+            children: [
+              _DesktopBrand(
+                key: const ValueKey('top-bar-app-mark'),
+                tokens: tokens,
+                onTap: onDebugAppTap,
+                compact: compactHeight,
+              ),
+              Divider(height: 1, color: tokens.subtleOutline),
+              _DesktopProfileSummary(
+                key: profileKey,
+                state: state,
+                tokens: tokens,
+                onTap: onOpenProfile,
+                compact: compactHeight,
+              ),
+              Divider(height: 1, color: tokens.subtleOutline),
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  12,
+                  compactHeight ? 6 : 12,
+                  12,
+                  compactHeight ? 5 : 10,
                 ),
-                KeyedSubtree(
-                  key: roadmapKey,
-                  child: _DesktopNavItem(
-                    key: const ValueKey('desktop-nav-map'),
-                    icon: Icons.account_tree,
-                    label: 'Карта',
-                    selected: mode == WorkspaceMode.mastery,
-                    tokens: tokens,
-                    onTap: () => onModeChanged(WorkspaceMode.mastery),
-                  ),
-                ),
-                KeyedSubtree(
-                  key: rewardsKey,
-                  child: _DesktopNavItem(
-                    key: const ValueKey('desktop-nav-trophies'),
-                    icon: Icons.emoji_events_outlined,
-                    label: 'Трофеи',
-                    selected: mode == WorkspaceMode.rewards,
-                    tokens: tokens,
-                    onTap: onOpenRewards,
-                  ),
-                ),
-                KeyedSubtree(
-                  key: statsKey,
-                  child: _DesktopNavItem(
-                    key: const ValueKey('desktop-nav-statistics'),
-                    icon: Icons.query_stats,
-                    label: 'Статистика',
-                    selected: mode == WorkspaceMode.stats,
-                    tokens: tokens,
-                    onTap: onOpenStatistics,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Divider(height: 1, color: tokens.subtleOutline),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 12, 7),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'НАВЫКИ',
-                    style: context.appTextRoles.sectionEyebrow.copyWith(
-                      color: tokens.mutedText,
+                child: Column(
+                  children: [
+                    _DesktopNavItem(
+                      key: const ValueKey('desktop-nav-act'),
+                      icon: Icons.bolt_rounded,
+                      label: 'Действовать',
+                      selected: mode == WorkspaceMode.act,
+                      tokens: tokens,
+                      compact: compactHeight,
+                      onTap: () => onModeChanged(WorkspaceMode.act),
                     ),
-                  ),
+                    KeyedSubtree(
+                      key: roadmapKey,
+                      child: _DesktopNavItem(
+                        key: const ValueKey('desktop-nav-map'),
+                        icon: Icons.account_tree,
+                        label: 'Карта',
+                        selected: mode == WorkspaceMode.mastery,
+                        tokens: tokens,
+                        compact: compactHeight,
+                        onTap: () => onModeChanged(WorkspaceMode.mastery),
+                      ),
+                    ),
+                    KeyedSubtree(
+                      key: rewardsKey,
+                      child: _DesktopNavItem(
+                        key: const ValueKey('desktop-nav-trophies'),
+                        icon: Icons.emoji_events_outlined,
+                        label: 'Трофеи',
+                        selected: mode == WorkspaceMode.rewards,
+                        tokens: tokens,
+                        compact: compactHeight,
+                        onTap: onOpenRewards,
+                      ),
+                    ),
+                    KeyedSubtree(
+                      key: statsKey,
+                      child: _DesktopNavItem(
+                        key: const ValueKey('desktop-nav-statistics'),
+                        icon: Icons.query_stats,
+                        label: 'Статистика',
+                        selected: mode == WorkspaceMode.stats,
+                        tokens: tokens,
+                        compact: compactHeight,
+                        onTap: onOpenStatistics,
+                      ),
+                    ),
+                  ],
                 ),
-                _DesktopCompactButton(
-                  key: const ValueKey('desktop-add-skill'),
-                  label: 'Навык',
-                  icon: Icons.add_rounded,
-                  color: tokens.profilePurple,
-                  onTap: onAddSkill,
+              ),
+              Divider(height: 1, color: tokens.subtleOutline),
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  compactHeight ? 7 : 12,
+                  12,
+                  compactHeight ? 4 : 7,
                 ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: skills.isEmpty
-                ? _DesktopSidebarEmpty(tokens: tokens, onAdd: onAddSkill)
-                : ReorderableListView.builder(
-                    key: const ValueKey('desktop-skill-list'),
-                    padding: const EdgeInsets.fromLTRB(10, 2, 10, 8),
-                    buildDefaultDragHandles: false,
-                    itemCount: skills.length,
-                    onReorderItem: state.reorderSkills,
-                    itemBuilder: (context, index) {
-                      final skill = skills[index];
-                      return Padding(
-                        key: ValueKey('desktop-skill-reorder-${skill.id}'),
-                        padding: const EdgeInsets.only(bottom: 5),
-                        child: ReorderableDelayedDragStartListener(
-                          index: index,
-                          child: _DesktopSkillRow(
-                            key: ValueKey('desktop-skill-${skill.id}'),
-                            skill: skill,
-                            tokens: tokens,
-                            selected: effectiveSkill?.id == skill.id,
-                            activeCount: state.activeTaskCountForSkill(
-                              skill.id,
-                            ),
-                            onTap: () {
-                              if (state.selectedSkillId != skill.id) {
-                                state.selectSkill(skill.id);
-                              }
-                              if (mode == WorkspaceMode.mastery) {
-                                onOpenRoadmap(skill);
-                              }
-                            },
-                            onEdit: () => onEditSkill(skill),
-                            onDelete: () => onDeleteSkill(skill),
-                            onRoadmap: () => onOpenRoadmap(skill),
-                          ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'НАВЫКИ',
+                        style: context.appTextRoles.sectionEyebrow.copyWith(
+                          color: tokens.mutedText,
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    ),
+                    _DesktopCompactButton(
+                      key: const ValueKey('desktop-add-skill'),
+                      label: 'Навык',
+                      icon: Icons.add_rounded,
+                      color: tokens.profilePurple,
+                      onTap: onAddSkill,
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: skills.isEmpty
+                    ? _DesktopSidebarEmpty(tokens: tokens, onAdd: onAddSkill)
+                    : ReorderableListView.builder(
+                        key: const ValueKey('desktop-skill-list'),
+                        padding: const EdgeInsets.fromLTRB(10, 2, 10, 8),
+                        buildDefaultDragHandles: false,
+                        itemCount: skills.length,
+                        onReorderItem: state.reorderSkills,
+                        itemBuilder: (context, index) {
+                          final skill = skills[index];
+                          return Padding(
+                            key: ValueKey('desktop-skill-reorder-${skill.id}'),
+                            padding: const EdgeInsets.only(bottom: 5),
+                            child: ReorderableDelayedDragStartListener(
+                              index: index,
+                              child: _DesktopSkillRow(
+                                key: ValueKey('desktop-skill-${skill.id}'),
+                                skill: skill,
+                                tokens: tokens,
+                                selected: effectiveSkill?.id == skill.id,
+                                activeCount: state.activeTaskCountForSkill(
+                                  skill.id,
+                                ),
+                                onTap: () {
+                                  if (state.selectedSkillId != skill.id) {
+                                    state.selectSkill(skill.id);
+                                  }
+                                  if (mode == WorkspaceMode.mastery) {
+                                    onOpenRoadmap(skill);
+                                  }
+                                },
+                                onEdit: () => onEditSkill(skill),
+                                onDelete: () => onDeleteSkill(skill),
+                                onRoadmap: () => onOpenRoadmap(skill),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+              _DesktopInboxShortcut(state: state, tokens: tokens),
+              Divider(height: 1, color: tokens.subtleOutline),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 2,
+                ),
+                child: _DesktopNavItem(
+                  key: const ValueKey('desktop-settings'),
+                  icon: Icons.settings_outlined,
+                  label: 'Настройки',
+                  selected: mode == WorkspaceMode.settings,
+                  tokens: tokens,
+                  compact: true,
+                  onTap: onOpenSettings,
+                ),
+              ),
+            ],
           ),
-          _DesktopInboxShortcut(state: state, tokens: tokens),
-          Divider(height: 1, color: tokens.subtleOutline),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-            child: _DesktopNavItem(
-              key: const ValueKey('desktop-settings'),
-              icon: Icons.settings_outlined,
-              label: 'Настройки',
-              selected: mode == WorkspaceMode.settings,
-              tokens: tokens,
-              compact: true,
-              onTap: onOpenSettings,
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -325,8 +349,14 @@ class _DesktopSidebar extends StatelessWidget {
 class _DesktopBrand extends StatelessWidget {
   final DesktopJournalTokens tokens;
   final VoidCallback? onTap;
+  final bool compact;
 
-  const _DesktopBrand({super.key, required this.tokens, this.onTap});
+  const _DesktopBrand({
+    super.key,
+    required this.tokens,
+    this.onTap,
+    this.compact = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -336,22 +366,22 @@ class _DesktopBrand extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 64),
+          constraints: BoxConstraints(minHeight: compact ? 52 : 64),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: EdgeInsets.symmetric(horizontal: compact ? 14 : 16),
             child: Row(
               children: [
                 Container(
-                  width: 34,
-                  height: 34,
+                  width: compact ? 30 : 34,
+                  height: compact ? 30 : 34,
                   decoration: BoxDecoration(
                     color: tokens.profilePurple,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.bolt_rounded,
                     color: Colors.white,
-                    size: 19,
+                    size: compact ? 17 : 19,
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -379,12 +409,14 @@ class _DesktopProfileSummary extends StatelessWidget {
   final AppState state;
   final DesktopJournalTokens tokens;
   final VoidCallback onTap;
+  final bool compact;
 
   const _DesktopProfileSummary({
     super.key,
     required this.state,
     required this.tokens,
     required this.onTap,
+    this.compact = false,
   });
 
   @override
@@ -400,15 +432,20 @@ class _DesktopProfileSummary extends StatelessWidget {
           behavior: HitTestBehavior.opaque,
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+            padding: EdgeInsets.fromLTRB(
+              16,
+              compact ? 10 : 16,
+              16,
+              compact ? 9 : 14,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
                     Container(
-                      width: 48,
-                      height: 48,
+                      width: compact ? 38 : 48,
+                      height: compact ? 38 : 48,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: LinearGradient(
@@ -430,9 +467,9 @@ class _DesktopProfileSummary extends StatelessWidget {
                       child: profile.avatarBytes == null
                           ? Text(
                               profile.initial,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: Colors.white,
-                                fontSize: 18,
+                                fontSize: compact ? 15 : 18,
                                 fontWeight: FontWeight.w900,
                               ),
                             )
@@ -453,7 +490,7 @@ class _DesktopProfileSummary extends StatelessWidget {
                               fontWeight: FontWeight.w900,
                             ),
                           ),
-                          const SizedBox(height: 5),
+                          SizedBox(height: compact ? 3 : 5),
                           _DesktopLevelPill(
                             level: profile.level,
                             color: tokens.profilePurple,
@@ -464,36 +501,38 @@ class _DesktopProfileSummary extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Опыт персонажа',
-                        style: TextStyle(
-                          color: tokens.mutedText,
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w700,
+                if (!compact) ...[
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Опыт персонажа',
+                          style: TextStyle(
+                            color: tokens.mutedText,
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
-                    ),
-                    Text(
-                      '${profile.xp}/${profile.xpNeeded}',
-                      style: TextStyle(
-                        color: tokens.profilePurple,
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w900,
+                      Text(
+                        '${profile.xp}/${profile.xpNeeded}',
+                        style: TextStyle(
+                          color: tokens.profilePurple,
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                _DesktopProgressBar(
-                  value: profile.progress,
-                  color: tokens.profilePurple,
-                  background: tokens.profilePurple.withValues(alpha: 0.15),
-                  height: 7,
-                ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  _DesktopProgressBar(
+                    value: profile.progress,
+                    color: tokens.profilePurple,
+                    background: tokens.profilePurple.withValues(alpha: 0.15),
+                    height: 7,
+                  ),
+                ],
               ],
             ),
           ),
@@ -1027,6 +1066,152 @@ class _DesktopMainWorkspace extends StatelessWidget {
         (tasks.isNotEmpty ||
             state.history.any((entry) => entry.skillId == currentSkill.id));
 
+    Widget buildTodaySummary() => Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: tokens.streakAmber.withValues(alpha: 0.13),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.bolt_rounded,
+                color: tokens.streakAmber,
+                size: 17,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              'Действовать сегодня',
+              style: context.appTextTheme.titleLarge?.copyWith(
+                color: tokens.text,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 18),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final columns = constraints.maxWidth >= 690 ? 4 : 2;
+            final textScale = MediaQuery.textScalerOf(context).scale(1);
+            final childAspectRatio = textScale >= 1.6
+                ? (columns == 4 ? 1.25 : 1.6)
+                : (columns == 4 ? 2.25 : 2.7);
+            return GridView.count(
+              key: const ValueKey('desktop-today-stats'),
+              crossAxisCount: columns,
+              childAspectRatio: childAspectRatio,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              children: [
+                _DesktopStatCard(
+                  icon: Icons.check_rounded,
+                  value: '${stats?.tasksCompleted ?? 0}',
+                  label: 'Выполнено',
+                  color: tokens.successGreen,
+                  tokens: tokens,
+                ),
+                _DesktopStatCard(
+                  icon: Icons.bolt_rounded,
+                  value: '+${stats?.xpEarned ?? 0}',
+                  label: 'XP сегодня',
+                  color: tokens.rewardGold,
+                  tokens: tokens,
+                ),
+                _DesktopStatCard(
+                  icon: Icons.radio_button_unchecked_rounded,
+                  value: '$activeGlobal',
+                  label: 'Активных',
+                  color: tokens.semanticBlue,
+                  tokens: tokens,
+                ),
+                _DesktopStatCard(
+                  icon: Icons.local_fire_department_outlined,
+                  value: '$streak дн.',
+                  label: 'Серия',
+                  color: tokens.streakAmber,
+                  tokens: tokens,
+                ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+
+    if (currentSkill != null && !hasQuestHistory) {
+      final header = _DesktopSelectedSkillHeader(
+        skill: currentSkill,
+        tokens: tokens,
+        activeStage: currentSkill.treeNodes
+            .where(
+              (node) =>
+                  currentSkill.treeNodeStatus(node) ==
+                  SkillTreeNodeStatus.active,
+            )
+            .firstOrNull,
+        onAddTask: () => onAddTask(currentSkill),
+      );
+      final firstQuest = _DesktopFirstQuestEmpty(
+        tokens: tokens,
+        color: currentSkill.color,
+      );
+      return ColoredBox(
+        color: tokens.mainSurface,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final padding = EdgeInsets.fromLTRB(
+              metrics.mainPadding,
+              22,
+              metrics.mainPadding,
+              32,
+            );
+            final compactHeight = constraints.maxHeight < 540;
+            if (compactHeight) {
+              return ListView(
+                key: const ValueKey('desktop-first-quest-scroll'),
+                padding: padding,
+                children: [
+                  buildTodaySummary(),
+                  SizedBox(height: metrics.sectionGap + 10),
+                  header,
+                  const SizedBox(height: 24),
+                  firstQuest,
+                ],
+              );
+            }
+            return Padding(
+              padding: padding,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  buildTodaySummary(),
+                  SizedBox(height: metrics.sectionGap + 10),
+                  header,
+                  const SizedBox(height: 18),
+                  Expanded(
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 680),
+                        child: firstQuest,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      );
+    }
+
     return ColoredBox(
       color: tokens.mainSurface,
       child: Scrollbar(
@@ -1039,81 +1224,7 @@ class _DesktopMainWorkspace extends StatelessWidget {
             32,
           ),
           children: [
-            Row(
-              children: [
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: tokens.streakAmber.withValues(alpha: 0.13),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.bolt_rounded,
-                    color: tokens.streakAmber,
-                    size: 17,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  'Действовать сегодня',
-                  style: TextStyle(
-                    color: tokens.text,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final columns = constraints.maxWidth >= 690 ? 4 : 2;
-                final textScale = MediaQuery.textScalerOf(context).scale(1);
-                final childAspectRatio = textScale >= 1.6
-                    ? (columns == 4 ? 1.25 : 1.6)
-                    : (columns == 4 ? 2.25 : 2.7);
-                return GridView.count(
-                  key: const ValueKey('desktop-today-stats'),
-                  crossAxisCount: columns,
-                  childAspectRatio: childAspectRatio,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: [
-                    _DesktopStatCard(
-                      icon: Icons.check_rounded,
-                      value: '${stats?.tasksCompleted ?? 0}',
-                      label: 'Выполнено',
-                      color: tokens.successGreen,
-                      tokens: tokens,
-                    ),
-                    _DesktopStatCard(
-                      icon: Icons.bolt_rounded,
-                      value: '+${stats?.xpEarned ?? 0}',
-                      label: 'XP сегодня',
-                      color: tokens.rewardGold,
-                      tokens: tokens,
-                    ),
-                    _DesktopStatCard(
-                      icon: Icons.radio_button_unchecked_rounded,
-                      value: '$activeGlobal',
-                      label: 'Активных',
-                      color: tokens.semanticBlue,
-                      tokens: tokens,
-                    ),
-                    _DesktopStatCard(
-                      icon: Icons.local_fire_department_outlined,
-                      value: '$streak дн.',
-                      label: 'Серия',
-                      color: tokens.streakAmber,
-                      tokens: tokens,
-                    ),
-                  ],
-                );
-              },
-            ),
+            buildTodaySummary(),
             SizedBox(height: metrics.sectionGap + 10),
             AnimatedSwitcher(
               duration: reduceMotion
@@ -1140,7 +1251,6 @@ class _DesktopMainWorkspace extends StatelessWidget {
                         _DesktopSelectedSkillHeader(
                           skill: currentSkill,
                           tokens: tokens,
-                          activeQuestCount: active.length,
                           activeStage: currentSkill.treeNodes
                               .where(
                                 (node) =>
@@ -1308,13 +1418,11 @@ class _DesktopSelectedSkillHeader extends StatelessWidget {
   final Skill skill;
   final DesktopJournalTokens tokens;
   final VoidCallback onAddTask;
-  final int activeQuestCount;
   final SkillTreeNode? activeStage;
 
   const _DesktopSelectedSkillHeader({
     required this.skill,
     required this.tokens,
-    required this.activeQuestCount,
     required this.activeStage,
     required this.onAddTask,
   });
@@ -1412,12 +1520,6 @@ class _DesktopSelectedSkillHeader extends StatelessWidget {
       spacing: 7,
       runSpacing: 6,
       children: [
-        _DesktopHeaderMeta(
-          label: '$activeQuestCount активных',
-          icon: Icons.task_alt_outlined,
-          color: skill.color,
-          tokens: tokens,
-        ),
         if (activeStage != null)
           _DesktopHeaderMeta(
             label: activeStage!.title,
@@ -1449,6 +1551,7 @@ class _DesktopSelectedSkillHeader extends StatelessWidget {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final compact = constraints.maxWidth < 720;
+            final hasMetadata = activeStage != null;
             final button = _DesktopPrimaryButton(
               key: ValueKey('desktop-add-task-${skill.id}'),
               label: 'Новый квест',
@@ -1466,8 +1569,11 @@ class _DesktopSelectedSkillHeader extends StatelessWidget {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      Expanded(child: metadata()),
-                      const SizedBox(width: 10),
+                      if (hasMetadata) ...[
+                        Expanded(child: metadata()),
+                        const SizedBox(width: 10),
+                      ] else
+                        const Spacer(),
                       button,
                     ],
                   ),
@@ -1487,9 +1593,11 @@ class _DesktopSelectedSkillHeader extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(width: 16),
-                metadata(),
-                const SizedBox(width: 16),
+                if (hasMetadata) ...[
+                  const SizedBox(width: 16),
+                  metadata(),
+                  const SizedBox(width: 16),
+                ],
                 button,
               ],
             );

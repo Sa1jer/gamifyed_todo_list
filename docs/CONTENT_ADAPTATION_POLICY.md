@@ -50,6 +50,15 @@ Template selection uses runtime layout adaptation:
 Canvas node labels remain geometry-sensitive and are tracked as a follow-up in
 the typography system.
 
+## Empty States
+
+Empty-state surfaces use the available component constraints, not the full
+screen size. RoadMap uses compact, normal, and large overlay variants; mobile
+focus reserves only the height of its selected variant and never creates a
+blank flexible slot before Inbox. A new desktop skill centres first-quest
+guidance in remaining workspace height, with a scroll-safe compact-height
+fallback.
+
 ## Testing Matrix
 
 Before accepting a typography/layout batch, verify at least:

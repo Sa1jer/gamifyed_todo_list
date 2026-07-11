@@ -717,6 +717,14 @@ single semantic text scale to adopt instead of adding more per-widget
 font-size heuristics. Large-text and responsive policy details live in
 `docs/TYPOGRAPHY_SYSTEM.md` and `docs/CONTENT_ADAPTATION_POLICY.md`.
 
+## 1.3.56 Responsive Empty-State Note
+
+The mobile overview add-skill action now uses a compact `44dp` visual control
+next to the section label. Focus guidance selects large, medium, or compact
+content heights from the remaining usable space and no longer holds an empty
+flexible slot when only one skill exists. The Inbox therefore follows the
+actual guidance card instead of being pushed to the bottom of a sparse screen.
+
 ## Reference Checklist
 
 - Flutter adaptive layout: <https://docs.flutter.dev/ui/adaptive-responsive/general>

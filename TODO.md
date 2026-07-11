@@ -1,6 +1,6 @@
 # TODO / Living Backlog
 
-Last updated: 2026-07-08
+Last updated: 2026-07-11
 
 This file tracks the active implementation roadmap and completed project work. Update it after every meaningful code or design change.
 
@@ -107,6 +107,7 @@ Do not mix these product decisions into Release / Regression Hardening. Revisit 
 - [ ] Decide whether the currently unreachable `PlanningWorkspace` is a future product surface or removable legacy code.
 - [ ] Characterize reward/chest/buff decision idempotency before extracting a pure `RewardEngine`; keep mutations in AppState initially.
 - [ ] Complete native visual recovery QA for `1.3.53`: RoadMap at 1/2/many stages and 1024/1366/1920 widths, all eight Statistics details, Trophies/Settings, rapid skill switching, and five-click Admin entry on macOS plus Windows QHD.
+- [ ] Define the product scope and entry point for a dedicated Task Manager before adding a new workspace; secondary desktop workspaces now safely return to the last normal panel on repeated navigation.
 
 ## P3 — Skill Goal Progress
 
@@ -237,6 +238,7 @@ Manual desktop/QHD checklist:
 
 - `1.3.54`: completed the application-wide stability/SOLID audit; fixed stale empty-snapshot history, post-dispose startup loading, invalid skill selection and Inbox skill counts; replaced linear repeat catch-up, centralized week/priority rules, pinned Flutter `3.44.3`, removed the unreachable legacy desktop header, and added evidence-based architecture documentation/tests.
 - `1.3.55`: added the semantic typography foundation, repaired nested-theme `AppTextRoles` fallback, synchronized RoadMap canvas/sidebar focus, improved adaptive desktop content at large text scale, and documented typography/content adaptation policy.
+- `1.3.56`: debounced RoadMap camera fitting during desktop resize, introduced constraint-aware empty RoadMap and mobile focus states, centered first-quest guidance in available desktop space, removed empty active-quest header metadata, and made Effects/Chests content-led instead of accordion/fixed-height surfaces.
 
 - `1.3.53`: recovered the incomplete `1.3.52` visual migration with a real RoadMap shell/templates/context rail, complete Trophies and Statistics ecosystems, full existing Settings coverage, responsive raised skill headers, history-aware empty states, stable overflow geometry, bounds-based camera fitting, and tested debug/profile Admin entry.
 - `1.3.52`: introduced workspace routes and initial wrappers, but its visual migration remained incomplete; superseded by the audited `1.3.53` recovery.

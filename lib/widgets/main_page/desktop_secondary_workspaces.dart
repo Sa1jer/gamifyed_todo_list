@@ -94,8 +94,6 @@ class _DesktopRewardsWorkspace extends StatefulWidget {
 }
 
 class _DesktopRewardsWorkspaceState extends State<_DesktopRewardsWorkspace> {
-  bool _effectsExpanded = true;
-
   @override
   Widget build(BuildContext context) {
     final state = widget.state;
@@ -169,133 +167,93 @@ class _DesktopRewardsWorkspaceState extends State<_DesktopRewardsWorkspace> {
           const SizedBox(height: 22),
           _DesktopSectionCard(
             tokens: tokens,
-            child: Column(
-              children: [
-                InkWell(
-                  key: const ValueKey('desktop-rewards-effects'),
-                  onTap: () =>
-                      setState(() => _effectsExpanded = !_effectsExpanded),
-                  child: Padding(
-                    padding: const EdgeInsets.all(18),
-                    child: Row(
-                      children: [
-                        Icon(Icons.bolt, color: tokens.successGreen),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'Эффекты',
-                            style: TextStyle(
-                              color: tokens.text,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w900,
+            child: _DesktopRewardCollection(
+              key: const ValueKey('desktop-rewards-effects'),
+              tokens: tokens,
+              icon: Icons.bolt_rounded,
+              color: tokens.successGreen,
+              title: 'Эффекты',
+              count: buffs.length,
+              child: buffs.isEmpty
+                  ? _DesktopEmptyMessage(
+                      tokens: tokens,
+                      icon: Icons.bolt_outlined,
+                      title: 'Нет эффектов',
+                      subtitle:
+                          'Открой сундук, и здесь появится временное усиление.',
+                    )
+                  : Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: buffs
+                          .map(
+                            (buff) => Chip(
+                              avatar: Icon(
+                                Icons.auto_awesome,
+                                color: tokens.successGreen,
+                                size: 17,
+                              ),
+                              label: Text(buff.title),
                             ),
-                          ),
-                        ),
-                        _DesktopCountPill(
-                          value: buffs.length,
-                          color: tokens.successGreen,
-                          tokens: tokens,
-                        ),
-                        const SizedBox(width: 8),
-                        Icon(
-                          _effectsExpanded
-                              ? Icons.expand_less
-                              : Icons.expand_more,
-                          color: tokens.mutedText,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                MotionExpandable(
-                  expanded: _effectsExpanded,
-                  expandedChild: Padding(
-                    padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
-                    child: buffs.isEmpty
-                        ? _DesktopEmptyMessage(
-                            tokens: tokens,
-                            icon: Icons.bolt_outlined,
-                            title: 'Нет эффектов',
-                            subtitle:
-                                'Открой сундук, и здесь появится временное усиление.',
                           )
-                        : Wrap(
-                            spacing: 10,
-                            runSpacing: 10,
-                            children: buffs
-                                .map(
-                                  (buff) => Chip(
-                                    avatar: Icon(
-                                      Icons.auto_awesome,
-                                      color: tokens.successGreen,
-                                      size: 17,
-                                    ),
-                                    label: Text(buff.title),
-                                  ),
-                                )
-                                .toList(),
-                          ),
-                  ),
-                  collapsedChild: const SizedBox.shrink(),
-                ),
-              ],
+                          .toList(),
+                    ),
             ),
           ),
           const SizedBox(height: 22),
-          Text(
-            'НОВЫЕ СУНДУКИ',
-            style: TextStyle(
-              color: tokens.mutedText,
-              fontSize: 12,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0.7,
+          _DesktopSectionCard(
+            tokens: tokens,
+            child: _DesktopRewardCollection(
+              key: const ValueKey('desktop-rewards-chests'),
+              tokens: tokens,
+              icon: Icons.inventory_2_outlined,
+              color: tokens.rewardGold,
+              title: 'Новые сундуки',
+              count: chests.length,
+              child: chests.isEmpty
+                  ? _DesktopEmptyMessage(
+                      tokens: tokens,
+                      icon: Icons.inventory_2_outlined,
+                      title: 'Пока нет сундуков',
+                      subtitle:
+                          'Закрой сильный день, удержи серию или пройди событие сопротивления.',
+                    )
+                  : Column(
+                      children: chests
+                          .map(
+                            (chest) => Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: _DesktopSectionCard(
+                                tokens: tokens,
+                                child: ListTile(
+                                  leading: Icon(
+                                    Icons.redeem_rounded,
+                                    color: tokens.rewardGold,
+                                  ),
+                                  title: Text(
+                                    chest.title,
+                                    style: TextStyle(
+                                      color: tokens.text,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  subtitle: Text(
+                                    chest.description,
+                                    style: TextStyle(color: tokens.mutedText),
+                                  ),
+                                  trailing: FilledButton(
+                                    onPressed: () =>
+                                        state.openRewardChest(chest.id),
+                                    child: const Text('Открыть'),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    ),
             ),
           ),
-          const SizedBox(height: 10),
-          if (chests.isEmpty)
-            _DesktopSectionCard(
-              tokens: tokens,
-              child: Padding(
-                padding: const EdgeInsets.all(18),
-                child: _DesktopEmptyMessage(
-                  tokens: tokens,
-                  icon: Icons.inventory_2_outlined,
-                  title: 'Пока нет сундуков',
-                  subtitle:
-                      'Закрой сильный день, удержи серию или пройди событие сопротивления.',
-                ),
-              ),
-            )
-          else
-            ...chests.map(
-              (chest) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: _DesktopSectionCard(
-                  tokens: tokens,
-                  child: ListTile(
-                    leading: Icon(
-                      Icons.redeem_rounded,
-                      color: tokens.rewardGold,
-                    ),
-                    title: Text(
-                      chest.title,
-                      style: TextStyle(
-                        color: tokens.text,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    subtitle: Text(
-                      chest.description,
-                      style: TextStyle(color: tokens.mutedText),
-                    ),
-                    trailing: FilledButton(
-                      onPressed: () => state.openRewardChest(chest.id),
-                      child: const Text('Открыть'),
-                    ),
-                  ),
-                ),
-              ),
-            ),
           const SizedBox(height: 24),
           Text(
             'КАК ПОЛУЧИТЬ ТРОФЕИ',
@@ -660,6 +618,55 @@ class _DesktopSectionCard extends StatelessWidget {
     ),
     clipBehavior: Clip.antiAlias,
     child: child,
+  );
+}
+
+/// Shared content-led anatomy for effects and unopened chests.
+/// Both collections grow only with their content instead of reserving a panel.
+class _DesktopRewardCollection extends StatelessWidget {
+  final DesktopJournalTokens tokens;
+  final IconData icon;
+  final Color color;
+  final String title;
+  final int count;
+  final Widget child;
+
+  const _DesktopRewardCollection({
+    super.key,
+    required this.tokens,
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.count,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.all(18),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                title,
+                style: context.appTextTheme.titleMedium?.copyWith(
+                  color: tokens.text,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            _DesktopCountPill(value: count, color: color, tokens: tokens),
+          ],
+        ),
+        const SizedBox(height: 12),
+        child,
+      ],
+    ),
   );
 }
 

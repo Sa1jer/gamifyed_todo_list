@@ -195,3 +195,17 @@ The practical desktop fixes in this boundary are:
 
 Detailed rules live in `docs/TYPOGRAPHY_SYSTEM.md` and
 `docs/CONTENT_ADAPTATION_POLICY.md`.
+
+## 1.3.56 Responsive Stabilization
+
+RoadMap camera fitting is debounced while native window constraints are moving.
+This prevents every intermediate `LayoutBuilder` pass from restarting the
+`TransformationController` animation, while preserving manual centering and
+the final fit after resize settles.
+
+Desktop empty states are content-led: an unused RoadMap chooses compact,
+normal, or large overlay metrics from actual canvas constraints; a fresh skill
+uses the remaining main-workspace height for its first-quest guidance and
+falls back to scrolling only at short window heights. Effects and unopened
+chests share one natural-height collection anatomy. Secondary shell navigation
+returns to the last normal workspace when its active item is selected again.

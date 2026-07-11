@@ -138,13 +138,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
     if (state.roadmapSkills.isEmpty) {
       return AppPanel(
         isDark: isDark,
-        child: EmptyStateMessage(
-          isDark: isDark,
-          icon: Icons.account_tree_outlined,
-          title: 'RoadMap пока пустой',
-          subtitle:
-              'Сначала создай первый навык в “Сейчас”: карта покажет этапы, когда появится путь.',
-        ),
+        child: _AdaptiveRoadmapEmptyState(isDark: isDark),
       );
     }
 
@@ -692,6 +686,108 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
           },
         ),
       ),
+    );
+  }
+}
+
+/// Makes an empty map feel intentional without changing the canvas renderer.
+class _AdaptiveRoadmapEmptyState extends StatelessWidget {
+  final bool isDark;
+
+  const _AdaptiveRoadmapEmptyState({required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final large =
+            constraints.maxWidth >= 980 && constraints.maxHeight >= 600;
+        final compact =
+            constraints.maxHeight < 520 || constraints.maxWidth < 520;
+        final iconSize = large
+            ? 48.0
+            : compact
+            ? 28.0
+            : 38.0;
+        final iconBox = large
+            ? 92.0
+            : compact
+            ? 54.0
+            : 72.0;
+        final variant = large
+            ? 'large'
+            : compact
+            ? 'compact'
+            : 'normal';
+
+        return Semantics(
+          label: 'RoadMap пока пустой. Сначала создайте первый навык в Сейчас.',
+          child: SizedBox.expand(
+            child: Align(
+              alignment: Alignment.center,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: large ? 560 : 420),
+                child: Container(
+                  key: ValueKey('roadmap-empty-$variant'),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: large ? 28 : 18,
+                    vertical: large ? 26 : 18,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(
+                      0xFF765BFF,
+                    ).withValues(alpha: isDark ? 0.055 : 0.04),
+                    borderRadius: BorderRadius.circular(large ? 22 : 18),
+                    border: Border.all(
+                      color: const Color(
+                        0xFF765BFF,
+                      ).withValues(alpha: isDark ? 0.24 : 0.2),
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: iconBox,
+                        height: iconBox,
+                        decoration: BoxDecoration(
+                          color: const Color(
+                            0xFF765BFF,
+                          ).withValues(alpha: isDark ? 0.14 : 0.1),
+                          borderRadius: BorderRadius.circular(iconBox * 0.3),
+                        ),
+                        child: Icon(
+                          Icons.account_tree_outlined,
+                          color: const Color(0xFF765BFF),
+                          size: iconSize,
+                        ),
+                      ),
+                      SizedBox(height: large ? 16 : 12),
+                      Text(
+                        'RoadMap пока пустой',
+                        textAlign: TextAlign.center,
+                        style: context.appTextTheme.titleLarge?.copyWith(
+                          color: textColor(isDark),
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Сначала создай первый навык в «Сейчас»: карта покажет этапы, когда появится путь.',
+                        textAlign: TextAlign.center,
+                        style: context.appTextTheme.bodyMedium?.copyWith(
+                          color: subtext(isDark),
+                          height: 1.38,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

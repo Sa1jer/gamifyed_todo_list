@@ -787,7 +787,11 @@ void main() {
       find.byKey(const ValueKey('desktop-rewards-effects')),
       findsOneWidget,
     );
-    expect(find.text('НОВЫЕ СУНДУКИ'), findsOneWidget);
+    expect(find.text('Новые сундуки'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('desktop-rewards-chests')),
+      findsOneWidget,
+    );
     expect(
       find.byKey(const ValueKey('desktop-trophies-how-to')),
       findsOneWidget,
@@ -1001,6 +1005,7 @@ void main() {
         find.byKey(const ValueKey('desktop-first-quest-empty')),
         findsOneWidget,
       );
+      expect(find.text('0 активных'), findsNothing);
       expect(find.text('АКТИВНЫЕ · 0'), findsNothing);
       expect(find.text('ВЫПОЛНЕНО · 0'), findsNothing);
 
@@ -1046,6 +1051,55 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('secondary desktop navigation returns to the last normal panel', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = InMemoryStorageService().._onboardingSeen = true;
+    await storage.init();
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('desktop-nav-trophies')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('desktop-trophies-in-progress')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('desktop-nav-trophies')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('desktop-main-scroll')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('empty RoadMap uses a constraint-aware desktop presentation', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = InMemoryStorageService().._onboardingSeen = true;
+    await storage.init();
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('desktop-nav-map')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('roadmap-empty-large')), findsOneWidget);
+
+    tester.view.physicalSize = const Size(900, 480);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('roadmap-empty-compact')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('mobile header keeps secondary actions in an overflow sheet', (
     WidgetTester tester,
@@ -1278,7 +1332,7 @@ void main() {
     final placeholder = find.byKey(const ValueKey('mobile-focus-placeholder'));
     final inbox = find.byKey(const ValueKey('mobile-inbox-accordion-toggle'));
     expect(
-      find.byKey(const ValueKey('focus-placeholder-full')),
+      find.byKey(const ValueKey('focus-placeholder-large')),
       findsOneWidget,
     );
     expect(
@@ -1292,7 +1346,7 @@ void main() {
 
     tester.view.physicalSize = const Size(360, 580);
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('focus-placeholder-full')), findsNothing);
+    expect(find.byKey(const ValueKey('focus-placeholder-large')), findsNothing);
     expect(
       find.byKey(const ValueKey('mobile-focus-placeholder')),
       findsNothing,
@@ -3710,12 +3764,8 @@ void main() {
       lessThan(tester.getTopLeft(find.text('Новые сундуки')).dy),
     );
     expect(find.byKey(const ValueKey('empty-buffs')), findsOneWidget);
-    expect(find.byIcon(Icons.expand_less), findsOneWidget);
-
-    await tester.tap(find.byKey(const ValueKey('rewards-effects-section')));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('empty-buffs')), findsNothing);
-    expect(find.byIcon(Icons.expand_more), findsOneWidget);
+    expect(find.byIcon(Icons.expand_less), findsNothing);
+    expect(find.byIcon(Icons.expand_more), findsNothing);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();

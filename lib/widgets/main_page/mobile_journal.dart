@@ -246,11 +246,12 @@ class _MobileActJournalState extends State<_MobileActJournal> {
                             tooltip: 'Создать навык',
                             onPressed: widget.onCreateSkill,
                             style: IconButton.styleFrom(
-                              minimumSize: const Size.square(48),
+                              minimumSize: const Size.square(44),
+                              maximumSize: const Size.square(44),
                               backgroundColor: _MobileJournalTokens.violet,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(15),
+                                borderRadius: BorderRadius.circular(14),
                               ),
                             ),
                             icon: const Icon(Icons.add_rounded),
@@ -585,12 +586,14 @@ class _MobileFocusPlaceholder extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = AppStateProvider.of(context).isDark;
     final textScale = MediaQuery.textScalerOf(context).scale(1);
-    final visible = textScale < 1.7 && availableHeight >= 120;
-    final slotHeight = visible ? availableHeight : 0.0;
-    final large = slotHeight > 220;
+    final visible = textScale < 1.7 && availableHeight >= 128;
+    final large = availableHeight >= 300;
+    final medium = !large && availableHeight >= 180;
     final cardHeight = large
-        ? math.min(slotHeight, skillCount == 1 ? 340.0 : 280.0)
-        : math.min(slotHeight, 150.0);
+        ? math.min(availableHeight, skillCount == 1 ? 260.0 : 230.0)
+        : medium
+        ? math.min(availableHeight, 168.0)
+        : math.min(availableHeight, 128.0);
     final duration = _motionDuration(context);
 
     return AnimatedSize(
@@ -603,34 +606,30 @@ class _MobileFocusPlaceholder extends StatelessWidget {
         child: visible
             ? SizedBox(
                 key: const ValueKey('mobile-focus-placeholder'),
-                height: slotHeight,
-                child: Align(
-                  alignment: Alignment.topCenter,
-                  child: SizedBox(
-                    key: ValueKey(
-                      large
-                          ? 'focus-placeholder-full'
-                          : 'focus-placeholder-compact',
+                height: cardHeight,
+                child: SizedBox(
+                  key: ValueKey(
+                    large
+                        ? 'focus-placeholder-large'
+                        : medium
+                        ? 'focus-placeholder-medium'
+                        : 'focus-placeholder-compact',
+                  ),
+                  width: double.infinity,
+                  child: DashedBorderContainer(
+                    color: _MobileJournalTokens.outline(isDark),
+                    backgroundColor: _MobileJournalTokens.surfaceColor(isDark),
+                    borderRadius: BorderRadius.circular(
+                      _MobileJournalTokens.radiusLarge,
                     ),
-                    width: double.infinity,
-                    height: cardHeight,
-                    child: DashedBorderContainer(
-                      color: _MobileJournalTokens.outline(isDark),
-                      backgroundColor: _MobileJournalTokens.surfaceColor(
-                        isDark,
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: large ? 20 : 14,
                       ),
-                      borderRadius: BorderRadius.circular(
-                        _MobileJournalTokens.radiusLarge,
-                      ),
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 18,
-                          vertical: large ? 20 : 14,
-                        ),
-                        child: large
-                            ? _MobileFocusPlaceholderLarge(isDark: isDark)
-                            : _MobileFocusPlaceholderCompact(isDark: isDark),
-                      ),
+                      child: large
+                          ? _MobileFocusPlaceholderLarge(isDark: isDark)
+                          : _MobileFocusPlaceholderCompact(isDark: isDark),
                     ),
                   ),
                 ),

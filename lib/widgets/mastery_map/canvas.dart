@@ -48,6 +48,7 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
         ..addListener(_handleRoadmapCameraTick);
   Matrix4Tween? _roadmapCameraTween;
   String? _lastRoadmapCameraSignature;
+  Timer? _roadmapCameraFitTimer;
   _OrbCanvasLayout? _lastLayout;
   Size? _lastViewport;
 
@@ -55,6 +56,7 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
     final layout = _lastLayout;
     final viewport = _lastViewport;
     if (layout == null || viewport == null) return;
+    _roadmapCameraFitTimer?.cancel();
     _centerRoadmapOverviewCamera(layout, viewport);
   }
 
@@ -68,6 +70,7 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
     _roadmapCameraAnimationController
       ..removeListener(_handleRoadmapCameraTick)
       ..dispose();
+    _roadmapCameraFitTimer?.cancel();
     _roadmapCameraController.dispose();
     super.dispose();
   }
@@ -102,8 +105,12 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
     if (signature == _lastRoadmapCameraSignature) return;
     _lastRoadmapCameraSignature = signature;
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+    // Native desktop resizing can issue many LayoutBuilder passes per second.
+    // Fit after the constraints settle instead of restarting the camera for
+    // every intermediate frame.
+    _roadmapCameraFitTimer?.cancel();
+    _roadmapCameraFitTimer = Timer(const Duration(milliseconds: 90), () {
+      if (!mounted || signature != _lastRoadmapCameraSignature) return;
       final target = _roadmapFitMatrix(
         layout,
         viewport,

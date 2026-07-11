@@ -28,6 +28,7 @@ class _MainPageState extends State<MainPage> {
   final GlobalKey _roadmapPracticeKey = GlobalKey();
   final GlobalKey _profileBarKey = GlobalKey();
   WorkspaceMode _mode = WorkspaceMode.act;
+  WorkspaceMode _lastNormalMode = WorkspaceMode.act;
   _RewardNotice? _rewardNotice;
   GoalMilestoneEvent? _goalMilestoneNotice;
   AppState? _eventState;
@@ -331,7 +332,7 @@ class _MainPageState extends State<MainPage> {
       showTutorialHint: showTutorialHint,
       onClose: () {
         setState(() {
-          _mode = WorkspaceMode.act;
+          _mode = _lastNormalMode;
           _statsTutorialActive = false;
         });
       },
@@ -363,6 +364,7 @@ class _MainPageState extends State<MainPage> {
     } else {
       setState(() {
         _mode = WorkspaceMode.mastery;
+        _lastNormalMode = WorkspaceMode.mastery;
         _statsTutorialActive = false;
       });
     }
@@ -652,6 +654,7 @@ class _MainPageState extends State<MainPage> {
     setState(() {
       _roadmapFocusSkillId = skill.id;
       _mode = WorkspaceMode.mastery;
+      _lastNormalMode = WorkspaceMode.mastery;
       _statsTutorialActive = false;
     });
   }
@@ -812,8 +815,23 @@ class _MainPageState extends State<MainPage> {
             : null;
 
         void changeMode(WorkspaceMode mode) {
-          if (_mode == mode) return;
+          if (_mode == mode) {
+            if (mode == WorkspaceMode.act || mode == WorkspaceMode.mastery) {
+              return;
+            }
+            setState(() {
+              _mode = _lastNormalMode;
+              _statsTutorialActive = false;
+            });
+            return;
+          }
           setState(() {
+            if (mode == WorkspaceMode.act || mode == WorkspaceMode.mastery) {
+              _lastNormalMode = mode;
+            } else if (_mode == WorkspaceMode.act ||
+                _mode == WorkspaceMode.mastery) {
+              _lastNormalMode = _mode;
+            }
             _mode = mode;
             if (mode == WorkspaceMode.mastery) {
               final selected = s.selectedSkill;
@@ -830,17 +848,14 @@ class _MainPageState extends State<MainPage> {
 
         void openStatistics({bool tutorial = false}) {
           if (mobileShell) {
-            setState(() {
-              _mode = WorkspaceMode.stats;
-              _statsTutorialActive = tutorial;
-            });
+            changeMode(WorkspaceMode.stats);
+            if (tutorial && mounted) {
+              setState(() => _statsTutorialActive = true);
+            }
           } else if (tutorial) {
             _openStatisticsTutorial(s);
           } else {
-            setState(() {
-              _mode = WorkspaceMode.stats;
-              _statsTutorialActive = false;
-            });
+            changeMode(WorkspaceMode.stats);
           }
         }
 
