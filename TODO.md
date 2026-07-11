@@ -102,6 +102,7 @@ Do not mix these product decisions into Release / Regression Hardening. Revisit 
 - [ ] Add screenshot-based native typography QA for Windows/macOS at `100%/125%/150%` scale and `200%` text size.
 - [ ] Perform physical Windows QHD validation at 125% and 150% scaling, including pointer hover, drag handles, popup placement, and text density.
 - [ ] Perform native macOS screenshot comparison at 1440/1920/2560 widths and tune only presentation tokens/spacing.
+- [ ] Capture native visual regressions for content-driven Effects/Chests, desktop first-quest guidance, and mobile Focus Full/Compact/Minimal states; no golden package is configured yet.
 - [ ] Profile sidebar/main/right-rail rebuild cost with 20+ skills and a large completion history before adding selectors or state decomposition.
 - [ ] Profile Statistics history scans and extract a shared `StatisticsSnapshot` only if native frame evidence shows repeated expensive aggregation.
 - [ ] Decide whether the currently unreachable `PlanningWorkspace` is a future product surface or removable legacy code.
@@ -239,6 +240,7 @@ Manual desktop/QHD checklist:
 - `1.3.54`: completed the application-wide stability/SOLID audit; fixed stale empty-snapshot history, post-dispose startup loading, invalid skill selection and Inbox skill counts; replaced linear repeat catch-up, centralized week/priority rules, pinned Flutter `3.44.3`, removed the unreachable legacy desktop header, and added evidence-based architecture documentation/tests.
 - `1.3.55`: added the semantic typography foundation, repaired nested-theme `AppTextRoles` fallback, synchronized RoadMap canvas/sidebar focus, improved adaptive desktop content at large text scale, and documented typography/content adaptation policy.
 - `1.3.56`: debounced RoadMap camera fitting during desktop resize, introduced constraint-aware empty RoadMap and mobile focus states, centered first-quest guidance in available desktop space, removed empty active-quest header metadata, and made Effects/Chests content-led instead of accordion/fixed-height surfaces.
+- `1.3.57`: corrected the incomplete adaptive recovery: Effects and Chests now use bounded content-led empty states, desktop first-quest guidance has landscape geometry, and mobile Focus uses local Full/Compact/Minimal/Hidden variants with a compact section-level Add Skill action.
 
 - `1.3.53`: recovered the incomplete `1.3.52` visual migration with a real RoadMap shell/templates/context rail, complete Trophies and Statistics ecosystems, full existing Settings coverage, responsive raised skill headers, history-aware empty states, stable overflow geometry, bounds-based camera fitting, and tested debug/profile Admin entry.
 - `1.3.52`: introduced workspace routes and initial wrappers, but its visual migration remained incomplete; superseded by the audited `1.3.53` recovery.

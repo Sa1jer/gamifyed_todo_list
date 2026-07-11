@@ -209,3 +209,19 @@ uses the remaining main-workspace height for its first-quest guidance and
 falls back to scrolling only at short window heights. Effects and unopened
 chests share one natural-height collection anatomy. Secondary shell navigation
 returns to the last normal workspace when its active item is selected again.
+
+## 1.3.57 Content-Driven Empty-State Recovery
+
+The Trophies Effects and New Chests sections now share the same full-width
+section anatomy without matching fixed heights. Empty collections contain a
+centred, bounded content surface; populated chests switch to a local two-column
+wrap only when their own content width permits it.
+
+The fresh-skill first-quest guidance is a bounded landscape composition inside
+the actual central workspace, not a narrow mobile-shaped card inside `Center`.
+On short desktop windows the workspace remains scroll-safe instead of forcing
+the message to grow.
+
+This batch also keeps the desktop shell free from layout-side mutations:
+responsive variant calculation is local and pure, with no state writes from
+`LayoutBuilder` callbacks.

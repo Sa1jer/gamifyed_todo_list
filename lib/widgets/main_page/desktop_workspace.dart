@@ -1197,10 +1197,17 @@ class _DesktopMainWorkspace extends StatelessWidget {
                   header,
                   const SizedBox(height: 18),
                   Expanded(
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 680),
-                        child: firstQuest,
+                    child: LayoutBuilder(
+                      builder: (context, workspaceConstraints) => Center(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: math.min(
+                              720,
+                              workspaceConstraints.maxWidth,
+                            ),
+                          ),
+                          child: firstQuest,
+                        ),
                       ),
                     ),
                   ),
@@ -1689,14 +1696,21 @@ class _DesktopFirstQuestEmpty extends StatelessWidget {
     final largeText = textScale >= 1.6;
     return Container(
       key: const ValueKey('desktop-first-quest-empty'),
-      constraints: BoxConstraints(minHeight: largeText ? 205 : 150),
-      padding: EdgeInsets.all(largeText ? 22 : 28),
+      constraints: BoxConstraints(
+        minHeight: largeText ? 178 : 156,
+        maxWidth: 720,
+      ),
+      padding: EdgeInsets.symmetric(
+        horizontal: largeText ? 26 : 32,
+        vertical: largeText ? 20 : 24,
+      ),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.035),
         borderRadius: BorderRadius.circular(DesktopJournalTokens.taskRadius),
         border: Border.all(color: color.withValues(alpha: 0.16)),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.task_alt_rounded, color: color, size: largeText ? 30 : 34),
@@ -1713,7 +1727,7 @@ class _DesktopFirstQuestEmpty extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Кнопка «Новый квест» выше запустит первое действие.',
+            'Начни с небольшого действия, которое поможет двигаться к цели.',
             maxLines: largeText ? 3 : 2,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,

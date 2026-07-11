@@ -725,6 +725,19 @@ content heights from the remaining usable space and no longer holds an empty
 flexible slot when only one skill exists. The Inbox therefore follows the
 actual guidance card instead of being pushed to the bottom of a sparse screen.
 
+## 1.3.57 Content-Driven Focus Recovery
+
+The mobile Add Skill action now lives in the `Навыки` section header as a
+compact `+ Навык` control rather than a standalone dominant squircle. Focus
+guidance is selected from the local sliver viewport after the actual skill list
+has been laid out: Full is bounded, Compact is a content-led row, Minimal keeps
+one readable line, and Hidden is reserved for genuinely constrained height.
+
+The placeholder no longer uses a dashed drop-zone border. Overview has no
+fully selected skill styling while the focus chooser is visible; selecting a
+skill replaces the overview guidance with its focus workspace. Native Android
+and large-text visual QA remains manual work.
+
 ## Reference Checklist
 
 - Flutter adaptive layout: <https://docs.flutter.dev/ui/adaptive-responsive/general>

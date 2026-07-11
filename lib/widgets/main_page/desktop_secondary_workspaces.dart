@@ -218,39 +218,30 @@ class _DesktopRewardsWorkspaceState extends State<_DesktopRewardsWorkspace> {
                       subtitle:
                           'Закрой сильный день, удержи серию или пройди событие сопротивления.',
                     )
-                  : Column(
-                      children: chests
-                          .map(
-                            (chest) => Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: _DesktopSectionCard(
-                                tokens: tokens,
-                                child: ListTile(
-                                  leading: Icon(
-                                    Icons.redeem_rounded,
-                                    color: tokens.rewardGold,
-                                  ),
-                                  title: Text(
-                                    chest.title,
-                                    style: TextStyle(
-                                      color: tokens.text,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                  subtitle: Text(
-                                    chest.description,
-                                    style: TextStyle(color: tokens.mutedText),
-                                  ),
-                                  trailing: FilledButton(
-                                    onPressed: () =>
+                  : LayoutBuilder(
+                      builder: (context, constraints) {
+                        final twoColumns = constraints.maxWidth >= 760;
+                        final itemWidth = twoColumns
+                            ? (constraints.maxWidth - 10) / 2
+                            : constraints.maxWidth;
+                        return Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: chests
+                              .map(
+                                (chest) => SizedBox(
+                                  width: itemWidth,
+                                  child: _DesktopRewardChestCard(
+                                    chest: chest,
+                                    tokens: tokens,
+                                    onOpen: () =>
                                         state.openRewardChest(chest.id),
-                                    child: const Text('Открыть'),
                                   ),
                                 ),
-                              ),
-                            ),
-                          )
-                          .toList(),
+                              )
+                              .toList(),
+                        );
+                      },
                     ),
             ),
           ),
@@ -642,30 +633,38 @@ class _DesktopRewardCollection extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.all(18),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(icon, color: color, size: 20),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                title,
-                style: context.appTextTheme.titleMedium?.copyWith(
-                  color: tokens.text,
-                  fontWeight: FontWeight.w900,
+  Widget build(BuildContext context) => AnimatedSize(
+    duration: MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : DesktopJournalTokens.standardMotion,
+    curve: DesktopJournalTokens.motionCurve,
+    alignment: Alignment.topCenter,
+    child: Padding(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  title,
+                  style: context.appTextTheme.titleMedium?.copyWith(
+                    color: tokens.text,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
-            ),
-            _DesktopCountPill(value: count, color: color, tokens: tokens),
-          ],
-        ),
-        const SizedBox(height: 12),
-        child,
-      ],
+              _DesktopCountPill(value: count, color: color, tokens: tokens),
+            ],
+          ),
+          const SizedBox(height: 12),
+          child,
+        ],
+      ),
     ),
   );
 }
@@ -684,27 +683,105 @@ class _DesktopEmptyMessage extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 22),
-    child: Column(
-      children: [
-        Icon(icon, color: tokens.mutedText, size: 36),
-        const SizedBox(height: 10),
-        Text(
-          title,
-          style: TextStyle(
-            color: tokens.text,
-            fontSize: 16,
-            fontWeight: FontWeight.w900,
+  Widget build(BuildContext context) => ConstrainedBox(
+    constraints: const BoxConstraints(minHeight: 142),
+    child: Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: tokens.mutedText, size: 32),
+            const SizedBox(height: 10),
+            Text(
+              title,
+              style: TextStyle(
+                color: tokens.text,
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: tokens.mutedText, height: 1.4),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+class _DesktopRewardChestCard extends StatelessWidget {
+  final RewardChest chest;
+  final DesktopJournalTokens tokens;
+  final VoidCallback onOpen;
+
+  const _DesktopRewardChestCard({
+    required this.chest,
+    required this.tokens,
+    required this.onOpen,
+  });
+
+  @override
+  Widget build(BuildContext context) => _DesktopSectionCard(
+    tokens: tokens,
+    child: Padding(
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: tokens.rewardGold.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: Icon(
+              Icons.redeem_rounded,
+              color: tokens.rewardGold,
+              size: 20,
+            ),
           ),
-        ),
-        const SizedBox(height: 5),
-        Text(
-          subtitle,
-          textAlign: TextAlign.center,
-          style: TextStyle(color: tokens.mutedText, height: 1.4),
-        ),
-      ],
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  chest.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: tokens.text,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  chest.description,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: tokens.mutedText, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          FilledButton.tonal(
+            onPressed: onOpen,
+            style: FilledButton.styleFrom(
+              foregroundColor: tokens.rewardGold,
+              minimumSize: const Size(0, 36),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+            ),
+            child: const Text('Открыть'),
+          ),
+        ],
+      ),
     ),
   );
 }

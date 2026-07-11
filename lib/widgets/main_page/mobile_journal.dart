@@ -197,24 +197,6 @@ class _MobileActJournalState extends State<_MobileActJournal> {
     final inboxCount = state.inboxTasks.where((task) => !task.isDone).length;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final skillListHeight = skills.isEmpty
-            ? 150.0
-            : skills.length * 94.0 + math.max(0, skills.length - 1) * 10.0;
-        final inboxContentHeight = _inboxExpanded
-            ? (170.0 + inboxCount * 52).clamp(230.0, 430.0)
-            : 0.0;
-        final fixedHeight =
-            84.0 +
-            73.0 +
-            skillListHeight +
-            12.0 +
-            76.0 +
-            inboxContentHeight +
-            12.0;
-        final placeholderSlot = constraints.maxHeight.isFinite
-            ? math.max(0.0, constraints.maxHeight - fixedHeight - 12.0)
-            : 0.0;
-
         return KeyedSubtree(
           key: const ValueKey('mobile-skill-overview'),
           child: KeyedSubtree(
@@ -241,20 +223,25 @@ class _MobileActJournalState extends State<_MobileActJournal> {
                         ),
                         KeyedSubtree(
                           key: widget.createFirstSkillButtonKey,
-                          child: IconButton.filled(
-                            key: const ValueKey('mobile-add-skill-open'),
-                            tooltip: 'Создать навык',
-                            onPressed: widget.onCreateSkill,
-                            style: IconButton.styleFrom(
-                              minimumSize: const Size.square(44),
-                              maximumSize: const Size.square(44),
-                              backgroundColor: _MobileJournalTokens.violet,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
+                          child: Tooltip(
+                            message: 'Создать навык',
+                            child: FilledButton.icon(
+                              key: const ValueKey('mobile-add-skill-open'),
+                              onPressed: widget.onCreateSkill,
+                              style: FilledButton.styleFrom(
+                                minimumSize: const Size(44, 40),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                ),
+                                backgroundColor: _MobileJournalTokens.violet,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(13),
+                                ),
                               ),
+                              icon: const Icon(Icons.add_rounded, size: 19),
+                              label: const Text('Навык'),
                             ),
-                            icon: const Icon(Icons.add_rounded),
                           ),
                         ),
                       ],
@@ -364,21 +351,26 @@ class _MobileActJournalState extends State<_MobileActJournal> {
                       },
                     ),
                   ),
-                if (skills.isEmpty)
-                  SliverToBoxAdapter(
-                    child: SizedBox(height: math.min(placeholderSlot, 80)),
-                  )
-                else
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: EdgeInsets.only(
-                        top: placeholderSlot >= 120 ? 12 : 0,
-                      ),
-                      child: _MobileFocusPlaceholder(
-                        availableHeight: placeholderSlot,
-                        skillCount: skills.length,
-                      ),
-                    ),
+                if (skills.isNotEmpty)
+                  SliverLayoutBuilder(
+                    builder: (context, sliverConstraints) {
+                      // The remaining paint extent reflects the real local
+                      // viewport after the skill list, unlike a guessed sum
+                      // of global screen and card heights.
+                      final availableHeight = math.max(
+                        0.0,
+                        sliverConstraints.remainingPaintExtent - 94,
+                      );
+                      return SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: _MobileFocusPlaceholder(
+                            availableHeight: availableHeight,
+                            availableWidth: sliverConstraints.crossAxisExtent,
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 SliverToBoxAdapter(
                   child: Padding(
@@ -575,69 +567,128 @@ class _MobileActJournalState extends State<_MobileActJournal> {
 
 class _MobileFocusPlaceholder extends StatelessWidget {
   final double availableHeight;
-  final int skillCount;
+  final double availableWidth;
 
   const _MobileFocusPlaceholder({
     required this.availableHeight,
-    required this.skillCount,
+    required this.availableWidth,
   });
 
   @override
   Widget build(BuildContext context) {
     final isDark = AppStateProvider.of(context).isDark;
     final textScale = MediaQuery.textScalerOf(context).scale(1);
-    final visible = textScale < 1.7 && availableHeight >= 128;
-    final large = availableHeight >= 300;
-    final medium = !large && availableHeight >= 180;
-    final cardHeight = large
-        ? math.min(availableHeight, skillCount == 1 ? 260.0 : 230.0)
-        : medium
-        ? math.min(availableHeight, 168.0)
-        : math.min(availableHeight, 128.0);
+    final variant = switch ((availableHeight, availableWidth, textScale)) {
+      (final height, final width, final scale)
+          when scale < 1.7 && height >= 280 && width >= 320 =>
+        _MobileFocusPlaceholderVariant.full,
+      (final height, _, final scale) when scale < 1.9 && height >= 118 =>
+        _MobileFocusPlaceholderVariant.compact,
+      (final height, _, _) when height >= 58 =>
+        _MobileFocusPlaceholderVariant.minimal,
+      _ => _MobileFocusPlaceholderVariant.hidden,
+    };
     final duration = _motionDuration(context);
 
-    return AnimatedSize(
+    return AnimatedSwitcher(
       duration: duration,
-      curve: _MobileJournalTokens.curve,
-      alignment: Alignment.topCenter,
-      child: AnimatedOpacity(
-        duration: duration,
-        opacity: visible ? 1 : 0,
-        child: visible
-            ? SizedBox(
-                key: const ValueKey('mobile-focus-placeholder'),
-                height: cardHeight,
-                child: SizedBox(
-                  key: ValueKey(
-                    large
-                        ? 'focus-placeholder-large'
-                        : medium
-                        ? 'focus-placeholder-medium'
-                        : 'focus-placeholder-compact',
-                  ),
-                  width: double.infinity,
-                  child: DashedBorderContainer(
-                    color: _MobileJournalTokens.outline(isDark),
-                    backgroundColor: _MobileJournalTokens.surfaceColor(isDark),
-                    borderRadius: BorderRadius.circular(
-                      _MobileJournalTokens.radiusLarge,
-                    ),
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: large ? 20 : 14,
-                      ),
-                      child: large
-                          ? _MobileFocusPlaceholderLarge(isDark: isDark)
-                          : _MobileFocusPlaceholderCompact(isDark: isDark),
-                    ),
-                  ),
-                ),
-              )
-            : const SizedBox(key: ValueKey('focus-placeholder-hidden')),
+      switchInCurve: _MobileJournalTokens.curve,
+      switchOutCurve: Curves.easeIn,
+      layoutBuilder: (current, previous) => Stack(
+        alignment: Alignment.topCenter,
+        children: [...previous, ?current],
       ),
+      child: switch (variant) {
+        _MobileFocusPlaceholderVariant.full => _MobileFocusPlaceholderSurface(
+          key: const ValueKey('focus-placeholder-full'),
+          isDark: isDark,
+          constraints: const BoxConstraints(minHeight: 220, maxHeight: 250),
+          child: _MobileFocusPlaceholderLarge(isDark: isDark),
+        ),
+        _MobileFocusPlaceholderVariant.compact =>
+          _MobileFocusPlaceholderSurface(
+            key: const ValueKey('focus-placeholder-compact'),
+            isDark: isDark,
+            constraints: const BoxConstraints(minHeight: 106, maxHeight: 146),
+            child: _MobileFocusPlaceholderCompact(isDark: isDark),
+          ),
+        _MobileFocusPlaceholderVariant.minimal =>
+          _MobileFocusPlaceholderMinimal(isDark: isDark),
+        _MobileFocusPlaceholderVariant.hidden => const SizedBox(
+          key: ValueKey('focus-placeholder-hidden'),
+        ),
+      },
     );
   }
+}
+
+enum _MobileFocusPlaceholderVariant { full, compact, minimal, hidden }
+
+class _MobileFocusPlaceholderSurface extends StatelessWidget {
+  final bool isDark;
+  final BoxConstraints constraints;
+  final Widget child;
+
+  const _MobileFocusPlaceholderSurface({
+    super.key,
+    required this.isDark,
+    required this.constraints,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) => Container(
+    key: const ValueKey('mobile-focus-placeholder'),
+    constraints: constraints,
+    width: double.infinity,
+    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+    decoration: BoxDecoration(
+      color: _MobileJournalTokens.surfaceColor(isDark),
+      borderRadius: BorderRadius.circular(_MobileJournalTokens.radiusLarge),
+      border: Border.all(color: _MobileJournalTokens.outline(isDark)),
+    ),
+    child: child,
+  );
+}
+
+class _MobileFocusPlaceholderMinimal extends StatelessWidget {
+  final bool isDark;
+
+  const _MobileFocusPlaceholderMinimal({required this.isDark});
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    label: 'Выбери навык для фокуса',
+    child: Container(
+      key: const ValueKey('mobile-focus-placeholder'),
+      constraints: const BoxConstraints(minHeight: 56),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: _MobileJournalTokens.surfaceColor(isDark),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _MobileJournalTokens.outline(isDark)),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.adjust_rounded,
+            color: _MobileJournalTokens.violet,
+            size: 21,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Выбери навык для фокуса',
+              style: TextStyle(
+                color: _MobileJournalTokens.text(isDark),
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _MobileFocusPlaceholderLarge extends StatelessWidget {

@@ -522,7 +522,7 @@ class _TasksPanelState extends State<TasksPanel> {
                     ),
                     icon: const Icon(Icons.arrow_back_rounded, size: 17),
                     label: const Text(
-                      'Обзор',
+                      'Навыки',
                       style: TextStyle(fontWeight: FontWeight.w800),
                     ),
                   ),

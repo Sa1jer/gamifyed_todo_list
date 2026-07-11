@@ -52,12 +52,26 @@ the typography system.
 
 ## Empty States
 
-Empty-state surfaces use the available component constraints, not the full
-screen size. RoadMap uses compact, normal, and large overlay variants; mobile
-focus reserves only the height of its selected variant and never creates a
-blank flexible slot before Inbox. A new desktop skill centres first-quest
-guidance in remaining workspace height, with a scroll-safe compact-height
-fallback.
+Empty background space does not automatically belong to a card. Empty-state
+surfaces use local component constraints, bounded geometry, and content-driven
+height rather than the full screen size.
+
+- Desktop Effects and New Chests use the same section/header/surface family,
+  but their height is determined by their own content. Empty collections use a
+  compact centred message; populated collections wrap or grow in the page
+  scroll view.
+- A desktop first-quest message is centered in the remaining main workspace,
+  but its landscape surface stays bounded (`<=720dp` wide) and content-led.
+  It never inherits a portrait-shaped remaining-height card.
+- Mobile Focus guidance has independent Full, Compact, Minimal, and Hidden
+  variants derived from local sliver width/remaining height. The placeholder
+  uses a quiet solid border because it is guidance, not a drag-and-drop target.
+- A visually focused skill and Focus content always appear together; the
+  overview never presents a fully selected skill card beside “Выбери навык для
+  фокуса”.
+
+This policy is currently implemented only for the surfaces above. Other empty
+states require their own local audit before adopting the same rules.
 
 ## Testing Matrix
 
