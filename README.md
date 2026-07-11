@@ -58,6 +58,15 @@ flutter analyze
 flutter test -r expanded --timeout 30s
 ```
 
+The repository workflow, task templates, review process, and cross-platform
+local verifier live in [AGENTS.md](AGENTS.md) and
+[docs/development/TASK_WORKFLOW.md](docs/development/TASK_WORKFLOW.md). Run the
+non-mutating full local gate with:
+
+```bash
+dart run tool/verify.dart
+```
+
 Если VSCode на Windows показывает ошибки про `onReorderItem`, хотя Git чистый,
 сначала проверьте SDK, который использует именно расширение Flutter:
 

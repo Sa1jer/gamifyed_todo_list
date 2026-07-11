@@ -10,6 +10,11 @@ This file tracks the active implementation roadmap and completed project work. U
 - Keep active work ordered from `P0` through `P6`.
 - Keep each task small enough for a separate reviewable batch.
 - Record uncertainty, migration risk, and manual QA requirements explicitly.
+- After meaningful product, architecture, or design work, update the affected
+  docs and this backlog. Move completed work according to the existing style.
+- Do not auto-fix review findings outside the approved scope: record a focused
+  follow-up with evidence instead. Keep speculative ideas separate from active
+  work.
 
 ## P0 — Bugs / Stabilization
 
@@ -237,6 +242,9 @@ Manual desktop/QHD checklist:
 
 ## Recently Completed
 
+- Codex workflow infrastructure: added a staged brief/explore/plan/implement/
+  review/fix/verify process, reusable prompts, task/PR templates, baseline CI,
+  and a cross-platform local verification command without changing app behavior.
 - `1.3.54`: completed the application-wide stability/SOLID audit; fixed stale empty-snapshot history, post-dispose startup loading, invalid skill selection and Inbox skill counts; replaced linear repeat catch-up, centralized week/priority rules, pinned Flutter `3.44.3`, removed the unreachable legacy desktop header, and added evidence-based architecture documentation/tests.
 - `1.3.55`: added the semantic typography foundation, repaired nested-theme `AppTextRoles` fallback, synchronized RoadMap canvas/sidebar focus, improved adaptive desktop content at large text scale, and documented typography/content adaptation policy.
 - `1.3.56`: debounced RoadMap camera fitting during desktop resize, introduced constraint-aware empty RoadMap and mobile focus states, centered first-quest guidance in available desktop space, removed empty active-quest header metadata, and made Effects/Chests content-led instead of accordion/fixed-height surfaces.
