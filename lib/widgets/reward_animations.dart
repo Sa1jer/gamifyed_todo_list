@@ -5,16 +5,20 @@ import 'package:flutter/material.dart';
 
 import 'shared.dart';
 
+enum RewardConfettiIntensity { subtle, reward, milestone }
+
 class MilestoneConfettiBurst extends StatefulWidget {
   final Color color;
   final Alignment alignment;
   final int particles;
+  final RewardConfettiIntensity intensity;
 
   const MilestoneConfettiBurst({
     super.key,
     required this.color,
     this.alignment = Alignment.topCenter,
     this.particles = 16,
+    this.intensity = RewardConfettiIntensity.milestone,
   });
 
   @override
@@ -27,9 +31,12 @@ class _MilestoneConfettiBurstState extends State<MilestoneConfettiBurst> {
   @override
   void initState() {
     super.initState();
-    _controller = ConfettiController(
-      duration: const Duration(milliseconds: 900),
-    );
+    final duration = switch (widget.intensity) {
+      RewardConfettiIntensity.subtle => const Duration(milliseconds: 420),
+      RewardConfettiIntensity.reward => const Duration(milliseconds: 650),
+      RewardConfettiIntensity.milestone => const Duration(milliseconds: 900),
+    };
+    _controller = ConfettiController(duration: duration);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _controller.play();
     });
@@ -43,6 +50,29 @@ class _MilestoneConfettiBurstState extends State<MilestoneConfettiBurst> {
 
   @override
   Widget build(BuildContext context) {
+    final reducedMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    if (reducedMotion) return const SizedBox.shrink();
+    final settings = switch (widget.intensity) {
+      RewardConfettiIntensity.subtle => (
+        count: 8,
+        minForce: 3.0,
+        maxForce: 8.0,
+        gravity: 0.22,
+      ),
+      RewardConfettiIntensity.reward => (
+        count: 14,
+        minForce: 5.0,
+        maxForce: 13.0,
+        gravity: 0.20,
+      ),
+      RewardConfettiIntensity.milestone => (
+        count: widget.particles,
+        minForce: 6.0,
+        maxForce: 18.0,
+        gravity: 0.18,
+      ),
+    };
     return IgnorePointer(
       child: Align(
         alignment: widget.alignment,
@@ -50,10 +80,10 @@ class _MilestoneConfettiBurstState extends State<MilestoneConfettiBurst> {
           confettiController: _controller,
           blastDirectionality: BlastDirectionality.explosive,
           emissionFrequency: 0.05,
-          numberOfParticles: widget.particles,
-          minBlastForce: 6,
-          maxBlastForce: 18,
-          gravity: 0.18,
+          numberOfParticles: settings.count,
+          minBlastForce: settings.minForce,
+          maxBlastForce: settings.maxForce,
+          gravity: settings.gravity,
           colors: [
             widget.color,
             const Color(0xFFFFCC00),

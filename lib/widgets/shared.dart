@@ -11,6 +11,7 @@ const kMotionFast = Duration(milliseconds: 90);
 const kMotionStandard = Duration(milliseconds: 180);
 const kMotionSlow = Duration(milliseconds: 240);
 const kMotionProgress = Duration(milliseconds: 560);
+const kMotionXp = Duration(milliseconds: 840);
 const kMotionListStaggerStep = Duration(milliseconds: 14);
 const kMotionListStaggerMaxIndex = 6;
 const kMotionCurve = Curves.easeOutCubic;
@@ -546,11 +547,15 @@ class XPBar extends StatefulWidget {
   final double progress;
   final Color color;
   final double height;
+  final Color? backgroundColor;
+  final int? level;
   const XPBar({
     super.key,
     required this.progress,
     required this.color,
     this.height = 8,
+    this.backgroundColor,
+    this.level,
   });
   @override
   State<XPBar> createState() => _XPBarState();
@@ -559,29 +564,79 @@ class XPBar extends StatefulWidget {
 class _XPBarState extends State<XPBar> with SingleTickerProviderStateMixin {
   late AnimationController _c;
   late Animation<double> _a;
-  double _prev = 0;
+  late double _target;
 
   @override
   void initState() {
     super.initState();
-    _c = AnimationController(vsync: this, duration: kMotionProgress);
-    _a = Tween<double>(
-      begin: 0,
-      end: widget.progress,
-    ).chain(CurveTween(curve: kMotionCurve)).animate(_c);
-    _prev = widget.progress;
-    _c.forward();
+    _target = widget.progress.clamp(0.0, 1.0);
+    _c = AnimationController(vsync: this, duration: kMotionXp, value: 1);
+    _a = AlwaysStoppedAnimation(_target);
   }
 
   @override
   void didUpdateWidget(XPBar old) {
     super.didUpdateWidget(old);
-    if (old.progress != widget.progress) {
-      _a = Tween<double>(
-        begin: _prev,
-        end: widget.progress,
-      ).chain(CurveTween(curve: kMotionCurve)).animate(_c);
-      _prev = widget.progress;
+    final target = widget.progress.clamp(0.0, 1.0);
+    if (old.progress != widget.progress || old.level != widget.level) {
+      final reducedMotion =
+          MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+      final displayed = _a.value.clamp(0.0, 1.0);
+      _target = target;
+      if (reducedMotion) {
+        _c.value = 1;
+        _a = AlwaysStoppedAnimation(target);
+        return;
+      }
+
+      final isLevelUp =
+          old.level != null &&
+          widget.level != null &&
+          widget.level! > old.level!;
+      final isLevelDown =
+          old.level != null &&
+          widget.level != null &&
+          widget.level! < old.level!;
+      _a =
+          (isLevelUp
+                  ? TweenSequence<double>([
+                      TweenSequenceItem(
+                        tween: Tween(
+                          begin: displayed,
+                          end: 1.0,
+                        ).chain(CurveTween(curve: kMotionCurve)),
+                        weight: 58,
+                      ),
+                      TweenSequenceItem(
+                        tween: Tween(
+                          begin: 0.0,
+                          end: target,
+                        ).chain(CurveTween(curve: kMotionCurve)),
+                        weight: 42,
+                      ),
+                    ])
+                  : isLevelDown
+                  ? TweenSequence<double>([
+                      TweenSequenceItem(
+                        tween: Tween(
+                          begin: displayed,
+                          end: 0.0,
+                        ).chain(CurveTween(curve: kMotionCurve)),
+                        weight: 42,
+                      ),
+                      TweenSequenceItem(
+                        tween: Tween(
+                          begin: 1.0,
+                          end: target,
+                        ).chain(CurveTween(curve: kMotionCurve)),
+                        weight: 58,
+                      ),
+                    ])
+                  : Tween<double>(
+                      begin: displayed,
+                      end: target,
+                    ).chain(CurveTween(curve: kMotionCurve)))
+              .animate(_c);
       _c.forward(from: 0);
     }
   }
@@ -593,18 +648,26 @@ class _XPBarState extends State<XPBar> with SingleTickerProviderStateMixin {
   }
 
   @override
-  Widget build(BuildContext context) => AnimatedBuilder(
-    animation: _a,
-    builder: (_, child) => ClipRRect(
-      borderRadius: BorderRadius.circular(widget.height / 2),
-      child: LinearProgressIndicator(
-        value: _a.value.clamp(0.0, 1.0),
-        minHeight: widget.height,
-        backgroundColor: widget.color.withAlpha(35),
-        valueColor: AlwaysStoppedAnimation(widget.color),
-      ),
-    ),
-  );
+  Widget build(BuildContext context) {
+    final reducedMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    return AnimatedBuilder(
+      animation: _a,
+      builder: (context, child) {
+        final value = reducedMotion ? _target : _a.value;
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(widget.height / 2),
+          child: LinearProgressIndicator(
+            value: value.clamp(0.0, 1.0),
+            minHeight: widget.height,
+            backgroundColor:
+                widget.backgroundColor ?? widget.color.withAlpha(35),
+            valueColor: AlwaysStoppedAnimation(widget.color),
+          ),
+        );
+      },
+    );
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -982,22 +1045,31 @@ class ActionToastPlacement {
   factory ActionToastPlacement.near({
     required Offset anchor,
     required Size viewport,
+    Rect? safeRegion,
     double bottomReserved = 0,
   }) {
-    final maxLeft = math.max(
-      edgeInset,
-      viewport.width - estimatedWidth - edgeInset,
-    );
+    final viewportBounds = Offset.zero & viewport;
+    final requestedRegion = safeRegion ?? viewportBounds;
+    final boundedRegion = requestedRegion.intersect(viewportBounds);
+    final available =
+        boundedRegion.width > edgeInset * 2 &&
+            boundedRegion.height > edgeInset * 2
+        ? boundedRegion.deflate(edgeInset)
+        : viewportBounds.deflate(edgeInset);
+    final maxLeft = math.max(available.left, available.right - estimatedWidth);
     final maxTop = math.max(
-      edgeInset,
-      viewport.height - bottomReserved - estimatedHeight - edgeInset,
+      available.top,
+      available.bottom - bottomReserved - estimatedHeight,
     );
     var left = anchor.dx - estimatedWidth / 2;
     var top = anchor.dy + 14;
     if (top > maxTop) top = anchor.dy - estimatedHeight - 14;
 
     return ActionToastPlacement(
-      Offset(left.clamp(edgeInset, maxLeft), top.clamp(edgeInset, maxTop)),
+      Offset(
+        left.clamp(available.left, maxLeft),
+        top.clamp(available.top, maxTop),
+      ),
     );
   }
 }
@@ -1134,7 +1206,8 @@ class XPBubble extends StatefulWidget {
   final String message;
   final Offset position;
   final CompletionToastColors colors;
-  final bool showMilestoneConfetti;
+  final Rect? safeRegion;
+  final bool showConfetti;
   final Widget Function(Color color)? confettiBuilder;
   final bool reducedMotion;
   final Function(Key?) onDone;
@@ -1143,7 +1216,8 @@ class XPBubble extends StatefulWidget {
     required this.message,
     required this.position,
     this.colors = const CompletionToastColors.fallback(),
-    this.showMilestoneConfetti = false,
+    this.safeRegion,
+    this.showConfetti = false,
     this.confettiBuilder,
     this.reducedMotion = false,
     required this.onDone,
@@ -1203,6 +1277,7 @@ class _XPBubbleState extends State<XPBubble>
     final placement = ActionToastPlacement.near(
       anchor: widget.position,
       viewport: MediaQuery.sizeOf(context),
+      safeRegion: widget.safeRegion,
       bottomReserved:
           MobileResponsiveMetrics.isMobileWidth(
             MediaQuery.sizeOf(context).width,
@@ -1234,7 +1309,7 @@ class _XPBubbleState extends State<XPBubble>
         );
       },
       child: Stack(
-        clipBehavior: Clip.none,
+        clipBehavior: Clip.hardEdge,
         children: [
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 320),
@@ -1320,14 +1395,18 @@ class _XPBubbleState extends State<XPBubble>
               ),
             ),
           ),
-          if (widget.showMilestoneConfetti && widget.confettiBuilder != null)
-            Positioned(
-              left: 150,
-              top: -4,
-              child: SizedBox(
-                width: 1,
-                height: 1,
-                child: widget.confettiBuilder!(widget.colors.sourceAccentColor),
+          if (widget.showConfetti && widget.confettiBuilder != null)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Center(
+                  child: SizedBox(
+                    width: 230,
+                    height: 104,
+                    child: widget.confettiBuilder!(
+                      widget.colors.sourceAccentColor,
+                    ),
+                  ),
+                ),
               ),
             ),
         ],

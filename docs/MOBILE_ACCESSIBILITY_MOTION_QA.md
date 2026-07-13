@@ -14,6 +14,10 @@ Updated: 2026-07-03
   transitions; the app preference persists in device-local metadata.
 - Dark/light palette tokens have regression checks for strong-text and reward
   contrast.
+- XP bars begin at their persisted value, animate later changes with bounded
+  motion, and skip interpolation when reduced motion is active. Completion
+  confetti is local to the feedback surface rather than a global particle
+  layer.
 
 ## Physical Android Gate — Pending
 

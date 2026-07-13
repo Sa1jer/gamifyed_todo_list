@@ -17,6 +17,7 @@ class _MainPageState extends State<MainPage> {
 
   final List<XPBubble> _bubbles = [];
   final GlobalKey _pageStackKey = GlobalKey();
+  final GlobalKey _desktopContextualToastHostKey = GlobalKey();
   final GlobalKey _rewardsButtonKey = GlobalKey();
   final GlobalKey _firstSkillCtaKey = GlobalKey();
   final GlobalKey _firstQuestCtaKey = GlobalKey();
@@ -89,7 +90,8 @@ class _MainPageState extends State<MainPage> {
     required CompletionToastColors colors,
   }) {
     final isMilestone = AppFeedback.isMilestoneMessage(message);
-    final anchor = _resolveActionToastAnchor(pos);
+    final toastRegion = _resolveActionToastSafeRegion();
+    final anchor = _resolveActionToastAnchor(pos, toastRegion);
     setState(() {
       _bubbles.add(
         XPBubble(
@@ -97,9 +99,15 @@ class _MainPageState extends State<MainPage> {
           message: message,
           position: anchor,
           colors: colors,
-          showMilestoneConfetti: isMilestone,
-          confettiBuilder: (color) =>
-              MilestoneConfettiBurst(color: color, particles: 14),
+          safeRegion: toastRegion,
+          showConfetti: true,
+          confettiBuilder: (color) => MilestoneConfettiBurst(
+            color: color,
+            intensity: isMilestone
+                ? RewardConfettiIntensity.milestone
+                : RewardConfettiIntensity.subtle,
+            particles: isMilestone ? 22 : 8,
+          ),
           reducedMotion: _eventState?.reducedMotion ?? false,
           onDone: (k) =>
               setState(() => _bubbles.removeWhere((b) => b.key == k)),
@@ -108,7 +116,27 @@ class _MainPageState extends State<MainPage> {
     });
   }
 
-  Offset _resolveActionToastAnchor(Offset source) {
+  Rect? _resolveActionToastSafeRegion() {
+    final host = _desktopContextualToastHostKey.currentContext
+        ?.findRenderObject();
+    final stack = _pageStackKey.currentContext?.findRenderObject();
+    if (host is! RenderBox ||
+        !host.hasSize ||
+        stack is! RenderBox ||
+        !stack.hasSize) {
+      return null;
+    }
+    final globalTopLeft = host.localToGlobal(Offset.zero);
+    final globalBottomRight = host.localToGlobal(
+      host.size.bottomRight(Offset.zero),
+    );
+    return Rect.fromPoints(
+      stack.globalToLocal(globalTopLeft),
+      stack.globalToLocal(globalBottomRight),
+    );
+  }
+
+  Offset _resolveActionToastAnchor(Offset source, Rect? toastRegion) {
     final context = _pageStackKey.currentContext;
     final renderObject = context?.findRenderObject();
     if (renderObject is! RenderBox || !renderObject.hasSize) return source;
@@ -121,6 +149,10 @@ class _MainPageState extends State<MainPage> {
       return renderObject.globalToLocal(source);
     }
     if (localBounds.contains(source)) return source;
+    if (toastRegion != null) {
+      // The safe region is already expressed in the page stack's coordinates.
+      return toastRegion.center;
+    }
     return Offset(size.width * 0.62, size.height * 0.46);
   }
 
@@ -137,15 +169,22 @@ class _MainPageState extends State<MainPage> {
       AppFeedback.reward();
     }
 
+    final notice = _RewardNotice(
+      id: _nextRewardNoticeId++,
+      chestTitles: chests.map((chest) => chest.title).toList(),
+      buffTitles: buffs.map((buff) => buff.title).toList(),
+      achievementTitles: achievements
+          .map((achievement) => achievement.def?.name ?? 'Достижение')
+          .toList(),
+    );
+    // Notification sources may be consumed by consecutive completion events.
+    // Keep distinct rewards, but avoid showing the same recovered batch twice.
+    if (_rewardNoticeQueue.any(
+      (queued) => queued.signature == notice.signature,
+    )) {
+      return;
+    }
     setState(() {
-      final notice = _RewardNotice(
-        id: _nextRewardNoticeId++,
-        chestTitles: chests.map((chest) => chest.title).toList(),
-        buffTitles: buffs.map((buff) => buff.title).toList(),
-        achievementTitles: achievements
-            .map((achievement) => achievement.def?.name ?? 'Достижение')
-            .toList(),
-      );
       if (_rewardNoticeQueue.length == 3) _rewardNoticeQueue.removeLast();
       _rewardNoticeQueue.add(notice);
     });
@@ -978,6 +1017,7 @@ class _MainPageState extends State<MainPage> {
                   onOpenRoadmap: (skill) => _openRoadmapForSkill(s, skill),
                   onComplete: _onComplete,
                   onMinimumAction: _onMinimumAction,
+                  contextualToastHostKey: _desktopContextualToastHostKey,
                   profileKey: _profileBarKey,
                   rewardsKey: _rewardsButtonKey,
                   roadmapKey: _roadmapNavKey,

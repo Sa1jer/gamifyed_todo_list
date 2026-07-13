@@ -594,6 +594,39 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
         ? 'Редактировать навык'
         : 'Новый навык';
     final iconOptions = widget.fullScreen ? _visibleIconOptions : _iconOptions;
+    final desktopDialogHeight = (MediaQuery.sizeOf(context).height - 48)
+        .clamp(620.0, 800.0)
+        .toDouble();
+    final nameField = DlgField(
+      label: 'Название навыка',
+      hintText: widget.fullScreen
+          ? 'Коротко назови направление, в котором хочешь расти.'
+          : 'Например: физическая форма или изучение языка',
+      showLabel: !widget.fullScreen,
+      ctrl: _nameCtrl,
+      fBg: fBg,
+      txt: txt,
+      sub: sub,
+      bdr: bdr,
+      fieldKey: const ValueKey('add-skill-name-field'),
+      onChanged: (_) {
+        if (_nameError != null) setState(() => _nameError = null);
+      },
+    );
+    final goalField = DlgField(
+      label: 'Цель',
+      hintText: widget.fullScreen
+          ? 'Цель поможет понять, к чему ведёт путь.'
+          : 'Какой результат будет означать, что навык вырос?',
+      showLabel: !widget.fullScreen,
+      ctrl: _goalCtrl,
+      fBg: fBg,
+      txt: txt,
+      sub: sub,
+      bdr: bdr,
+      min: 2,
+      fieldKey: const ValueKey('add-skill-goal-field'),
+    );
 
     final form = SingleChildScrollView(
       key: const ValueKey('add-skill-form-scroll'),
@@ -602,91 +635,33 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (!widget.fullScreen) ...[
-            DlgHeader(title: title, txtColor: txt),
-            const SizedBox(height: 16),
-          ],
-          if (widget.fullScreen)
+          if (widget.fullScreen) ...[
             _MobileSkillEmblemPreview(
               icon: _icon,
               color: _color,
               name: _nameCtrl.text,
               isDark: isDark,
-            )
-          else
-            Center(
-              child: Container(
-                key: const ValueKey('skill-preview-icon'),
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: _color.withAlpha(35),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(_icon, color: _color, size: 30),
-              ),
             ),
-          const SizedBox(height: 16),
-          if (widget.fullScreen) ...[
+            const SizedBox(height: 16),
             _MobileSkillFormSection(
               title: 'Название навыка',
               subtitle: '',
               isDark: isDark,
             ),
             const SizedBox(height: 9),
-          ],
-          DlgField(
-            label: 'Название навыка',
-            hintText: widget.fullScreen
-                ? 'Коротко назови направление, в котором хочешь расти.'
-                : null,
-            showLabel: !widget.fullScreen,
-            ctrl: _nameCtrl,
-            fBg: fBg,
-            txt: txt,
-            sub: sub,
-            bdr: bdr,
-            fieldKey: const ValueKey('add-skill-name-field'),
-            onChanged: (_) {
-              if (_nameError != null) setState(() => _nameError = null);
-            },
-          ),
-          if (_nameError != null) ...[
-            const SizedBox(height: 6),
-            Text(
-              _nameError!,
-              key: const ValueKey('add-skill-name-error'),
-              style: const TextStyle(
-                color: Color(0xFFFF453A),
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-          SizedBox(height: widget.fullScreen ? 18 : 10),
-          if (widget.fullScreen) ...[
+            nameField,
+            if (_nameError != null) ...[
+              const SizedBox(height: 6),
+              _SkillNameError(message: _nameError!),
+            ],
+            const SizedBox(height: 18),
             _MobileSkillFormSection(
               title: 'Цель',
               subtitle: '',
               isDark: isDark,
             ),
             const SizedBox(height: 9),
-          ],
-          DlgField(
-            label: 'Цель',
-            hintText: widget.fullScreen
-                ? 'Цель поможет понять, к чему ведёт путь.'
-                : null,
-            showLabel: !widget.fullScreen,
-            ctrl: _goalCtrl,
-            fBg: fBg,
-            txt: txt,
-            sub: sub,
-            bdr: bdr,
-            min: 2,
-            fieldKey: const ValueKey('add-skill-goal-field'),
-          ),
-          if (widget.fullScreen) ...[
+            goalField,
             const SizedBox(height: 7),
             Text(
               'Можно уточнить цель позже — она не обязана быть идеальной с первого раза.',
@@ -695,6 +670,23 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
                 fontSize: 11.5,
                 height: 1.3,
                 fontWeight: FontWeight.w600,
+              ),
+            ),
+          ] else ...[
+            _DesktopSkillIdentitySection(
+              icon: _icon,
+              color: _color,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  nameField,
+                  if (_nameError != null) ...[
+                    const SizedBox(height: 6),
+                    _SkillNameError(message: _nameError!),
+                  ],
+                  const SizedBox(height: 12),
+                  goalField,
+                ],
               ),
             ),
           ],
@@ -894,14 +886,6 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
           ],
 
           const SizedBox(height: 8),
-          if (!widget.fullScreen)
-            DlgActions(
-              onCancel: () => Navigator.pop(context),
-              onSave: _save,
-              saveLabel: widget.existing == null
-                  ? 'Создать'
-                  : 'Сохранить изменения',
-            ),
         ],
       ),
     );
@@ -961,10 +945,39 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
     }
 
     return Dialog(
+      key: const ValueKey('desktop-add-skill-dialog'),
       backgroundColor: bg,
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: SizedBox(width: 480, child: form),
+      child: SizedBox(
+        width: 720,
+        height: desktopDialogHeight,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 16, 14),
+              child: DlgHeader(title: title, txtColor: txt),
+            ),
+            Divider(height: 1, color: bdr),
+            Expanded(child: form),
+            Divider(height: 1, color: bdr),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 14, 24, 18),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: DlgActions(
+                  onCancel: () => Navigator.pop(context),
+                  onSave: _save,
+                  saveLabel: widget.existing == null
+                      ? 'Создать'
+                      : 'Сохранить изменения',
+                  saveColor: _color,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1025,6 +1038,59 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
         requiredQuestCompletions: 3,
       ),
     ];
+  }
+}
+
+class _SkillNameError extends StatelessWidget {
+  final String message;
+
+  const _SkillNameError({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      message,
+      key: const ValueKey('add-skill-name-error'),
+      style: const TextStyle(
+        color: Color(0xFFFF453A),
+        fontSize: 12,
+        fontWeight: FontWeight.w700,
+      ),
+    );
+  }
+}
+
+class _DesktopSkillIdentitySection extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final Widget child;
+
+  const _DesktopSkillIdentitySection({
+    required this.icon,
+    required this.color,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          key: const ValueKey('skill-preview-icon'),
+          width: 84,
+          height: 84,
+          decoration: BoxDecoration(
+            color: color.withAlpha(30),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: color.withAlpha(110)),
+          ),
+          child: Icon(icon, color: color, size: 39),
+        ),
+        const SizedBox(width: 16),
+        Expanded(child: child),
+      ],
+    );
   }
 }
 

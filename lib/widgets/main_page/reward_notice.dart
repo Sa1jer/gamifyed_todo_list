@@ -17,6 +17,12 @@ class _RewardNotice {
   bool get hasBuffs => buffTitles.isNotEmpty;
   bool get hasAchievements => achievementTitles.isNotEmpty;
 
+  String get signature => [
+    ...chestTitles.map((title) => 'chest:$title'),
+    ...buffTitles.map((title) => 'buff:$title'),
+    ...achievementTitles.map((title) => 'achievement:$title'),
+  ].join('\u0000');
+
   String get title {
     if (hasAchievements && !hasChests && !hasBuffs) {
       return achievementTitles.length == 1

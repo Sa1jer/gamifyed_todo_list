@@ -21,6 +21,7 @@ class _DesktopWorkspaceShell extends StatelessWidget {
   final GlobalKey? rewardsKey;
   final GlobalKey? roadmapKey;
   final GlobalKey? statsKey;
+  final GlobalKey? contextualToastHostKey;
 
   const _DesktopWorkspaceShell({
     required this.state,
@@ -41,6 +42,7 @@ class _DesktopWorkspaceShell extends StatelessWidget {
     this.rewardsKey,
     this.roadmapKey,
     this.statsKey,
+    this.contextualToastHostKey,
   });
 
   @override
@@ -91,24 +93,27 @@ class _DesktopWorkspaceShell extends StatelessWidget {
             VerticalDivider(width: 1, thickness: 1, color: tokens.outline),
             Expanded(
               key: const ValueKey('desktop-main-region'),
-              child: actMode
-                  ? _DesktopMainWorkspace(
-                      state: state,
-                      skill: effectiveSkill,
-                      tokens: tokens,
-                      metrics: metrics,
-                      onAddSkill: onAddSkill,
-                      onAddTask: (skill) =>
-                          _showDesktopAddTask(context, state, skill),
-                      onEditTask: (skill, task) =>
-                          _showDesktopEditTask(context, state, skill, task),
-                      onComplete: onComplete,
-                      onMinimumAction: onMinimumAction,
-                    )
-                  : Padding(
-                      padding: EdgeInsets.all(metrics.mainPadding),
-                      child: alternateWorkspace ?? const SizedBox.shrink(),
-                    ),
+              child: KeyedSubtree(
+                key: contextualToastHostKey,
+                child: actMode
+                    ? _DesktopMainWorkspace(
+                        state: state,
+                        skill: effectiveSkill,
+                        tokens: tokens,
+                        metrics: metrics,
+                        onAddSkill: onAddSkill,
+                        onAddTask: (skill) =>
+                            _showDesktopAddTask(context, state, skill),
+                        onEditTask: (skill, task) =>
+                            _showDesktopEditTask(context, state, skill, task),
+                        onComplete: onComplete,
+                        onMinimumAction: onMinimumAction,
+                      )
+                    : Padding(
+                        padding: EdgeInsets.all(metrics.mainPadding),
+                        child: alternateWorkspace ?? const SizedBox.shrink(),
+                      ),
+              ),
             ),
             if (actMode && metrics.showRightRail) ...[
               VerticalDivider(width: 1, thickness: 1, color: tokens.outline),
@@ -1533,6 +1538,7 @@ class _DesktopSelectedSkillHeader extends StatelessWidget {
           color: skill.color,
           background: tokens.raisedSurface,
           height: 7,
+          level: skill.level,
         ),
       );
       final value = Text(
@@ -2812,24 +2818,24 @@ class _DesktopProgressBar extends StatelessWidget {
   final Color color;
   final Color background;
   final double height;
+  final int? level;
 
   const _DesktopProgressBar({
     required this.value,
     required this.color,
     required this.background,
     required this.height,
+    this.level,
   });
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(99),
-      child: LinearProgressIndicator(
-        value: value.clamp(0.0, 1.0),
-        minHeight: height,
-        backgroundColor: background,
-        valueColor: AlwaysStoppedAnimation(color),
-      ),
+    return XPBar(
+      progress: value,
+      color: color,
+      height: height,
+      backgroundColor: background,
+      level: level,
     );
   }
 }

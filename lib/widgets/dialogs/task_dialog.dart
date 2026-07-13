@@ -223,6 +223,9 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     final title = widget.existing != null
         ? 'Редактировать квест'
         : 'Новый квест';
+    final desktopDialogHeight = (MediaQuery.sizeOf(context).height - 48)
+        .clamp(560.0, 780.0)
+        .toDouble();
 
     final form = SingleChildScrollView(
       key: const ValueKey('add-task-form-scroll'),
@@ -232,10 +235,6 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (!widget.fullScreen) ...[
-            DlgHeader(title: title, txtColor: txt),
-            const SizedBox(height: 16),
-          ],
           if (_initialStage case final stage?) ...[
             _buildStageContextCard(stage, txt, sub, bdr, c, isDark),
             const SizedBox(height: 14),
@@ -284,15 +283,6 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
           const SizedBox(height: 16),
           _buildAdvancedSection(fBg, txt, sub, bdr, c, isDark),
           const SizedBox(height: 22),
-          if (!widget.fullScreen)
-            DlgActions(
-              onCancel: () => Navigator.pop(context),
-              onSave: _save,
-              saveLabel: widget.existing == null
-                  ? 'Создать'
-                  : 'Сохранить изменения',
-              saveColor: c,
-            ),
         ],
       ),
     );
@@ -324,9 +314,34 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
       backgroundColor: bg,
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 620, maxHeight: 820),
-        child: SizedBox(width: 620, child: form),
+      child: SizedBox(
+        width: 720,
+        height: desktopDialogHeight,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 16, 14),
+              child: DlgHeader(title: title, txtColor: txt),
+            ),
+            Divider(height: 1, color: bdr),
+            Expanded(child: form),
+            Divider(height: 1, color: bdr),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 14, 24, 18),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: DlgActions(
+                  onCancel: () => Navigator.pop(context),
+                  onSave: _save,
+                  saveLabel: widget.existing == null
+                      ? 'Создать'
+                      : 'Сохранить изменения',
+                  saveColor: c,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -360,24 +375,24 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   ) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(11),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(
-        color: color.withAlpha(isDark ? 18 : 12),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withAlpha(58)),
+        color: color.withAlpha(isDark ? 14 : 9),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withAlpha(48)),
       ),
       child: Row(
         children: [
           Container(
-            width: 34,
-            height: 34,
+            width: 30,
+            height: 30,
             decoration: BoxDecoration(
-              color: color.withAlpha(28),
-              borderRadius: BorderRadius.circular(10),
+              color: color.withAlpha(24),
+              borderRadius: BorderRadius.circular(9),
             ),
-            child: Icon(Icons.account_tree, color: color, size: 18),
+            child: Icon(Icons.account_tree, color: color, size: 16),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 9),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -388,17 +403,18 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: txt,
-                    fontSize: 13.2,
+                    fontSize: 12.8,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                const SizedBox(height: 2),
                 Text(
-                  'Этот квест двигает выбранный этап RoadMap.',
+                  'Квест можно привязать к текущей ступени RoadMap.',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: sub,
-                    fontSize: 11.5,
-                    height: 1.3,
+                    fontSize: 11,
+                    height: 1.2,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -420,16 +436,16 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   ) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(11),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF181820) : const Color(0xFFFFFFFF),
-        borderRadius: BorderRadius.circular(12),
+        color: isDark ? const Color(0xFF17171F) : const Color(0xFFFFFFFF),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: bdr.withAlpha(180)),
       ),
       child: Row(
         children: [
-          Icon(Icons.route_rounded, color: color, size: 18),
-          const SizedBox(width: 9),
+          Icon(Icons.route_rounded, color: color, size: 17),
+          const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -440,7 +456,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: txt,
-                    fontSize: 12.8,
+                    fontSize: 12.5,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -449,7 +465,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                   'Можно связать квест с текущей ступенью RoadMap.',
                   style: TextStyle(
                     color: sub,
-                    fontSize: 11.3,
+                    fontSize: 11,
                     height: 1.25,
                     fontWeight: FontWeight.w600,
                   ),

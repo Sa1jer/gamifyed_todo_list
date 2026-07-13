@@ -190,6 +190,19 @@ void main() {
     },
   );
 
+  test('action toast placement honours a constrained desktop workspace', () {
+    final placement = ActionToastPlacement.near(
+      anchor: const Offset(1700, 520),
+      viewport: const Size(1920, 1080),
+      safeRegion: const Rect.fromLTWH(360, 80, 1200, 920),
+    );
+
+    expect(placement.topLeft.dx, greaterThanOrEqualTo(372));
+    expect(placement.topLeft.dx, lessThanOrEqualTo(1228));
+    expect(placement.topLeft.dy, greaterThanOrEqualTo(92));
+    expect(placement.topLeft.dy, lessThanOrEqualTo(884));
+  });
+
   testWidgets('XP bubble keeps its action placement while visible', (
     WidgetTester tester,
   ) async {
@@ -220,6 +233,65 @@ void main() {
 
     expect(after.dx, closeTo(before.dx, 0.1));
     expect(after.dy, closeTo(before.dy, 0.1));
+  });
+
+  testWidgets('XP bar starts at the persisted value and animates updates', (
+    WidgetTester tester,
+  ) async {
+    Future<void> pumpBar({required double progress, required int level}) {
+      return tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: XPBar(
+              key: const ValueKey('animated-xp-bar'),
+              progress: progress,
+              level: level,
+              color: const Color(0xFF4A9EFF),
+            ),
+          ),
+        ),
+      );
+    }
+
+    await pumpBar(progress: 0.24, level: 1);
+    expect(
+      tester
+          .widget<LinearProgressIndicator>(find.byType(LinearProgressIndicator))
+          .value,
+      closeTo(0.24, 0.001),
+    );
+
+    await pumpBar(progress: 0.56, level: 1);
+    await tester.pump();
+    expect(
+      tester
+          .widget<LinearProgressIndicator>(find.byType(LinearProgressIndicator))
+          .value,
+      closeTo(0.24, 0.001),
+    );
+    await tester.pump(kMotionXp);
+    expect(
+      tester
+          .widget<LinearProgressIndicator>(find.byType(LinearProgressIndicator))
+          .value,
+      closeTo(0.56, 0.001),
+    );
+
+    await pumpBar(progress: 0.18, level: 2);
+    await tester.pump(const Duration(milliseconds: 360));
+    expect(
+      tester
+          .widget<LinearProgressIndicator>(find.byType(LinearProgressIndicator))
+          .value,
+      greaterThan(0.90),
+    );
+    await tester.pump(kMotionXp);
+    expect(
+      tester
+          .widget<LinearProgressIndicator>(find.byType(LinearProgressIndicator))
+          .value,
+      closeTo(0.18, 0.001),
+    );
   });
 
   test('mobile responsive metrics cover the supported width buckets', () {

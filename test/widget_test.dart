@@ -2212,59 +2212,60 @@ void main() {
     await tester.pump();
   });
 
-  testWidgets('AddSkillDialog keeps first stage optional and preview first', (
-    WidgetTester tester,
-  ) async {
-    tester.view.physicalSize = const Size(900, 1200);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
+  testWidgets(
+    'AddSkillDialog keeps first stage optional in desktop identity layout',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(900, 1200);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
 
-    List<SkillTreeNode>? savedNodes;
+      List<SkillTreeNode>? savedNodes;
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: AddSkillDialog(
-            isDark: true,
-            showFirstRunHints: true,
-            onSave:
-                (
-                  name,
-                  goal,
-                  checklist,
-                  color,
-                  icon,
-                  initialTreeNodes,
-                  initialQuest,
-                ) {
-                  savedNodes = initialTreeNodes;
-                },
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: AddSkillDialog(
+              isDark: true,
+              showFirstRunHints: true,
+              onSave:
+                  (
+                    name,
+                    goal,
+                    checklist,
+                    color,
+                    icon,
+                    initialTreeNodes,
+                    initialQuest,
+                  ) {
+                    savedNodes = initialTreeNodes;
+                  },
+            ),
           ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.textContaining('Достаточно названия и цели'), findsOneWidget);
-    expect(find.byKey(const ValueKey('skill-preview-icon')), findsOneWidget);
-    expect(
-      tester.getTopLeft(find.byKey(const ValueKey('skill-preview-icon'))).dy,
-      lessThan(tester.getTopLeft(find.text('Название навыка')).dy),
-    );
-    for (var i = 0; i < kColors.length; i++) {
-      expect(find.byKey(ValueKey('skill-color-$i')), findsOneWidget);
-    }
+      expect(find.textContaining('Достаточно названия и цели'), findsOneWidget);
+      expect(find.byKey(const ValueKey('skill-preview-icon')), findsOneWidget);
+      expect(
+        tester.getCenter(find.byKey(const ValueKey('skill-preview-icon'))).dx,
+        lessThan(tester.getCenter(find.text('Название навыка')).dx),
+      );
+      for (var i = 0; i < kColors.length; i++) {
+        expect(find.byKey(ValueKey('skill-color-$i')), findsOneWidget);
+      }
 
-    await tester.enterText(find.byType(TextField).at(0), 'Плавание');
-    await tester.enterText(find.byType(TextField).at(1), 'Проплыть километр');
-    await tester.ensureVisible(find.text('Создать'));
-    await tester.pump();
-    await tester.tap(find.text('Создать'));
-    await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).at(0), 'Плавание');
+      await tester.enterText(find.byType(TextField).at(1), 'Проплыть километр');
+      await tester.ensureVisible(find.text('Создать'));
+      await tester.pump();
+      await tester.tap(find.text('Создать'));
+      await tester.pumpAndSettle();
 
-    expect(savedNodes, isEmpty);
-  });
+      expect(savedNodes, isEmpty);
+    },
+  );
 
   testWidgets('Tooltip visibility follows saved setting', (
     WidgetTester tester,

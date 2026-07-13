@@ -249,6 +249,27 @@ timer, animation, and `LayoutBuilder` paths. No deterministic UI-isolate loop
 was proven, so this release adds no speculative lifecycle workaround. Native
 profile capture during an actual stall remains the required next evidence.
 
+## 1.3.61 Reward Feedback And Creation Forms
+
+Completion feedback is split by scope. Action-context XP bubbles resolve their
+anchor inside the active desktop workspace, so they do not use the sidebar or
+focus rail as visual territory. Their confetti is a bounded local burst clipped
+to the toast surface: ordinary completions use the subtle variant, while
+milestones retain the stronger bounded variant. System rewards remain in the
+stable top-level notice queue and are deduplicated by reward payload.
+
+`XPBar` renders the persisted value immediately, then interpolates subsequent
+XP changes over `840ms` with the shared easing curve. A level boundary fills
+the outgoing bar before continuing from zero at the new level; reduced motion
+swaps directly to the target value. This is presentation-only and does not
+change XP, level, completion, or reward rules.
+
+Desktop Add Skill and Add Quest dialogs now use a fixed header, scrollable
+body, and fixed footer. Their desktop identity and field layouts reuse the
+same field order and semantic controls as the mobile forms without becoming a
+mobile-sized route. Quest stage context stays compact, and long form content
+scrolls within the dialog rather than displacing actions off screen.
+
 ## 1.3.57 Content-Driven Empty-State Recovery
 
 The Trophies Effects and New Chests sections now share the same full-width
