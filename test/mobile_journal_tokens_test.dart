@@ -117,10 +117,10 @@ void main() {
       find.byKey(const ValueKey('xp-bubble-reward-icon')),
     );
     expect(icon.color, MobileJournalTokens.rewardGold);
-    final subtitle = tester.widget<Text>(
-      find.byKey(const ValueKey('xp-bubble-subtitle')),
+    final rewardLine = tester.widget<Text>(
+      find.byKey(const ValueKey('xp-bubble-reward-line')),
     );
-    final spans = (subtitle.textSpan! as TextSpan).children!
+    final spans = (rewardLine.textSpan! as TextSpan).children!
         .whereType<TextSpan>();
     expect(
       spans.any(
@@ -137,6 +137,89 @@ void main() {
     );
 
     await tester.pump(const Duration(seconds: 2));
+  });
+
+  test('completion toast separates base XP from effect bonus', () {
+    final content = CompletionToastContent.fromMessage(
+      'Навык окреп\nСпорт +24 XP • эффект +2 XP • до ур. 2 92 XP',
+    );
+
+    expect(content.title, 'Навык окреп');
+    expect(content.skillName, 'Спорт');
+    expect(content.baseXp, 22);
+    expect(content.bonusXp, 2);
+    expect(content.nextLevelHint, 'До следующего уровня 92 XP');
+  });
+
+  test(
+    'completion toast formats the AppState skill-level-up event as growth',
+    () {
+      final content = CompletionToastContent.fromMessage(
+        'Навык вырос\nСпорт окреп до ур.2 • +24 XP • эффект +2 XP '
+        '• до ур.3 92 XP',
+      );
+
+      expect(content.title, 'Навык окреп');
+      expect(content.skillName, 'Спорт');
+      expect(content.baseXp, 22);
+      expect(content.bonusXp, 2);
+      expect(content.nextLevelHint, 'До следующего уровня 92 XP');
+    },
+  );
+
+  test('completion toast hides distant next-level progress by default', () {
+    final content = CompletionToastContent.fromMessage(
+      'Навык окреп\nСпорт +20 XP • до ур. 2 100 XP',
+    );
+
+    expect(content.nextLevelHint, isNull);
+  });
+
+  test(
+    'action toast placement stays inside the workspace and reserved nav',
+    () {
+      final placement = ActionToastPlacement.near(
+        anchor: const Offset(390, 760),
+        viewport: const Size(400, 800),
+        bottomReserved: 96,
+      );
+
+      expect(placement.topLeft.dx, inInclusiveRange(12, 68));
+      expect(placement.topLeft.dy, lessThanOrEqualTo(588));
+      expect(placement.topLeft.dy, greaterThanOrEqualTo(12));
+    },
+  );
+
+  testWidgets('XP bubble keeps its action placement while visible', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Stack(
+            children: [
+              XPBubble(
+                message: '+10 XP · быстрое действие',
+                position: const Offset(180, 180),
+                reducedMotion: false,
+                onDone: (_) {},
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 250));
+    final before = tester.getTopLeft(
+      find.byKey(const ValueKey('xp-bubble-surface')),
+    );
+    await tester.pump(const Duration(milliseconds: 700));
+    final after = tester.getTopLeft(
+      find.byKey(const ValueKey('xp-bubble-surface')),
+    );
+
+    expect(after.dx, closeTo(before.dx, 0.1));
+    expect(after.dy, closeTo(before.dy, 0.1));
   });
 
   test('mobile responsive metrics cover the supported width buckets', () {

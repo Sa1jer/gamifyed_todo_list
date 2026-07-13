@@ -30,10 +30,10 @@ class _MainPageState extends State<MainPage> {
   final GlobalKey<_MobileActJournalState> _mobileActJournalKey = GlobalKey();
   WorkspaceMode _mode = WorkspaceMode.act;
   WorkspaceMode _lastNormalMode = WorkspaceMode.act;
-  _RewardNotice? _rewardNotice;
+  final List<_RewardNotice> _rewardNoticeQueue = [];
   GoalMilestoneEvent? _goalMilestoneNotice;
   AppState? _eventState;
-  Offset? _rewardNoticeAnchor;
+  int _nextRewardNoticeId = 0;
   int _debugAdminTapCount = 0;
   Timer? _debugAdminTapResetTimer;
   bool _firstRunDialogOpen = false;
@@ -89,21 +89,39 @@ class _MainPageState extends State<MainPage> {
     required CompletionToastColors colors,
   }) {
     final isMilestone = AppFeedback.isMilestoneMessage(message);
+    final anchor = _resolveActionToastAnchor(pos);
     setState(() {
       _bubbles.add(
         XPBubble(
           key: UniqueKey(),
           message: message,
-          position: pos,
+          position: anchor,
           colors: colors,
           showMilestoneConfetti: isMilestone,
           confettiBuilder: (color) =>
               MilestoneConfettiBurst(color: color, particles: 14),
+          reducedMotion: _eventState?.reducedMotion ?? false,
           onDone: (k) =>
               setState(() => _bubbles.removeWhere((b) => b.key == k)),
         ),
       );
     });
+  }
+
+  Offset _resolveActionToastAnchor(Offset source) {
+    final context = _pageStackKey.currentContext;
+    final renderObject = context?.findRenderObject();
+    if (renderObject is! RenderBox || !renderObject.hasSize) return source;
+
+    final size = renderObject.size;
+    final stackOrigin = renderObject.localToGlobal(Offset.zero);
+    final globalBounds = stackOrigin & size;
+    final localBounds = Offset.zero & size;
+    if (globalBounds.contains(source)) {
+      return renderObject.globalToLocal(source);
+    }
+    if (localBounds.contains(source)) return source;
+    return Offset(size.width * 0.62, size.height * 0.46);
   }
 
   void _showRewardNotifications(AppState state) {
@@ -120,14 +138,16 @@ class _MainPageState extends State<MainPage> {
     }
 
     setState(() {
-      _rewardNotice = _RewardNotice(
+      final notice = _RewardNotice(
+        id: _nextRewardNoticeId++,
         chestTitles: chests.map((chest) => chest.title).toList(),
         buffTitles: buffs.map((buff) => buff.title).toList(),
         achievementTitles: achievements
             .map((achievement) => achievement.def?.name ?? 'Достижение')
             .toList(),
       );
-      _rewardNoticeAnchor = _resolveRewardsButtonAnchor();
+      if (_rewardNoticeQueue.length == 3) _rewardNoticeQueue.removeLast();
+      _rewardNoticeQueue.add(notice);
     });
   }
 
@@ -151,23 +171,6 @@ class _MainPageState extends State<MainPage> {
     _openRoadmapForSkill(state, skill);
   }
 
-  Offset? _resolveRewardsButtonAnchor() {
-    final buttonContext = _rewardsButtonKey.currentContext;
-    final stackContext = _pageStackKey.currentContext;
-    if (buttonContext == null || stackContext == null) return null;
-
-    final buttonBox = buttonContext.findRenderObject();
-    final stackBox = stackContext.findRenderObject();
-    if (buttonBox is! RenderBox || stackBox is! RenderBox) return null;
-
-    final buttonTopLeft = buttonBox.localToGlobal(Offset.zero);
-    final localTopLeft = stackBox.globalToLocal(buttonTopLeft);
-    return Offset(
-      localTopLeft.dx + buttonBox.size.width / 2,
-      localTopLeft.dy + buttonBox.size.height,
-    );
-  }
-
   bool get _usesMobileWorkspaceRoutes =>
       MobileResponsiveMetrics.isMobileWidth(MediaQuery.sizeOf(context).width);
 
@@ -189,7 +192,7 @@ class _MainPageState extends State<MainPage> {
   void _openRewardsDialog(AppState state, {bool showTutorialHint = false}) {
     AppFeedback.selection();
     setState(() {
-      _rewardNotice = null;
+      _rewardNoticeQueue.clear();
       if (showTutorialHint) _rewardsTutorialActive = true;
     });
     if (_usesMobileWorkspaceRoutes) {
@@ -1081,13 +1084,19 @@ class _MainPageState extends State<MainPage> {
                     ),
                   ],
                 ),
-              if (_rewardNotice != null)
+              if (_rewardNoticeQueue.isNotEmpty)
                 _RewardNoticePopover(
-                  notice: _rewardNotice!,
-                  anchor: _rewardNoticeAnchor,
+                  notice: _rewardNoticeQueue.first,
                   isDark: isDark,
+                  desktop: desktopShell,
+                  desktopMetrics: desktopMetrics,
+                  reducedMotion: s.reducedMotion,
+                  queuedCount: _rewardNoticeQueue.length,
                   onShow: () => _openRewardsDialog(s),
-                  onHide: () => setState(() => _rewardNotice = null),
+                  onHide: () {
+                    if (!mounted || _rewardNoticeQueue.isEmpty) return;
+                    setState(() => _rewardNoticeQueue.removeAt(0));
+                  },
                 ),
               if (_goalMilestoneNotice != null)
                 GoalMilestoneBanner(

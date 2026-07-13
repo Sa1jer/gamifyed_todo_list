@@ -287,6 +287,10 @@ Manual desktop/QHD checklist:
 - `1.3.58`: unified the mobile RoadMap into one vertical ascent graph, removed the free-map mode switch and floating return action, retained branch paths/templates/details, and finalized the compact mobile Focus placeholder.
 - `1.3.59`: introduced the mobile RoadMap projection; the skill root remains at the top while the earliest foundation stage begins at the bottom and later stages rise toward the skill, without changing stored topology or initial focus behavior.
 - `1.3.60`: rebuilt the active desktop selected-skill header around a centred three-row content block, keeping the approved plain-text quest counter and adding geometry coverage for goal, counts, Inbox exclusion, compact width, and large text. The macOS hang audit remains evidence-gathering only; no freeze root cause is claimed without a native profile trace.
+- Notification presentation: separated action-context XP toasts from bounded
+  system reward notices, with fixed action placement, mobile navigation-safe
+  clamping, and reduced-motion support. Native screen-reader and physical
+  profile-mode visual QA remains pending.
 
 - `1.3.53`: recovered the incomplete `1.3.52` visual migration with a real RoadMap shell/templates/context rail, complete Trophies and Statistics ecosystems, full existing Settings coverage, responsive raised skill headers, history-aware empty states, stable overflow geometry, bounds-based camera fitting, and tested debug/profile Admin entry.
 - `1.3.52`: introduced workspace routes and initial wrappers, but its visual migration remained incomplete; superseded by the audited `1.3.53` recovery.

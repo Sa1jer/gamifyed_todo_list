@@ -967,12 +967,176 @@ CompletionToastColors completionToastColorsForTask({
   return const CompletionToastColors.fallback();
 }
 
+@immutable
+class ActionToastPlacement {
+  static const double edgeInset = 12;
+  static const double estimatedWidth = 320;
+  static const double estimatedHeight = 104;
+
+  final Offset topLeft;
+
+  const ActionToastPlacement(this.topLeft);
+
+  /// Keeps a completion toast near its source without letting it cover a
+  /// reserved navigation area or leave the current workspace.
+  factory ActionToastPlacement.near({
+    required Offset anchor,
+    required Size viewport,
+    double bottomReserved = 0,
+  }) {
+    final maxLeft = math.max(
+      edgeInset,
+      viewport.width - estimatedWidth - edgeInset,
+    );
+    final maxTop = math.max(
+      edgeInset,
+      viewport.height - bottomReserved - estimatedHeight - edgeInset,
+    );
+    var left = anchor.dx - estimatedWidth / 2;
+    var top = anchor.dy + 14;
+    if (top > maxTop) top = anchor.dy - estimatedHeight - 14;
+
+    return ActionToastPlacement(
+      Offset(left.clamp(edgeInset, maxLeft), top.clamp(edgeInset, maxTop)),
+    );
+  }
+}
+
+@immutable
+class CompletionToastContent {
+  final IconData icon;
+  final String title;
+  final String? skillName;
+  final int? baseXp;
+  final int? bonusXp;
+  final String? detail;
+  final String? nextLevelHint;
+
+  const CompletionToastContent({
+    required this.icon,
+    required this.title,
+    this.skillName,
+    this.baseXp,
+    this.bonusXp,
+    this.detail,
+    this.nextLevelHint,
+  });
+
+  factory CompletionToastContent.fromMessage(String message) {
+    final cleaned = message
+        .replaceAll('🎉', '')
+        .replaceAll('🏅', '')
+        .replaceAll('⬆️', '')
+        .trim();
+    final lower = cleaned.toLowerCase();
+    final lines = cleaned
+        .split('\n')
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty)
+        .toList();
+    final raw = lines.length > 1 ? lines.skip(1).join(' ') : cleaned;
+    final parts = raw
+        .split('•')
+        .map((part) => part.trim())
+        .where((part) => part.isNotEmpty)
+        .toList();
+    final bonusMatch = RegExp(
+      r'эффект\s*\+(\d+)\s*XP',
+      caseSensitive: false,
+    ).firstMatch(raw);
+    final totalMatch = RegExp(r'\+(\d+)\s*XP').firstMatch(raw);
+    final totalXp = totalMatch == null
+        ? null
+        : int.tryParse(totalMatch.group(1)!);
+    final bonusXp = bonusMatch == null
+        ? null
+        : int.tryParse(bonusMatch.group(1)!);
+    final baseXp = totalXp == null
+        ? null
+        : math.max(0, totalXp - (bonusXp ?? 0));
+    final remainingMatch = RegExp(
+      r'до\s+ур\.?\s*\d+\s+(\d+)\s*XP',
+      caseSensitive: false,
+    ).firstMatch(raw);
+    final remaining = remainingMatch == null
+        ? null
+        : int.tryParse(remainingMatch.group(1)!);
+    final nextLevelHint = remaining != null && remaining > 0 && remaining < 100
+        ? 'До следующего уровня $remaining XP'
+        : null;
+
+    final isQuickAction = lower.contains('быстрое действие');
+    final isSkillGrowth =
+        lower.contains('навык окреп') ||
+        lower.contains('навык вырос') ||
+        lower.contains('окреп до ур');
+    final isLevelUp = lower.contains('новый уровень') && !isSkillGrowth;
+    String? skillName;
+    if (isSkillGrowth || isLevelUp) {
+      final candidate = parts.firstWhere(
+        (part) =>
+            part.toLowerCase().contains('окреп') ||
+            (part.contains('+') && !part.toLowerCase().contains('эффект')),
+        orElse: () => '',
+      );
+      final name = candidate
+          .replaceFirst(
+            RegExp(r'\s+окреп\s+до\s+ур\.?\s*\d+.*$', caseSensitive: false),
+            '',
+          )
+          .replaceFirst(RegExp(r'\+\d+\s*XP.*$', caseSensitive: false), '')
+          .replaceFirst(
+            RegExp(r'окреп\s+до\s+ур\.?\s*\d+', caseSensitive: false),
+            '',
+          )
+          .trim();
+      skillName = name.isEmpty ? null : name;
+    }
+
+    return CompletionToastContent(
+      icon: isLevelUp
+          ? Icons.workspace_premium
+          : isSkillGrowth
+          ? Icons.trending_up
+          : isQuickAction
+          ? Icons.auto_awesome
+          : lower.contains('сопротивлен')
+          ? Icons.shield
+          : Icons.auto_awesome,
+      title: isLevelUp
+          ? 'Новый уровень'
+          : isSkillGrowth
+          ? 'Навык окреп'
+          : isQuickAction
+          ? 'Опыт получен'
+          : lines.length > 1
+          ? lines.first
+          : 'Опыт получен',
+      skillName: skillName,
+      baseXp: baseXp,
+      bonusXp: bonusXp,
+      detail: isQuickAction ? 'Быстрое действие' : null,
+      nextLevelHint: nextLevelHint,
+    );
+  }
+
+  String get semanticsLabel {
+    final values = <String>[title];
+    if (skillName != null) values.add(skillName!);
+    if (baseXp != null) values.add('плюс $baseXp XP');
+    if (bonusXp != null) values.add('эффект плюс $bonusXp XP');
+    if (nextLevelHint != null) values.add(nextLevelHint!);
+    return values.join(', ');
+  }
+}
+
 class XPBubble extends StatefulWidget {
   final String message;
   final Offset position;
   final CompletionToastColors colors;
   final bool showMilestoneConfetti;
   final Widget Function(Color color)? confettiBuilder;
+  final bool reducedMotion;
   final Function(Key?) onDone;
   const XPBubble({
     super.key,
@@ -981,6 +1145,7 @@ class XPBubble extends StatefulWidget {
     this.colors = const CompletionToastColors.fallback(),
     this.showMilestoneConfetti = false,
     this.confettiBuilder,
+    this.reducedMotion = false,
     required this.onDone,
   });
   @override
@@ -990,19 +1155,20 @@ class XPBubble extends StatefulWidget {
 class _XPBubbleState extends State<XPBubble>
     with SingleTickerProviderStateMixin {
   late AnimationController _c;
-  late Animation<double> _lift, _opacity, _scale;
-  late _XPBubbleTone _tone;
+  late Animation<double> _opacity, _scale;
+  late CompletionToastContent _content;
 
   @override
   void initState() {
     super.initState();
-    _tone = _XPBubbleTone.fromMessage(widget.message);
+    _content = CompletionToastContent.fromMessage(widget.message);
     _c = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1800),
+      duration: widget.reducedMotion
+          ? Duration.zero
+          : const Duration(milliseconds: 1800),
     );
     final curved = CurvedAnimation(parent: _c, curve: kMotionCurve);
-    _lift = Tween<double>(begin: 8, end: -58).animate(curved);
     _opacity = TweenSequence([
       TweenSequenceItem(tween: Tween<double>(begin: 0, end: 1), weight: 14),
       TweenSequenceItem(tween: ConstantTween<double>(1), weight: 58),
@@ -1034,26 +1200,34 @@ class _XPBubbleState extends State<XPBubble>
     final bg = widget.colors.surfaceTint(baseBg, isDark: isDark);
     final txt = isDark ? const Color(0xFFF4F4F8) : const Color(0xFF1B1B22);
     final sub = isDark ? const Color(0xFF9A9AA6) : const Color(0xFF5F6370);
-    final screen = MediaQuery.sizeOf(context);
+    final placement = ActionToastPlacement.near(
+      anchor: widget.position,
+      viewport: MediaQuery.sizeOf(context),
+      bottomReserved:
+          MobileResponsiveMetrics.isMobileWidth(
+            MediaQuery.sizeOf(context).width,
+          )
+          ? 96
+          : 0,
+    );
 
     return AnimatedBuilder(
       animation: _c,
       builder: (_, child) {
-        final maxLeft = screen.width > 356 ? screen.width - 332 : 12.0;
-        final maxTop = screen.height > 104 ? screen.height - 92 : 12.0;
-        final left = (widget.position.dx - 154).clamp(12.0, maxLeft);
-        final top = (widget.position.dy + _lift.value - 4).clamp(12.0, maxTop);
-
         return Positioned(
-          left: left.toDouble(),
-          top: top.toDouble(),
+          left: placement.topLeft.dx,
+          top: placement.topLeft.dy,
           child: IgnorePointer(
-            child: Opacity(
-              opacity: _opacity.value,
-              child: Transform.scale(
-                scale: _scale.value,
-                alignment: Alignment.bottomCenter,
-                child: child,
+            child: Semantics(
+              liveRegion: true,
+              label: _content.semanticsLabel,
+              child: Opacity(
+                opacity: _opacity.value,
+                child: Transform.scale(
+                  scale: _scale.value,
+                  alignment: Alignment.topLeft,
+                  child: child,
+                ),
               ),
             ),
           ),
@@ -1066,7 +1240,7 @@ class _XPBubbleState extends State<XPBubble>
             constraints: const BoxConstraints(maxWidth: 320),
             child: Container(
               key: const ValueKey('xp-bubble-surface'),
-              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
                 color: bg,
                 borderRadius: BorderRadius.circular(18),
@@ -1089,17 +1263,17 @@ class _XPBubbleState extends State<XPBubble>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    width: 26,
-                    height: 26,
+                    width: 34,
+                    height: 34,
                     decoration: BoxDecoration(
                       color: widget.colors.rewardSoft(isDark: isDark),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      _tone.icon,
+                      _content.icon,
                       key: const ValueKey('xp-bubble-reward-icon'),
                       color: widget.colors.rewardColor,
-                      size: 15,
+                      size: 18,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -1109,21 +1283,35 @@ class _XPBubbleState extends State<XPBubble>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          _tone.title,
+                          _content.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: txt,
                             fontWeight: FontWeight.w900,
-                            fontSize: 12.5,
+                            fontSize: 13,
                             height: 1,
                           ),
                         ),
-                        const SizedBox(height: 2),
-                        _XPBubbleSubtitle(
-                          subtitle: _tone.subtitle,
+                        if (_content.skillName != null) ...[
+                          const SizedBox(height: 1),
+                          Text(
+                            _content.skillName!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: sub,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 3),
+                        _XPBubbleRewardLine(
+                          content: _content,
                           textColor: sub,
                           rewardColor: widget.colors.rewardColor,
+                          bonusColor: MobileJournalTokens.inbox,
                         ),
                       ],
                     ),
@@ -1148,15 +1336,17 @@ class _XPBubbleState extends State<XPBubble>
   }
 }
 
-class _XPBubbleSubtitle extends StatelessWidget {
-  final String subtitle;
+class _XPBubbleRewardLine extends StatelessWidget {
+  final CompletionToastContent content;
   final Color textColor;
   final Color rewardColor;
+  final Color bonusColor;
 
-  const _XPBubbleSubtitle({
-    required this.subtitle,
+  const _XPBubbleRewardLine({
+    required this.content,
     required this.textColor,
     required this.rewardColor,
+    required this.bonusColor,
   });
 
   @override
@@ -1167,121 +1357,42 @@ class _XPBubbleSubtitle extends StatelessWidget {
       fontWeight: FontWeight.w600,
       height: 1,
     );
-    final matches = RegExp(r'[+-]\d+\s*XP').allMatches(subtitle).toList();
     final spans = <InlineSpan>[];
-    var cursor = 0;
-    for (final match in matches) {
-      if (match.start > cursor) {
-        spans.add(TextSpan(text: subtitle.substring(cursor, match.start)));
-      }
+    if (content.baseXp != null) {
       spans.add(
         TextSpan(
-          text: match.group(0),
+          text: '+${content.baseXp} XP',
           style: style.copyWith(
             color: rewardColor,
             fontWeight: FontWeight.w900,
           ),
         ),
       );
-      cursor = match.end;
     }
-    if (cursor < subtitle.length) {
-      spans.add(TextSpan(text: subtitle.substring(cursor)));
+    if (content.bonusXp != null) {
+      if (spans.isNotEmpty) spans.add(const TextSpan(text: ' · '));
+      spans.add(
+        TextSpan(
+          text: 'эффект +${content.bonusXp} XP',
+          style: style.copyWith(color: bonusColor, fontWeight: FontWeight.w900),
+        ),
+      );
     }
+    if (content.detail != null) {
+      if (spans.isNotEmpty) spans.add(const TextSpan(text: ' · '));
+      spans.add(TextSpan(text: content.detail));
+    }
+    if (content.nextLevelHint != null) {
+      if (spans.isNotEmpty) spans.add(const TextSpan(text: ' · '));
+      spans.add(TextSpan(text: content.nextLevelHint));
+    }
+    if (spans.isEmpty) spans.add(TextSpan(text: 'Действие засчитано'));
 
     return Text.rich(
       TextSpan(style: style, children: spans),
-      key: const ValueKey('xp-bubble-subtitle'),
+      key: const ValueKey('xp-bubble-reward-line'),
       maxLines: 2,
       overflow: TextOverflow.ellipsis,
-    );
-  }
-}
-
-class _XPBubbleTone {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  const _XPBubbleTone({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  factory _XPBubbleTone.fromMessage(String message) {
-    final cleaned = message
-        .replaceAll('🎉', '')
-        .replaceAll('🏅', '')
-        .replaceAll('⬆️', '')
-        .trim();
-    final lines = cleaned
-        .split('\n')
-        .map((line) => line.trim())
-        .where((line) => line.isNotEmpty)
-        .toList();
-    final customTitle = lines.length > 1 ? lines.first : null;
-    final rawSubtitle = lines.length > 1 ? lines.skip(1).join(' ') : cleaned;
-    final customSubtitle = rawSubtitle.replaceFirst(
-      '· быстрое действие',
-      '· Быстрое действие',
-    );
-    final lower = cleaned.toLowerCase();
-
-    if (lower.contains('ранг')) {
-      return _XPBubbleTone(
-        icon: Icons.workspace_premium,
-        title: customTitle ?? 'Новый ранг',
-        subtitle: customSubtitle,
-      );
-    }
-
-    if (lower.contains('уровень')) {
-      return _XPBubbleTone(
-        icon: Icons.workspace_premium,
-        title: customTitle ?? 'Новый рубеж',
-        subtitle: customSubtitle,
-      );
-    }
-
-    if (lower.contains('окреп') ||
-        lower.contains('ур.') ||
-        lower.contains('→')) {
-      return _XPBubbleTone(
-        icon: Icons.trending_up,
-        title: customTitle ?? 'Навык вырос',
-        subtitle: customSubtitle,
-      );
-    }
-
-    if (lower.contains('босс') || lower.contains('сопротивлен')) {
-      return _XPBubbleTone(
-        icon: Icons.shield,
-        title: customTitle ?? 'Сопротивление ослабло',
-        subtitle: customSubtitle,
-      );
-    }
-
-    if (lower.contains('старт')) {
-      return _XPBubbleTone(
-        icon: Icons.play_circle_fill,
-        title: customTitle ?? 'Лёгкий старт',
-        subtitle: customSubtitle,
-      );
-    }
-
-    if (lower.contains('бафф') || lower.contains('пассивн')) {
-      return _XPBubbleTone(
-        icon: Icons.bolt,
-        title: customTitle ?? 'Эффект сработал',
-        subtitle: customSubtitle,
-      );
-    }
-
-    return _XPBubbleTone(
-      icon: Icons.auto_awesome,
-      title: customTitle ?? 'Опыт получен',
-      subtitle: customSubtitle,
     );
   }
 }

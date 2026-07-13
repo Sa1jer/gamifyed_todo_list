@@ -17,6 +17,12 @@ stabilization pass rather than another redesign. The main changes are:
   labels retained, and reading-order traversal applied to mobile forms;
 - exact `760dp` handling consolidated as mobile rather than falling through to
   desktop composition at one boundary pixel.
+- completion feedback now distinguishes action-context toast cards from
+  system rewards: an XP toast remains near the completed action and clears the
+  mobile navigation, while chests, buffs, and achievements use a bounded,
+  stable queue under the mobile profile header or beside the desktop workspace.
+  XP remains gold, effect bonuses are green, and reduced motion removes the
+  non-essential entry motion.
 
 Automated checks cover responsive buckets, light contrast, app/platform reduced
 motion, reduced-motion persistence, AddSkill icon/color semantics, selected
