@@ -96,7 +96,11 @@ void main() {
             children: [
               XPBubble(
                 message: '+10 XP · быстрое действие',
-                position: const Offset(180, 180),
+                placement: ActionToastPlacement.resolve(
+                  sourceRect: const Rect.fromLTWH(180, 180, 24, 24),
+                  kind: ActionToastOriginKind.questCheckbox,
+                  viewport: const Size(400, 400),
+                ),
                 colors: colors,
                 onDone: (_) {},
               ),
@@ -175,109 +179,123 @@ void main() {
     expect(content.nextLevelHint, isNull);
   });
 
-  test(
-    'action toast placement stays inside the workspace and reserved nav',
-    () {
-      final placement = ActionToastPlacement.near(
-        anchor: const Offset(390, 760),
-        viewport: const Size(400, 800),
-        bottomReserved: 96,
-      );
-
-      expect(placement.topLeft.dx, inInclusiveRange(12, 68));
-      expect(placement.topLeft.dy, lessThanOrEqualTo(588));
-      expect(placement.topLeft.dy, greaterThanOrEqualTo(12));
-    },
-  );
-
-  test('action toast placement honours a constrained desktop workspace', () {
-    final placement = ActionToastPlacement.near(
-      anchor: const Offset(1700, 520),
-      viewport: const Size(1920, 1080),
-      safeRegion: const Rect.fromLTWH(360, 80, 1200, 920),
+  test('action toast stays inside a bottom-navigation safe region', () {
+    final placement = ActionToastPlacement.resolve(
+      sourceRect: const Rect.fromLTWH(370, 730, 20, 20),
+      kind: ActionToastOriginKind.questCheckbox,
+      viewport: const Size(400, 800),
+      bottomReserved: 96,
     );
 
-    expect(placement.topLeft.dx, greaterThanOrEqualTo(372));
-    expect(placement.topLeft.dx, lessThanOrEqualTo(1228));
-    expect(placement.topLeft.dy, greaterThanOrEqualTo(92));
-    expect(placement.topLeft.dy, lessThanOrEqualTo(884));
+    expect(placement.topLeft.dx, inInclusiveRange(12, 128));
+    expect(placement.topLeft.dy, lessThanOrEqualTo(588));
+    expect(placement.topLeft.dy, greaterThanOrEqualTo(12));
   });
 
-  test(
-    'action toast follows a left-side pointer instead of the row centre',
-    () {
-      const viewport = Size(1920, 1080);
-      const workspace = Rect.fromLTWH(392, 84, 1246, 900);
-      final pointerPlacement = ActionToastPlacement.near(
-        anchor: const Offset(450, 590),
-        viewport: viewport,
-        safeRegion: workspace,
-      );
-      final legacyRowCentrePlacement = ActionToastPlacement.near(
-        anchor: const Offset(1015, 590),
-        viewport: viewport,
-        safeRegion: workspace,
-      );
+  test('action toast remains within its desktop source zone', () {
+    const viewport = Size(1920, 1080);
+    const rightRail = Rect.fromLTWH(1560, 84, 340, 900);
+    final placement = ActionToastPlacement.resolve(
+      sourceRect: const Rect.fromLTWH(1680, 520, 32, 32),
+      kind: ActionToastOriginKind.focusTask,
+      viewport: viewport,
+      safeRegion: rightRail,
+    );
 
-      expect(pointerPlacement.topLeft.dx, closeTo(464, 0.1));
-      expect(
-        pointerPlacement.topLeft.dx,
-        lessThan(legacyRowCentrePlacement.topLeft.dx),
-      );
-    },
-  );
+    expect(placement.topLeft.dx, greaterThanOrEqualTo(rightRail.left + 12));
+    expect(
+      placement.topLeft.dx + placement.maxWidth,
+      lessThanOrEqualTo(rightRail.right - 12),
+    );
+    expect(placement.topLeft.dy, greaterThanOrEqualTo(rightRail.top + 12));
+  });
 
-  test('action toast flips left when a pointer is near the right edge', () {
-    final placement = ActionToastPlacement.near(
-      anchor: const Offset(1508, 520),
+  test('action toast narrows instead of leaving a compact rail', () {
+    const viewport = Size(1024, 768);
+    const compactRail = Rect.fromLTWH(780, 84, 232, 620);
+    final placement = ActionToastPlacement.resolve(
+      sourceRect: const Rect.fromLTWH(836, 360, 32, 32),
+      kind: ActionToastOriginKind.focusTask,
+      viewport: viewport,
+      safeRegion: compactRail,
+    );
+
+    expect(placement.maxWidth, lessThan(ActionToastPlacement.estimatedWidth));
+    expect(placement.topLeft.dx, greaterThanOrEqualTo(compactRail.left + 12));
+    expect(
+      placement.topLeft.dx + placement.maxWidth,
+      lessThanOrEqualTo(compactRail.right - 12),
+    );
+  });
+
+  test('main-list checkbox placement does not use the row centre', () {
+    const viewport = Size(1920, 1080);
+    const workspace = Rect.fromLTWH(392, 84, 1246, 900);
+    final checkboxPlacement = ActionToastPlacement.resolve(
+      sourceRect: const Rect.fromLTWH(440, 572, 34, 34),
+      kind: ActionToastOriginKind.questCheckbox,
+      viewport: viewport,
+      safeRegion: workspace,
+    );
+    final rowCentrePlacement = ActionToastPlacement.resolve(
+      sourceRect: const Rect.fromLTWH(998, 572, 34, 34),
+      kind: ActionToastOriginKind.questCheckbox,
+      viewport: viewport,
+      safeRegion: workspace,
+    );
+
+    expect(
+      checkboxPlacement.topLeft.dx,
+      lessThan(rowCentrePlacement.topLeft.dx),
+    );
+  });
+
+  test('action toast tries the opposite horizontal side near a zone edge', () {
+    final placement = ActionToastPlacement.resolve(
+      sourceRect: const Rect.fromLTWH(1490, 520, 32, 32),
+      kind: ActionToastOriginKind.questCheckbox,
       viewport: const Size(1920, 1080),
       safeRegion: const Rect.fromLTWH(392, 84, 1246, 900),
     );
 
-    expect(placement.topLeft.dx, lessThan(1508));
-    expect(placement.topLeft.dy, lessThan(520));
+    expect(placement.topLeft.dx, lessThan(1490));
   });
 
-  test('action toast falls below a pointer near the top safe edge', () {
-    final placement = ActionToastPlacement.near(
-      anchor: const Offset(620, 100),
+  test('minimum-action toast prefers a position below its source', () {
+    final placement = ActionToastPlacement.resolve(
+      sourceRect: const Rect.fromLTWH(620, 120, 32, 32),
+      kind: ActionToastOriginKind.minimumAction,
       viewport: const Size(1920, 1080),
       safeRegion: const Rect.fromLTWH(392, 84, 1246, 900),
     );
 
-    expect(placement.topLeft.dy, greaterThan(100));
+    expect(placement.topLeft.dy, greaterThan(120));
   });
 
-  test('action toast moves above a pointer near the bottom safe edge', () {
-    final placement = ActionToastPlacement.near(
-      anchor: const Offset(620, 950),
+  test('action toast does not cover the source control', () {
+    const sourceRect = Rect.fromLTWH(450, 540, 34, 34);
+    final placement = ActionToastPlacement.resolve(
+      sourceRect: sourceRect,
+      kind: ActionToastOriginKind.questCheckbox,
       viewport: const Size(1920, 1080),
       safeRegion: const Rect.fromLTWH(392, 84, 1246, 900),
     );
+    final toastRect =
+        placement.topLeft &
+        Size(placement.maxWidth, ActionToastPlacement.estimatedHeight);
 
-    expect(placement.topLeft.dy, lessThan(950));
+    expect(toastRect.overlaps(sourceRect), isFalse);
   });
 
-  test(
-    'action toast uses a source-rect fallback without covering the source',
-    () {
-      const sourceRect = Rect.fromLTWH(450, 540, 34, 34);
-      final placement = ActionToastPlacement.near(
-        anchor: sourceRect.center,
-        sourceRect: sourceRect,
-        viewport: const Size(1920, 1080),
-        safeRegion: const Rect.fromLTWH(392, 84, 1246, 900),
-      );
-      final toastRect =
-          placement.topLeft &
-          const Size(
-            ActionToastPlacement.estimatedWidth,
-            ActionToastPlacement.estimatedHeight,
-          );
+  test('action-toast jitter is deterministic and bounded for tiny zones', () {
+    const region = Rect.fromLTWH(40, 40, 48, 48);
+    final first = ActionToastPlacement.stableJitter(17, region);
+    final second = ActionToastPlacement.stableJitter(17, region);
 
-      expect(toastRect.overlaps(sourceRect), isFalse);
-    },
-  );
+    expect(first, second);
+    expect(first.dx.abs(), lessThanOrEqualTo(4));
+    expect(first.dy.abs(), lessThanOrEqualTo(2.7));
+  });
 
   testWidgets('XP bubble keeps its action placement while visible', (
     WidgetTester tester,
@@ -289,7 +307,11 @@ void main() {
             children: [
               XPBubble(
                 message: '+10 XP · быстрое действие',
-                position: const Offset(180, 180),
+                placement: ActionToastPlacement.resolve(
+                  sourceRect: const Rect.fromLTWH(180, 180, 24, 24),
+                  kind: ActionToastOriginKind.questCheckbox,
+                  viewport: const Size(400, 400),
+                ),
                 reducedMotion: false,
                 onDone: (_) {},
               ),

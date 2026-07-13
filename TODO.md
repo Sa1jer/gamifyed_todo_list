@@ -1,6 +1,6 @@
 # TODO / Living Backlog
 
-Last updated: 2026-07-13
+Last updated: 2026-07-14
 
 This file tracks the active implementation roadmap and completed project work. Update it after every meaningful code or design change.
 
@@ -35,6 +35,7 @@ This file tracks the active implementation roadmap and completed project work. U
 - [ ] Add native startup-dispose/background-foreground regression checks around slow storage and plugin initialization.
 - [ ] Capture a native macOS profile trace for intermittent UI unresponsiveness. The `1.3.60` static audit found no deterministic rebuild, timer, or RoadMap-layout loop; record the active workspace and CPU timeline before changing lifecycle or animation code.
 - [ ] Run native desktop pointer and visual QA for `1.3.61` reward feedback: repeated completion must keep local confetti out of the focus rail, RoadMap controls, and the Inbox composer.
+- [ ] Convert remaining legacy leaf completion callbacks from temporary coordinate adapters to control-bound `ActionToastOrigin` values when those widgets are next refactored; preserve the zone-specific resolver and do not expand this migration into a domain change.
 
 ## Reminder — Product Follow-ups After Hardening
 

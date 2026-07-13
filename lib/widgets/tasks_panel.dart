@@ -16,8 +16,8 @@ import 'skill_goal_progress.dart';
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class TasksPanel extends StatefulWidget {
-  final Function(String id, Offset pos) onComplete;
-  final Function(String id, Offset pos) onMinimumAction;
+  final void Function(String id, ActionToastOrigin origin) onComplete;
+  final void Function(String id, ActionToastOrigin origin) onMinimumAction;
   final bool planningMode;
   final bool mobileFocus;
   final VoidCallback? onMobileOverview;
@@ -333,9 +333,24 @@ class _TasksPanelState extends State<TasksPanel> {
                               skillColor: skill.color,
                               previewEarnedXP: s.previewEarnedXP(t),
                               previewBuffBonus: s.previewBuffBonusXP(t),
-                              onToggle: (pos) => widget.onComplete(t.id, pos),
-                              onMinimumAction: (pos) =>
-                                  widget.onMinimumAction(t.id, pos),
+                              onToggle: (pos) => widget.onComplete(
+                                t.id,
+                                legacyActionToastOrigin(
+                                  pos,
+                                  zone: ActionToastZone.mainWorkspace,
+                                  kind: ActionToastOriginKind.questCheckbox,
+                                  sourceId: t.id,
+                                ),
+                              ),
+                              onMinimumAction: (pos) => widget.onMinimumAction(
+                                t.id,
+                                legacyActionToastOrigin(
+                                  pos,
+                                  zone: ActionToastZone.mainWorkspace,
+                                  kind: ActionToastOriginKind.minimumAction,
+                                  sourceId: t.id,
+                                ),
+                              ),
                               onUncomplete: () => s.uncompleteTask(t.id),
                               onArchive: () => s.archiveCompletedTask(t.id),
                               onRestoreArchive: () =>
@@ -674,10 +689,24 @@ class _TasksPanelState extends State<TasksPanel> {
                     isDark: isDark,
                     skillColor: skill.color,
                     previewEarnedXP: state.previewEarnedXP(task),
-                    onToggle: (position) =>
-                        widget.onComplete(task.id, position),
-                    onMinimumAction: (position) =>
-                        widget.onMinimumAction(task.id, position),
+                    onToggle: (position) => widget.onComplete(
+                      task.id,
+                      legacyActionToastOrigin(
+                        position,
+                        zone: ActionToastZone.mobileContent,
+                        kind: ActionToastOriginKind.questCheckbox,
+                        sourceId: task.id,
+                      ),
+                    ),
+                    onMinimumAction: (position) => widget.onMinimumAction(
+                      task.id,
+                      legacyActionToastOrigin(
+                        position,
+                        zone: ActionToastZone.mobileContent,
+                        kind: ActionToastOriginKind.minimumAction,
+                        sourceId: task.id,
+                      ),
+                    ),
                     onUncomplete: () => state.uncompleteTask(task.id),
                     onArchive: () => state.archiveCompletedTask(task.id),
                     onRestoreArchive: () => state.restoreArchivedTask(task.id),

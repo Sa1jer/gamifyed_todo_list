@@ -251,12 +251,18 @@ profile capture during an actual stall remains the required next evidence.
 
 ## 1.3.61 Reward Feedback And Creation Forms
 
-Completion feedback is split by scope. Action-context XP bubbles resolve their
-anchor inside the active desktop workspace, so they do not use the sidebar or
-focus rail as visual territory. Their confetti is a bounded local burst clipped
-to the toast surface: ordinary completions use the subtle variant, while
-milestones retain the stronger bounded variant. System rewards remain in the
-stable top-level notice queue and are deduplicated by reward payload.
+Completion feedback is split by scope. Action-context XP bubbles resolve from
+an `ActionToastOrigin`: the source control's global rectangle, semantic action
+kind, and owning workspace zone. The resolver tries bounded positions around
+that rectangle and stores one final placement before the toast builds. It does
+not use a cursor or a quest-row centre as the primary anchor, and it does not
+re-roll placement during rebuilds. Main workspace, right rail, RoadMap canvas,
+and inspector zones keep the toast out of unrelated rails; compact zones also
+constrain the toast width rather than allowing it to escape its safe region.
+Their confetti is a bounded local burst clipped to the toast surface: ordinary
+completions use the subtle variant, while milestones retain the stronger
+bounded variant. System rewards remain in the stable top-level notice queue
+and are deduplicated by reward payload.
 
 `XPBar` renders the persisted value immediately, then interpolates subsequent
 XP changes over `840ms` with the shared easing curve. A level boundary fills

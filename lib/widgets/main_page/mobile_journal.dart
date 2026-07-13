@@ -30,8 +30,8 @@ abstract final class _MobileJournalTokens {
 }
 
 class _MobileActJournal extends StatefulWidget {
-  final void Function(String taskId, Offset position) onComplete;
-  final void Function(String taskId, Offset position) onMinimumAction;
+  final void Function(String taskId, ActionToastOrigin origin) onComplete;
+  final void Function(String taskId, ActionToastOrigin origin) onMinimumAction;
   final VoidCallback onCreateSkill;
   final Key? createFirstSkillButtonKey;
   final Key? createFirstQuestButtonKey;
@@ -976,7 +976,7 @@ class _MobileInboxAccordion extends StatelessWidget {
   final int taskCount;
   final bool isDark;
   final VoidCallback onToggle;
-  final void Function(String taskId, Offset position) onComplete;
+  final void Function(String taskId, ActionToastOrigin origin) onComplete;
 
   const _MobileInboxAccordion({
     required this.expanded,

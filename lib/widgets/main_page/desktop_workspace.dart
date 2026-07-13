@@ -14,14 +14,15 @@ class _DesktopWorkspaceShell extends StatelessWidget {
   final VoidCallback onOpenProfile;
   final VoidCallback? onDebugAppTap;
   final ValueChanged<Skill> onOpenRoadmap;
-  final void Function(String taskId, Offset position) onComplete;
-  final void Function(String taskId, Offset position) onMinimumAction;
+  final void Function(String taskId, ActionToastOrigin origin) onComplete;
+  final void Function(String taskId, ActionToastOrigin origin) onMinimumAction;
   final Widget? alternateWorkspace;
   final GlobalKey? profileKey;
   final GlobalKey? rewardsKey;
   final GlobalKey? roadmapKey;
   final GlobalKey? statsKey;
   final GlobalKey? contextualToastHostKey;
+  final GlobalKey? rightRailKey;
 
   const _DesktopWorkspaceShell({
     required this.state,
@@ -43,6 +44,7 @@ class _DesktopWorkspaceShell extends StatelessWidget {
     this.roadmapKey,
     this.statsKey,
     this.contextualToastHostKey,
+    this.rightRailKey,
   });
 
   @override
@@ -117,13 +119,16 @@ class _DesktopWorkspaceShell extends StatelessWidget {
             ),
             if (actMode && metrics.showRightRail) ...[
               VerticalDivider(width: 1, thickness: 1, color: tokens.outline),
-              SizedBox(
+              KeyedSubtree(
                 key: const ValueKey('desktop-right-rail-region'),
-                width: metrics.railWidth,
-                child: _DesktopRightRail(
-                  state: state,
-                  tokens: tokens,
-                  onComplete: onComplete,
+                child: SizedBox(
+                  key: rightRailKey,
+                  width: metrics.railWidth,
+                  child: _DesktopRightRail(
+                    state: state,
+                    tokens: tokens,
+                    onComplete: onComplete,
+                  ),
                 ),
               ),
             ],
@@ -1026,8 +1031,8 @@ class _DesktopMainWorkspace extends StatelessWidget {
   final VoidCallback onAddSkill;
   final ValueChanged<Skill> onAddTask;
   final void Function(Skill skill, Task task) onEditTask;
-  final void Function(String taskId, Offset position) onComplete;
-  final void Function(String taskId, Offset position) onMinimumAction;
+  final void Function(String taskId, ActionToastOrigin origin) onComplete;
+  final void Function(String taskId, ActionToastOrigin origin) onMinimumAction;
 
   const _DesktopMainWorkspace({
     required this.state,
@@ -1778,8 +1783,8 @@ class _DesktopQuestRow extends StatefulWidget {
   final Task task;
   final Skill skill;
   final DesktopJournalTokens tokens;
-  final void Function(String taskId, Offset position) onComplete;
-  final void Function(String taskId, Offset position) onMinimumAction;
+  final void Function(String taskId, ActionToastOrigin origin) onComplete;
+  final void Function(String taskId, ActionToastOrigin origin) onMinimumAction;
   final VoidCallback onEdit;
 
   const _DesktopQuestRow({
@@ -1801,15 +1806,14 @@ class _DesktopQuestRowState extends State<_DesktopQuestRow> {
   bool _hovered = false;
   bool _focused = false;
   bool _menuOpen = false;
+  final GlobalKey _rowKey = GlobalKey();
 
-  Offset _sourceAnchor() {
-    final box = context.findRenderObject();
-    if (box is RenderBox) {
-      return box.localToGlobal(Offset(box.size.width / 2, box.size.height / 2));
-    }
-    final size = MediaQuery.sizeOf(context);
-    return Offset(size.width / 2, size.height / 2);
-  }
+  ActionToastOrigin _rowOrigin() => actionToastOriginForContext(
+    _rowKey.currentContext ?? context,
+    kind: ActionToastOriginKind.questRow,
+    zone: ActionToastZone.mainWorkspace,
+    sourceId: widget.task.id,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -1833,6 +1837,7 @@ class _DesktopQuestRowState extends State<_DesktopQuestRow> {
           onEnter: (_) => setState(() => _hovered = true),
           onExit: (_) => setState(() => _hovered = false),
           child: AnimatedContainer(
+            key: _rowKey,
             duration: DesktopJournalTokens.fastMotion,
             curve: DesktopJournalTokens.motionCurve,
             constraints: const BoxConstraints(minHeight: 72),
@@ -1868,14 +1873,11 @@ class _DesktopQuestRowState extends State<_DesktopQuestRow> {
                 _DesktopQuestCheck(
                   done: done,
                   color: done ? tokens.successGreen : widget.skill.color,
-                  onTap: (pointerPosition) {
+                  onTap: (origin) {
                     if (done) {
                       widget.state.uncompleteTask(task.id);
                     } else {
-                      widget.onComplete(
-                        task.id,
-                        pointerPosition ?? _sourceAnchor(),
-                      );
+                      widget.onComplete(task.id, origin ?? _rowOrigin());
                     }
                   },
                 ),
@@ -1923,11 +1925,10 @@ class _DesktopQuestRowState extends State<_DesktopQuestRow> {
                             _DesktopMiniAction(
                               label: 'Минимальный шаг',
                               color: widget.skill.color,
-                              onTap: (pointerPosition) =>
-                                  widget.onMinimumAction(
-                                    task.id,
-                                    pointerPosition ?? _sourceAnchor(),
-                                  ),
+                              onTap: (origin) => widget.onMinimumAction(
+                                task.id,
+                                origin ?? _rowOrigin(),
+                              ),
                             ),
                         ],
                       ),
@@ -2016,7 +2017,7 @@ class _DesktopQuestRowState extends State<_DesktopQuestRow> {
 class _DesktopQuestCheck extends StatefulWidget {
   final bool done;
   final Color color;
-  final ValueChanged<Offset?> onTap;
+  final ValueChanged<ActionToastOrigin?> onTap;
 
   const _DesktopQuestCheck({
     required this.done,
@@ -2029,12 +2030,13 @@ class _DesktopQuestCheck extends StatefulWidget {
 }
 
 class _DesktopQuestCheckState extends State<_DesktopQuestCheck> {
-  Offset? _pointerPosition;
+  ActionToastOrigin? _origin;
+  final GlobalKey _checkKey = GlobalKey();
 
   void _completeTap() {
-    final pointerPosition = _pointerPosition;
-    _pointerPosition = null;
-    widget.onTap(pointerPosition);
+    final origin = _origin;
+    _origin = null;
+    widget.onTap(origin);
   }
 
   @override
@@ -2046,8 +2048,13 @@ class _DesktopQuestCheckState extends State<_DesktopQuestCheck> {
       child: Tooltip(
         message: widget.done ? 'Вернуть квест' : 'Выполнить квест',
         child: InkResponse(
-          onTapDown: (details) => _pointerPosition = details.globalPosition,
-          onTapCancel: () => _pointerPosition = null,
+          key: _checkKey,
+          onTapDown: (_) => _origin = actionToastOriginForContext(
+            _checkKey.currentContext ?? context,
+            kind: ActionToastOriginKind.questCheckbox,
+            zone: ActionToastZone.mainWorkspace,
+          ),
+          onTapCancel: () => _origin = null,
           onTap: _completeTap,
           radius: 24,
           child: AnimatedContainer(
@@ -2102,7 +2109,7 @@ class _DesktopTypeBadge extends StatelessWidget {
 class _DesktopMiniAction extends StatefulWidget {
   final String label;
   final Color color;
-  final ValueChanged<Offset?> onTap;
+  final ValueChanged<ActionToastOrigin?> onTap;
 
   const _DesktopMiniAction({
     required this.label,
@@ -2115,19 +2122,25 @@ class _DesktopMiniAction extends StatefulWidget {
 }
 
 class _DesktopMiniActionState extends State<_DesktopMiniAction> {
-  Offset? _pointerPosition;
+  ActionToastOrigin? _origin;
+  final GlobalKey _actionKey = GlobalKey();
 
   void _completeTap() {
-    final pointerPosition = _pointerPosition;
-    _pointerPosition = null;
-    widget.onTap(pointerPosition);
+    final origin = _origin;
+    _origin = null;
+    widget.onTap(origin);
   }
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTapDown: (details) => _pointerPosition = details.globalPosition,
-      onTapCancel: () => _pointerPosition = null,
+      key: _actionKey,
+      onTapDown: (_) => _origin = actionToastOriginForContext(
+        _actionKey.currentContext ?? context,
+        kind: ActionToastOriginKind.minimumAction,
+        zone: ActionToastZone.mainWorkspace,
+      ),
+      onTapCancel: () => _origin = null,
       onTap: _completeTap,
       borderRadius: BorderRadius.circular(99),
       child: Padding(
@@ -2183,7 +2196,7 @@ class _DesktopRewardPill extends StatelessWidget {
 class _DesktopRightRail extends StatelessWidget {
   final AppState state;
   final DesktopJournalTokens tokens;
-  final void Function(String taskId, Offset position) onComplete;
+  final void Function(String taskId, ActionToastOrigin origin) onComplete;
 
   const _DesktopRightRail({
     required this.state,
@@ -2432,7 +2445,7 @@ class _DesktopFocusTask extends StatefulWidget {
   final AppState state;
   final Task task;
   final DesktopJournalTokens tokens;
-  final void Function(String taskId, Offset position) onComplete;
+  final void Function(String taskId, ActionToastOrigin origin) onComplete;
 
   const _DesktopFocusTask({
     required this.state,
@@ -2448,24 +2461,25 @@ class _DesktopFocusTask extends StatefulWidget {
 class _DesktopFocusTaskState extends State<_DesktopFocusTask> {
   bool _hovered = false;
   bool _focused = false;
-  Offset? _pointerPosition;
+  ActionToastOrigin? _origin;
+  final GlobalKey _surfaceKey = GlobalKey();
 
-  Offset _sourceAnchor() {
-    final box = context.findRenderObject();
-    if (box is RenderBox && box.hasSize) {
-      return box.localToGlobal(box.size.center(Offset.zero));
-    }
-    final size = MediaQuery.sizeOf(context);
-    return Offset(size.width / 2, size.height / 2);
-  }
-
-  void _activate(Offset? pointerPosition) {
+  void _activate(ActionToastOrigin? origin) {
     final task = widget.task;
     if (task.isDone) {
       widget.state.uncompleteTask(task.id);
       return;
     }
-    widget.onComplete(task.id, pointerPosition ?? _sourceAnchor());
+    widget.onComplete(
+      task.id,
+      origin ??
+          actionToastOriginForContext(
+            _surfaceKey.currentContext ?? context,
+            kind: ActionToastOriginKind.focusTask,
+            zone: ActionToastZone.rightRail,
+            sourceId: task.id,
+          ),
+    );
   }
 
   @override
@@ -2507,13 +2521,19 @@ class _DesktopFocusTaskState extends State<_DesktopFocusTask> {
           ),
         },
         child: GestureDetector(
+          key: _surfaceKey,
           behavior: HitTestBehavior.opaque,
-          onTapDown: (details) => _pointerPosition = details.globalPosition,
-          onTapCancel: () => _pointerPosition = null,
+          onTapDown: (_) => _origin = actionToastOriginForContext(
+            _surfaceKey.currentContext ?? context,
+            kind: ActionToastOriginKind.focusTask,
+            zone: ActionToastZone.rightRail,
+            sourceId: task.id,
+          ),
+          onTapCancel: () => _origin = null,
           onTap: () {
-            final pointerPosition = _pointerPosition;
-            _pointerPosition = null;
-            _activate(pointerPosition);
+            final origin = _origin;
+            _origin = null;
+            _activate(origin);
           },
           child: AnimatedContainer(
             key: ValueKey('desktop-focus-surface-${task.id}'),

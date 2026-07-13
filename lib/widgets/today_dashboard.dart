@@ -6,8 +6,8 @@ import '../utils.dart';
 import 'shared.dart';
 
 class TodayDashboard extends StatefulWidget {
-  final Function(String id, Offset pos) onComplete;
-  final Function(String id, Offset pos) onMinimumAction;
+  final void Function(String id, ActionToastOrigin origin) onComplete;
+  final void Function(String id, ActionToastOrigin origin) onMinimumAction;
   final VoidCallback? onCreateFirstSkill;
   final Key? createFirstSkillButtonKey;
   final Key? nextQuestActionKey;
@@ -173,8 +173,24 @@ class _TodayDashboardState extends State<TodayDashboard> {
               ? null
               : TodayDashboard._skillFor(state, nextTask),
           isDark: isDark,
-          onComplete: widget.onComplete,
-          onMinimumAction: widget.onMinimumAction,
+          onComplete: (taskId, position) => widget.onComplete(
+            taskId,
+            legacyActionToastOrigin(
+              position,
+              zone: ActionToastZone.mainWorkspace,
+              kind: ActionToastOriginKind.questCheckbox,
+              sourceId: taskId,
+            ),
+          ),
+          onMinimumAction: (taskId, position) => widget.onMinimumAction(
+            taskId,
+            legacyActionToastOrigin(
+              position,
+              zone: ActionToastZone.mainWorkspace,
+              kind: ActionToastOriginKind.minimumAction,
+              sourceId: taskId,
+            ),
+          ),
           onCreateFirstSkill: widget.onCreateFirstSkill,
           createFirstSkillButtonKey: widget.createFirstSkillButtonKey,
           nextQuestActionKey: widget.nextQuestActionKey,
@@ -364,8 +380,30 @@ class _TodayDashboardState extends State<TodayDashboard> {
                                       todayTasks: stats?.tasksCompleted ?? 0,
                                       todayXp: stats?.xpEarned ?? 0,
                                       isDark: isDark,
-                                      onComplete: widget.onComplete,
-                                      onMinimumAction: widget.onMinimumAction,
+                                      onComplete: (taskId, position) =>
+                                          widget.onComplete(
+                                            taskId,
+                                            legacyActionToastOrigin(
+                                              position,
+                                              zone:
+                                                  ActionToastZone.mainWorkspace,
+                                              kind: ActionToastOriginKind
+                                                  .questCheckbox,
+                                              sourceId: taskId,
+                                            ),
+                                          ),
+                                      onMinimumAction: (taskId, position) =>
+                                          widget.onMinimumAction(
+                                            taskId,
+                                            legacyActionToastOrigin(
+                                              position,
+                                              zone:
+                                                  ActionToastZone.mainWorkspace,
+                                              kind: ActionToastOriginKind
+                                                  .minimumAction,
+                                              sourceId: taskId,
+                                            ),
+                                          ),
                                       onCreateFirstSkill:
                                           widget.onCreateFirstSkill,
                                       createFirstSkillButtonKey:
@@ -379,8 +417,30 @@ class _TodayDashboardState extends State<TodayDashboard> {
                                         state: state,
                                         nextTask: nextTask,
                                         isDark: isDark,
-                                        onComplete: widget.onComplete,
-                                        onMinimumAction: widget.onMinimumAction,
+                                        onComplete: (taskId, position) =>
+                                            widget.onComplete(
+                                              taskId,
+                                              legacyActionToastOrigin(
+                                                position,
+                                                zone: ActionToastZone
+                                                    .mobileContent,
+                                                kind: ActionToastOriginKind
+                                                    .questCheckbox,
+                                                sourceId: taskId,
+                                              ),
+                                            ),
+                                        onMinimumAction: (taskId, position) =>
+                                            widget.onMinimumAction(
+                                              taskId,
+                                              legacyActionToastOrigin(
+                                                position,
+                                                zone: ActionToastZone
+                                                    .mobileContent,
+                                                kind: ActionToastOriginKind
+                                                    .minimumAction,
+                                                sourceId: taskId,
+                                              ),
+                                            ),
                                         onCreateFirstSkill:
                                             widget.onCreateFirstSkill,
                                         createFirstSkillButtonKey:

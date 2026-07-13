@@ -51,8 +51,8 @@ class MasteryMapWorkspace extends StatefulWidget {
   final GlobalKey? inspectorTutorialKey;
   final GlobalKey? practiceTutorialKey;
   final ValueChanged<String?>? onFocusSkillChanged;
-  final void Function(String taskId, Offset position) onCompleteTask;
-  final void Function(String taskId, Offset position) onMinimumAction;
+  final void Function(String taskId, ActionToastOrigin origin) onCompleteTask;
+  final void Function(String taskId, ActionToastOrigin origin) onMinimumAction;
 
   const MasteryMapWorkspace({
     super.key,
@@ -277,11 +277,27 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
       AppStateProvider.of(context).uncompleteTask(task.id);
       return;
     }
-    widget.onCompleteTask(task.id, position);
+    widget.onCompleteTask(
+      task.id,
+      legacyActionToastOrigin(
+        position,
+        zone: ActionToastZone.roadmapInspector,
+        kind: ActionToastOriginKind.roadmapInspectorTask,
+        sourceId: task.id,
+      ),
+    );
   }
 
   void _minimumActionFromMap(Task task, Offset position) {
-    widget.onMinimumAction(task.id, position);
+    widget.onMinimumAction(
+      task.id,
+      legacyActionToastOrigin(
+        position,
+        zone: ActionToastZone.roadmapInspector,
+        kind: ActionToastOriginKind.minimumAction,
+        sourceId: task.id,
+      ),
+    );
   }
 
   void _addNode(

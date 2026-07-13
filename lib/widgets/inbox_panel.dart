@@ -7,7 +7,7 @@ import '../utils.dart';
 import 'shared.dart';
 
 class InboxPanel extends StatefulWidget {
-  final void Function(String taskId, Offset position) onComplete;
+  final void Function(String taskId, ActionToastOrigin origin) onComplete;
   final bool embedded;
   final bool showHeader;
   final bool desktopJournal;
@@ -225,6 +225,9 @@ class _InboxPanelState extends State<InboxPanel> {
                             task: task,
                             isDark: isDark,
                             color: accent,
+                            toastZone: widget.embedded
+                                ? ActionToastZone.mobileContent
+                                : ActionToastZone.mainWorkspace,
                             onComplete: widget.onComplete,
                             onUndo: () => state.uncompleteTask(task.id),
                             onDelete: () => state.removeTask(task.id),
@@ -249,6 +252,9 @@ class _InboxPanelState extends State<InboxPanel> {
                             task: task,
                             isDark: isDark,
                             color: accent,
+                            toastZone: widget.embedded
+                                ? ActionToastZone.mobileContent
+                                : ActionToastZone.mainWorkspace,
                             onComplete: widget.onComplete,
                             onUndo: () => state.uncompleteTask(task.id),
                             onDelete: () => state.removeTask(task.id),
@@ -439,6 +445,9 @@ class _InboxPanelState extends State<InboxPanel> {
                                 task: task,
                                 isDark: isDark,
                                 color: accent,
+                                toastZone: widget.embedded
+                                    ? ActionToastZone.mobileContent
+                                    : ActionToastZone.mainWorkspace,
                                 onComplete: widget.onComplete,
                                 onUndo: () => state.uncompleteTask(task.id),
                                 onDelete: () => state.removeTask(task.id),
@@ -465,6 +474,9 @@ class _InboxPanelState extends State<InboxPanel> {
                                 task: task,
                                 isDark: isDark,
                                 color: accent,
+                                toastZone: widget.embedded
+                                    ? ActionToastZone.mobileContent
+                                    : ActionToastZone.mainWorkspace,
                                 onComplete: widget.onComplete,
                                 onUndo: () => state.uncompleteTask(task.id),
                                 onDelete: () => state.removeTask(task.id),
@@ -510,7 +522,8 @@ class _InboxTaskRow extends StatelessWidget {
   final Task task;
   final bool isDark;
   final Color color;
-  final void Function(String taskId, Offset position) onComplete;
+  final ActionToastZone toastZone;
+  final void Function(String taskId, ActionToastOrigin origin) onComplete;
   final VoidCallback onUndo;
   final VoidCallback onDelete;
 
@@ -519,6 +532,7 @@ class _InboxTaskRow extends StatelessWidget {
     required this.task,
     required this.isDark,
     required this.color,
+    required this.toastZone,
     required this.onComplete,
     required this.onUndo,
     required this.onDelete,
@@ -528,6 +542,7 @@ class _InboxTaskRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final txt = textColor(isDark);
     final sub = subtext(isDark);
+    final completeControlKey = GlobalKey();
 
     return Container(
       margin: const EdgeInsets.only(top: 4),
@@ -546,14 +561,19 @@ class _InboxTaskRow extends StatelessWidget {
               if (task.isDone) {
                 onUndo();
               } else {
-                final box = context.findRenderObject();
-                final pos = box is RenderBox
-                    ? box.localToGlobal(box.size.center(Offset.zero))
-                    : Offset.zero;
-                onComplete(task.id, pos);
+                onComplete(
+                  task.id,
+                  actionToastOriginForContext(
+                    completeControlKey.currentContext ?? context,
+                    kind: ActionToastOriginKind.inboxTask,
+                    zone: toastZone,
+                    sourceId: task.id,
+                  ),
+                );
               }
             },
             child: AnimatedContainer(
+              key: completeControlKey,
               duration: kMotionStandard,
               curve: kMotionCurve,
               width: 21,

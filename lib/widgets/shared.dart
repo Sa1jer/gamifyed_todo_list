@@ -1030,23 +1030,123 @@ CompletionToastColors completionToastColorsForTask({
   return const CompletionToastColors.fallback();
 }
 
+enum ActionToastOriginKind {
+  questRow,
+  questCheckbox,
+  minimumAction,
+  focusTask,
+  roadmapInspectorTask,
+  roadmapCanvasNode,
+  inboxTask,
+  fallback,
+}
+
+enum ActionToastZone {
+  mainWorkspace,
+  rightRail,
+  roadmapCanvas,
+  roadmapInspector,
+  mobileContent,
+  mobileBottomContextual,
+  fallback,
+}
+
+/// Presentation-only completion source. It intentionally stores the action
+/// control's global bounds instead of a pointer coordinate: keyboard and mouse
+/// activation therefore share a stable visual origin.
+@immutable
+class ActionToastOrigin {
+  final Rect globalSourceRect;
+  final ActionToastOriginKind kind;
+  final ActionToastZone zone;
+  final String? sourceId;
+  final int eventSeed;
+
+  const ActionToastOrigin({
+    required this.globalSourceRect,
+    required this.kind,
+    required this.zone,
+    this.sourceId,
+    this.eventSeed = 0,
+  });
+
+  bool get hasSourceRect => !globalSourceRect.isEmpty;
+
+  ActionToastOrigin withEventSeed(int seed) => ActionToastOrigin(
+    globalSourceRect: globalSourceRect,
+    kind: kind,
+    zone: zone,
+    sourceId: sourceId,
+    eventSeed: seed,
+  );
+}
+
+ActionToastOrigin actionToastOriginForContext(
+  BuildContext context, {
+  required ActionToastOriginKind kind,
+  required ActionToastZone zone,
+  String? sourceId,
+}) {
+  final renderObject = context.findRenderObject();
+  if (renderObject is RenderBox &&
+      renderObject.hasSize &&
+      renderObject.attached) {
+    return ActionToastOrigin(
+      globalSourceRect:
+          renderObject.localToGlobal(Offset.zero) & renderObject.size,
+      kind: kind,
+      zone: zone,
+      sourceId: sourceId,
+    );
+  }
+  return ActionToastOrigin(
+    globalSourceRect: Rect.zero,
+    kind: ActionToastOriginKind.fallback,
+    zone: ActionToastZone.fallback,
+    sourceId: sourceId,
+  );
+}
+
+/// Transitional adapter for legacy leaf widgets that still expose a global
+/// interaction position. New controls must create origins from their own
+/// [BuildContext] so the placement resolver can use real action bounds.
+ActionToastOrigin legacyActionToastOrigin(
+  Offset globalPosition, {
+  required ActionToastZone zone,
+  ActionToastOriginKind kind = ActionToastOriginKind.fallback,
+  String? sourceId,
+}) {
+  return ActionToastOrigin(
+    globalSourceRect: Rect.fromCenter(
+      center: globalPosition,
+      width: 1,
+      height: 1,
+    ),
+    kind: kind,
+    zone: zone,
+    sourceId: sourceId,
+  );
+}
+
 @immutable
 class ActionToastPlacement {
   static const double edgeInset = 12;
-  static const double estimatedWidth = 320;
+  static const double estimatedWidth = 260;
   static const double estimatedHeight = 104;
 
   final Offset topLeft;
+  final double maxWidth;
 
-  const ActionToastPlacement(this.topLeft);
+  const ActionToastPlacement(this.topLeft, {this.maxWidth = estimatedWidth});
 
-  /// Keeps a completion toast near its source without letting it cover a
-  /// reserved navigation area or leave the current workspace.
-  factory ActionToastPlacement.near({
-    required Offset anchor,
+  /// Resolves once, when the completion event is received. `XPBubble` only
+  /// consumes the result, so rebuilds cannot move the toast or re-roll jitter.
+  factory ActionToastPlacement.resolve({
+    required Rect sourceRect,
+    required ActionToastOriginKind kind,
     required Size viewport,
     Rect? safeRegion,
-    Rect? sourceRect,
+    Offset jitter = Offset.zero,
     double bottomReserved = 0,
   }) {
     final viewportBounds = Offset.zero & viewport;
@@ -1057,47 +1157,53 @@ class ActionToastPlacement {
             boundedRegion.height > edgeInset * 2
         ? boundedRegion.deflate(edgeInset)
         : viewportBounds.deflate(edgeInset);
-    final maxLeft = math.max(available.left, available.right - estimatedWidth);
+    final toastWidth = math.min(estimatedWidth, available.width);
+    final maxLeft = math.max(available.left, available.right - toastWidth);
     final maxTop = math.max(
       available.top,
       available.bottom - bottomReserved - estimatedHeight,
     );
     const gap = 14.0;
-    final source = sourceRect;
+    final source = sourceRect.isEmpty
+        ? available.center & Size.zero
+        : sourceRect;
+    final prefersBelow =
+        kind == ActionToastOriginKind.minimumAction ||
+        kind == ActionToastOriginKind.roadmapCanvasNode;
+    final aboveRight = Offset(
+      source.right + gap,
+      source.top - estimatedHeight - gap,
+    );
+    final aboveLeft = Offset(
+      source.left - toastWidth - gap,
+      source.top - estimatedHeight - gap,
+    );
+    final belowRight = Offset(source.right + gap, source.bottom + gap);
+    final belowLeft = Offset(
+      source.left - toastWidth - gap,
+      source.bottom + gap,
+    );
     final candidates = <Offset>[
-      // Prefer the natural desktop reading position: beside and above the
-      // click. The following candidates keep the toast near the action when
-      // that corner is unavailable.
-      Offset(
-        source?.right ?? anchor.dx + gap,
-        (source?.top ?? anchor.dy) - estimatedHeight - gap,
-      ),
-      Offset(
-        (source?.left ?? anchor.dx) - estimatedWidth - gap,
-        (source?.top ?? anchor.dy) - estimatedHeight - gap,
-      ),
-      Offset(
-        source?.right ?? anchor.dx + gap,
-        (source?.bottom ?? anchor.dy) + gap,
-      ),
-      Offset(
-        (source?.left ?? anchor.dx) - estimatedWidth - gap,
-        (source?.bottom ?? anchor.dy) + gap,
-      ),
-    ];
+      if (prefersBelow) belowRight else aboveRight,
+      if (prefersBelow) belowLeft else aboveLeft,
+      if (prefersBelow) aboveRight else belowRight,
+      if (prefersBelow) aboveLeft else belowLeft,
+    ].map((candidate) => candidate + jitter).toList();
 
     bool fits(Offset topLeft) {
-      final rect = topLeft & const Size(estimatedWidth, estimatedHeight);
+      final rect = topLeft & Size(toastWidth, estimatedHeight);
       final isInside =
           rect.left >= available.left &&
           rect.right <= available.right &&
           rect.top >= available.top &&
           rect.bottom <= available.bottom - bottomReserved;
-      return isInside && (sourceRect == null || !rect.overlaps(sourceRect));
+      return isInside && !rect.overlaps(source);
     }
 
     for (final candidate in candidates) {
-      if (fits(candidate)) return ActionToastPlacement(candidate);
+      if (fits(candidate)) {
+        return ActionToastPlacement(candidate, maxWidth: toastWidth);
+      }
     }
 
     // A very small safe region can make every candidate invalid. Clamp the
@@ -1108,6 +1214,20 @@ class ActionToastPlacement {
         fallback.dx.clamp(available.left, maxLeft),
         fallback.dy.clamp(available.top, maxTop),
       ),
+      maxWidth: toastWidth,
+    );
+  }
+
+  static Offset stableJitter(int seed, Rect safeRegion) {
+    // Deterministic, bounded event variation. It is intentionally calculated
+    // outside widget build and stays small on constrained regions.
+    final maxX = math.min(24.0, math.max(0.0, safeRegion.width / 12));
+    final maxY = math.min(18.0, math.max(0.0, safeRegion.height / 18));
+    final x = ((seed * 37) % 49) - 24;
+    final y = ((seed * 19) % 33) - 14;
+    return Offset(
+      x.clamp(-maxX, maxX).toDouble(),
+      y.clamp(-maxY, maxY).toDouble(),
     );
   }
 }
@@ -1242,9 +1362,8 @@ class CompletionToastContent {
 
 class XPBubble extends StatefulWidget {
   final String message;
-  final Offset position;
+  final ActionToastPlacement placement;
   final CompletionToastColors colors;
-  final Rect? safeRegion;
   final bool showConfetti;
   final Widget Function(Color color)? confettiBuilder;
   final bool reducedMotion;
@@ -1252,9 +1371,8 @@ class XPBubble extends StatefulWidget {
   const XPBubble({
     super.key,
     required this.message,
-    required this.position,
+    required this.placement,
     this.colors = const CompletionToastColors.fallback(),
-    this.safeRegion,
     this.showConfetti = false,
     this.confettiBuilder,
     this.reducedMotion = false,
@@ -1312,24 +1430,12 @@ class _XPBubbleState extends State<XPBubble>
     final bg = widget.colors.surfaceTint(baseBg, isDark: isDark);
     final txt = isDark ? const Color(0xFFF4F4F8) : const Color(0xFF1B1B22);
     final sub = isDark ? const Color(0xFF9A9AA6) : const Color(0xFF5F6370);
-    final placement = ActionToastPlacement.near(
-      anchor: widget.position,
-      viewport: MediaQuery.sizeOf(context),
-      safeRegion: widget.safeRegion,
-      bottomReserved:
-          MobileResponsiveMetrics.isMobileWidth(
-            MediaQuery.sizeOf(context).width,
-          )
-          ? 96
-          : 0,
-    );
-
     return AnimatedBuilder(
       animation: _c,
       builder: (_, child) {
         return Positioned(
-          left: placement.topLeft.dx,
-          top: placement.topLeft.dy,
+          left: widget.placement.topLeft.dx,
+          top: widget.placement.topLeft.dy,
           child: IgnorePointer(
             child: Semantics(
               liveRegion: true,
@@ -1350,7 +1456,7 @@ class _XPBubbleState extends State<XPBubble>
         clipBehavior: Clip.hardEdge,
         children: [
           ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 320),
+            constraints: BoxConstraints(maxWidth: widget.placement.maxWidth),
             child: Container(
               key: const ValueKey('xp-bubble-surface'),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

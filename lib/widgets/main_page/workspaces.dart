@@ -1,8 +1,8 @@
 part of '../main_page.dart';
 
 class _ActWorkspace extends StatelessWidget {
-  final void Function(String taskId, Offset position) onComplete;
-  final void Function(String taskId, Offset position) onMinimumAction;
+  final void Function(String taskId, ActionToastOrigin origin) onComplete;
+  final void Function(String taskId, ActionToastOrigin origin) onMinimumAction;
   final VoidCallback onCreateFirstSkill;
   final ValueChanged<Skill> onOpenRoadmap;
   final Key? createFirstSkillButtonKey;
@@ -70,8 +70,8 @@ class _MasteryWorkspace extends StatelessWidget {
   final GlobalKey? inspectorTutorialKey;
   final GlobalKey? practiceTutorialKey;
   final ValueChanged<String?>? onFocusSkillChanged;
-  final Function(String taskId, Offset pos) onComplete;
-  final Function(String taskId, Offset pos) onMinimumAction;
+  final void Function(String taskId, ActionToastOrigin origin) onComplete;
+  final void Function(String taskId, ActionToastOrigin origin) onMinimumAction;
 
   const _MasteryWorkspace({
     super.key,
@@ -162,8 +162,8 @@ class _ProgressWorkspace extends StatelessWidget {
 }
 
 class _SkillTaskWorkspace extends StatelessWidget {
-  final void Function(String taskId, Offset position) onComplete;
-  final void Function(String taskId, Offset position) onMinimumAction;
+  final void Function(String taskId, ActionToastOrigin origin) onComplete;
+  final void Function(String taskId, ActionToastOrigin origin) onMinimumAction;
   final ValueChanged<Skill> onOpenRoadmap;
   final Key? createFirstQuestButtonKey;
 

@@ -18,6 +18,7 @@ class _MainPageState extends State<MainPage> {
   final List<XPBubble> _bubbles = [];
   final GlobalKey _pageStackKey = GlobalKey();
   final GlobalKey _desktopContextualToastHostKey = GlobalKey();
+  final GlobalKey _desktopRightRailKey = GlobalKey();
   final GlobalKey _rewardsButtonKey = GlobalKey();
   final GlobalKey _firstSkillCtaKey = GlobalKey();
   final GlobalKey _firstQuestCtaKey = GlobalKey();
@@ -35,6 +36,7 @@ class _MainPageState extends State<MainPage> {
   GoalMilestoneEvent? _goalMilestoneNotice;
   AppState? _eventState;
   int _nextRewardNoticeId = 0;
+  int _nextToastEventSeed = 1;
   int _debugAdminTapCount = 0;
   Timer? _debugAdminTapResetTimer;
   bool _firstRunDialogOpen = false;
@@ -86,20 +88,37 @@ class _MainPageState extends State<MainPage> {
 
   void _showBubble(
     String message,
-    Offset pos, {
+    ActionToastOrigin origin, {
     required CompletionToastColors colors,
   }) {
     final isMilestone = AppFeedback.isMilestoneMessage(message);
-    final toastRegion = _resolveActionToastSafeRegion(pos);
-    final anchor = _resolveActionToastAnchor(pos, toastRegion);
+    final toastRegion = _resolveActionToastSafeRegion(origin);
+    final stackSize = _pageStackSize;
+    final available = toastRegion ?? (Offset.zero & stackSize);
+    final sourceRect = _sourceRectInStack(origin, available);
+    final seededOrigin = origin.withEventSeed(_nextToastEventSeed++);
+    final placement = ActionToastPlacement.resolve(
+      sourceRect: sourceRect,
+      kind: seededOrigin.kind,
+      viewport: stackSize,
+      safeRegion: toastRegion,
+      jitter: ActionToastPlacement.stableJitter(
+        seededOrigin.eventSeed,
+        available,
+      ),
+      bottomReserved:
+          seededOrigin.zone == ActionToastZone.mobileContent ||
+              seededOrigin.zone == ActionToastZone.mobileBottomContextual
+          ? 96
+          : 0,
+    );
     setState(() {
       _bubbles.add(
         XPBubble(
           key: UniqueKey(),
           message: message,
-          position: anchor,
+          placement: placement,
           colors: colors,
-          safeRegion: toastRegion,
           showConfetti: true,
           confettiBuilder: (color) => MilestoneConfettiBurst(
             color: color,
@@ -116,70 +135,56 @@ class _MainPageState extends State<MainPage> {
     });
   }
 
-  Rect? _resolveActionToastSafeRegion(Offset source) {
-    final host = _desktopContextualToastHostKey.currentContext
-        ?.findRenderObject();
-    final stack = _pageStackKey.currentContext?.findRenderObject();
-    if (host is! RenderBox ||
-        !host.hasSize ||
-        stack is! RenderBox ||
-        !stack.hasSize) {
-      return null;
-    }
-    final globalTopLeft = host.localToGlobal(Offset.zero);
-    final globalBottomRight = host.localToGlobal(
-      host.size.bottomRight(Offset.zero),
-    );
-    final hostRect = Rect.fromPoints(
-      stack.globalToLocal(globalTopLeft),
-      stack.globalToLocal(globalBottomRight),
-    );
-    final inspector = _roadmapInspectorKey.currentContext?.findRenderObject();
-    if (inspector is! RenderBox || !inspector.hasSize) return hostRect;
-
-    final inspectorTopLeft = inspector.localToGlobal(Offset.zero);
-    final inspectorBottomRight = inspector.localToGlobal(
-      inspector.size.bottomRight(Offset.zero),
-    );
-    final inspectorRect = Rect.fromPoints(
-      stack.globalToLocal(inspectorTopLeft),
-      stack.globalToLocal(inspectorBottomRight),
-    );
-    final sourceInStack = stack.globalToLocal(source);
-    if (inspectorRect.contains(sourceInStack)) return inspectorRect;
-
-    // On the RoadMap, the inspector is part of the main workspace rather than
-    // a separate desktop rail. Keep canvas-originated feedback out of it.
-    if (hostRect.overlaps(inspectorRect) &&
-        inspectorRect.left > hostRect.left) {
-      return Rect.fromLTRB(
-        hostRect.left,
-        hostRect.top,
-        inspectorRect.left,
-        hostRect.bottom,
-      );
-    }
-    return hostRect;
+  Size get _pageStackSize {
+    final renderObject = _pageStackKey.currentContext?.findRenderObject();
+    return renderObject is RenderBox && renderObject.hasSize
+        ? renderObject.size
+        : MediaQuery.sizeOf(context);
   }
 
-  Offset _resolveActionToastAnchor(Offset source, Rect? toastRegion) {
-    final context = _pageStackKey.currentContext;
-    final renderObject = context?.findRenderObject();
-    if (renderObject is! RenderBox || !renderObject.hasSize) return source;
+  Rect? _stackRectFor(GlobalKey key) {
+    final stack = _pageStackKey.currentContext?.findRenderObject();
+    final source = key.currentContext?.findRenderObject();
+    if (stack is! RenderBox ||
+        source is! RenderBox ||
+        !stack.hasSize ||
+        !source.hasSize) {
+      return null;
+    }
+    return Rect.fromPoints(
+      stack.globalToLocal(source.localToGlobal(Offset.zero)),
+      stack.globalToLocal(
+        source.localToGlobal(source.size.bottomRight(Offset.zero)),
+      ),
+    );
+  }
 
-    final size = renderObject.size;
-    final stackOrigin = renderObject.localToGlobal(Offset.zero);
-    final globalBounds = stackOrigin & size;
-    final localBounds = Offset.zero & size;
-    if (globalBounds.contains(source)) {
-      return renderObject.globalToLocal(source);
+  Rect _sourceRectInStack(ActionToastOrigin origin, Rect fallbackRegion) {
+    final stack = _pageStackKey.currentContext?.findRenderObject();
+    if (stack is RenderBox && stack.hasSize && origin.hasSourceRect) {
+      return Rect.fromPoints(
+        stack.globalToLocal(origin.globalSourceRect.topLeft),
+        stack.globalToLocal(origin.globalSourceRect.bottomRight),
+      );
     }
-    if (localBounds.contains(source)) return source;
-    if (toastRegion != null) {
-      // The safe region is already expressed in the page stack's coordinates.
-      return toastRegion.center;
-    }
-    return Offset(size.width * 0.62, size.height * 0.46);
+    return Rect.fromCenter(center: fallbackRegion.center, width: 1, height: 1);
+  }
+
+  Rect? _resolveActionToastSafeRegion(ActionToastOrigin origin) {
+    final pageBounds = Offset.zero & _pageStackSize;
+    final main = _stackRectFor(_desktopContextualToastHostKey);
+    final rightRail = _stackRectFor(_desktopRightRailKey);
+    final canvas = _stackRectFor(_roadmapCanvasKey);
+    final inspector = _stackRectFor(_roadmapInspectorKey);
+    return switch (origin.zone) {
+      ActionToastZone.rightRail => rightRail ?? main ?? pageBounds,
+      ActionToastZone.roadmapInspector => inspector ?? main ?? pageBounds,
+      ActionToastZone.roadmapCanvas => canvas ?? main ?? pageBounds,
+      ActionToastZone.mainWorkspace => main ?? pageBounds,
+      ActionToastZone.mobileContent ||
+      ActionToastZone.mobileBottomContextual => pageBounds,
+      ActionToastZone.fallback => main ?? pageBounds,
+    };
   }
 
   void _showRewardNotifications(AppState state) {
@@ -694,23 +699,23 @@ class _MainPageState extends State<MainPage> {
     return null;
   }
 
-  void _onComplete(String taskId, Offset pos) {
+  void _onComplete(String taskId, ActionToastOrigin origin) {
     final s = AppStateProvider.of(context);
     final colors = _completionToastColors(s, taskId);
     final msg = s.completeTask(taskId);
     if (msg == null) return;
     AppFeedback.questResult(msg);
-    _showBubble(msg, pos, colors: colors);
+    _showBubble(msg, origin, colors: colors);
     _showRewardNotifications(s);
   }
 
-  void _onMinimumAction(String taskId, Offset pos) {
+  void _onMinimumAction(String taskId, ActionToastOrigin origin) {
     final s = AppStateProvider.of(context);
     final colors = _completionToastColors(s, taskId);
     final msg = s.completeMinimumAction(taskId);
     if (msg == null) return;
     AppFeedback.questResult(msg, isMinimum: true);
-    _showBubble(msg, pos, colors: colors);
+    _showBubble(msg, origin, colors: colors);
     _showRewardNotifications(s);
   }
 
@@ -1044,6 +1049,7 @@ class _MainPageState extends State<MainPage> {
                   onComplete: _onComplete,
                   onMinimumAction: _onMinimumAction,
                   contextualToastHostKey: _desktopContextualToastHostKey,
+                  rightRailKey: _desktopRightRailKey,
                   profileKey: _profileBarKey,
                   rewardsKey: _rewardsButtonKey,
                   roadmapKey: _roadmapNavKey,
