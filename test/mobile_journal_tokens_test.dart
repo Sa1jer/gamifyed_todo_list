@@ -203,6 +203,82 @@ void main() {
     expect(placement.topLeft.dy, lessThanOrEqualTo(884));
   });
 
+  test(
+    'action toast follows a left-side pointer instead of the row centre',
+    () {
+      const viewport = Size(1920, 1080);
+      const workspace = Rect.fromLTWH(392, 84, 1246, 900);
+      final pointerPlacement = ActionToastPlacement.near(
+        anchor: const Offset(450, 590),
+        viewport: viewport,
+        safeRegion: workspace,
+      );
+      final legacyRowCentrePlacement = ActionToastPlacement.near(
+        anchor: const Offset(1015, 590),
+        viewport: viewport,
+        safeRegion: workspace,
+      );
+
+      expect(pointerPlacement.topLeft.dx, closeTo(464, 0.1));
+      expect(
+        pointerPlacement.topLeft.dx,
+        lessThan(legacyRowCentrePlacement.topLeft.dx),
+      );
+    },
+  );
+
+  test('action toast flips left when a pointer is near the right edge', () {
+    final placement = ActionToastPlacement.near(
+      anchor: const Offset(1508, 520),
+      viewport: const Size(1920, 1080),
+      safeRegion: const Rect.fromLTWH(392, 84, 1246, 900),
+    );
+
+    expect(placement.topLeft.dx, lessThan(1508));
+    expect(placement.topLeft.dy, lessThan(520));
+  });
+
+  test('action toast falls below a pointer near the top safe edge', () {
+    final placement = ActionToastPlacement.near(
+      anchor: const Offset(620, 100),
+      viewport: const Size(1920, 1080),
+      safeRegion: const Rect.fromLTWH(392, 84, 1246, 900),
+    );
+
+    expect(placement.topLeft.dy, greaterThan(100));
+  });
+
+  test('action toast moves above a pointer near the bottom safe edge', () {
+    final placement = ActionToastPlacement.near(
+      anchor: const Offset(620, 950),
+      viewport: const Size(1920, 1080),
+      safeRegion: const Rect.fromLTWH(392, 84, 1246, 900),
+    );
+
+    expect(placement.topLeft.dy, lessThan(950));
+  });
+
+  test(
+    'action toast uses a source-rect fallback without covering the source',
+    () {
+      const sourceRect = Rect.fromLTWH(450, 540, 34, 34);
+      final placement = ActionToastPlacement.near(
+        anchor: sourceRect.center,
+        sourceRect: sourceRect,
+        viewport: const Size(1920, 1080),
+        safeRegion: const Rect.fromLTWH(392, 84, 1246, 900),
+      );
+      final toastRect =
+          placement.topLeft &
+          const Size(
+            ActionToastPlacement.estimatedWidth,
+            ActionToastPlacement.estimatedHeight,
+          );
+
+      expect(toastRect.overlaps(sourceRect), isFalse);
+    },
+  );
+
   testWidgets('XP bubble keeps its action placement while visible', (
     WidgetTester tester,
   ) async {

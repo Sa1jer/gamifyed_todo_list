@@ -90,7 +90,7 @@ class _MainPageState extends State<MainPage> {
     required CompletionToastColors colors,
   }) {
     final isMilestone = AppFeedback.isMilestoneMessage(message);
-    final toastRegion = _resolveActionToastSafeRegion();
+    final toastRegion = _resolveActionToastSafeRegion(pos);
     final anchor = _resolveActionToastAnchor(pos, toastRegion);
     setState(() {
       _bubbles.add(
@@ -116,7 +116,7 @@ class _MainPageState extends State<MainPage> {
     });
   }
 
-  Rect? _resolveActionToastSafeRegion() {
+  Rect? _resolveActionToastSafeRegion(Offset source) {
     final host = _desktopContextualToastHostKey.currentContext
         ?.findRenderObject();
     final stack = _pageStackKey.currentContext?.findRenderObject();
@@ -130,10 +130,36 @@ class _MainPageState extends State<MainPage> {
     final globalBottomRight = host.localToGlobal(
       host.size.bottomRight(Offset.zero),
     );
-    return Rect.fromPoints(
+    final hostRect = Rect.fromPoints(
       stack.globalToLocal(globalTopLeft),
       stack.globalToLocal(globalBottomRight),
     );
+    final inspector = _roadmapInspectorKey.currentContext?.findRenderObject();
+    if (inspector is! RenderBox || !inspector.hasSize) return hostRect;
+
+    final inspectorTopLeft = inspector.localToGlobal(Offset.zero);
+    final inspectorBottomRight = inspector.localToGlobal(
+      inspector.size.bottomRight(Offset.zero),
+    );
+    final inspectorRect = Rect.fromPoints(
+      stack.globalToLocal(inspectorTopLeft),
+      stack.globalToLocal(inspectorBottomRight),
+    );
+    final sourceInStack = stack.globalToLocal(source);
+    if (inspectorRect.contains(sourceInStack)) return inspectorRect;
+
+    // On the RoadMap, the inspector is part of the main workspace rather than
+    // a separate desktop rail. Keep canvas-originated feedback out of it.
+    if (hostRect.overlaps(inspectorRect) &&
+        inspectorRect.left > hostRect.left) {
+      return Rect.fromLTRB(
+        hostRect.left,
+        hostRect.top,
+        inspectorRect.left,
+        hostRect.bottom,
+      );
+    }
+    return hostRect;
   }
 
   Offset _resolveActionToastAnchor(Offset source, Rect? toastRegion) {

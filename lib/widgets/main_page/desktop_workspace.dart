@@ -1802,7 +1802,7 @@ class _DesktopQuestRowState extends State<_DesktopQuestRow> {
   bool _focused = false;
   bool _menuOpen = false;
 
-  Offset _anchor() {
+  Offset _sourceAnchor() {
     final box = context.findRenderObject();
     if (box is RenderBox) {
       return box.localToGlobal(Offset(box.size.width / 2, box.size.height / 2));
@@ -1868,11 +1868,14 @@ class _DesktopQuestRowState extends State<_DesktopQuestRow> {
                 _DesktopQuestCheck(
                   done: done,
                   color: done ? tokens.successGreen : widget.skill.color,
-                  onTap: () {
+                  onTap: (pointerPosition) {
                     if (done) {
                       widget.state.uncompleteTask(task.id);
                     } else {
-                      widget.onComplete(task.id, _anchor());
+                      widget.onComplete(
+                        task.id,
+                        pointerPosition ?? _sourceAnchor(),
+                      );
                     }
                   },
                 ),
@@ -1920,8 +1923,11 @@ class _DesktopQuestRowState extends State<_DesktopQuestRow> {
                             _DesktopMiniAction(
                               label: 'Минимальный шаг',
                               color: widget.skill.color,
-                              onTap: () =>
-                                  widget.onMinimumAction(task.id, _anchor()),
+                              onTap: (pointerPosition) =>
+                                  widget.onMinimumAction(
+                                    task.id,
+                                    pointerPosition ?? _sourceAnchor(),
+                                  ),
                             ),
                         ],
                       ),
@@ -2007,10 +2013,10 @@ class _DesktopQuestRowState extends State<_DesktopQuestRow> {
   }
 }
 
-class _DesktopQuestCheck extends StatelessWidget {
+class _DesktopQuestCheck extends StatefulWidget {
   final bool done;
   final Color color;
-  final VoidCallback onTap;
+  final ValueChanged<Offset?> onTap;
 
   const _DesktopQuestCheck({
     required this.done,
@@ -2019,15 +2025,30 @@ class _DesktopQuestCheck extends StatelessWidget {
   });
 
   @override
+  State<_DesktopQuestCheck> createState() => _DesktopQuestCheckState();
+}
+
+class _DesktopQuestCheckState extends State<_DesktopQuestCheck> {
+  Offset? _pointerPosition;
+
+  void _completeTap() {
+    final pointerPosition = _pointerPosition;
+    _pointerPosition = null;
+    widget.onTap(pointerPosition);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      checked: done,
-      label: done ? 'Вернуть квест' : 'Выполнить квест',
+      checked: widget.done,
+      label: widget.done ? 'Вернуть квест' : 'Выполнить квест',
       child: Tooltip(
-        message: done ? 'Вернуть квест' : 'Выполнить квест',
+        message: widget.done ? 'Вернуть квест' : 'Выполнить квест',
         child: InkResponse(
-          onTap: onTap,
+          onTapDown: (details) => _pointerPosition = details.globalPosition,
+          onTapCancel: () => _pointerPosition = null,
+          onTap: _completeTap,
           radius: 24,
           child: AnimatedContainer(
             duration: DesktopJournalTokens.fastMotion,
@@ -2035,13 +2056,13 @@ class _DesktopQuestCheck extends StatelessWidget {
             height: 31,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: done ? color : Colors.transparent,
+              color: widget.done ? widget.color : Colors.transparent,
               border: Border.all(
-                color: color.withValues(alpha: 0.75),
+                color: widget.color.withValues(alpha: 0.75),
                 width: 2,
               ),
             ),
-            child: done
+            child: widget.done
                 ? const Icon(Icons.check_rounded, color: Colors.white, size: 18)
                 : null,
           ),
@@ -2078,10 +2099,10 @@ class _DesktopTypeBadge extends StatelessWidget {
   }
 }
 
-class _DesktopMiniAction extends StatelessWidget {
+class _DesktopMiniAction extends StatefulWidget {
   final String label;
   final Color color;
-  final VoidCallback onTap;
+  final ValueChanged<Offset?> onTap;
 
   const _DesktopMiniAction({
     required this.label,
@@ -2090,16 +2111,31 @@ class _DesktopMiniAction extends StatelessWidget {
   });
 
   @override
+  State<_DesktopMiniAction> createState() => _DesktopMiniActionState();
+}
+
+class _DesktopMiniActionState extends State<_DesktopMiniAction> {
+  Offset? _pointerPosition;
+
+  void _completeTap() {
+    final pointerPosition = _pointerPosition;
+    _pointerPosition = null;
+    widget.onTap(pointerPosition);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: onTap,
+      onTapDown: (details) => _pointerPosition = details.globalPosition,
+      onTapCancel: () => _pointerPosition = null,
+      onTap: _completeTap,
       borderRadius: BorderRadius.circular(99),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
         child: Text(
-          label,
+          widget.label,
           style: TextStyle(
-            color: color,
+            color: widget.color,
             fontSize: 9.5,
             fontWeight: FontWeight.w800,
           ),
@@ -2412,6 +2448,25 @@ class _DesktopFocusTask extends StatefulWidget {
 class _DesktopFocusTaskState extends State<_DesktopFocusTask> {
   bool _hovered = false;
   bool _focused = false;
+  Offset? _pointerPosition;
+
+  Offset _sourceAnchor() {
+    final box = context.findRenderObject();
+    if (box is RenderBox && box.hasSize) {
+      return box.localToGlobal(box.size.center(Offset.zero));
+    }
+    final size = MediaQuery.sizeOf(context);
+    return Offset(size.width / 2, size.height / 2);
+  }
+
+  void _activate(Offset? pointerPosition) {
+    final task = widget.task;
+    if (task.isDone) {
+      widget.state.uncompleteTask(task.id);
+      return;
+    }
+    widget.onComplete(task.id, pointerPosition ?? _sourceAnchor());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -2429,15 +2484,6 @@ class _DesktopFocusTaskState extends State<_DesktopFocusTask> {
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
     final textTheme = context.appTextTheme;
     final roles = context.appTextRoles;
-    void activate() {
-      if (task.isDone) {
-        state.uncompleteTask(task.id);
-        return;
-      }
-      final size = MediaQuery.sizeOf(context);
-      widget.onComplete(task.id, Offset(size.width * 0.78, size.height * 0.4));
-    }
-
     return Semantics(
       button: true,
       checked: task.isDone,
@@ -2455,14 +2501,20 @@ class _DesktopFocusTaskState extends State<_DesktopFocusTask> {
         actions: <Type, Action<Intent>>{
           ActivateIntent: CallbackAction<ActivateIntent>(
             onInvoke: (_) {
-              activate();
+              _activate(null);
               return null;
             },
           ),
         },
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: activate,
+          onTapDown: (details) => _pointerPosition = details.globalPosition,
+          onTapCancel: () => _pointerPosition = null,
+          onTap: () {
+            final pointerPosition = _pointerPosition;
+            _pointerPosition = null;
+            _activate(pointerPosition);
+          },
           child: AnimatedContainer(
             key: ValueKey('desktop-focus-surface-${task.id}'),
             duration: reduceMotion

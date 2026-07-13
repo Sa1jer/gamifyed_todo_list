@@ -1046,6 +1046,7 @@ class ActionToastPlacement {
     required Offset anchor,
     required Size viewport,
     Rect? safeRegion,
+    Rect? sourceRect,
     double bottomReserved = 0,
   }) {
     final viewportBounds = Offset.zero & viewport;
@@ -1061,14 +1062,51 @@ class ActionToastPlacement {
       available.top,
       available.bottom - bottomReserved - estimatedHeight,
     );
-    var left = anchor.dx - estimatedWidth / 2;
-    var top = anchor.dy + 14;
-    if (top > maxTop) top = anchor.dy - estimatedHeight - 14;
+    const gap = 14.0;
+    final source = sourceRect;
+    final candidates = <Offset>[
+      // Prefer the natural desktop reading position: beside and above the
+      // click. The following candidates keep the toast near the action when
+      // that corner is unavailable.
+      Offset(
+        source?.right ?? anchor.dx + gap,
+        (source?.top ?? anchor.dy) - estimatedHeight - gap,
+      ),
+      Offset(
+        (source?.left ?? anchor.dx) - estimatedWidth - gap,
+        (source?.top ?? anchor.dy) - estimatedHeight - gap,
+      ),
+      Offset(
+        source?.right ?? anchor.dx + gap,
+        (source?.bottom ?? anchor.dy) + gap,
+      ),
+      Offset(
+        (source?.left ?? anchor.dx) - estimatedWidth - gap,
+        (source?.bottom ?? anchor.dy) + gap,
+      ),
+    ];
 
+    bool fits(Offset topLeft) {
+      final rect = topLeft & const Size(estimatedWidth, estimatedHeight);
+      final isInside =
+          rect.left >= available.left &&
+          rect.right <= available.right &&
+          rect.top >= available.top &&
+          rect.bottom <= available.bottom - bottomReserved;
+      return isInside && (sourceRect == null || !rect.overlaps(sourceRect));
+    }
+
+    for (final candidate in candidates) {
+      if (fits(candidate)) return ActionToastPlacement(candidate);
+    }
+
+    // A very small safe region can make every candidate invalid. Clamp the
+    // primary position as a final safe fallback instead of re-centering it.
+    final fallback = candidates.first;
     return ActionToastPlacement(
       Offset(
-        left.clamp(available.left, maxLeft),
-        top.clamp(available.top, maxTop),
+        fallback.dx.clamp(available.left, maxLeft),
+        fallback.dy.clamp(available.top, maxTop),
       ),
     );
   }
