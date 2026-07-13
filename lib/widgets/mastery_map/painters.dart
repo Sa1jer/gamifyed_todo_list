@@ -162,7 +162,8 @@ class _OrbMasteryMapPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _OrbMasteryMapPainter oldDelegate) {
-    return oldDelegate.layout != layout || oldDelegate.isDark != isDark;
+    return oldDelegate.layout.paintSignature != layout.paintSignature ||
+        oldDelegate.isDark != isDark;
   }
 }
 

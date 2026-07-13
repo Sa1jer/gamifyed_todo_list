@@ -78,6 +78,7 @@ class _MasteryMapHero extends StatelessWidget {
             const SizedBox(width: 12),
             _RoadmapLayoutToggle(
               isDark: isDark,
+              accent: color,
               value: layoutAxis,
               onChanged: onLayoutAxisChanged,
             ),
@@ -145,18 +146,19 @@ class _MasteryMapHero extends StatelessWidget {
 
 class _RoadmapLayoutToggle extends StatelessWidget {
   final bool isDark;
+  final Color accent;
   final _RoadmapLayoutAxis value;
   final ValueChanged<_RoadmapLayoutAxis> onChanged;
 
   const _RoadmapLayoutToggle({
     required this.isDark,
+    required this.accent,
     required this.value,
     required this.onChanged,
   });
 
   @override
   Widget build(BuildContext context) {
-    const accent = Color(0xFF4A9EFF);
     return Semantics(
       label: 'Ориентация RoadMap',
       child: Container(

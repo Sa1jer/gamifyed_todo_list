@@ -8,6 +8,7 @@ class _ActWorkspace extends StatelessWidget {
   final Key? createFirstSkillButtonKey;
   final Key? createFirstQuestButtonKey;
   final Key? nextQuestActionKey;
+  final GlobalKey<_MobileActJournalState>? mobileJournalKey;
 
   const _ActWorkspace({
     super.key,
@@ -18,6 +19,7 @@ class _ActWorkspace extends StatelessWidget {
     this.createFirstSkillButtonKey,
     this.createFirstQuestButtonKey,
     this.nextQuestActionKey,
+    this.mobileJournalKey,
   });
 
   @override
@@ -26,6 +28,7 @@ class _ActWorkspace extends StatelessWidget {
       builder: (context, constraints) {
         if (MobileResponsiveMetrics.isMobileWidth(constraints.maxWidth)) {
           return _MobileActJournal(
+            key: mobileJournalKey,
             onComplete: onComplete,
             onMinimumAction: onMinimumAction,
             onCreateSkill: onCreateFirstSkill,

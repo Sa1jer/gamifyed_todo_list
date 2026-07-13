@@ -129,6 +129,12 @@ changing canvas paint, node geometry, graph ordering, or persistence. The
 desktop toolbar controls layout, templates, centering, and expansion; the
 context rail and template cards use the selected skill accent.
 
+The first fit is applied synchronously once layout bounds are known, so a
+newly opened RoadMap does not briefly paint at the identity transform and then
+jump. During native window resizing, fitting remains debounced to avoid
+restarting the camera animation on every intermediate constraint. Reduced
+motion applies the resulting transform without a camera animation.
+
 Skill and quest context actions use stable vertical-ellipsis hit regions that
 fade on hover/focus without changing row geometry. Reordering remains on the
 existing delayed-drag gesture. A skill that has never contained a quest shows
@@ -219,7 +225,8 @@ selection synchronization, camera fit, and graph order remain unchanged.
 ## 1.3.59 Desktop RoadMap Freeze Contract
 
 `MobileRoadMapAscentLayout` is imported only by the mobile RoadMap journal.
-It projects existing snapshots into a mobile-only root-sphere ascent and does
+It projects existing snapshots into a mobile-only ascent: the skill root stays
+at the top, while foundations and prerequisite links rise toward it. It does
 not participate in desktop canvas geometry, camera fitting, toolbar controls,
 template application, or selection synchronization.
 

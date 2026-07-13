@@ -1,6 +1,6 @@
 # TODO / Living Backlog
 
-Last updated: 2026-07-11
+Last updated: 2026-07-12
 
 This file tracks the active implementation roadmap and completed project work. Update it after every meaningful code or design change.
 
@@ -48,6 +48,30 @@ Do not mix these product decisions into Release / Regression Hardening. Revisit 
 - [ ] Profile theme switching on real mobile hardware; the current `2x` snapshot cap is only a partial mitigation.
 - [ ] Extend stage reordering beyond isolated linear roads only after branching/shared-root/cross-road semantics and conflict handling are designed.
 
+## Product Doctrine Discovery
+
+Conceptual direction, evidence labels, and implementation boundaries live in
+[`docs/concept/README.md`](docs/concept/README.md). Every future product idea
+must pass the [Product Doctrine decision test](docs/concept/PRODUCT_DOCTRINE.md#decision-test)
+before it enters an implementation brief.
+
+- [x] **Recommended epic 1:** implemented a presentation-only `Next Action Lens`
+  and session-only Boot Entry using existing Task, Minimum Action, selection,
+  stage and priority data. No models, schema, XP rules, RoadMap rules or second
+  ranking engine were added; see
+  `docs/concept/NEXT_ACTION_BOOT_ENTRY_IMPLEMENTATION.md`.
+- [ ] **Recommended epic 2:** validate a derived `Return Context` card after a
+  pause using existing task, stage, history, and review data. Do not call it a
+  persistent Save Point or add storage until user validation proves the need.
+- [ ] Run a voluntary Next Action / Boot Entry diary pass before making its
+  override or entry state durable: record clarity, override/dismiss reason,
+  real-world change, and whether restart loss is harmful.
+- [ ] **Deferred experiments:** Resistance intervention, Definition of Done,
+  Proof of Progress, Quest Chain, Side-Quest parking, capacity modes, AI
+  decomposition, body doubling, and ambient focus remain in
+  `docs/concept/PRODUCT_INNOVATION_BACKLOG.md`; do not mix them into active
+  delivery work without a scoped brief and decision-test evidence.
+
 ## P1 — Mobile Foundation
 
 - [x] Surface a compact next-action/minimum-step summary between mobile skills and the task list, with a labelled `48dp` primary action and expandable full dashboard.
@@ -55,7 +79,9 @@ Do not mix these product decisions into Release / Regression Hardening. Revisit 
 - [x] Replace mobile TopBar/ProfileBar stacking with one SafeArea identity header and captured-state secondary-actions sheet while preserving desktop chrome.
 - [x] Split mobile `Сейчас` into Overview and Skill Focus with reorderable full-width level-XP progress cards, explicit `Обзор`, and one focus surface.
 - [x] Move Inbox out of the mobile skill selector into a separate animated accordion while preserving its system ID and desktop presentation.
-- [x] Rebuild the mobile RoadMap as one bottom-up ascent graph: a root skill sphere at the base, upward topology-aware connectors, alternating stage cards, contextual details/templates sheets, and no mobile free-map canvas.
+- [x] Rebuild the mobile RoadMap as one vertical ascent: the skill root stays at the top, the foundation begins at the bottom, prerequisite-aware connectors rise toward the skill, stage cards alternate around nodes, and details/templates remain contextual without a mobile free-map canvas.
+- [x] Move mobile Profile, Trophies, and Statistics secondary detail flows to safe full-page routes; preserve desktop dialogs and keep the existing Statistics workspace as the primary full page.
+- [x] Dock the Overview Inbox above mobile navigation so it does not compete with the skill/focus scroll region; tab reselect and Android Back collapse it before changing the screen.
 - [x] Redesign mobile AddSkill around a live emblem, meaningful icon semantics/runtime categories, squircle colors, dirty-draft safety, and one bottom CTA.
 - [ ] Extend automated accessibility gates beyond the journal: minimum tap targets, focus order, screen-reader traversal, and `200%` text scaling across dialogs/statistics/rewards at `360/393/430dp`.
 - [ ] Add a device-local last-active skill/resumption context with an obvious return to the skill chooser; do not mix it into cloud-conflict domain state.
@@ -84,6 +110,8 @@ Do not mix these product decisions into Release / Regression Hardening. Revisit 
 
 ## P2 — RoadMap Layout
 
+- [x] Apply the selected skill accent to desktop RoadMap orientation controls, with the app violet fallback only when no skill is selected.
+- [x] Apply the first desktop RoadMap camera fit synchronously to prevent the visible identity-transform jump; retain debounced fitting only while native window constraints are moving.
 - [ ] Persist the desktop layout preference as a local per-device UI setting.
 - [ ] Add keyboard shortcuts for desktop RoadMap orientation only if the toolbar toggle proves insufficient.
 - [ ] Profile orientation transitions with very large multi-road maps and add a reduced-motion fallback if needed.
@@ -242,6 +270,11 @@ Manual desktop/QHD checklist:
 
 ## Recently Completed
 
+- Next Action Lens + Boot Entry MVP: mobile Act now derives one deterministic,
+  overrideable Skill quest from selected context, active stage, priority and
+  task order. A temporary, editable three-step Boot Entry helps open context,
+  make one small change and inspect it without completing the parent quest or
+  changing XP, Minimum Action, RoadMap, Goal, history, rewards or storage.
 - Codex workflow infrastructure: added a staged brief/explore/plan/implement/
   review/fix/verify process, reusable prompts, task/PR templates, baseline CI,
   and a cross-platform local verification command without changing app behavior.
@@ -249,8 +282,8 @@ Manual desktop/QHD checklist:
 - `1.3.55`: added the semantic typography foundation, repaired nested-theme `AppTextRoles` fallback, synchronized RoadMap canvas/sidebar focus, improved adaptive desktop content at large text scale, and documented typography/content adaptation policy.
 - `1.3.56`: debounced RoadMap camera fitting during desktop resize, introduced constraint-aware empty RoadMap and mobile focus states, centered first-quest guidance in available desktop space, removed empty active-quest header metadata, and made Effects/Chests content-led instead of accordion/fixed-height surfaces.
 - `1.3.57`: corrected the incomplete adaptive recovery: Effects and Chests now use bounded content-led empty states, desktop first-quest guidance has landscape geometry, and mobile Focus uses local Full/Compact/Minimal/Hidden variants with a compact section-level Add Skill action.
-- `1.3.58`: unified the mobile RoadMap into one top-to-bottom graph, removed the free-map mode switch and floating return action, retained branch paths/templates/details, and finalized the compact mobile Focus placeholder.
-- `1.3.59`: replaced the remaining top-down mobile path presentation with a pure bottom-up ascent projection: the skill is the root sphere, future stages rise above it, real branch edges remain visible, and focus scrolls only once per selected skill.
+- `1.3.58`: unified the mobile RoadMap into one vertical ascent graph, removed the free-map mode switch and floating return action, retained branch paths/templates/details, and finalized the compact mobile Focus placeholder.
+- `1.3.59`: introduced the mobile RoadMap projection; the skill root remains at the top while the earliest foundation stage begins at the bottom and later stages rise toward the skill, without changing stored topology or initial focus behavior.
 
 - `1.3.53`: recovered the incomplete `1.3.52` visual migration with a real RoadMap shell/templates/context rail, complete Trophies and Statistics ecosystems, full existing Settings coverage, responsive raised skill headers, history-aware empty states, stable overflow geometry, bounds-based camera fitting, and tested debug/profile Admin entry.
 - `1.3.52`: introduced workspace routes and initial wrappers, but its visual migration remained incomplete; superseded by the audited `1.3.53` recovery.
@@ -277,7 +310,7 @@ Manual desktop/QHD checklist:
 - RoadMap progress polish: skill-orb rings now visualize derived goal completion while a separate compact bar under the level number shows XP progress toward the next level.
 - Rewards polish: removed duplicate chest/effect summary cards and moved the existing expandable buffs section to the top under the simpler “Эффекты” title.
 - Desktop skill-list polish: quest-count badges use explicit line-height and geometric centering for stable QHD rendering.
-- RoadMap Vertical Mode MVP: desktop now switches between horizontal and vertical canvas layouts from the toolbar and fullscreen, mobile always uses vertical roads, the skill anchors the top while terminal and earlier stages continue downward, vertical bezier links and insertion actions preserve the existing DAG, and adaptive camera auto-fit covers `0`, `1`, `3`, and `10` stage scenarios without model/storage changes.
+- RoadMap Vertical Mode MVP: desktop now switches between horizontal and vertical canvas layouts from the toolbar and fullscreen, mobile always uses vertical roads, the skill anchors the top while the earliest foundation stages begin at the bottom and connections rise toward mastery, vertical bezier links and insertion actions preserve the existing DAG, and adaptive camera auto-fit covers `0`, `1`, `3`, and `10` stage scenarios without model/storage changes.
 - Mobile Skill Experience MVP: mobile Act now starts with informative skill squircles showing level, active quest count and existing RoadMap goal progress; selecting by stable skill ID transitions to compact chips, while “Действовать сегодня” moves below tasks and starts collapsed. Desktop composition and data/storage models remain unchanged.
 - Mobile AddSkill/AddTask creation: routes below `760px` now reuse the existing forms in full-screen `SafeArea` pages with scroll/keyboard safety, visible validation, stable skill/stage context, cancel/save navigation, and desktop dialog preservation.
 - Task Inbox / “Задачник” MVP: added a permanent system skill with stable ID, title-only quick add, isolated completion/undo/delete UI in Act, storage compatibility for legacy tasks, and regression coverage proving quick tasks update only profile/today XP and completed-action count without affecting skill XP, RoadMap progress, history, achievements, rewards, resistance, or normal skill quest counts.

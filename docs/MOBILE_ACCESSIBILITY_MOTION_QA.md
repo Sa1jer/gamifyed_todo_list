@@ -35,6 +35,10 @@ refresh rate, and whether any interaction exceeds the frame budget.
   dark/light switching in DevTools Performance.
 - [ ] Review Light Journal outdoors/at high brightness and dark mode at low
   brightness.
+- [ ] Verify Profile, Trophies, Statistics, Daily victories, Weekly analytics,
+  and Chronicle as full-page routes: Android Back closes one route at a time,
+  text remains usable at `2.0x`, and no route transition drops frames in
+  profile mode.
 
 ## Five-Scenario Usability Script — Pending Physical Run
 

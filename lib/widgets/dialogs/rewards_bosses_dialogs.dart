@@ -4,11 +4,13 @@ class RewardsDialog extends StatefulWidget {
   final AppState state;
   final bool showTutorialHint;
   final VoidCallback? onTutorialComplete;
+  final bool fullScreen;
   const RewardsDialog({
     super.key,
     required this.state,
     this.showTutorialHint = false,
     this.onTutorialComplete,
+    this.fullScreen = false,
   });
 
   @override
@@ -31,156 +33,169 @@ class _RewardsDialogState extends State<RewardsDialog> {
     final size = MediaQuery.sizeOf(context);
     final availableWidth = size.width - 36;
     final availableHeight = size.height - 40;
-    final dialogWidth = availableWidth < 360
+    final dialogWidth = widget.fullScreen
+        ? size.width
+        : availableWidth < 360
         ? availableWidth
         : availableWidth.clamp(360.0, 500.0).toDouble();
-    final dialogHeight = availableHeight < 500
+    final dialogHeight = widget.fullScreen
+        ? size.height
+        : availableHeight < 500
         ? availableHeight
         : availableHeight.clamp(500.0, 620.0).toDouble();
 
-    return Dialog(
-      backgroundColor: bg,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: SizedBox(
-        width: dialogWidth,
-        height: dialogHeight,
-        child: Stack(
-          children: [
-            Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(22, 20, 16, 14),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.redeem,
-                        color: Color(0xFFFFCC00),
-                        size: 22,
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
+    final content = SizedBox(
+      width: dialogWidth,
+      height: dialogHeight,
+      child: Stack(
+        children: [
+          Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(22, 20, 16, 14),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.redeem,
+                      color: Color(0xFFFFCC00),
+                      size: 22,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
                         'Трофеи после действий',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 18,
                           color: txt,
                         ),
                       ),
-                      const Spacer(),
-                      PressFeedback(
-                        scale: 0.94,
-                        tooltip: 'Закрыть трофеи',
-                        onTap: () => Navigator.pop(context),
-                        child: Icon(Icons.close, color: sub, size: 22),
+                    ),
+                    PressFeedback(
+                      scale: 0.94,
+                      tooltip: 'Закрыть трофеи',
+                      onTap: () => Navigator.pop(context),
+                      child: Icon(Icons.close, color: sub, size: 22),
+                    ),
+                  ],
+                ),
+              ),
+              Container(height: 1, color: bdr),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      KeyedSubtree(
+                        key: tutorialTargetKey,
+                        child: _buildEffectsSection(
+                          isDark: isDark,
+                          txt: txt,
+                          sub: sub,
+                          buffs: buffs,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Трофеи появляются после заметных действий: сильного дня, рубежа серии или победы над сопротивлением.',
+                        style: TextStyle(
+                          color: sub,
+                          fontSize: 12,
+                          height: 1.35,
+                        ),
+                      ),
+                      MotionExpandable(
+                        expanded: _lastReveal != null,
+                        collapsedChild: const SizedBox(height: 18),
+                        expandedChild: _lastReveal == null
+                            ? const SizedBox.shrink()
+                            : Padding(
+                                padding: const EdgeInsets.only(top: 12),
+                                child: _RewardRevealNotice(
+                                  key: ValueKey(_lastReveal!.id),
+                                  reveal: _lastReveal!,
+                                  isDark: isDark,
+                                ),
+                              ),
+                      ),
+                      Text(
+                        'Новые сундуки',
+                        style: TextStyle(
+                          color: txt,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      MotionFadeSlideSwitcher(
+                        child: unopened.isEmpty
+                            ? _RewardsEmptyState(
+                                key: const ValueKey('empty-chests'),
+                                icon: Icons.inventory_2_outlined,
+                                title: 'Пока нет сундуков',
+                                subtitle:
+                                    'Закрой сильный день, удержи серию или пройди событие сопротивления, чтобы получить трофей.',
+                                isDark: isDark,
+                              )
+                            : Column(
+                                key: const ValueKey('chest-list'),
+                                children: unopened.asMap().entries.map((entry) {
+                                  final chest = entry.value;
+                                  return MotionListItem(
+                                    key: ValueKey('chest-${chest.id}'),
+                                    index: entry.key,
+                                    slide: 5,
+                                    child: _RewardChestCard(
+                                      chest: chest,
+                                      skill: chest.skillId == null
+                                          ? null
+                                          : widget.state.skills
+                                                .where(
+                                                  (skill) =>
+                                                      skill.id == chest.skillId,
+                                                )
+                                                .firstOrNull,
+                                      isDark: isDark,
+                                      onOpen: () =>
+                                          _openChest(context, chest.id),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
                       ),
                     ],
                   ),
                 ),
-                Container(height: 1, color: bdr),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(18),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        KeyedSubtree(
-                          key: tutorialTargetKey,
-                          child: _buildEffectsSection(
-                            isDark: isDark,
-                            txt: txt,
-                            sub: sub,
-                            buffs: buffs,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Трофеи появляются после заметных действий: сильного дня, рубежа серии или победы над сопротивлением.',
-                          style: TextStyle(
-                            color: sub,
-                            fontSize: 12,
-                            height: 1.35,
-                          ),
-                        ),
-                        MotionExpandable(
-                          expanded: _lastReveal != null,
-                          collapsedChild: const SizedBox(height: 18),
-                          expandedChild: _lastReveal == null
-                              ? const SizedBox.shrink()
-                              : Padding(
-                                  padding: const EdgeInsets.only(top: 12),
-                                  child: _RewardRevealNotice(
-                                    key: ValueKey(_lastReveal!.id),
-                                    reveal: _lastReveal!,
-                                    isDark: isDark,
-                                  ),
-                                ),
-                        ),
-                        Text(
-                          'Новые сундуки',
-                          style: TextStyle(
-                            color: txt,
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        MotionFadeSlideSwitcher(
-                          child: unopened.isEmpty
-                              ? _RewardsEmptyState(
-                                  key: const ValueKey('empty-chests'),
-                                  icon: Icons.inventory_2_outlined,
-                                  title: 'Пока нет сундуков',
-                                  subtitle:
-                                      'Закрой сильный день, удержи серию или пройди событие сопротивления, чтобы получить трофей.',
-                                  isDark: isDark,
-                                )
-                              : Column(
-                                  key: const ValueKey('chest-list'),
-                                  children: unopened.asMap().entries.map((
-                                    entry,
-                                  ) {
-                                    final chest = entry.value;
-                                    return MotionListItem(
-                                      key: ValueKey('chest-${chest.id}'),
-                                      index: entry.key,
-                                      slide: 5,
-                                      child: _RewardChestCard(
-                                        chest: chest,
-                                        skill: chest.skillId == null
-                                            ? null
-                                            : widget.state.skills
-                                                  .where(
-                                                    (skill) =>
-                                                        skill.id ==
-                                                        chest.skillId,
-                                                  )
-                                                  .firstOrNull,
-                                        isDark: isDark,
-                                        onOpen: () =>
-                                            _openChest(context, chest.id),
-                                      ),
-                                    );
-                                  }).toList(),
-                                ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            if (widget.showTutorialHint && widget.onTutorialComplete != null)
-              Positioned.fill(
-                child: _RewardsTutorialSpotlight(
-                  targetKey: tutorialTargetKey,
-                  isDark: isDark,
-                  onComplete: widget.onTutorialComplete!,
-                ),
               ),
-          ],
-        ),
+            ],
+          ),
+          if (widget.showTutorialHint && widget.onTutorialComplete != null)
+            Positioned.fill(
+              child: _RewardsTutorialSpotlight(
+                targetKey: tutorialTargetKey,
+                isDark: isDark,
+                onComplete: widget.onTutorialComplete!,
+              ),
+            ),
+        ],
       ),
+    );
+
+    if (widget.fullScreen) {
+      return Scaffold(
+        backgroundColor: bg,
+        body: SafeArea(child: SizedBox.expand(child: content)),
+      );
+    }
+
+    return Dialog(
+      backgroundColor: bg,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: content,
     );
   }
 

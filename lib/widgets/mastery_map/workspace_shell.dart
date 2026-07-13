@@ -588,6 +588,16 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
                               ),
                               _RoadmapLayoutToggle(
                                 isDark: isDark,
+                                accent:
+                                    state.roadmapSkills
+                                        .where(
+                                          (skill) =>
+                                              skill.id ==
+                                              fullscreenSelection?.skillId,
+                                        )
+                                        .firstOrNull
+                                        ?.color ??
+                                    const Color(0xFF765BFF),
                                 value: _desktopLayoutAxis,
                                 onChanged: updateLayoutAxis,
                               ),

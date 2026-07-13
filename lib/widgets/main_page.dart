@@ -15,6 +15,7 @@ import 'dialogs.dart';
 import 'skills_panel.dart';
 import 'tasks_panel.dart';
 import 'inbox_panel.dart';
+import 'next_action_lens.dart';
 import 'today_dashboard.dart';
 import 'profile_dialog.dart';
 import 'faq_dialog.dart';
@@ -28,6 +29,7 @@ import 'goal_milestone_banner.dart';
 import 'reward_animations.dart';
 import 'weekly_analytics_dialog.dart';
 import '../engines/course_nudge_engine.dart';
+import '../engines/next_action_resolver.dart';
 
 part 'main_page/mode.dart';
 part 'main_page/profile_bar.dart';

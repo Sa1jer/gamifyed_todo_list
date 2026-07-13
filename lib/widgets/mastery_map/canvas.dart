@@ -48,6 +48,10 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
         ..addListener(_handleRoadmapCameraTick);
   Matrix4Tween? _roadmapCameraTween;
   String? _lastRoadmapCameraSignature;
+  String? _lastRoadmapCameraSkillId;
+  _RoadmapLayoutAxis? _lastRoadmapCameraAxis;
+  bool _hasInitialRoadmapCameraFit = false;
+  bool _reducedMotion = false;
   Timer? _roadmapCameraFitTimer;
   _OrbCanvasLayout? _lastLayout;
   Size? _lastViewport;
@@ -103,7 +107,28 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
       templatePanelCollapsed,
     );
     if (signature == _lastRoadmapCameraSignature) return;
+    final selectionChanged =
+        _lastRoadmapCameraSkillId != layout.selectedSkill?.id;
+    final axisChanged = _lastRoadmapCameraAxis != layout.layoutAxis;
     _lastRoadmapCameraSignature = signature;
+    _lastRoadmapCameraSkillId = layout.selectedSkill?.id;
+    _lastRoadmapCameraAxis = layout.layoutAxis;
+
+    final target = _roadmapFitMatrix(layout, viewport, templatePanelCollapsed);
+    if (!_hasInitialRoadmapCameraFit) {
+      // The first visible graph must already use its final camera transform.
+      // Delaying this fit painted nodes at identity and caused a visible jump.
+      _hasInitialRoadmapCameraFit = true;
+      _roadmapCameraAnimationController.stop();
+      _roadmapCameraController.value = target;
+      return;
+    }
+
+    if (selectionChanged || axisChanged) {
+      _roadmapCameraFitTimer?.cancel();
+      _animateRoadmapCameraTo(target);
+      return;
+    }
 
     // Native desktop resizing can issue many LayoutBuilder passes per second.
     // Fit after the constraints settle instead of restarting the camera for
@@ -111,11 +136,6 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
     _roadmapCameraFitTimer?.cancel();
     _roadmapCameraFitTimer = Timer(const Duration(milliseconds: 90), () {
       if (!mounted || signature != _lastRoadmapCameraSignature) return;
-      final target = _roadmapFitMatrix(
-        layout,
-        viewport,
-        templatePanelCollapsed,
-      );
       _animateRoadmapCameraTo(target);
     });
   }
@@ -158,7 +178,7 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
 
   void _animateRoadmapCameraTo(Matrix4 target) {
     final current = _roadmapCameraController.value;
-    if (_matrixCloseTo(current, target)) {
+    if (_reducedMotion || _matrixCloseTo(current, target)) {
       _roadmapCameraAnimationController.stop();
       _roadmapCameraController.value = target;
       return;
@@ -356,6 +376,8 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
     final isDark = widget.isDark;
     final selection = widget.selection;
     final mobilePresentation = MediaQuery.sizeOf(context).width < 760;
+    _reducedMotion =
+        state.reducedMotion || MediaQuery.disableAnimationsOf(context);
     final bg = mobilePresentation
         ? isDark
               ? const Color(0xFF11100F)
@@ -389,6 +411,9 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
           final calmMobile = mobilePresentation;
           final compactCanvas = layout.compactVisuals;
           final selectedSkill = layout.selectedSkill;
+          final layoutMotionDuration = _reducedMotion
+              ? Duration.zero
+              : kMotionSlow;
           final templatePanelCollapsed =
               _templatePanelHidden ||
               selection?.type != _MasterySelectionType.skill;
@@ -455,7 +480,7 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
                           final focusedWidth = compactCanvas ? 216.0 : 264.0;
                           return AnimatedPositioned(
                             key: ValueKey('map-skill-orb-${skill.id}'),
-                            duration: kMotionSlow,
+                            duration: layoutMotionDuration,
                             curve: kMotionCurve,
                             left:
                                 position.dx -
@@ -488,14 +513,14 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
                               key: ValueKey(
                                 'map-node-${selectedSkill.id}-${node.id}',
                               ),
-                              duration: kMotionSlow,
+                              duration: layoutMotionDuration,
                               curve: kMotionCurve,
                               left: position.dx - _roadmapNodeItemWidth / 2,
                               top: position.dy - _roadmapNodeItemTopOffset,
                               width: _roadmapNodeItemWidth,
                               height: _roadmapNodeItemHeight,
                               child: AnimatedSwitcher(
-                                duration: kMotionSlow,
+                                duration: layoutMotionDuration,
                                 switchInCurve: kMotionCurve,
                                 switchOutCurve: kMotionExitCurve,
                                 child: _MapNodeButton(
@@ -538,7 +563,7 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
                               key: ValueKey(
                                 'roadmap-insert-${selectedSkill.id}-${leftNode.id}-${rightNode?.id ?? 'skill'}',
                               ),
-                              duration: kMotionSlow,
+                              duration: layoutMotionDuration,
                               curve: kMotionCurve,
                               left: position.dx - _roadmapInsertHitSize / 2,
                               top: position.dy - _roadmapInsertHitSize / 2,
@@ -618,7 +643,7 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
                       ? math.min(constraints.maxWidth - 28, 276)
                       : 235,
                   child: AnimatedSwitcher(
-                    duration: kMotionSlow,
+                    duration: layoutMotionDuration,
                     switchInCurve: kMotionCurve,
                     switchOutCurve: kMotionExitCurve,
                     layoutBuilder: (currentChild, previousChildren) {
@@ -797,7 +822,54 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
       nodePositions: nodePositions,
       pathInsertionPoints: pathInsertionPoints,
       compactVisuals: compactVisuals,
+      paintSignature: _orbPaintSignature(
+        size: Size(width, height),
+        layoutAxis: widget.layoutAxis,
+        selectedSkill: selectedSkill,
+        pathLayout: pathLayout,
+        skillPositions: skillPositions,
+        nodePositions: nodePositions,
+        compactVisuals: compactVisuals,
+      ),
     );
+  }
+
+  String _orbPaintSignature({
+    required Size size,
+    required _RoadmapLayoutAxis layoutAxis,
+    required Skill? selectedSkill,
+    required RoadmapPathLayout pathLayout,
+    required Map<Skill, Offset> skillPositions,
+    required Map<String, Offset> nodePositions,
+    required bool compactVisuals,
+  }) {
+    final signature = StringBuffer()
+      ..write('${size.width}:${size.height}:${layoutAxis.name}:$compactVisuals')
+      ..write(':${selectedSkill?.id ?? 'none'}')
+      ..write(':${selectedSkill?.color.toARGB32() ?? 0}');
+    final skills = skillPositions.entries.toList()
+      ..sort((left, right) => left.key.id.compareTo(right.key.id));
+    for (final entry in skills) {
+      signature.write(':${entry.key.id}@${entry.value.dx},${entry.value.dy}');
+    }
+    final positions = nodePositions.entries.toList()
+      ..sort((left, right) => left.key.compareTo(right.key));
+    for (final entry in positions) {
+      signature.write(':${entry.key}@${entry.value.dx},${entry.value.dy}');
+    }
+    if (selectedSkill != null) {
+      for (final node in selectedSkill.treeNodes) {
+        signature.write(
+          ':${node.id}:${selectedSkill.treeNodeStatus(node).name}:${node.questTarget}',
+        );
+      }
+    }
+    for (final path in pathLayout.paths) {
+      signature.write(
+        ':path${path.index}:${path.nodes.map((node) => node.id).join(',')}',
+      );
+    }
+    return signature.toString();
   }
 
   Offset _verticalRoadmapSkillCenter(Size size, int stageCount) =>
@@ -1041,6 +1113,7 @@ class _OrbCanvasLayout {
   final Map<String, Offset> nodePositions;
   final List<_RoadmapInsertionPoint> pathInsertionPoints;
   final bool compactVisuals;
+  final String paintSignature;
 
   double get focusedSkillOrbDiameter => compactVisuals
       ? _roadmapMobileFocusedSkillOrbDiameter
@@ -1056,5 +1129,6 @@ class _OrbCanvasLayout {
     required this.nodePositions,
     required this.pathInsertionPoints,
     required this.compactVisuals,
+    required this.paintSignature,
   });
 }

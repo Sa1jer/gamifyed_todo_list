@@ -5,6 +5,7 @@ class _MobileWorkspaceNav extends StatelessWidget {
   final bool isDark;
   final bool reducedMotion;
   final ValueChanged<WorkspaceMode> onChanged;
+  final VoidCallback? onReselectCurrent;
   final Key? roadmapKey;
 
   const _MobileWorkspaceNav({
@@ -12,6 +13,7 @@ class _MobileWorkspaceNav extends StatelessWidget {
     required this.isDark,
     required this.reducedMotion,
     required this.onChanged,
+    this.onReselectCurrent,
     this.roadmapKey,
   });
 
@@ -22,6 +24,7 @@ class _MobileWorkspaceNav extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Container(
+        key: const ValueKey('mobile-workspace-nav'),
         padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
         decoration: BoxDecoration(
           color: _MobileJournalTokens.surfaceColor(isDark),
@@ -39,7 +42,13 @@ class _MobileWorkspaceNav extends StatelessWidget {
                     label: 'Раздел ${item.shortLabel}',
                     child: PressFeedback(
                       scale: 0.96,
-                      onTap: () => onChanged(item),
+                      onTap: () {
+                        if (item == mode) {
+                          onReselectCurrent?.call();
+                          return;
+                        }
+                        onChanged(item);
+                      },
                       child: Center(
                         child: AnimatedContainer(
                           duration: MobileMotion.duration(

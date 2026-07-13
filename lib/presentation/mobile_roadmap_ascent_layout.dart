@@ -7,8 +7,10 @@ import '../engines/roadmap_engine.dart';
 /// Mobile-only projection of the existing RoadMap graph.
 ///
 /// The domain keeps its prerequisite direction. This calculator only maps that
-/// direction onto an ascent: the skill root is at the bottom and every child
-/// stage is placed above its prerequisite.
+/// direction onto a readable mobile path: the skill root stays at the top,
+/// while the foundation sits at the bottom and later stages rise toward the
+/// skill. This is presentation geometry only; the stored RoadMap graph is
+/// unchanged.
 class MobileRoadMapAscentLayout {
   const MobileRoadMapAscentLayout();
 
@@ -83,7 +85,7 @@ class MobileRoadMapAscentLayout {
         .toDouble();
     const stageRadius = 31.0;
     const rootRadius = 46.0;
-    const topPadding = 52.0;
+    const topPadding = 24.0;
     final laneSpacing = cardHeight + 10;
     final levelHeightByDepth = <int, double>{
       for (final entry in byDepth.entries)
@@ -91,18 +93,14 @@ class MobileRoadMapAscentLayout {
     };
     const bottomPadding = 18.0;
     const rootLabelHeight = 34.0;
-    final totalLevelHeight = levelHeightByDepth.values.fold<double>(
-      0,
-      (sum, height) => sum + height,
-    );
-    final rootCenter = Offset(
-      safeWidth / 2,
-      topPadding + stageRadius + totalLevelHeight,
-    );
+    final rootCenter = Offset(safeWidth / 2, topPadding + rootRadius);
     final nodes = <String, MobileRoadMapNodeGeometry>{};
-    var levelTop = topPadding + stageRadius;
+    var levelTop = topPadding + rootRadius * 2 + rootLabelHeight + 28;
 
-    for (var depth = maxDepth; depth >= 1; depth--) {
+    // The visual journey ascends from its foundation to the skill. Domain
+    // depth still describes prerequisites, so invert it only for coordinates.
+    for (var visualDepth = 1; visualDepth <= maxDepth; visualDepth++) {
+      final depth = maxDepth - visualDepth + 1;
       final group = byDepth[depth] ?? const <RoadmapStageInfo>[];
       final levelHeight = levelHeightByDepth[depth] ?? 150;
       final levelCenter = levelTop + levelHeight / 2;
@@ -160,17 +158,16 @@ class MobileRoadMapAscentLayout {
       if (!hasUpwardParent) {
         edges.add(
           MobileRoadMapEdgeGeometry(
-            fromId: MobileRoadMapLayoutResult.rootId,
-            toId: stage.node.id,
-            from: rootCenter,
-            to: child.center,
+            fromId: stage.node.id,
+            toId: MobileRoadMapLayoutResult.rootId,
+            from: child.center,
+            to: rootCenter,
           ),
         );
       }
     }
 
-    final totalHeight =
-        rootCenter.dy + rootRadius + rootLabelHeight + bottomPadding;
+    final totalHeight = levelTop + bottomPadding;
     final traversal = stages.toList(growable: false)
       ..sort((left, right) {
         final depthOrder = (depths[left.node.id] ?? 1).compareTo(
@@ -190,7 +187,38 @@ class MobileRoadMapAscentLayout {
       edges: edges,
       semanticTraversal: traversal,
       hasCycle: hasCycle,
+      paintSignature: _paintSignature(
+        size: Size(safeWidth, totalHeight),
+        rootCenter: rootCenter,
+        nodes: nodes,
+        edges: edges,
+      ),
     );
+  }
+
+  String _paintSignature({
+    required Size size,
+    required Offset rootCenter,
+    required Map<String, MobileRoadMapNodeGeometry> nodes,
+    required List<MobileRoadMapEdgeGeometry> edges,
+  }) {
+    final signature = StringBuffer(
+      '${size.width}:${size.height}:${rootCenter.dx}:${rootCenter.dy}',
+    );
+    final orderedNodes = nodes.entries.toList()
+      ..sort((left, right) => left.key.compareTo(right.key));
+    for (final entry in orderedNodes) {
+      final node = entry.value;
+      signature.write(
+        ':${entry.key}:${node.center.dx},${node.center.dy}:${node.stage.status.name}',
+      );
+    }
+    for (final edge in edges) {
+      signature.write(
+        ':${edge.fromId}>${edge.toId}:${edge.from.dx},${edge.from.dy}:${edge.to.dx},${edge.to.dy}',
+      );
+    }
+    return signature.toString();
   }
 }
 
@@ -204,6 +232,7 @@ class MobileRoadMapLayoutResult {
   final List<MobileRoadMapEdgeGeometry> edges;
   final List<RoadmapStageInfo> semanticTraversal;
   final bool hasCycle;
+  final String paintSignature;
 
   const MobileRoadMapLayoutResult({
     required this.size,
@@ -213,6 +242,7 @@ class MobileRoadMapLayoutResult {
     required this.edges,
     required this.semanticTraversal,
     required this.hasCycle,
+    required this.paintSignature,
   });
 
   factory MobileRoadMapLayoutResult.empty({required double width}) {
@@ -224,6 +254,7 @@ class MobileRoadMapLayoutResult {
       edges: const [],
       semanticTraversal: const [],
       hasCycle: false,
+      paintSignature: 'empty:$width',
     );
   }
 }

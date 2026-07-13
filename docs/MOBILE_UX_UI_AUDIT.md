@@ -479,8 +479,9 @@ changes. The only product-logic change in that batch was the approved fixed
    completion and undo update profile XP and today's XP/action count only; they
    remain isolated from skill XP, RoadMap, history, buffs, achievements, chests,
    and milestones. Desktop keeps the system-skill layout and shared XP copy.
-4. Mobile RoadMap is one presentation-only ascent graph: a root skill sphere,
-   upward connectors, topology-aware branch placement, alternating stage cards,
+4. Mobile RoadMap is one presentation-only vertical ascent: a root skill sphere
+   at the top, a foundation stage at the bottom, upward connectors,
+   topology-aware branch placement, alternating stage cards,
    and safe details/templates sheets. Desktop keeps canvas-first behavior.
 5. Mobile AddSkill now has a live emblem rather than a fake skill card,
    meaningful icon semantics, non-persisted category filters, squircle color
@@ -737,21 +738,37 @@ fully selected skill styling while the focus chooser is visible; selecting a
 skill replaces the overview guidance with its focus workspace. Native Android
 and large-text visual QA remains manual work.
 
-## 1.3.59 Bottom-Up Mobile RoadMap
+## Mobile RoadMap Geometry Recovery
 
-Mobile RoadMap no longer reuses the former top-down path list. A pure
-`MobileRoadMapAscentLayout` projects existing RoadMap data into a bottom-up
-graph: the selected skill is the root sphere at the base; prerequisite stages
-rise above it; and arrows point upward. The projection preserves domain order,
+`MobileRoadMapAscentLayout` projects existing RoadMap data into a vertical
+ascent graph: the selected skill is the root sphere at the top; the earliest
+foundation stage begins at the bottom; and prerequisite-aware connectors point
+upward toward the skill. The projection preserves domain order,
 branch/merge edges, templates, quest links, and desktop rendering because it
 does not mutate `RoadmapEngine` or persisted topology.
 
 Stage cards alternate around their corresponding circles for a linear route;
 branched depths receive independent lanes to prevent card overlap. Root and
-stage details open contextually in existing SafeArea sheets. Initial focus runs
-once when a skill is selected and then leaves scrolling to the user. The graph
-uses reduced-motion-aware switch timing; native animation and 2.0x text-scale
-QA remain manual work.
+stage details open contextually in existing SafeArea sheets. Initial rendering
+keeps the root and first meaningful stage below the controls rather than
+auto-scrolling to a later stage. The graph uses reduced-motion-aware switch
+timing; native animation and 2.0x text-scale QA remain manual work.
+
+## Stage B Mobile Continuity
+
+Mobile Profile, Trophies, Daily victories, Weekly analytics, and Chronicle now
+open as SafeArea full-page routes rather than desktop-shaped dialogs. The
+existing Statistics workspace remains the primary full page; its secondary
+detail entries use the same route policy. Android Back first closes the top
+route, then returns to the prior workspace. Desktop continues to use its
+existing dialog/shell composition.
+
+The Inbox is a docked Overview surface directly above bottom navigation rather
+than a final item in the main skill/focus scroll area. Re-selecting `Сейчас`
+or pressing Back collapses the expanded Inbox before navigation changes. These
+are presentation changes only: Inbox identity, quick-task rewards, storage,
+and task rules are unchanged. Physical-device, `2.0x` text-scale, and profile
+frame-timing QA remain pending.
 
 ## Reference Checklist
 

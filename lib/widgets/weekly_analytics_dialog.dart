@@ -8,8 +8,13 @@ import 'shared.dart';
 
 class WeeklyAnalyticsDialog extends StatefulWidget {
   final AppState state;
+  final bool fullScreen;
 
-  const WeeklyAnalyticsDialog({super.key, required this.state});
+  const WeeklyAnalyticsDialog({
+    super.key,
+    required this.state,
+    this.fullScreen = false,
+  });
 
   @override
   State<WeeklyAnalyticsDialog> createState() => _WeeklyAnalyticsDialogState();
@@ -35,178 +40,186 @@ class _WeeklyAnalyticsDialogState extends State<WeeklyAnalyticsDialog> {
     final size = MediaQuery.sizeOf(context);
     final availableWidth = size.width - 36;
     final availableHeight = size.height - 40;
-    final dialogWidth = availableWidth < 360
+    final dialogWidth = widget.fullScreen
+        ? size.width
+        : availableWidth < 360
         ? availableWidth
         : availableWidth.clamp(360.0, 900.0).toDouble();
-    final maxHeight = availableHeight < 520
+    final maxHeight = widget.fullScreen
+        ? size.height
+        : availableHeight < 520
         ? availableHeight
         : availableHeight.clamp(520.0, 720.0).toDouble();
+
+    final content = Container(
+      width: dialogWidth,
+      constraints: widget.fullScreen
+          ? const BoxConstraints()
+          : BoxConstraints(maxHeight: maxHeight),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(widget.fullScreen ? 0 : 22),
+        border: widget.fullScreen ? null : Border.all(color: bdr),
+        boxShadow: widget.fullScreen
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withAlpha(isDark ? 90 : 30),
+                  blurRadius: 26,
+                  offset: const Offset(0, 16),
+                ),
+              ],
+      ),
+      child: Column(
+        children: [
+          _WeeklyHeader(
+            isDark: isDark,
+            weekStart: _weekStart,
+            canGoNext: canGoNext,
+            onPrevious: () => setState(
+              () => _weekStart = _weekStart.subtract(const Duration(days: 7)),
+            ),
+            onNext: canGoNext
+                ? () => setState(
+                    () => _weekStart = _weekStart.add(const Duration(days: 7)),
+                  )
+                : null,
+            onClose: () => Navigator.pop(context),
+          ),
+          Container(height: 1, color: bdr),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  MotionFadeSlideSwitcher(
+                    child: _WeeklyOverview(
+                      key: ValueKey(
+                        'week-overview-${_weekStart.toIso8601String()}',
+                      ),
+                      summary: summary,
+                      isDark: isDark,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  MotionFadeSlideSwitcher(
+                    child: _ProcrastinationInsightsCard(
+                      key: ValueKey(
+                        'week-procrastination-${summary.procrastination.signature}',
+                      ),
+                      summary: summary,
+                      isDark: isDark,
+                      onStartMinimum: (taskId) {
+                        final message = widget.state.completeMinimumAction(
+                          taskId,
+                        );
+                        if (message != null) {
+                          AppFeedback.questResult(message, isMinimum: true);
+                          ScaffoldMessenger.maybeOf(
+                            context,
+                          )?.showSnackBar(SnackBar(content: Text(message)));
+                        }
+                        setState(() {});
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final wide = constraints.maxWidth >= 760;
+                      final skills = _WeeklySkillBreakdown(
+                        summary: summary,
+                        isDark: isDark,
+                      );
+                      final graph = _WeeklyXpChart(
+                        summary: summary,
+                        isDark: isDark,
+                      );
+
+                      if (!wide) {
+                        return Column(
+                          children: [skills, const SizedBox(height: 14), graph],
+                        );
+                      }
+
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(flex: 5, child: skills),
+                          const SizedBox(width: 14),
+                          Expanded(flex: 6, child: graph),
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final wide = constraints.maxWidth >= 760;
+                      final tasks = _WeeklyTaskList(
+                        summary: summary,
+                        isDark: isDark,
+                      );
+                      final risks = _WeeklyStreakRisks(
+                        summary: summary,
+                        isDark: isDark,
+                      );
+
+                      if (!wide) {
+                        return Column(
+                          children: [tasks, const SizedBox(height: 14), risks],
+                        );
+                      }
+
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(flex: 6, child: tasks),
+                          const SizedBox(width: 14),
+                          Expanded(flex: 5, child: risks),
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  MotionFadeSlideSwitcher(
+                    child: _WeeklyGoalCard(
+                      key: ValueKey(
+                        'week-goal-${summary.weeklyGoal?.id ?? 'empty'}-${summary.weeklyGoal?.updatedAt.millisecondsSinceEpoch ?? 0}',
+                      ),
+                      summary: summary,
+                      isDark: isDark,
+                      onEdit: () => _openGoalEditor(summary),
+                      onToggleKeyResult: (keyResultId) {
+                        final goal = summary.weeklyGoal;
+                        if (goal == null) return;
+                        widget.state.toggleWeeklyKeyResult(
+                          goal.id,
+                          keyResultId,
+                        );
+                        setState(() {});
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (widget.fullScreen) {
+      return Scaffold(
+        backgroundColor: bg,
+        body: SafeArea(child: SizedBox.expand(child: content)),
+      );
+    }
 
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
-      child: Container(
-        width: dialogWidth,
-        constraints: BoxConstraints(maxHeight: maxHeight),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: bdr),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withAlpha(isDark ? 90 : 30),
-              blurRadius: 26,
-              offset: const Offset(0, 16),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            _WeeklyHeader(
-              isDark: isDark,
-              weekStart: _weekStart,
-              canGoNext: canGoNext,
-              onPrevious: () => setState(
-                () => _weekStart = _weekStart.subtract(const Duration(days: 7)),
-              ),
-              onNext: canGoNext
-                  ? () => setState(
-                      () =>
-                          _weekStart = _weekStart.add(const Duration(days: 7)),
-                    )
-                  : null,
-              onClose: () => Navigator.pop(context),
-            ),
-            Container(height: 1, color: bdr),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    MotionFadeSlideSwitcher(
-                      child: _WeeklyOverview(
-                        key: ValueKey(
-                          'week-overview-${_weekStart.toIso8601String()}',
-                        ),
-                        summary: summary,
-                        isDark: isDark,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    MotionFadeSlideSwitcher(
-                      child: _ProcrastinationInsightsCard(
-                        key: ValueKey(
-                          'week-procrastination-${summary.procrastination.signature}',
-                        ),
-                        summary: summary,
-                        isDark: isDark,
-                        onStartMinimum: (taskId) {
-                          final message = widget.state.completeMinimumAction(
-                            taskId,
-                          );
-                          if (message != null) {
-                            AppFeedback.questResult(message, isMinimum: true);
-                            ScaffoldMessenger.maybeOf(
-                              context,
-                            )?.showSnackBar(SnackBar(content: Text(message)));
-                          }
-                          setState(() {});
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final wide = constraints.maxWidth >= 760;
-                        final skills = _WeeklySkillBreakdown(
-                          summary: summary,
-                          isDark: isDark,
-                        );
-                        final graph = _WeeklyXpChart(
-                          summary: summary,
-                          isDark: isDark,
-                        );
-
-                        if (!wide) {
-                          return Column(
-                            children: [
-                              skills,
-                              const SizedBox(height: 14),
-                              graph,
-                            ],
-                          );
-                        }
-
-                        return Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(flex: 5, child: skills),
-                            const SizedBox(width: 14),
-                            Expanded(flex: 6, child: graph),
-                          ],
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 14),
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final wide = constraints.maxWidth >= 760;
-                        final tasks = _WeeklyTaskList(
-                          summary: summary,
-                          isDark: isDark,
-                        );
-                        final risks = _WeeklyStreakRisks(
-                          summary: summary,
-                          isDark: isDark,
-                        );
-
-                        if (!wide) {
-                          return Column(
-                            children: [
-                              tasks,
-                              const SizedBox(height: 14),
-                              risks,
-                            ],
-                          );
-                        }
-
-                        return Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(flex: 6, child: tasks),
-                            const SizedBox(width: 14),
-                            Expanded(flex: 5, child: risks),
-                          ],
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 14),
-                    MotionFadeSlideSwitcher(
-                      child: _WeeklyGoalCard(
-                        key: ValueKey(
-                          'week-goal-${summary.weeklyGoal?.id ?? 'empty'}-${summary.weeklyGoal?.updatedAt.millisecondsSinceEpoch ?? 0}',
-                        ),
-                        summary: summary,
-                        isDark: isDark,
-                        onEdit: () => _openGoalEditor(summary),
-                        onToggleKeyResult: (keyResultId) {
-                          final goal = summary.weeklyGoal;
-                          if (goal == null) return;
-                          widget.state.toggleWeeklyKeyResult(
-                            goal.id,
-                            keyResultId,
-                          );
-                          setState(() {});
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+      child: content,
     );
   }
 

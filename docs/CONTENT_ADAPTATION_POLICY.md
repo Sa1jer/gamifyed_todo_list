@@ -75,14 +75,19 @@ states require their own local audit before adopting the same rules.
 
 ## Unified Mobile RoadMap
 
-Mobile RoadMap is one vertical, scroll-led bottom-up ascent graph. A local,
-pure layout calculator uses available width and text scale to place the skill
-root at the bottom, topology depths above it, and branch cards in non-overlapping
-lanes. The mobile route does not reuse desktop free-pan canvas geometry or
-mutate stored RoadMap order.
-Circular nodes and adjacent descriptions follow source graph order
-top-to-bottom; branch paths are selected from existing `RoadmapEngine` output
+Mobile RoadMap is one vertical, scroll-led ascent path. A local, pure layout
+calculator uses available width and text scale to place the skill root at the
+top, the earliest foundation at the bottom, and branch cards in
+non-overlapping lanes. The mobile route does not reuse desktop free-pan canvas
+geometry or mutate stored RoadMap order.
+Circular nodes and adjacent descriptions visually climb from source foundations
+to later stages; branch paths are selected from existing `RoadmapEngine` output
 without changing graph data.
+
+Node state is not conveyed by a standalone directional-arrow node: active,
+next, completed, and locked nodes use distinct icon/state treatments, while
+the connector itself expresses the upward path direction. This prevents the
+mobile path from implying a separate persisted RoadMap entity.
 
 ## Testing Matrix
 

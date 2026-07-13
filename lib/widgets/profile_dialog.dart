@@ -16,7 +16,9 @@ import 'shared.dart';
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class ProfileDialog extends StatefulWidget {
-  const ProfileDialog({super.key});
+  final bool fullScreen;
+
+  const ProfileDialog({super.key, this.fullScreen = false});
   @override
   State<ProfileDialog> createState() => _ProfileDialogState();
 }
@@ -220,94 +222,106 @@ class _ProfileDialogState extends State<ProfileDialog> {
     final sub = subtext(isDark);
     final bdr = borderColor(isDark);
 
+    final content = ClipRRect(
+      borderRadius: BorderRadius.circular(widget.fullScreen ? 0 : 20),
+      child: Container(
+        width: widget.fullScreen ? double.infinity : 460,
+        constraints: widget.fullScreen
+            ? const BoxConstraints()
+            : const BoxConstraints(maxHeight: 680),
+        color: bg,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // ── Banner ─────────────────────────────────────────────────
+                _buildBannerSection(context, s, p),
+                // ── Scrollable Body ───────────────────────────────────────
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildNameRow(context, s, p, txt, sub),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            LvlBadge(
+                              level: p.level,
+                              color: const Color(0xFF4A9EFF),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 18),
+                        Container(height: 1, color: bdr),
+                        const SizedBox(height: 14),
+                        _buildXPSection(p, sub),
+                        const SizedBox(height: 6),
+                        _buildTotalXP(p, txt, sub),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Изучаю ${s.activeSkillCount} ${_skillWord(s.activeSkillCount)}',
+                          style: TextStyle(color: sub, fontSize: 13),
+                        ),
+                        const SizedBox(height: 10),
+                        _ProfileTimelineButton(
+                          state: s,
+                          isDark: isDark,
+                          txt: txt,
+                          sub: sub,
+                          fullScreen: widget.fullScreen,
+                        ),
+                        const SizedBox(height: 18),
+                        Container(height: 1, color: bdr),
+                        const SizedBox(height: 14),
+                        _buildPersonalInfo(
+                          context,
+                          s,
+                          p,
+                          isDark,
+                          txt,
+                          sub,
+                          bdr,
+                        ),
+                        const SizedBox(height: 18),
+                        Container(height: 1, color: bdr),
+                        const SizedBox(height: 14),
+                        _buildInterfaceSettings(s, isDark, txt, sub, bdr),
+                        const SizedBox(height: 18),
+                        Container(height: 1, color: bdr),
+                        const SizedBox(height: 14),
+                        _buildSkillsSection(context, s, isDark, txt, sub),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            // Keep avatar above the scrollable body during scroll.
+            Positioned(
+              top: 120,
+              left: 24,
+              child: _buildAvatar(context, s, p, isDark),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (widget.fullScreen) {
+      return Scaffold(
+        backgroundColor: bg,
+        body: SafeArea(child: SizedBox.expand(child: content)),
+      );
+    }
+
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 60, vertical: 40),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          width: 460,
-          constraints: const BoxConstraints(maxHeight: 680),
-          color: bg,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // ── Banner ─────────────────────────────────────────────────
-                  _buildBannerSection(context, s, p),
-                  // ── Scrollable Body ───────────────────────────────────────
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildNameRow(context, s, p, txt, sub),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              LvlBadge(
-                                level: p.level,
-                                color: const Color(0xFF4A9EFF),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 18),
-                          Container(height: 1, color: bdr),
-                          const SizedBox(height: 14),
-                          _buildXPSection(p, sub),
-                          const SizedBox(height: 6),
-                          _buildTotalXP(p, txt, sub),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Изучаю ${s.activeSkillCount} ${_skillWord(s.activeSkillCount)}',
-                            style: TextStyle(color: sub, fontSize: 13),
-                          ),
-                          const SizedBox(height: 10),
-                          _ProfileTimelineButton(
-                            state: s,
-                            isDark: isDark,
-                            txt: txt,
-                            sub: sub,
-                          ),
-                          const SizedBox(height: 18),
-                          Container(height: 1, color: bdr),
-                          const SizedBox(height: 14),
-                          _buildPersonalInfo(
-                            context,
-                            s,
-                            p,
-                            isDark,
-                            txt,
-                            sub,
-                            bdr,
-                          ),
-                          const SizedBox(height: 18),
-                          Container(height: 1, color: bdr),
-                          const SizedBox(height: 14),
-                          _buildInterfaceSettings(s, isDark, txt, sub, bdr),
-                          const SizedBox(height: 18),
-                          Container(height: 1, color: bdr),
-                          const SizedBox(height: 14),
-                          _buildSkillsSection(context, s, isDark, txt, sub),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              // Keep avatar above the scrollable body during scroll.
-              Positioned(
-                top: 120,
-                left: 24,
-                child: _buildAvatar(context, s, p, isDark),
-              ),
-            ],
-          ),
-        ),
-      ),
+      child: content,
     );
   }
 
@@ -913,12 +927,14 @@ class _ProfileTimelineButton extends StatelessWidget {
   final bool isDark;
   final Color txt;
   final Color sub;
+  final bool fullScreen;
 
   const _ProfileTimelineButton({
     required this.state,
     required this.isDark,
     required this.txt,
     required this.sub,
+    required this.fullScreen,
   });
 
   @override
@@ -928,10 +944,22 @@ class _ProfileTimelineButton extends StatelessWidget {
     return PressFeedback(
       scale: 0.98,
       tooltip: 'Открыть летопись роста персонажа',
-      onTap: () => showDialog(
-        context: context,
-        builder: (_) => CharacterTimelineDialog(state: state),
-      ),
+      onTap: () {
+        if (fullScreen) {
+          Navigator.of(context).push<void>(
+            MaterialPageRoute<void>(
+              fullscreenDialog: true,
+              builder: (_) =>
+                  CharacterTimelineDialog(state: state, fullScreen: true),
+            ),
+          );
+          return;
+        }
+        showDialog(
+          context: context,
+          builder: (_) => CharacterTimelineDialog(state: state),
+        );
+      },
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(12),

@@ -43,43 +43,6 @@ class _MobileRoadmapJournal extends StatefulWidget {
 }
 
 class _MobileRoadmapJournalState extends State<_MobileRoadmapJournal> {
-  final GlobalKey _initialFocusKey = GlobalKey();
-  String? _queuedFocusSkillId;
-
-  @override
-  void initState() {
-    super.initState();
-    _queueCurrentStageFocus();
-  }
-
-  @override
-  void didUpdateWidget(covariant _MobileRoadmapJournal oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.selection?.skillId != widget.selection?.skillId) {
-      // One focus request per explicit skill change, never on ordinary rebuilds.
-      _queuedFocusSkillId = null;
-      _queueCurrentStageFocus();
-    }
-  }
-
-  void _queueCurrentStageFocus() {
-    final skillId = widget.selection?.skillId;
-    if (skillId == null || _queuedFocusSkillId == skillId) return;
-    _queuedFocusSkillId = skillId;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || widget.selection?.skillId != skillId) return;
-      final stageContext = _initialFocusKey.currentContext;
-      if (stageContext == null) return;
-      Scrollable.ensureVisible(
-        stageContext,
-        alignment: 0.28,
-        duration: _roadmapMotionDuration(context),
-        curve: Curves.easeOutCubic,
-      );
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final selection = widget.selection;
@@ -196,15 +159,11 @@ class _MobileRoadmapJournalState extends State<_MobileRoadmapJournal> {
       );
     }
 
-    final initialFocusId =
-        snapshot.currentStage?.node.id ?? snapshot.stages.firstOrNull?.node.id;
     return _MobileRoadmapAscentGraph(
       key: ValueKey('mobile-roadmap-unified-${skill.id}'),
       skill: skill,
       snapshot: snapshot,
       isDark: widget.isDark,
-      initialFocusId: initialFocusId,
-      initialFocusKey: _initialFocusKey,
       onTapRoot: () => _showSkillDetails(skill),
       onTapStage: (node) => _showStageDetails(skill, node),
     );
@@ -326,8 +285,6 @@ class _MobileRoadmapAscentGraph extends StatelessWidget {
   final Skill skill;
   final RoadmapSnapshot snapshot;
   final bool isDark;
-  final String? initialFocusId;
-  final GlobalKey initialFocusKey;
   final VoidCallback onTapRoot;
   final ValueChanged<SkillTreeNode> onTapStage;
 
@@ -336,8 +293,6 @@ class _MobileRoadmapAscentGraph extends StatelessWidget {
     required this.skill,
     required this.snapshot,
     required this.isDark,
-    required this.initialFocusId,
-    required this.initialFocusKey,
     required this.onTapRoot,
     required this.onTapStage,
   });
@@ -387,15 +342,10 @@ class _MobileRoadmapAscentGraph extends StatelessWidget {
                       top: geometry.center.dy - geometry.radius,
                       width: geometry.radius * 2,
                       height: geometry.radius * 2,
-                      child: KeyedSubtree(
-                        key: geometry.stage.node.id == initialFocusId
-                            ? initialFocusKey
-                            : null,
-                        child: _MobileRoadmapStageNode(
-                          geometry: geometry,
-                          skill: skill,
-                          onTap: () => onTapStage(geometry.stage.node),
-                        ),
+                      child: _MobileRoadmapStageNode(
+                        geometry: geometry,
+                        skill: skill,
+                        onTap: () => onTapStage(geometry.stage.node),
                       ),
                     ),
                   ],
@@ -611,21 +561,31 @@ class _MobileRoadmapConnectionsPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     for (final edge in layout.edges) {
+      final source = layout.nodes[edge.fromId];
       final destination = layout.nodes[edge.toId];
-      if (destination == null || !edge.pointsUpward) continue;
-      final sourceRadius = edge.fromId == MobileRoadMapLayoutResult.rootId
+      final startsAtRoot = edge.fromId == MobileRoadMapLayoutResult.rootId;
+      final endsAtRoot = edge.toId == MobileRoadMapLayoutResult.rootId;
+      if ((source == null && !startsAtRoot) ||
+          (destination == null && !endsAtRoot) ||
+          !edge.pointsUpward) {
+        continue;
+      }
+      final sourceRadius = startsAtRoot ? layout.rootRadius : source!.radius;
+      final destinationRadius = endsAtRoot
           ? layout.rootRadius
-          : layout.nodes[edge.fromId]?.radius ?? 0;
+          : destination!.radius;
       final delta = edge.to - edge.from;
       final length = delta.distance;
       if (length < 1) continue;
       final direction = delta / length;
       final start = edge.from + direction * sourceRadius;
-      final end = edge.to - direction * destination.radius;
-      final visual = _stageVisual(destination.stage, skill);
+      final end = edge.to - direction * destinationRadius;
+      final visual = _stageVisual(destination?.stage ?? source!.stage, skill);
+      final isCurrentConnection =
+          destination?.stage.isCurrent ?? source?.stage.isCurrent ?? false;
       final paint = Paint()
-        ..color = visual.color.withAlpha(destination.stage.isCurrent ? 140 : 72)
-        ..strokeWidth = destination.stage.isCurrent ? 3 : 2
+        ..color = visual.color.withAlpha(isCurrentConnection ? 140 : 72)
+        ..strokeWidth = isCurrentConnection ? 3 : 2
         ..strokeCap = StrokeCap.round;
       canvas.drawLine(start, end, paint);
       final normal = Offset(-direction.dy, direction.dx);
@@ -647,7 +607,9 @@ class _MobileRoadmapConnectionsPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _MobileRoadmapConnectionsPainter oldDelegate) {
-    return oldDelegate.layout != layout || oldDelegate.skill.id != skill.id;
+    return oldDelegate.layout.paintSignature != layout.paintSignature ||
+        oldDelegate.skill.id != skill.id ||
+        oldDelegate.skill.color != skill.color;
   }
 }
 
@@ -931,7 +893,7 @@ _StageVisual _stageVisual(RoadmapStageInfo info, Skill skill) {
     ),
     RoadmapStageRole.next => _StageVisual(
       'Следующий',
-      Icons.arrow_downward_rounded,
+      Icons.radio_button_unchecked_rounded,
       skill.color.withAlpha(190),
     ),
     RoadmapStageRole.locked => const _StageVisual(

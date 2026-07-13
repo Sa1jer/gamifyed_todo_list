@@ -7,8 +7,13 @@ import 'shared.dart';
 
 class DailyVictoriesDialog extends StatelessWidget {
   final AppState state;
+  final bool fullScreen;
 
-  const DailyVictoriesDialog({super.key, required this.state});
+  const DailyVictoriesDialog({
+    super.key,
+    required this.state,
+    this.fullScreen = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -19,107 +24,120 @@ class DailyVictoriesDialog extends StatelessWidget {
     final bg = surface(isDark);
     final summary = _DailyVictorySummary.fromState(state);
 
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      child: Container(
-        width: 860,
-        constraints: const BoxConstraints(maxHeight: 720),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: bdr),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withAlpha(isDark ? 92 : 30),
-              blurRadius: 28,
-              offset: const Offset(0, 16),
+    final content = Container(
+      width: fullScreen ? double.infinity : 860,
+      constraints: fullScreen
+          ? const BoxConstraints()
+          : const BoxConstraints(maxHeight: 720),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(fullScreen ? 0 : 24),
+        border: fullScreen ? null : Border.all(color: bdr),
+        boxShadow: fullScreen
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withAlpha(isDark ? 92 : 30),
+                  blurRadius: 28,
+                  offset: const Offset(0, 16),
+                ),
+              ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(22, 18, 16, 14),
+            child: Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFCC00).withAlpha(26),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(
+                    Icons.celebration,
+                    color: Color(0xFFFFCC00),
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Победы дня',
+                        style: TextStyle(
+                          color: txt,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        '${formatShortDate(summary.today)} • итог сегодняшнего рывка',
+                        style: TextStyle(color: sub, fontSize: 12.5),
+                      ),
+                    ],
+                  ),
+                ),
+                PressFeedback(
+                  scale: 0.94,
+                  tooltip: 'Закрыть победы дня',
+                  onTap: () => Navigator.pop(context),
+                  child: Icon(Icons.close, color: sub, size: 22),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(22, 18, 16, 14),
-              child: Row(
+          ),
+          Container(height: 1, color: bdr),
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFCC00).withAlpha(26),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: const Icon(
-                      Icons.celebration,
-                      color: Color(0xFFFFCC00),
-                      size: 22,
-                    ),
+                  MotionListItem(
+                    index: 0,
+                    child: _VictoryHero(summary: summary, isDark: isDark),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Победы дня',
-                          style: TextStyle(
-                            color: txt,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          '${formatShortDate(summary.today)} • итог сегодняшнего рывка',
-                          style: TextStyle(color: sub, fontSize: 12.5),
-                        ),
-                      ],
-                    ),
+                  const SizedBox(height: 12),
+                  MotionListItem(
+                    index: 1,
+                    child: _VictoryMetrics(summary: summary, isDark: isDark),
                   ),
-                  PressFeedback(
-                    scale: 0.94,
-                    tooltip: 'Закрыть победы дня',
-                    onTap: () => Navigator.pop(context),
-                    child: Icon(Icons.close, color: sub, size: 22),
+                  const SizedBox(height: 12),
+                  _VictoryOverview(summary: summary, isDark: isDark),
+                  const SizedBox(height: 12),
+                  MotionListItem(
+                    index: 5,
+                    child: _VictoryTimeline(
+                      entries: summary.entries,
+                      isDark: isDark,
+                    ),
                   ),
                 ],
               ),
             ),
-            Container(height: 1, color: bdr),
-            Flexible(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    MotionListItem(
-                      index: 0,
-                      child: _VictoryHero(summary: summary, isDark: isDark),
-                    ),
-                    const SizedBox(height: 12),
-                    MotionListItem(
-                      index: 1,
-                      child: _VictoryMetrics(summary: summary, isDark: isDark),
-                    ),
-                    const SizedBox(height: 12),
-                    _VictoryOverview(summary: summary, isDark: isDark),
-                    const SizedBox(height: 12),
-                    MotionListItem(
-                      index: 5,
-                      child: _VictoryTimeline(
-                        entries: summary.entries,
-                        isDark: isDark,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
+    );
+
+    if (fullScreen) {
+      return Scaffold(
+        backgroundColor: bg,
+        body: SafeArea(child: SizedBox.expand(child: content)),
+      );
+    }
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      child: content,
     );
   }
 }

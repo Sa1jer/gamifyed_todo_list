@@ -14,6 +14,7 @@ class ProfileBar extends StatelessWidget {
   final VoidCallback? onRewardsTap;
   final VoidCallback? onStatsTap;
   final VoidCallback? onAppIconTap;
+  final VoidCallback? onProfileTap;
   final GlobalKey? rewardsKey;
   final GlobalKey? statsKey;
 
@@ -26,11 +27,17 @@ class ProfileBar extends StatelessWidget {
     this.onRewardsTap,
     this.onStatsTap,
     this.onAppIconTap,
+    this.onProfileTap,
     this.rewardsKey,
     this.statsKey,
   });
 
   void _openProfile(BuildContext context) {
+    final callback = onProfileTap;
+    if (callback != null) {
+      callback();
+      return;
+    }
     showDialog(
       context: context,
       builder: (_) => AppStateProvider(

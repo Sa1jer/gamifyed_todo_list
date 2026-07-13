@@ -38,6 +38,7 @@ class _MobileActJournal extends StatefulWidget {
   final Key? nextQuestActionKey;
 
   const _MobileActJournal({
+    super.key,
     required this.onComplete,
     required this.onMinimumAction,
     required this.onCreateSkill,
@@ -52,6 +53,7 @@ class _MobileActJournal extends StatefulWidget {
 
 class _MobileActJournalState extends State<_MobileActJournal> {
   bool _inboxExpanded = false;
+  String? _nextActionOverrideTaskId;
   _MobileSkillTransitionPhase _skillTransition =
       _MobileSkillTransitionPhase.idle;
   String? _transitionSkillId;
@@ -60,6 +62,12 @@ class _MobileActJournalState extends State<_MobileActJournal> {
   bool _transitionLocked = false;
 
   bool get _isSkillTransitioning => _transitionLocked;
+
+  void collapseInbox() {
+    if (_inboxExpanded && mounted) {
+      setState(() => _inboxExpanded = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -76,9 +84,13 @@ class _MobileActJournalState extends State<_MobileActJournal> {
     }
 
     return PopScope(
-      canPop: selectedSkill == null && !_isSkillTransitioning,
+      canPop:
+          selectedSkill == null && !_inboxExpanded && !_isSkillTransitioning,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop && selectedSkill != null) {
+        if (didPop) return;
+        if (_inboxExpanded) {
+          collapseInbox();
+        } else if (selectedSkill != null) {
           _closeSkillFocus(state, selectedSkill);
         }
       },
@@ -119,12 +131,35 @@ class _MobileActJournalState extends State<_MobileActJournal> {
           },
           layoutBuilder: (current, previous) => Stack(
             alignment: Alignment.topCenter,
+            fit: StackFit.expand,
             children: [...previous, ?current],
           ),
           child: selectedSkill == null
-              ? _buildOverview(context, state)
+              ? _buildOverviewWithDock(context, state)
               : _buildFocus(context, state, selectedSkill),
         ),
+      ),
+    );
+  }
+
+  Widget _buildOverviewWithDock(BuildContext context, AppState state) {
+    final inboxCount = state.inboxTasks.where((task) => !task.isDone).length;
+    return KeyedSubtree(
+      key: const ValueKey('mobile-skill-overview-with-inbox-dock'),
+      child: Column(
+        children: [
+          Expanded(child: _buildOverview(context, state)),
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: _MobileInboxAccordion(
+              expanded: _inboxExpanded,
+              taskCount: inboxCount,
+              isDark: state.isDark,
+              onToggle: () => setState(() => _inboxExpanded = !_inboxExpanded),
+              onComplete: widget.onComplete,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -194,7 +229,12 @@ class _MobileActJournalState extends State<_MobileActJournal> {
   Widget _buildOverview(BuildContext context, AppState state) {
     final isDark = state.isDark;
     final skills = state.roadmapSkills;
-    final inboxCount = state.inboxTasks.where((task) => !task.isDone).length;
+    final nextAction = const NextActionResolver().resolve(
+      skills: skills,
+      tasks: state.tasks,
+      selectedSkillId: state.selectedSkillId,
+      explicitTaskId: _nextActionOverrideTaskId,
+    );
     return LayoutBuilder(
       builder: (context, constraints) {
         return KeyedSubtree(
@@ -205,6 +245,23 @@ class _MobileActJournalState extends State<_MobileActJournal> {
               key: const ValueKey('mobile-skill-panel-compact'),
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: NextActionLens(
+                      resolution: nextAction,
+                      persistenceStatus: state.persistenceStatus,
+                      isDark: isDark,
+                      onOpenTask: (candidate) =>
+                          _openNextActionSkill(state, candidate.skill),
+                      onChooseTask: (taskId) =>
+                          setState(() => _nextActionOverrideTaskId = taskId),
+                      onOpenEmptySkill: (skill) =>
+                          _openNextActionSkill(state, skill),
+                      onCreateSkill: widget.onCreateSkill,
+                    ),
+                  ),
+                ),
                 SliverToBoxAdapter(child: _MobileMomentumRow(state: state)),
                 SliverToBoxAdapter(
                   child: Padding(
@@ -351,47 +408,22 @@ class _MobileActJournalState extends State<_MobileActJournal> {
                       },
                     ),
                   ),
-                if (skills.isNotEmpty)
-                  SliverLayoutBuilder(
-                    builder: (context, sliverConstraints) {
-                      // The remaining paint extent reflects the real local
-                      // viewport after the skill list, unlike a guessed sum
-                      // of global screen and card heights.
-                      final availableHeight = math.max(
-                        0.0,
-                        sliverConstraints.remainingPaintExtent - 94,
-                      );
-                      return SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.only(top: 12),
-                          child: _MobileFocusPlaceholder(
-                            availableHeight: availableHeight,
-                            availableWidth: sliverConstraints.crossAxisExtent,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: _MobileInboxAccordion(
-                      expanded: _inboxExpanded,
-                      taskCount: inboxCount,
-                      isDark: isDark,
-                      onToggle: () =>
-                          setState(() => _inboxExpanded = !_inboxExpanded),
-                      onComplete: widget.onComplete,
-                    ),
-                  ),
-                ),
-                const SliverToBoxAdapter(child: SizedBox(height: 12)),
+                // Keeps the final skill card reachable above the docked Inbox.
+                const SliverToBoxAdapter(child: SizedBox(height: 96)),
               ],
             ),
           ),
         );
       },
     );
+  }
+
+  void _openNextActionSkill(AppState state, Skill skill) {
+    final index = state.roadmapSkills.indexWhere(
+      (candidate) => candidate.id == skill.id,
+    );
+    if (index < 0) return;
+    _openSkillFocus(state, skill, index);
   }
 
   Widget _buildFocus(BuildContext context, AppState state, Skill skill) {
@@ -562,184 +594,6 @@ class _MobileActJournalState extends State<_MobileActJournal> {
     if (!mounted || confirmed != true) return;
     AppFeedback.destructive();
     state.removeSkill(skill.id);
-  }
-}
-
-class _MobileFocusPlaceholder extends StatelessWidget {
-  final double availableHeight;
-  final double availableWidth;
-
-  const _MobileFocusPlaceholder({
-    required this.availableHeight,
-    required this.availableWidth,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = AppStateProvider.of(context).isDark;
-    final textScale = MediaQuery.textScalerOf(context).scale(1);
-    final variant = switch ((availableHeight, textScale)) {
-      (final height, final scale) when scale < 1.9 && height >= 86 =>
-        _MobileFocusPlaceholderVariant.compact,
-      (final height, _) when height >= 58 =>
-        _MobileFocusPlaceholderVariant.minimal,
-      _ => _MobileFocusPlaceholderVariant.hidden,
-    };
-    final duration = _motionDuration(context);
-
-    return AnimatedSwitcher(
-      duration: duration,
-      switchInCurve: _MobileJournalTokens.curve,
-      switchOutCurve: Curves.easeIn,
-      layoutBuilder: (current, previous) => Stack(
-        alignment: Alignment.topCenter,
-        children: [...previous, ?current],
-      ),
-      child: switch (variant) {
-        _MobileFocusPlaceholderVariant.compact =>
-          _MobileFocusPlaceholderSurface(
-            key: const ValueKey('focus-placeholder-compact'),
-            isDark: isDark,
-            constraints: const BoxConstraints(minHeight: 82),
-            child: _MobileFocusPlaceholderCompact(isDark: isDark),
-          ),
-        _MobileFocusPlaceholderVariant.minimal =>
-          _MobileFocusPlaceholderMinimal(isDark: isDark),
-        _MobileFocusPlaceholderVariant.hidden => const SizedBox(
-          key: ValueKey('focus-placeholder-hidden'),
-        ),
-      },
-    );
-  }
-}
-
-enum _MobileFocusPlaceholderVariant { compact, minimal, hidden }
-
-class _MobileFocusPlaceholderSurface extends StatelessWidget {
-  final bool isDark;
-  final BoxConstraints constraints;
-  final Widget child;
-
-  const _MobileFocusPlaceholderSurface({
-    super.key,
-    required this.isDark,
-    required this.constraints,
-    required this.child,
-  });
-
-  @override
-  Widget build(BuildContext context) => Container(
-    key: const ValueKey('mobile-focus-placeholder'),
-    constraints: constraints,
-    width: double.infinity,
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-    decoration: BoxDecoration(
-      color: _MobileJournalTokens.surfaceColor(isDark),
-      borderRadius: BorderRadius.circular(_MobileJournalTokens.radiusLarge),
-      border: Border.all(color: _MobileJournalTokens.outline(isDark)),
-    ),
-    child: child,
-  );
-}
-
-class _MobileFocusPlaceholderMinimal extends StatelessWidget {
-  final bool isDark;
-
-  const _MobileFocusPlaceholderMinimal({required this.isDark});
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-    label: 'Выбери навык для фокуса',
-    child: Container(
-      key: const ValueKey('mobile-focus-placeholder'),
-      constraints: const BoxConstraints(minHeight: 56),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: _MobileJournalTokens.surfaceColor(isDark),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _MobileJournalTokens.outline(isDark)),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.adjust_rounded,
-            color: _MobileJournalTokens.violet,
-            size: 21,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Выбери навык для фокуса',
-              style: TextStyle(
-                color: _MobileJournalTokens.text(isDark),
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-class _MobileFocusPlaceholderCompact extends StatelessWidget {
-  final bool isDark;
-
-  const _MobileFocusPlaceholderCompact({required this.isDark});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: _MobileJournalTokens.violet.withAlpha(isDark ? 20 : 14),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: const Icon(
-            Icons.adjust_rounded,
-            color: _MobileJournalTokens.violet,
-          ),
-        ),
-        const SizedBox(width: 13),
-        Expanded(child: _MobileFocusPlaceholderCopy(isDark: isDark)),
-      ],
-    );
-  }
-}
-
-class _MobileFocusPlaceholderCopy extends StatelessWidget {
-  final bool isDark;
-
-  const _MobileFocusPlaceholderCopy({required this.isDark});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Выбери навык для фокуса',
-          textAlign: TextAlign.start,
-          style: TextStyle(
-            color: _MobileJournalTokens.text(isDark),
-            fontSize: 15,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Здесь появятся квесты, прогресс и цели',
-          textAlign: TextAlign.start,
-          style: TextStyle(
-            color: _MobileJournalTokens.muted(isDark),
-            fontSize: 11.5,
-          ),
-        ),
-      ],
-    );
   }
 }
 

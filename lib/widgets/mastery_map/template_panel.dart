@@ -548,43 +548,60 @@ class _RoadmapCounterControl extends StatelessWidget {
         borderRadius: BorderRadius.circular(11),
         border: Border.all(color: borderColor(isDark)),
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                color: textColor(isDark),
-                fontSize: 11.2,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          _RoadmapCounterButton(
-            icon: Icons.remove,
-            isDark: isDark,
-            color: color,
-            onTap: onDecrease,
-          ),
-          SizedBox(
-            width: 32,
-            child: Text(
-              '$value',
-              textAlign: TextAlign.center,
-              style: TextStyle(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final controls = Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _RoadmapCounterButton(
+                icon: Icons.remove,
+                isDark: isDark,
                 color: color,
-                fontSize: 14,
-                fontWeight: FontWeight.w900,
+                onTap: onDecrease,
               ),
+              SizedBox(
+                width: 32,
+                child: Text(
+                  '$value',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              _RoadmapCounterButton(
+                icon: Icons.add,
+                isDark: isDark,
+                color: color,
+                onTap: onIncrease,
+              ),
+            ],
+          );
+          final labelWidget = Text(
+            label,
+            maxLines: constraints.maxWidth < 260 ? 2 : 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: textColor(isDark),
+              fontSize: 11.2,
+              fontWeight: FontWeight.w800,
             ),
-          ),
-          _RoadmapCounterButton(
-            icon: Icons.add,
-            isDark: isDark,
-            color: color,
-            onTap: onIncrease,
-          ),
-        ],
+          );
+          if (constraints.maxWidth < 220) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [labelWidget, const SizedBox(height: 6), controls],
+            );
+          }
+          return Row(
+            children: [
+              Expanded(child: labelWidget),
+              controls,
+            ],
+          );
+        },
       ),
     );
   }

@@ -26,7 +26,7 @@ RoadmapStageInfo _stage(
 void main() {
   const calculator = MobileRoadMapAscentLayout();
 
-  test('places root and future stages in a bottom-up ascent', () {
+  test('places the skill above a path ascending from foundation', () {
     final layout = calculator.calculate(
       viewport: const Size(360, 600),
       stages: [
@@ -41,13 +41,31 @@ void main() {
     final mastery = layout.nodes['mastery']!;
 
     expect(layout.rootRadius, greaterThan(foundation.radius));
-    expect(layout.rootCenter.dy, greaterThan(foundation.center.dy));
-    expect(foundation.center.dy, greaterThan(practice.center.dy));
-    expect(practice.center.dy, greaterThan(mastery.center.dy));
+    expect(layout.rootCenter.dy, lessThan(foundation.center.dy));
+    expect(mastery.center.dy, lessThan(practice.center.dy));
+    expect(practice.center.dy, lessThan(foundation.center.dy));
     expect(layout.edges, isNotEmpty);
     expect(layout.edges.every((edge) => edge.pointsUpward), isTrue);
     expect(foundation.cardOnLeft, isNot(practice.cardOnLeft));
     expect(practice.cardOnLeft, isNot(mastery.cardOnLeft));
+  });
+
+  test('keeps the visual paint signature stable for unchanged geometry', () {
+    final stages = [
+      _stage('signature-root', 'Основа'),
+      _stage('signature-child', 'Практика', prerequisites: ['signature-root']),
+    ];
+
+    final first = calculator.calculate(
+      viewport: const Size(360, 600),
+      stages: stages,
+    );
+    final repeated = calculator.calculate(
+      viewport: const Size(360, 600),
+      stages: stages,
+    );
+
+    expect(repeated.paintSignature, first.paintSignature);
   });
 
   test('keeps a branched topology without overlapping description cards', () {
@@ -68,14 +86,24 @@ void main() {
       layout.nodes['right']!,
     ];
 
-    expect(layout.rootCenter.dy, greaterThan(root.center.dy));
+    expect(layout.rootCenter.dy, lessThan(root.center.dy));
     expect(
       branches.every((branch) => root.center.dy > branch.center.dy),
       isTrue,
     );
     expect(
       layout.edges.where((edge) => edge.fromId == 'root-stage'),
-      hasLength(3),
+      hasLength(4),
+    );
+    expect(
+      layout.edges
+          .where(
+            (edge) =>
+                edge.fromId == 'root-stage' &&
+                edge.toId != MobileRoadMapLayoutResult.rootId,
+          )
+          .length,
+      3,
     );
     for (var index = 0; index < branches.length; index++) {
       for (var other = index + 1; other < branches.length; other++) {

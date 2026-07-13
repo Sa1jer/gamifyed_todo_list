@@ -27,6 +27,7 @@ class _MainPageState extends State<MainPage> {
   final GlobalKey _roadmapInspectorKey = GlobalKey();
   final GlobalKey _roadmapPracticeKey = GlobalKey();
   final GlobalKey _profileBarKey = GlobalKey();
+  final GlobalKey<_MobileActJournalState> _mobileActJournalKey = GlobalKey();
   WorkspaceMode _mode = WorkspaceMode.act;
   WorkspaceMode _lastNormalMode = WorkspaceMode.act;
   _RewardNotice? _rewardNotice;
@@ -39,6 +40,7 @@ class _MainPageState extends State<MainPage> {
   bool _statsTutorialActive = false;
   bool _rewardsTutorialActive = false;
   bool _tutorialStepPaused = false;
+  bool _mobileWorkspaceRouteOpen = false;
   String? _lastTutorialStepId;
   String? _pendingTutorialStepId;
   Timer? _tutorialStepDelayTimer;
@@ -166,12 +168,53 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
+  bool get _usesMobileWorkspaceRoutes =>
+      MobileResponsiveMetrics.isMobileWidth(MediaQuery.sizeOf(context).width);
+
+  Future<void> _openMobileWorkspaceRoute(Widget Function() pageBuilder) async {
+    if (!mounted || _mobileWorkspaceRouteOpen) return;
+    setState(() => _mobileWorkspaceRouteOpen = true);
+    try {
+      await Navigator.of(context, rootNavigator: true).push<void>(
+        MaterialPageRoute<void>(
+          fullscreenDialog: true,
+          builder: (_) => pageBuilder(),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _mobileWorkspaceRouteOpen = false);
+    }
+  }
+
   void _openRewardsDialog(AppState state, {bool showTutorialHint = false}) {
     AppFeedback.selection();
     setState(() {
       _rewardNotice = null;
       if (showTutorialHint) _rewardsTutorialActive = true;
     });
+    if (_usesMobileWorkspaceRoutes) {
+      _openMobileWorkspaceRoute(
+        () => RewardsDialog(
+          state: state,
+          fullScreen: true,
+          showTutorialHint: showTutorialHint,
+          onTutorialComplete: showTutorialHint
+              ? () {
+                  _completeRewardsTutorial(state);
+                  Navigator.of(context, rootNavigator: true).maybePop();
+                  if (mounted) {
+                    setState(() => _rewardsTutorialActive = false);
+                  }
+                }
+              : null,
+        ),
+      ).whenComplete(() {
+        if (showTutorialHint && mounted) {
+          setState(() => _rewardsTutorialActive = false);
+        }
+      });
+      return;
+    }
     showDialog(
       context: context,
       builder: (dialogContext) => RewardsDialog(
@@ -193,6 +236,12 @@ class _MainPageState extends State<MainPage> {
   }
 
   void _openDailyVictoriesDialog(AppState state) {
+    if (_usesMobileWorkspaceRoutes) {
+      _openMobileWorkspaceRoute(
+        () => DailyVictoriesDialog(state: state, fullScreen: true),
+      );
+      return;
+    }
     showDialog(
       context: context,
       builder: (_) => DailyVictoriesDialog(state: state),
@@ -200,6 +249,12 @@ class _MainPageState extends State<MainPage> {
   }
 
   void _openCharacterTimelineDialog(AppState state) {
+    if (_usesMobileWorkspaceRoutes) {
+      _openMobileWorkspaceRoute(
+        () => CharacterTimelineDialog(state: state, fullScreen: true),
+      );
+      return;
+    }
     showDialog(
       context: context,
       builder: (_) => CharacterTimelineDialog(state: state),
@@ -207,6 +262,12 @@ class _MainPageState extends State<MainPage> {
   }
 
   void _openWeeklyDialog(AppState state) {
+    if (_usesMobileWorkspaceRoutes) {
+      _openMobileWorkspaceRoute(
+        () => WeeklyAnalyticsDialog(state: state, fullScreen: true),
+      );
+      return;
+    }
     showDialog(
       context: context,
       builder: (_) => WeeklyAnalyticsDialog(state: state),
@@ -861,6 +922,15 @@ class _MainPageState extends State<MainPage> {
 
         void openProfile() {
           final capturedState = s;
+          if (mobileShell) {
+            _openMobileWorkspaceRoute(
+              () => AppStateProvider(
+                state: capturedState,
+                child: const ProfileDialog(fullScreen: true),
+              ),
+            );
+            return;
+          }
           showDialog<void>(
             context: context,
             builder: (_) => AppStateProvider(
@@ -955,12 +1025,13 @@ class _MainPageState extends State<MainPage> {
                       onAppIconTap: !kReleaseMode
                           ? () => _handleDebugAdminTap(s)
                           : null,
+                      onProfileTap: openProfile,
                       rewardsKey: _rewardsButtonKey,
                       statsKey: _statsButtonKey,
                     ),
                     Expanded(
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
                         child: MotionFadeSlideSwitcher(
                           child: switch (displayedMode) {
                             WorkspaceMode.act => _ActWorkspace(
@@ -973,6 +1044,7 @@ class _MainPageState extends State<MainPage> {
                               createFirstSkillButtonKey: _firstSkillCtaKey,
                               createFirstQuestButtonKey: _firstQuestCtaKey,
                               nextQuestActionKey: _nextQuestActionKey,
+                              mobileJournalKey: _mobileActJournalKey,
                             ),
                             WorkspaceMode.mastery => _MasteryWorkspace(
                               key: const ValueKey('mastery-workspace'),
@@ -1002,6 +1074,9 @@ class _MainPageState extends State<MainPage> {
                       isDark: isDark,
                       reducedMotion: s.reducedMotion,
                       onChanged: changeMode,
+                      onReselectCurrent: displayedMode == WorkspaceMode.act
+                          ? _mobileActJournalKey.currentState?.collapseInbox
+                          : null,
                       roadmapKey: _roadmapNavKey,
                     ),
                   ],
