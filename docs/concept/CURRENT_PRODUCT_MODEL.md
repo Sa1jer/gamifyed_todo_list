@@ -2,7 +2,7 @@
 
 ## Evidence boundary
 
-This is a **repository fact** map as of version `1.3.59+1`. It describes the
+This is a **repository fact** map as of version `1.3.60+1`. It describes the
 current application, not the preferred future product. Source areas include
 `models.dart`, `app_state.dart`, `engines/`, mobile Act, planning, RoadMap,
 statistics, and persistence documentation.

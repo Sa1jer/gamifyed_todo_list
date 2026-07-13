@@ -1,6 +1,6 @@
 # Desktop Visual System
 
-Last updated: 2026-07-05
+Last updated: 2026-07-13
 
 ## Scope
 
@@ -229,6 +229,25 @@ It projects existing snapshots into a mobile-only ascent: the skill root stays
 at the top, while foundations and prerequisite links rise toward it. It does
 not participate in desktop canvas geometry, camera fitting, toolbar controls,
 template application, or selection synchronization.
+
+## 1.3.60 Selected-Skill Header Geometry
+
+The active selected-skill header is content-led rather than offset-led. Its
+single desktop row has a stable emblem slot, a three-row content column, and a
+stable primary-action slot. The content column keeps the skill name, level,
+and real non-empty goal in its identity row; its XP track/value in the second
+row; and the approved plain-text `Всего квестов: N` value in the third row.
+
+The emblem and primary action centre against the complete content column, not
+against only the XP row. At constrained desktop widths or large text the goal
+can move below the identity row and the action can take a controlled second
+row. The component never invents a goal, turns the total into a chip, counts
+Inbox tasks, or falls back to the legacy selected-skill header.
+
+Static macOS hang investigation covered recent layout, RoadMap, listener,
+timer, animation, and `LayoutBuilder` paths. No deterministic UI-isolate loop
+was proven, so this release adds no speculative lifecycle workaround. Native
+profile capture during an actual stall remains the required next evidence.
 
 ## 1.3.57 Content-Driven Empty-State Recovery
 

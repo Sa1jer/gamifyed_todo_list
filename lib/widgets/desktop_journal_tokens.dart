@@ -145,4 +145,16 @@ class DesktopJournalTokens {
   static const double skillRadius = 13;
   static const double statRadius = 15;
   static const double taskRadius = 13;
+
+  // Shared desktop header geometry. Keep the selected-skill panel aligned
+  // with the same density system as the rest of the three-panel workspace.
+  static const EdgeInsets selectedSkillHeaderPadding = EdgeInsets.symmetric(
+    horizontal: 20,
+    vertical: 16,
+  );
+  static const double selectedSkillHeaderIconSize = 76;
+  static const double selectedSkillHeaderCompactIconSize = 64;
+  static const double selectedSkillHeaderContentGap = 18;
+  static const double selectedSkillHeaderRowGap = 8;
+  static const double selectedSkillHeaderActionWidth = 176;
 }

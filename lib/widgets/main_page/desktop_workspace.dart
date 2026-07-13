@@ -1085,11 +1085,15 @@ class _DesktopMainWorkspace extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 10),
-            Text(
-              'Действовать сегодня',
-              style: context.appTextTheme.titleLarge?.copyWith(
-                color: tokens.text,
-                fontWeight: FontWeight.w900,
+            Expanded(
+              child: Text(
+                'Действовать сегодня',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: context.appTextTheme.titleLarge?.copyWith(
+                  color: tokens.text,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ),
           ],
@@ -1354,10 +1358,16 @@ class _DesktopStatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
     return Semantics(
       label: '$label: $value',
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: EdgeInsets.symmetric(
+          horizontal: 14,
+          // Compact stat cards have a bounded row height. Reclaim a little
+          // vertical room before enlarged text would overflow that contract.
+          vertical: textScale >= 1.2 ? 10 : 12,
+        ),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.055),
           borderRadius: BorderRadius.circular(DesktopJournalTokens.statRadius),
@@ -1426,166 +1436,154 @@ class _DesktopSelectedSkillHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget identity({required bool compact, bool stacked = false}) {
-      return LayoutBuilder(
-        builder: (context, localConstraints) {
-          final shouldStack =
-              stacked ||
-              MediaQuery.textScalerOf(context).scale(1) >= 1.6 ||
-              localConstraints.maxWidth < (compact ? 160 : 220);
-          final emblem = SizedBox(
-            width: compact ? 56 : 68,
-            height: compact ? 56 : 68,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                CircularProgressIndicator(
-                  value: skill.progress,
-                  strokeWidth: 4,
-                  backgroundColor: skill.color.withValues(alpha: 0.12),
-                  valueColor: AlwaysStoppedAnimation(skill.color),
-                ),
-                Icon(skill.icon, color: skill.color, size: compact ? 24 : 28),
-              ],
-            ),
-          );
-          final title = Text(
-            skill.name,
-            maxLines: shouldStack ? 2 : 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: tokens.text,
-              fontSize: compact ? 17 : 20,
-              fontWeight: FontWeight.w900,
-            ),
-          );
-          final details = Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (shouldStack)
-                title
-              else
-                Row(
-                  children: [
-                    Flexible(child: title),
-                    const SizedBox(width: 8),
-                    _DesktopLevelPill(
-                      level: skill.level,
-                      color: skill.color,
-                      tokens: tokens,
-                    ),
-                    if (!compact && skill.goal.trim().isNotEmpty) ...[
-                      const SizedBox(width: 10),
-                      Flexible(
-                        child: Text(
-                          skill.goal,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: tokens.mutedText,
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              if (shouldStack) ...[
-                const SizedBox(height: 5),
-                _DesktopLevelPill(
-                  level: skill.level,
-                  color: skill.color,
-                  tokens: tokens,
-                ),
-              ],
-              if (compact && skill.goal.trim().isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Text(
-                  skill.goal,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: tokens.mutedText,
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ],
-          );
-          if (shouldStack) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [emblem, const SizedBox(height: 9), details],
-            );
-          }
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              emblem,
-              SizedBox(width: compact ? 12 : 16),
-              Expanded(child: details),
-            ],
-          );
-        },
-      );
-    }
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
+    final goal = skill.goal.trim();
 
-    Widget progress({bool stacked = false}) {
-      return LayoutBuilder(
-        builder: (context, localConstraints) {
-          final shouldStack =
-              stacked ||
-              MediaQuery.textScalerOf(context).scale(1) >= 1.6 ||
-              localConstraints.maxWidth < 230;
-          final bar = _DesktopProgressBar(
-            value: skill.progress,
+    Widget emblem(double size) => KeyedSubtree(
+      key: ValueKey('desktop-skill-emblem-${skill.id}'),
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            CircularProgressIndicator(
+              value: skill.progress,
+              strokeWidth: 4,
+              backgroundColor: skill.color.withValues(alpha: 0.12),
+              valueColor: AlwaysStoppedAnimation(skill.color),
+            ),
+            Icon(skill.icon, color: skill.color, size: size * 0.4),
+          ],
+        ),
+      ),
+    );
+
+    Widget skillTitle({required bool compact}) => KeyedSubtree(
+      key: ValueKey('desktop-skill-title-${skill.id}'),
+      child: Text(
+        skill.name,
+        maxLines: compact ? 2 : 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: tokens.text,
+          fontSize: compact ? 18 : 20,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+
+    Widget goalLabel() => KeyedSubtree(
+      key: ValueKey('desktop-skill-goal-${skill.id}'),
+      child: Text(
+        goal,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: tokens.mutedText,
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+
+    Widget identityRow({required bool compact, required bool reflowGoal}) {
+      final titleAndLevel = Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(child: skillTitle(compact: compact)),
+          const SizedBox(width: DesktopJournalTokens.selectedSkillHeaderRowGap),
+          _DesktopLevelPill(
+            level: skill.level,
             color: skill.color,
-            background: tokens.raisedSurface,
-            height: 7,
-          );
-          final value = Text(
-            '${skill.xp} / ${skill.xpNeeded} XP',
-            style: TextStyle(
-              color: tokens.mutedText,
-              fontSize: 11.5,
-              fontWeight: FontWeight.w700,
-            ),
-          );
-          if (shouldStack) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [bar, const SizedBox(height: 6), value],
-            );
-          }
-          return Row(
-            children: [
-              Expanded(child: bar),
-              const SizedBox(width: 12),
-              value,
-            ],
-          );
-        },
+            tokens: tokens,
+          ),
+        ],
+      );
+      if (goal.isEmpty) {
+        return titleAndLevel;
+      }
+      if (reflowGoal) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [titleAndLevel, const SizedBox(height: 4), goalLabel()],
+        );
+      }
+      return Row(
+        children: [
+          Flexible(child: skillTitle(compact: compact)),
+          const SizedBox(width: DesktopJournalTokens.selectedSkillHeaderRowGap),
+          _DesktopLevelPill(
+            level: skill.level,
+            color: skill.color,
+            tokens: tokens,
+          ),
+          const SizedBox(width: 12),
+          Flexible(child: goalLabel()),
+        ],
       );
     }
 
-    Widget metadata() => Text(
-      'Всего квестов: $totalQuestCount',
-      style: TextStyle(
-        color: tokens.mutedText,
-        fontSize: 11.5,
-        fontWeight: FontWeight.w700,
+    Widget progressRow({required bool stackValue}) {
+      final progressTrack = KeyedSubtree(
+        key: ValueKey('desktop-skill-progress-track-${skill.id}'),
+        child: _DesktopProgressBar(
+          value: skill.progress,
+          color: skill.color,
+          background: tokens.raisedSurface,
+          height: 7,
+        ),
+      );
+      final value = Text(
+        '${skill.xp} / ${skill.xpNeeded} XP',
+        style: TextStyle(
+          color: tokens.mutedText,
+          fontSize: 11.5,
+          fontWeight: FontWeight.w700,
+        ),
+      );
+      return KeyedSubtree(
+        key: ValueKey('desktop-skill-xp-row-${skill.id}'),
+        child: stackValue
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(width: double.infinity, child: progressTrack),
+                  const SizedBox(height: 6),
+                  value,
+                ],
+              )
+            : Row(
+                children: [
+                  Expanded(child: progressTrack),
+                  const SizedBox(width: 12),
+                  value,
+                ],
+              ),
+      );
+    }
+
+    Widget questCount() => KeyedSubtree(
+      key: ValueKey('desktop-skill-quest-count-${skill.id}'),
+      child: Text(
+        'Всего квестов: $totalQuestCount',
+        style: TextStyle(
+          color: tokens.mutedText,
+          fontSize: 11.5,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
 
     return Semantics(
       container: true,
       label:
-          '${skill.name}, уровень ${skill.level}, ${skill.xp} из ${skill.xpNeeded} XP',
+          '${skill.name}, уровень ${skill.level}${goal.isEmpty ? '' : ', цель: $goal'}, ${skill.xp} из ${skill.xpNeeded} XP',
       child: Container(
         key: ValueKey('desktop-raised-skill-header-${skill.id}'),
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+        padding: DesktopJournalTokens.selectedSkillHeaderPadding,
         decoration: BoxDecoration(
           color: skill.color.withValues(alpha: 0.045),
           borderRadius: BorderRadius.circular(16),
@@ -1599,8 +1597,24 @@ class _DesktopSelectedSkillHeader extends StatelessWidget {
         ),
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final compact = constraints.maxWidth < 720;
-            final ultraCompact = constraints.maxWidth < 360;
+            final compact = constraints.maxWidth < 720 || textScale >= 1.6;
+            final iconSize = compact
+                ? DesktopJournalTokens.selectedSkillHeaderCompactIconSize
+                : DesktopJournalTokens.selectedSkillHeaderIconSize;
+            final remainingForContent =
+                constraints.maxWidth -
+                iconSize -
+                (DesktopJournalTokens.selectedSkillHeaderContentGap * 2) -
+                DesktopJournalTokens.selectedSkillHeaderActionWidth;
+            final moveActionBelow =
+                remainingForContent < 280 || textScale >= 1.8;
+            final contentWidth = moveActionBelow
+                ? constraints.maxWidth -
+                      iconSize -
+                      DesktopJournalTokens.selectedSkillHeaderContentGap
+                : remainingForContent;
+            final reflowGoal = textScale >= 1.3 || contentWidth < 440;
+            final stackXpValue = textScale >= 1.6 || contentWidth < 250;
             final button = _DesktopPrimaryButton(
               key: ValueKey('desktop-add-task-${skill.id}'),
               label: 'Новый квест',
@@ -1608,133 +1622,59 @@ class _DesktopSelectedSkillHeader extends StatelessWidget {
               color: skill.color,
               onTap: onAddTask,
             );
-            if (compact) {
+            final contentBlock = KeyedSubtree(
+              key: ValueKey('desktop-skill-content-block-${skill.id}'),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  identityRow(compact: compact, reflowGoal: reflowGoal),
+                  const SizedBox(
+                    height: DesktopJournalTokens.selectedSkillHeaderRowGap,
+                  ),
+                  progressRow(stackValue: stackXpValue),
+                  const SizedBox(height: 6),
+                  questCount(),
+                ],
+              ),
+            );
+            final action = SizedBox(
+              width: DesktopJournalTokens.selectedSkillHeaderActionWidth,
+              child: button,
+            );
+
+            if (moveActionBelow) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  KeyedSubtree(
-                    key: ValueKey('desktop-skill-emblem-${skill.id}'),
-                    child: identity(compact: true, stacked: ultraCompact),
-                  ),
-                  const SizedBox(height: 10),
-                  if (ultraCompact) ...[
-                    progress(stacked: true),
-                    const SizedBox(height: 10),
-                    metadata(),
-                    const SizedBox(height: 10),
-                    SizedBox(
-                      width: constraints.maxWidth,
-                      child: FittedBox(
-                        alignment: Alignment.centerLeft,
-                        fit: BoxFit.scaleDown,
-                        child: button,
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      emblem(iconSize),
+                      const SizedBox(
+                        width:
+                            DesktopJournalTokens.selectedSkillHeaderContentGap,
                       ),
-                    ),
-                  ] else ...[
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: KeyedSubtree(
-                            key: ValueKey('desktop-skill-xp-row-${skill.id}'),
-                            child: progress(),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        button,
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    metadata(),
-                  ],
+                      Expanded(child: contentBlock),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Align(alignment: Alignment.centerRight, child: action),
                 ],
               );
             }
-            final emblem = KeyedSubtree(
-              key: ValueKey('desktop-skill-emblem-${skill.id}'),
-              child: SizedBox(
-                width: 68,
-                height: 68,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    CircularProgressIndicator(
-                      value: skill.progress,
-                      strokeWidth: 4,
-                      backgroundColor: skill.color.withValues(alpha: 0.12),
-                      valueColor: AlwaysStoppedAnimation(skill.color),
-                    ),
-                    Icon(skill.icon, color: skill.color, size: 28),
-                  ],
-                ),
-              ),
-            );
-            final title = Text(
-              skill.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: tokens.text,
-                fontSize: 20,
-                fontWeight: FontWeight.w900,
-              ),
-            );
             return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Align the larger skill emblem with the primary XP/action row,
-                // not with the whole text column that also contains title/meta.
-                Padding(padding: const EdgeInsets.only(top: 26), child: emblem),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Flexible(child: title),
-                          const SizedBox(width: 8),
-                          _DesktopLevelPill(
-                            level: skill.level,
-                            color: skill.color,
-                            tokens: tokens,
-                          ),
-                          if (skill.goal.trim().isNotEmpty) ...[
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Text(
-                                skill.goal,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: tokens.mutedText,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Expanded(
-                            child: KeyedSubtree(
-                              key: ValueKey('desktop-skill-xp-row-${skill.id}'),
-                              child: progress(),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          button,
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      metadata(),
-                    ],
-                  ),
+                emblem(iconSize),
+                const SizedBox(
+                  width: DesktopJournalTokens.selectedSkillHeaderContentGap,
                 ),
+                Expanded(child: contentBlock),
+                const SizedBox(
+                  width: DesktopJournalTokens.selectedSkillHeaderContentGap,
+                ),
+                action,
               ],
             );
           },

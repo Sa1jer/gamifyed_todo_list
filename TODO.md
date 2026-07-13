@@ -1,6 +1,6 @@
 # TODO / Living Backlog
 
-Last updated: 2026-07-12
+Last updated: 2026-07-13
 
 This file tracks the active implementation roadmap and completed project work. Update it after every meaningful code or design change.
 
@@ -33,6 +33,7 @@ This file tracks the active implementation roadmap and completed project work. U
 - [ ] Profile mobile theme switching after the `2x` snapshot cap and add a reduced-motion fallback only if frame timings still show jank.
 - [ ] Add a sustained-mutation storage stress test to characterize repeated save follow-up passes and lifecycle flush completion.
 - [ ] Add native startup-dispose/background-foreground regression checks around slow storage and plugin initialization.
+- [ ] Capture a native macOS profile trace for intermittent UI unresponsiveness. The `1.3.60` static audit found no deterministic rebuild, timer, or RoadMap-layout loop; record the active workspace and CPU timeline before changing lifecycle or animation code.
 
 ## Reminder — Product Follow-ups After Hardening
 
@@ -130,6 +131,7 @@ before it enters an implementation brief.
 - [x] Synchronize RoadMap focus with sidebar skill selection, refine camera centering, and preserve the approved canvas painter.
 - [x] Replace persistent row action glyphs with stable hover/focus ellipsis menus and simplify the first-quest empty state.
 - [x] Add the semantic `AppTypography`/`AppTextRoles` foundation, nested-theme fallback, and adaptive-content tests for desktop focus, sidebar and RoadMap template surfaces.
+- [x] Rebuild the selected desktop skill header into one centred icon/content/action row: real goal follows the level, XP and plain-text total quest count share one leading axis, and compact widths reflow without restoring legacy positioning.
 - [ ] Revisit Smarter Quest product model, value proposition, and UX before re-enabling its creation/edit controls.
 - [ ] Continue reducing remaining hardcoded `fontSize` values by subsystem; keep canvas-geometry labels as explicit exceptions until RoadMap painter metrics move to tokens.
 - [ ] Add screenshot-based native typography QA for Windows/macOS at `100%/125%/150%` scale and `200%` text size.
@@ -284,6 +286,7 @@ Manual desktop/QHD checklist:
 - `1.3.57`: corrected the incomplete adaptive recovery: Effects and Chests now use bounded content-led empty states, desktop first-quest guidance has landscape geometry, and mobile Focus uses local Full/Compact/Minimal/Hidden variants with a compact section-level Add Skill action.
 - `1.3.58`: unified the mobile RoadMap into one vertical ascent graph, removed the free-map mode switch and floating return action, retained branch paths/templates/details, and finalized the compact mobile Focus placeholder.
 - `1.3.59`: introduced the mobile RoadMap projection; the skill root remains at the top while the earliest foundation stage begins at the bottom and later stages rise toward the skill, without changing stored topology or initial focus behavior.
+- `1.3.60`: rebuilt the active desktop selected-skill header around a centred three-row content block, keeping the approved plain-text quest counter and adding geometry coverage for goal, counts, Inbox exclusion, compact width, and large text. The macOS hang audit remains evidence-gathering only; no freeze root cause is claimed without a native profile trace.
 
 - `1.3.53`: recovered the incomplete `1.3.52` visual migration with a real RoadMap shell/templates/context rail, complete Trophies and Statistics ecosystems, full existing Settings coverage, responsive raised skill headers, history-aware empty states, stable overflow geometry, bounds-based camera fitting, and tested debug/profile Admin entry.
 - `1.3.52`: introduced workspace routes and initial wrappers, but its visual migration remained incomplete; superseded by the audited `1.3.53` recovery.

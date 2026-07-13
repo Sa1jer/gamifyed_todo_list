@@ -1108,17 +1108,184 @@ void main() {
       final addQuest = tester.getCenter(
         find.byKey(const ValueKey('desktop-add-task-header-skill')),
       );
-      final header = tester.getRect(
-        find.byKey(const ValueKey('desktop-raised-skill-header-header-skill')),
-      );
       final emblem = tester.getRect(
         find.byKey(const ValueKey('desktop-skill-emblem-header-skill')),
       );
-      expect(addQuest.dy, closeTo(xpRow.dy, 1));
-      expect(emblem.width, 68);
-      expect(emblem.center.dy, closeTo(xpRow.dy, 1));
-      expect(header.height, lessThanOrEqualTo(124));
+      final contentBlock = tester.getRect(
+        find.byKey(const ValueKey('desktop-skill-content-block-header-skill')),
+      );
+      final title = tester.getRect(
+        find.byKey(const ValueKey('desktop-skill-title-header-skill')),
+      );
+      final progressTrack = tester.getRect(
+        find.byKey(const ValueKey('desktop-skill-progress-track-header-skill')),
+      );
+      final questCount = tester.getRect(
+        find.byKey(const ValueKey('desktop-skill-quest-count-header-skill')),
+      );
+
+      // The leading emblem and trailing CTA are aligned to the whole three-row
+      // content block, not to the middle XP row as the legacy layout was.
+      expect(addQuest.dy, closeTo(contentBlock.center.dy, 2));
+      expect(emblem.center.dy, closeTo(contentBlock.center.dy, 2));
+      expect(emblem.width, 76);
+      expect(title.left, closeTo(progressTrack.left, 1));
+      expect(title.left, closeTo(questCount.left, 1));
+      expect(questCount.top, greaterThan(xpRow.dy));
+      expect(progressTrack.right, lessThan(addQuest.dx));
+      expect(
+        find.ancestor(
+          of: find.byKey(
+            const ValueKey('desktop-skill-quest-count-header-skill'),
+          ),
+          matching: find.byType(Chip),
+        ),
+        findsNothing,
+      );
       expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'desktop selected-skill header keeps zero quest count plain when no goal exists',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1366, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final skill = Skill(
+        id: 'header-zero-skill',
+        name: 'Навык без цели',
+        goal: '',
+        color: const Color(0xFF2ED36F),
+        icon: Icons.forest_rounded,
+      );
+      final storage = InMemoryStorageService()
+        .._onboardingSeen = true
+        ..skills = [skill];
+      await storage.init();
+      await tester.pumpWidget(RPGApp(storage: storage));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('Всего квестов: 0'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('desktop-skill-goal-header-zero-skill')),
+        findsNothing,
+      );
+      expect(
+        find.ancestor(
+          of: find.byKey(
+            const ValueKey('desktop-skill-quest-count-header-zero-skill'),
+          ),
+          matching: find.byType(Chip),
+        ),
+        findsNothing,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'desktop selected-skill header reflows one quest and a long goal safely',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1024, 1280);
+      tester.view.devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      final skill = Skill(
+        id: 'header-one-skill',
+        name: 'Очень длинное название навыка для проверки адаптации',
+        goal:
+            'Длинная реальная цель должна переноситься без обрезки основной кнопки',
+        color: const Color(0xFFFF8A1F),
+        icon: Icons.rocket_launch_rounded,
+      );
+      final storage = InMemoryStorageService()
+        .._onboardingSeen = true
+        ..skills = [skill]
+        ..tasks = [
+          Task(
+            id: 'header-one-task',
+            title: 'Единственный квест',
+            skillId: skill.id,
+            xpReward: 20,
+            type: TaskType.shortTerm,
+          ),
+        ];
+      await storage.init();
+      await tester.pumpWidget(RPGApp(storage: storage));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('Всего квестов: 1'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('desktop-skill-goal-header-one-skill')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('desktop-add-task-header-one-skill')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'desktop selected-skill header keeps its geometry across desktop widths',
+    (WidgetTester tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      for (final width in [1024.0, 1180.0, 1280.0, 1366.0, 1440.0, 1920.0]) {
+        tester.view.physicalSize = Size(width, 1280);
+        final skill = Skill(
+          id: 'header-matrix-$width',
+          name: 'Навык $width',
+          goal: 'Реальная цель для проверки desktop-компоновки',
+          color: const Color(0xFF4A9EFF),
+          icon: Icons.code_rounded,
+        );
+        final storage = InMemoryStorageService()
+          .._onboardingSeen = true
+          ..skills = [skill]
+          ..tasks = [
+            Task(
+              id: 'header-matrix-task-$width',
+              title: 'Квест',
+              skillId: skill.id,
+              xpReward: 20,
+              type: TaskType.shortTerm,
+            ),
+          ];
+        await storage.init();
+        await tester.pumpWidget(
+          RPGApp(
+            key: ValueKey('desktop-header-matrix-$width'),
+            storage: storage,
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(
+          find.byKey(ValueKey('desktop-raised-skill-header-${skill.id}')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(ValueKey('desktop-add-task-${skill.id}')),
+          findsOneWidget,
+        );
+        expect(find.text('Всего квестов: 1'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      }
     },
   );
 
