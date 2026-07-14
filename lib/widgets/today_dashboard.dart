@@ -173,24 +173,8 @@ class _TodayDashboardState extends State<TodayDashboard> {
               ? null
               : TodayDashboard._skillFor(state, nextTask),
           isDark: isDark,
-          onComplete: (taskId, position) => widget.onComplete(
-            taskId,
-            legacyActionToastOrigin(
-              position,
-              zone: ActionToastZone.mainWorkspace,
-              kind: ActionToastOriginKind.questCheckbox,
-              sourceId: taskId,
-            ),
-          ),
-          onMinimumAction: (taskId, position) => widget.onMinimumAction(
-            taskId,
-            legacyActionToastOrigin(
-              position,
-              zone: ActionToastZone.mainWorkspace,
-              kind: ActionToastOriginKind.minimumAction,
-              sourceId: taskId,
-            ),
-          ),
+          onComplete: widget.onComplete,
+          onMinimumAction: widget.onMinimumAction,
           onCreateFirstSkill: widget.onCreateFirstSkill,
           createFirstSkillButtonKey: widget.createFirstSkillButtonKey,
           nextQuestActionKey: widget.nextQuestActionKey,
@@ -380,30 +364,8 @@ class _TodayDashboardState extends State<TodayDashboard> {
                                       todayTasks: stats?.tasksCompleted ?? 0,
                                       todayXp: stats?.xpEarned ?? 0,
                                       isDark: isDark,
-                                      onComplete: (taskId, position) =>
-                                          widget.onComplete(
-                                            taskId,
-                                            legacyActionToastOrigin(
-                                              position,
-                                              zone:
-                                                  ActionToastZone.mainWorkspace,
-                                              kind: ActionToastOriginKind
-                                                  .questCheckbox,
-                                              sourceId: taskId,
-                                            ),
-                                          ),
-                                      onMinimumAction: (taskId, position) =>
-                                          widget.onMinimumAction(
-                                            taskId,
-                                            legacyActionToastOrigin(
-                                              position,
-                                              zone:
-                                                  ActionToastZone.mainWorkspace,
-                                              kind: ActionToastOriginKind
-                                                  .minimumAction,
-                                              sourceId: taskId,
-                                            ),
-                                          ),
+                                      onComplete: widget.onComplete,
+                                      onMinimumAction: widget.onMinimumAction,
                                       onCreateFirstSkill:
                                           widget.onCreateFirstSkill,
                                       createFirstSkillButtonKey:
@@ -417,30 +379,8 @@ class _TodayDashboardState extends State<TodayDashboard> {
                                         state: state,
                                         nextTask: nextTask,
                                         isDark: isDark,
-                                        onComplete: (taskId, position) =>
-                                            widget.onComplete(
-                                              taskId,
-                                              legacyActionToastOrigin(
-                                                position,
-                                                zone: ActionToastZone
-                                                    .mobileContent,
-                                                kind: ActionToastOriginKind
-                                                    .questCheckbox,
-                                                sourceId: taskId,
-                                              ),
-                                            ),
-                                        onMinimumAction: (taskId, position) =>
-                                            widget.onMinimumAction(
-                                              taskId,
-                                              legacyActionToastOrigin(
-                                                position,
-                                                zone: ActionToastZone
-                                                    .mobileContent,
-                                                kind: ActionToastOriginKind
-                                                    .minimumAction,
-                                                sourceId: taskId,
-                                              ),
-                                            ),
+                                        onComplete: widget.onComplete,
+                                        onMinimumAction: widget.onMinimumAction,
                                         onCreateFirstSkill:
                                             widget.onCreateFirstSkill,
                                         createFirstSkillButtonKey:
@@ -491,8 +431,8 @@ class _DashboardContent extends StatelessWidget {
   final int todayTasks;
   final int todayXp;
   final bool isDark;
-  final Function(String id, Offset pos) onComplete;
-  final Function(String id, Offset pos) onMinimumAction;
+  final void Function(String id, ActionToastOrigin origin) onComplete;
+  final void Function(String id, ActionToastOrigin origin) onMinimumAction;
   final VoidCallback? onCreateFirstSkill;
   final Key? createFirstSkillButtonKey;
   final Key? nextQuestActionKey;
@@ -574,8 +514,8 @@ class _CompactDashboardContent extends StatelessWidget {
   final AppState state;
   final Task? nextTask;
   final bool isDark;
-  final Function(String id, Offset pos) onComplete;
-  final Function(String id, Offset pos) onMinimumAction;
+  final void Function(String id, ActionToastOrigin origin) onComplete;
+  final void Function(String id, ActionToastOrigin origin) onMinimumAction;
   final VoidCallback? onCreateFirstSkill;
   final Key? createFirstSkillButtonKey;
   final Key? nextQuestActionKey;
@@ -614,8 +554,8 @@ class _MobileNextActionSummary extends StatelessWidget {
   final Task? task;
   final Skill? skill;
   final bool isDark;
-  final Function(String id, Offset pos) onComplete;
-  final Function(String id, Offset pos) onMinimumAction;
+  final void Function(String id, ActionToastOrigin origin) onComplete;
+  final void Function(String id, ActionToastOrigin origin) onMinimumAction;
   final VoidCallback? onCreateFirstSkill;
   final Key? createFirstSkillButtonKey;
   final Key? nextQuestActionKey;
@@ -693,11 +633,15 @@ class _MobileNextActionSummary extends StatelessWidget {
     final trigger = canStartMinimum ? onMinimumAction : onComplete;
     final largeText = MediaQuery.textScalerOf(context).scale(1) > 1.5;
 
-    Widget actionButton() => KeyedSubtree(
-      key: nextQuestActionKey,
-      child: Builder(
-        builder: (actionContext) => _MobileSummaryButton(
+    Widget actionButton() {
+      final controlKey = GlobalKey(
+        debugLabel: 'mobile-next-action-control-${currentTask.id}',
+      );
+      return KeyedSubtree(
+        key: nextQuestActionKey,
+        child: _MobileSummaryButton(
           key: ValueKey('mobile-next-action-trigger-${currentTask.id}'),
+          controlKey: controlKey,
           label: canStartMinimum ? 'Начать' : 'Готово',
           icon: canStartMinimum
               ? Icons.play_arrow_rounded
@@ -707,15 +651,22 @@ class _MobileNextActionSummary extends StatelessWidget {
               ? 'Начать минимальный шаг: $actionText'
               : 'Выполнить квест: ${currentTask.title}',
           onTap: () {
-            final box = actionContext.findRenderObject() as RenderBox?;
+            final controlContext = controlKey.currentContext;
             trigger(
               currentTask.id,
-              box?.localToGlobal(Offset.zero) ?? Offset.zero,
+              actionToastOriginForContext(
+                controlContext ?? context,
+                kind: canStartMinimum
+                    ? ActionToastOriginKind.minimumAction
+                    : ActionToastOriginKind.focusTask,
+                zone: ActionToastZone.mobileContent,
+                sourceId: currentTask.id,
+              ),
             );
           },
         ),
-      ),
-    );
+      );
+    }
 
     if (largeText) {
       return Semantics(
@@ -847,6 +798,7 @@ class _MobileNextActionSummary extends StatelessWidget {
 }
 
 class _MobileSummaryButton extends StatelessWidget {
+  final GlobalKey? controlKey;
   final String label;
   final IconData icon;
   final Color color;
@@ -855,6 +807,7 @@ class _MobileSummaryButton extends StatelessWidget {
 
   const _MobileSummaryButton({
     super.key,
+    this.controlKey,
     required this.label,
     required this.icon,
     required this.color,
@@ -873,6 +826,7 @@ class _MobileSummaryButton extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 48, minWidth: 76),
           child: DecoratedBox(
+            key: controlKey,
             decoration: BoxDecoration(
               color: color,
               borderRadius: BorderRadius.circular(11),
@@ -908,8 +862,8 @@ class _NextActionCard extends StatelessWidget {
   final Task? task;
   final Skill? skill;
   final bool isDark;
-  final Function(String id, Offset pos) onComplete;
-  final Function(String id, Offset pos) onMinimumAction;
+  final void Function(String id, ActionToastOrigin origin) onComplete;
+  final void Function(String id, ActionToastOrigin origin) onMinimumAction;
   final VoidCallback? onCreateFirstSkill;
   final Key? createFirstSkillButtonKey;
   final Key? nextQuestActionKey;
@@ -1109,6 +1063,12 @@ class _NextActionCard extends StatelessWidget {
                 icon: canStartMinimum ? Icons.play_arrow : Icons.check,
                 compact: false,
                 primary: true,
+                zone: compact
+                    ? ActionToastZone.mobileContent
+                    : ActionToastZone.mainWorkspace,
+                originKind: canStartMinimum
+                    ? ActionToastOriginKind.minimumAction
+                    : ActionToastOriginKind.questCheckbox,
                 onTrigger: canStartMinimum ? onMinimumAction : onComplete,
               ),
             )
@@ -1135,6 +1095,9 @@ class _NextActionCard extends StatelessWidget {
                   icon: canStartMinimum ? Icons.play_arrow : Icons.check,
                   compact: false,
                   primary: true,
+                  originKind: canStartMinimum
+                      ? ActionToastOriginKind.minimumAction
+                      : ActionToastOriginKind.questCheckbox,
                   onTrigger: canStartMinimum ? onMinimumAction : onComplete,
                 ),
               ],
@@ -1280,8 +1243,8 @@ class _QuestQueue extends StatelessWidget {
   final String subtitle;
   final List<Task> tasks;
   final bool isDark;
-  final Function(String id, Offset pos) onComplete;
-  final Function(String id, Offset pos) onMinimumAction;
+  final void Function(String id, ActionToastOrigin origin) onComplete;
+  final void Function(String id, ActionToastOrigin origin) onMinimumAction;
 
   const _QuestQueue({
     required this.state,
@@ -1373,8 +1336,8 @@ class _QuestMiniRow extends StatelessWidget {
   final int buffBonus;
   final int minimumXp;
   final bool isDark;
-  final Function(String id, Offset pos) onComplete;
-  final Function(String id, Offset pos) onMinimumAction;
+  final void Function(String id, ActionToastOrigin origin) onComplete;
+  final void Function(String id, ActionToastOrigin origin) onMinimumAction;
 
   const _QuestMiniRow({
     required this.task,
@@ -1467,6 +1430,9 @@ class _QuestMiniRow extends StatelessWidget {
             icon: recommendsMinimum ? Icons.play_arrow : Icons.check,
             compact: true,
             primary: false,
+            originKind: recommendsMinimum
+                ? ActionToastOriginKind.minimumAction
+                : ActionToastOriginKind.questCheckbox,
             onTrigger: recommendsMinimum ? onMinimumAction : onComplete,
           ),
         ],
@@ -1483,7 +1449,9 @@ class _QuickActionButton extends StatelessWidget {
   final IconData icon;
   final bool compact;
   final bool primary;
-  final Function(String id, Offset pos) onTrigger;
+  final ActionToastZone zone;
+  final ActionToastOriginKind originKind;
+  final void Function(String id, ActionToastOrigin origin) onTrigger;
 
   const _QuickActionButton({
     super.key,
@@ -1494,21 +1462,35 @@ class _QuickActionButton extends StatelessWidget {
     required this.icon,
     required this.compact,
     this.primary = true,
+    this.zone = ActionToastZone.mainWorkspace,
+    this.originKind = ActionToastOriginKind.questCheckbox,
     required this.onTrigger,
   });
 
   @override
   Widget build(BuildContext context) {
     final fg = primary ? Colors.white : color;
+    final controlKey = GlobalKey(
+      debugLabel: 'today-dashboard-action-control-${task.id}',
+    );
     return Tooltip(
       message: tooltip,
       child: PressFeedback(
         scale: 0.96,
         onTap: () {
-          final box = context.findRenderObject() as RenderBox?;
-          onTrigger(task.id, box?.localToGlobal(Offset.zero) ?? Offset.zero);
+          final controlContext = controlKey.currentContext;
+          onTrigger(
+            task.id,
+            actionToastOriginForContext(
+              controlContext ?? context,
+              kind: originKind,
+              zone: zone,
+              sourceId: task.id,
+            ),
+          );
         },
         child: Container(
+          key: controlKey,
           padding: EdgeInsets.symmetric(
             horizontal: compact ? 8 : 10,
             vertical: compact ? 7 : 8,

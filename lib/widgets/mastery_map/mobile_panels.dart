@@ -241,8 +241,8 @@ class _MobileMasterySelectionPanel extends StatelessWidget {
   final void Function(Skill skill, SkillTreeNode node) onExtendPath;
   final void Function(Skill skill, SkillTreeNode node) onRenameNode;
   final void Function(Skill skill, SkillTreeNode? node) onAddQuest;
-  final void Function(Task task, Offset position) onToggleQuest;
-  final void Function(Task task, Offset position) onMinimumAction;
+  final void Function(Task task, ActionToastOrigin origin) onToggleQuest;
+  final void Function(Task task, ActionToastOrigin origin) onMinimumAction;
   final void Function(Skill skill, Task task) onEditQuest;
   final ValueChanged<Task> onDeleteQuest;
   final void Function(Skill skill, SkillTreeNode node) onMasterNode;
@@ -452,8 +452,8 @@ class _MobileSkillMasteryPanel extends StatelessWidget {
   final AppState state;
   final bool isDark;
   final Skill skill;
-  final void Function(Task task, Offset position) onToggleQuest;
-  final void Function(Task task, Offset position) onMinimumAction;
+  final void Function(Task task, ActionToastOrigin origin) onToggleQuest;
+  final void Function(Task task, ActionToastOrigin origin) onMinimumAction;
   final ValueChanged<Task> onEditQuest;
   final ValueChanged<Task> onDeleteQuest;
 
@@ -584,8 +584,8 @@ class _MobileNodeMasteryPanel extends StatelessWidget {
   final VoidCallback onRename;
   final VoidCallback onExtendPath;
   final VoidCallback onAddQuest;
-  final void Function(Task task, Offset position) onToggleQuest;
-  final void Function(Task task, Offset position) onMinimumAction;
+  final void Function(Task task, ActionToastOrigin origin) onToggleQuest;
+  final void Function(Task task, ActionToastOrigin origin) onMinimumAction;
   final ValueChanged<Task> onEditQuest;
   final ValueChanged<Task> onDeleteQuest;
   final VoidCallback onMaster;
@@ -931,8 +931,8 @@ class _MobileStagePracticeList extends StatelessWidget {
   final bool isDark;
   final Color color;
   final bool showTitle;
-  final void Function(Task task, Offset position) onToggleQuest;
-  final void Function(Task task, Offset position) onMinimumAction;
+  final void Function(Task task, ActionToastOrigin origin) onToggleQuest;
+  final void Function(Task task, ActionToastOrigin origin) onMinimumAction;
   final ValueChanged<Task> onEditQuest;
   final ValueChanged<Task> onDeleteQuest;
 
@@ -1018,8 +1018,8 @@ class _MobileMasteryQuestRow extends StatelessWidget {
   final Task task;
   final bool isDark;
   final Color color;
-  final ValueChanged<Offset> onToggle;
-  final ValueChanged<Offset> onMinimumAction;
+  final ValueChanged<ActionToastOrigin> onToggle;
+  final ValueChanged<ActionToastOrigin> onMinimumAction;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
@@ -1035,6 +1035,10 @@ class _MobileMasteryQuestRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final toggleKey = GlobalKey(debugLabel: 'mobile-roadmap-toggle-${task.id}');
+    final minimumKey = GlobalKey(
+      debugLabel: 'mobile-roadmap-minimum-${task.id}',
+    );
     final sub = subtext(isDark);
     final canStartMinimum =
         task.hasMinimumAction && !task.isDone && !task.isMinimumActionDone;
@@ -1049,16 +1053,22 @@ class _MobileMasteryQuestRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Builder(
-            builder: (iconContext) => PressFeedback(
-              scale: 0.9,
-              onTap: () => onToggle(_feedbackOriginFor(iconContext)),
-              child: _QuestToggleCircle(
-                done: task.isDone,
-                color: color,
-                isDark: isDark,
-                size: 18,
+          PressFeedback(
+            key: toggleKey,
+            scale: 0.9,
+            onTap: () => onToggle(
+              actionToastOriginForContext(
+                toggleKey.currentContext ?? context,
+                kind: ActionToastOriginKind.roadmapInspectorTask,
+                zone: ActionToastZone.mobileContent,
+                sourceId: task.id,
               ),
+            ),
+            child: _QuestToggleCircle(
+              done: task.isDone,
+              color: color,
+              isDark: isDark,
+              size: 18,
             ),
           ),
           const SizedBox(width: 8),
@@ -1098,12 +1108,17 @@ class _MobileMasteryQuestRow extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           if (canStartMinimum) ...[
-            Builder(
-              builder: (minimumContext) => _RoadmapMinimumButton(
-                isDark: isDark,
-                color: color,
-                onTap: () =>
-                    onMinimumAction(_feedbackOriginFor(minimumContext)),
+            _RoadmapMinimumButton(
+              key: minimumKey,
+              isDark: isDark,
+              color: color,
+              onTap: () => onMinimumAction(
+                actionToastOriginForContext(
+                  minimumKey.currentContext ?? context,
+                  kind: ActionToastOriginKind.minimumAction,
+                  zone: ActionToastZone.mobileContent,
+                  sourceId: task.id,
+                ),
               ),
             ),
             const SizedBox(width: 8),

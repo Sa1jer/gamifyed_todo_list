@@ -100,11 +100,13 @@ class _MainPageState extends State<MainPage> {
     final placement = ActionToastPlacement.resolve(
       sourceRect: sourceRect,
       kind: seededOrigin.kind,
+      zone: seededOrigin.zone,
       viewport: stackSize,
       safeRegion: toastRegion,
       jitter: ActionToastPlacement.stableJitter(
         seededOrigin.eventSeed,
-        available,
+        seededOrigin.kind,
+        seededOrigin.zone,
       ),
       bottomReserved:
           seededOrigin.zone == ActionToastZone.mobileContent ||
@@ -167,6 +169,8 @@ class _MainPageState extends State<MainPage> {
         stack.globalToLocal(origin.globalSourceRect.bottomRight),
       );
     }
+    // Only keyboard/fallback actions should reach this branch. Pointer-driven
+    // completion paths capture their concrete control rect before mutation.
     return Rect.fromCenter(center: fallbackRegion.center, width: 1, height: 1);
   }
 

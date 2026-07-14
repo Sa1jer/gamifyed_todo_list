@@ -34,8 +34,7 @@ This file tracks the active implementation roadmap and completed project work. U
 - [ ] Add a sustained-mutation storage stress test to characterize repeated save follow-up passes and lifecycle flush completion.
 - [ ] Add native startup-dispose/background-foreground regression checks around slow storage and plugin initialization.
 - [ ] Capture a native macOS profile trace for intermittent UI unresponsiveness. The `1.3.60` static audit found no deterministic rebuild, timer, or RoadMap-layout loop; record the active workspace and CPU timeline before changing lifecycle or animation code.
-- [ ] Run native desktop pointer and visual QA for `1.3.61` reward feedback: repeated completion must keep local confetti out of the focus rail, RoadMap controls, and the Inbox composer.
-- [ ] Convert remaining legacy leaf completion callbacks from temporary coordinate adapters to control-bound `ActionToastOrigin` values when those widgets are next refactored; preserve the zone-specific resolver and do not expand this migration into a domain change.
+- [ ] Run native desktop pointer and visual QA for `1.3.64` reward feedback: repeated completion must keep the local halo beside its checkbox, minimum-action button, focus task check, or RoadMap inspector control without crossing into neighbouring rails or the Inbox composer.
 
 ## Reminder — Product Follow-ups After Hardening
 
@@ -290,6 +289,7 @@ Manual desktop/QHD checklist:
 - `1.3.59`: introduced the mobile RoadMap projection; the skill root remains at the top while the earliest foundation stage begins at the bottom and later stages rise toward the skill, without changing stored topology or initial focus behavior.
 - `1.3.60`: rebuilt the active desktop selected-skill header around a centred three-row content block, keeping the approved plain-text quest counter and adding geometry coverage for goal, counts, Inbox exclusion, compact width, and large text. The macOS hang audit remains evidence-gathering only; no freeze root cause is claimed without a native profile trace.
 - `1.3.61`: constrained action-context reward feedback to the active workspace with bounded local confetti, added persisted-value and level-transition XP motion, and recovered desktop-native Skill/Quest form anatomy with fixed action footers and scroll-safe bodies. XP, storage, RoadMap, and reward rules are unchanged; native desktop visual QA remains pending.
+- `1.3.64`: anchored action-context reward feedback to the exact completion-control rectangle and a bounded local halo, replacing temporary coordinate adapters across desktop, mobile, and RoadMap task paths. XP, completion, storage, and reward rules are unchanged; native visual QA remains pending.
 - Notification presentation: separated action-context XP toasts from bounded
   system reward notices, with fixed action placement, mobile navigation-safe
   clamping, and reduced-motion support. Native screen-reader and physical

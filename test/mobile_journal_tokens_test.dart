@@ -99,6 +99,7 @@ void main() {
                 placement: ActionToastPlacement.resolve(
                   sourceRect: const Rect.fromLTWH(180, 180, 24, 24),
                   kind: ActionToastOriginKind.questCheckbox,
+                  zone: ActionToastZone.mainWorkspace,
                   viewport: const Size(400, 400),
                 ),
                 colors: colors,
@@ -183,6 +184,7 @@ void main() {
     final placement = ActionToastPlacement.resolve(
       sourceRect: const Rect.fromLTWH(370, 730, 20, 20),
       kind: ActionToastOriginKind.questCheckbox,
+      zone: ActionToastZone.mobileContent,
       viewport: const Size(400, 800),
       bottomReserved: 96,
     );
@@ -198,6 +200,7 @@ void main() {
     final placement = ActionToastPlacement.resolve(
       sourceRect: const Rect.fromLTWH(1680, 520, 32, 32),
       kind: ActionToastOriginKind.focusTask,
+      zone: ActionToastZone.rightRail,
       viewport: viewport,
       safeRegion: rightRail,
     );
@@ -216,6 +219,7 @@ void main() {
     final placement = ActionToastPlacement.resolve(
       sourceRect: const Rect.fromLTWH(836, 360, 32, 32),
       kind: ActionToastOriginKind.focusTask,
+      zone: ActionToastZone.rightRail,
       viewport: viewport,
       safeRegion: compactRail,
     );
@@ -234,12 +238,14 @@ void main() {
     final checkboxPlacement = ActionToastPlacement.resolve(
       sourceRect: const Rect.fromLTWH(440, 572, 34, 34),
       kind: ActionToastOriginKind.questCheckbox,
+      zone: ActionToastZone.mainWorkspace,
       viewport: viewport,
       safeRegion: workspace,
     );
     final rowCentrePlacement = ActionToastPlacement.resolve(
       sourceRect: const Rect.fromLTWH(998, 572, 34, 34),
       kind: ActionToastOriginKind.questCheckbox,
+      zone: ActionToastZone.mainWorkspace,
       viewport: viewport,
       safeRegion: workspace,
     );
@@ -250,10 +256,31 @@ void main() {
     );
   });
 
+  test('main-list checkbox placement stays in a local control halo', () {
+    const viewport = Size(1920, 1080);
+    const workspace = Rect.fromLTWH(392, 84, 1246, 900);
+    const checkbox = Rect.fromLTWH(440, 572, 34, 34);
+    final placement = ActionToastPlacement.resolve(
+      sourceRect: checkbox,
+      kind: ActionToastOriginKind.questCheckbox,
+      zone: ActionToastZone.mainWorkspace,
+      viewport: viewport,
+      safeRegion: workspace,
+    );
+    final toastCenter =
+        (placement.topLeft &
+                Size(placement.maxWidth, ActionToastPlacement.estimatedHeight))
+            .center;
+
+    expect((toastCenter - checkbox.center).distance, lessThanOrEqualTo(210));
+    expect(toastCenter.dx, lessThan(workspace.center.dx - 150));
+  });
+
   test('action toast tries the opposite horizontal side near a zone edge', () {
     final placement = ActionToastPlacement.resolve(
       sourceRect: const Rect.fromLTWH(1490, 520, 32, 32),
       kind: ActionToastOriginKind.questCheckbox,
+      zone: ActionToastZone.mainWorkspace,
       viewport: const Size(1920, 1080),
       safeRegion: const Rect.fromLTWH(392, 84, 1246, 900),
     );
@@ -265,6 +292,7 @@ void main() {
     final placement = ActionToastPlacement.resolve(
       sourceRect: const Rect.fromLTWH(620, 120, 32, 32),
       kind: ActionToastOriginKind.minimumAction,
+      zone: ActionToastZone.mainWorkspace,
       viewport: const Size(1920, 1080),
       safeRegion: const Rect.fromLTWH(392, 84, 1246, 900),
     );
@@ -277,6 +305,7 @@ void main() {
     final placement = ActionToastPlacement.resolve(
       sourceRect: sourceRect,
       kind: ActionToastOriginKind.questCheckbox,
+      zone: ActionToastZone.mainWorkspace,
       viewport: const Size(1920, 1080),
       safeRegion: const Rect.fromLTWH(392, 84, 1246, 900),
     );
@@ -287,15 +316,25 @@ void main() {
     expect(toastRect.overlaps(sourceRect), isFalse);
   });
 
-  test('action-toast jitter is deterministic and bounded for tiny zones', () {
-    const region = Rect.fromLTWH(40, 40, 48, 48);
-    final first = ActionToastPlacement.stableJitter(17, region);
-    final second = ActionToastPlacement.stableJitter(17, region);
+  test(
+    'action-toast jitter is deterministic and bounded for its control zone',
+    () {
+      final first = ActionToastPlacement.stableJitter(
+        17,
+        ActionToastOriginKind.focusTask,
+        ActionToastZone.rightRail,
+      );
+      final second = ActionToastPlacement.stableJitter(
+        17,
+        ActionToastOriginKind.focusTask,
+        ActionToastZone.rightRail,
+      );
 
-    expect(first, second);
-    expect(first.dx.abs(), lessThanOrEqualTo(4));
-    expect(first.dy.abs(), lessThanOrEqualTo(2.7));
-  });
+      expect(first, second);
+      expect(first.dx.abs(), lessThanOrEqualTo(10));
+      expect(first.dy.abs(), lessThanOrEqualTo(8));
+    },
+  );
 
   testWidgets('XP bubble keeps its action placement while visible', (
     WidgetTester tester,
@@ -310,6 +349,7 @@ void main() {
                 placement: ActionToastPlacement.resolve(
                   sourceRect: const Rect.fromLTWH(180, 180, 24, 24),
                   kind: ActionToastOriginKind.questCheckbox,
+                  zone: ActionToastZone.mainWorkspace,
                   viewport: const Size(400, 400),
                 ),
                 reducedMotion: false,

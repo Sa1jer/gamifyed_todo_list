@@ -8,13 +8,6 @@ const _roadmapGoalAnchorHeaderFontSize = 14.0;
 const _roadmapGoalAnchorHeaderIconSize = 17.0;
 const _roadmapGoalAnchorGoalFontSize = 16.0;
 
-Offset _feedbackOriginFor(BuildContext context) {
-  final box = context.findRenderObject() as RenderBox?;
-  if (box == null) return Offset.zero;
-  final topLeft = box.localToGlobal(Offset.zero);
-  return Offset(topLeft.dx + box.size.width / 2, topLeft.dy + box.size.height);
-}
-
 double _roadmapGoalAnchorWidth(String text) {
   final goal = text.trim();
   final headerWidth =

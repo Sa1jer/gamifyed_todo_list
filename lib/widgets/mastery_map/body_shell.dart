@@ -269,8 +269,8 @@ class _MasteryMapBody extends StatelessWidget {
   final void Function(Skill skill, SkillTreeNode? node) onAddQuest;
   final void Function(Skill skill, RoadmapTemplateConfig config)
   onApplyRoadmapTemplate;
-  final void Function(Task task, Offset position) onToggleQuest;
-  final void Function(Task task, Offset position) onMinimumAction;
+  final void Function(Task task, ActionToastOrigin origin) onToggleQuest;
+  final void Function(Task task, ActionToastOrigin origin) onMinimumAction;
   final void Function(Skill skill, Task task) onEditQuest;
   final ValueChanged<Task> onDeleteQuest;
   final void Function(Skill skill, SkillTreeNode node) onMasterNode;

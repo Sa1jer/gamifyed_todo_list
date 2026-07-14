@@ -333,24 +333,10 @@ class _TasksPanelState extends State<TasksPanel> {
                               skillColor: skill.color,
                               previewEarnedXP: s.previewEarnedXP(t),
                               previewBuffBonus: s.previewBuffBonusXP(t),
-                              onToggle: (pos) => widget.onComplete(
-                                t.id,
-                                legacyActionToastOrigin(
-                                  pos,
-                                  zone: ActionToastZone.mainWorkspace,
-                                  kind: ActionToastOriginKind.questCheckbox,
-                                  sourceId: t.id,
-                                ),
-                              ),
-                              onMinimumAction: (pos) => widget.onMinimumAction(
-                                t.id,
-                                legacyActionToastOrigin(
-                                  pos,
-                                  zone: ActionToastZone.mainWorkspace,
-                                  kind: ActionToastOriginKind.minimumAction,
-                                  sourceId: t.id,
-                                ),
-                              ),
+                              onToggle: (origin) =>
+                                  widget.onComplete(t.id, origin),
+                              onMinimumAction: (origin) =>
+                                  widget.onMinimumAction(t.id, origin),
                               onUncomplete: () => s.uncompleteTask(t.id),
                               onArchive: () => s.archiveCompletedTask(t.id),
                               onRestoreArchive: () =>
@@ -689,24 +675,9 @@ class _TasksPanelState extends State<TasksPanel> {
                     isDark: isDark,
                     skillColor: skill.color,
                     previewEarnedXP: state.previewEarnedXP(task),
-                    onToggle: (position) => widget.onComplete(
-                      task.id,
-                      legacyActionToastOrigin(
-                        position,
-                        zone: ActionToastZone.mobileContent,
-                        kind: ActionToastOriginKind.questCheckbox,
-                        sourceId: task.id,
-                      ),
-                    ),
-                    onMinimumAction: (position) => widget.onMinimumAction(
-                      task.id,
-                      legacyActionToastOrigin(
-                        position,
-                        zone: ActionToastZone.mobileContent,
-                        kind: ActionToastOriginKind.minimumAction,
-                        sourceId: task.id,
-                      ),
-                    ),
+                    onToggle: (origin) => widget.onComplete(task.id, origin),
+                    onMinimumAction: (origin) =>
+                        widget.onMinimumAction(task.id, origin),
                     onUncomplete: () => state.uncompleteTask(task.id),
                     onArchive: () => state.archiveCompletedTask(task.id),
                     onRestoreArchive: () => state.restoreArchivedTask(task.id),
@@ -1138,8 +1109,8 @@ class _MobileFocusTaskTile extends StatefulWidget {
   final bool isDark;
   final Color skillColor;
   final int previewEarnedXP;
-  final ValueChanged<Offset> onToggle;
-  final ValueChanged<Offset> onMinimumAction;
+  final ValueChanged<ActionToastOrigin> onToggle;
+  final ValueChanged<ActionToastOrigin> onMinimumAction;
   final VoidCallback onUncomplete;
   final VoidCallback onArchive;
   final VoidCallback onRestoreArchive;
@@ -1423,17 +1394,26 @@ class _MobileFocusTaskTileState extends State<_MobileFocusTaskTile> {
     );
   }
 
-  Offset _globalOrigin(BuildContext context) {
-    final box = context.findRenderObject() as RenderBox?;
-    return box?.localToGlobal(Offset.zero) ?? Offset.zero;
+  ActionToastOrigin _originFor(
+    BuildContext context,
+    ActionToastOriginKind kind,
+  ) {
+    return actionToastOriginForContext(
+      context,
+      kind: kind,
+      zone: ActionToastZone.mobileContent,
+      sourceId: widget.task.id,
+    );
   }
 
   void _complete(BuildContext context) {
-    widget.onToggle(_globalOrigin(context));
+    widget.onToggle(_originFor(context, ActionToastOriginKind.questCheckbox));
   }
 
   void _completeMinimum(BuildContext context) {
-    widget.onMinimumAction(_globalOrigin(context));
+    widget.onMinimumAction(
+      _originFor(context, ActionToastOriginKind.minimumAction),
+    );
   }
 
   void _uncomplete() {
@@ -1525,8 +1505,8 @@ class TaskTile extends StatefulWidget {
   final Color skillColor;
   final int previewEarnedXP;
   final int previewBuffBonus;
-  final Function(Offset) onToggle;
-  final Function(Offset) onMinimumAction;
+  final ValueChanged<ActionToastOrigin> onToggle;
+  final ValueChanged<ActionToastOrigin> onMinimumAction;
   final VoidCallback onUncomplete;
   final VoidCallback onArchive;
   final VoidCallback onRestoreArchive;
@@ -1913,17 +1893,26 @@ class _TaskTileState extends State<TaskTile> {
     );
   }
 
-  Offset _globalOrigin(BuildContext context) {
-    final box = context.findRenderObject() as RenderBox?;
-    return box?.localToGlobal(Offset.zero) ?? Offset.zero;
+  ActionToastOrigin _originFor(
+    BuildContext context,
+    ActionToastOriginKind kind,
+  ) {
+    return actionToastOriginForContext(
+      context,
+      kind: kind,
+      zone: ActionToastZone.mainWorkspace,
+      sourceId: widget.task.id,
+    );
   }
 
   void _complete(BuildContext context) {
-    widget.onToggle(_globalOrigin(context));
+    widget.onToggle(_originFor(context, ActionToastOriginKind.questCheckbox));
   }
 
   void _completeMinimum(BuildContext context) {
-    widget.onMinimumAction(_globalOrigin(context));
+    widget.onMinimumAction(
+      _originFor(context, ActionToastOriginKind.minimumAction),
+    );
   }
 
   void _uncomplete() {

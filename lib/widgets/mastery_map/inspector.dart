@@ -261,8 +261,8 @@ class _MasteryMapInspector extends StatelessWidget {
   final void Function(Skill skill, SkillTreeNode node) onExtendPath;
   final void Function(Skill skill, SkillTreeNode node) onRenameNode;
   final void Function(Skill skill, SkillTreeNode? node) onAddQuest;
-  final void Function(Task task, Offset position) onToggleQuest;
-  final void Function(Task task, Offset position) onMinimumAction;
+  final void Function(Task task, ActionToastOrigin origin) onToggleQuest;
+  final void Function(Task task, ActionToastOrigin origin) onMinimumAction;
   final void Function(Skill skill, Task task) onEditQuest;
   final ValueChanged<Task> onDeleteQuest;
   final void Function(Skill skill, SkillTreeNode node) onMasterNode;
@@ -498,8 +498,8 @@ class _SkillInspector extends StatelessWidget {
   final bool isDark;
   final Skill skill;
   final ValueChanged<Skill> onAddStage;
-  final void Function(Task task, Offset position) onToggleQuest;
-  final void Function(Task task, Offset position) onMinimumAction;
+  final void Function(Task task, ActionToastOrigin origin) onToggleQuest;
+  final void Function(Task task, ActionToastOrigin origin) onMinimumAction;
   final ValueChanged<Task> onEditQuest;
   final ValueChanged<Task> onDeleteQuest;
 
@@ -765,8 +765,8 @@ class _NodeInspector extends StatelessWidget {
   final VoidCallback onRename;
   final VoidCallback onExtendPath;
   final VoidCallback onAddQuest;
-  final void Function(Task task, Offset position) onToggleQuest;
-  final void Function(Task task, Offset position) onMinimumAction;
+  final void Function(Task task, ActionToastOrigin origin) onToggleQuest;
+  final void Function(Task task, ActionToastOrigin origin) onMinimumAction;
   final ValueChanged<Task> onEditQuest;
   final ValueChanged<Task> onDeleteQuest;
   final VoidCallback onMaster;
@@ -1340,8 +1340,8 @@ class _StagePracticeQuestList extends StatelessWidget {
   final List<Task> activeTasks;
   final List<Task> completedTasks;
   final String emptyText;
-  final void Function(Task task, Offset position) onToggleQuest;
-  final void Function(Task task, Offset position) onMinimumAction;
+  final void Function(Task task, ActionToastOrigin origin) onToggleQuest;
+  final void Function(Task task, ActionToastOrigin origin) onMinimumAction;
   final ValueChanged<Task> onEditQuest;
   final ValueChanged<Task> onDeleteQuest;
   final bool shrinkWrap;
@@ -1423,8 +1423,8 @@ class _InspectorQuestRow extends StatelessWidget {
   final bool isDark;
   final Color color;
   final bool muted;
-  final ValueChanged<Offset> onToggle;
-  final ValueChanged<Offset> onMinimumAction;
+  final ValueChanged<ActionToastOrigin> onToggle;
+  final ValueChanged<ActionToastOrigin> onMinimumAction;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
@@ -1441,6 +1441,12 @@ class _InspectorQuestRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final toggleKey = GlobalKey(
+      debugLabel: 'roadmap-inspector-toggle-${task.id}',
+    );
+    final minimumKey = GlobalKey(
+      debugLabel: 'roadmap-inspector-minimum-${task.id}',
+    );
     final done = task.isDone;
     final sub = subtext(isDark);
     final rowColor = done ? const Color(0xFF34C759) : color;
@@ -1467,16 +1473,22 @@ class _InspectorQuestRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Builder(
-            builder: (iconContext) => PressFeedback(
-              scale: 0.9,
-              onTap: () => onToggle(_feedbackOriginFor(iconContext)),
-              child: _QuestToggleCircle(
-                done: done,
-                color: rowColor,
-                isDark: isDark,
-                size: 18,
+          PressFeedback(
+            key: toggleKey,
+            scale: 0.9,
+            onTap: () => onToggle(
+              actionToastOriginForContext(
+                toggleKey.currentContext ?? context,
+                kind: ActionToastOriginKind.roadmapInspectorTask,
+                zone: ActionToastZone.roadmapInspector,
+                sourceId: task.id,
               ),
+            ),
+            child: _QuestToggleCircle(
+              done: done,
+              color: rowColor,
+              isDark: isDark,
+              size: 18,
             ),
           ),
           const SizedBox(width: 8),
@@ -1516,12 +1528,17 @@ class _InspectorQuestRow extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (canStartMinimum) ...[
-                Builder(
-                  builder: (minimumContext) => _RoadmapMinimumButton(
-                    isDark: isDark,
-                    color: color,
-                    onTap: () =>
-                        onMinimumAction(_feedbackOriginFor(minimumContext)),
+                _RoadmapMinimumButton(
+                  key: minimumKey,
+                  isDark: isDark,
+                  color: color,
+                  onTap: () => onMinimumAction(
+                    actionToastOriginForContext(
+                      minimumKey.currentContext ?? context,
+                      kind: ActionToastOriginKind.minimumAction,
+                      zone: ActionToastZone.roadmapInspector,
+                      sourceId: task.id,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -1615,6 +1632,7 @@ class _RoadmapMinimumButton extends StatelessWidget {
   final VoidCallback onTap;
 
   const _RoadmapMinimumButton({
+    super.key,
     required this.isDark,
     required this.color,
     required this.onTap,

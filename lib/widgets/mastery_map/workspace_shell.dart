@@ -271,33 +271,17 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
   Skill? _skillById(AppState state, String id) =>
       state.roadmapSkills.where((skill) => skill.id == id).firstOrNull;
 
-  void _toggleQuestFromMap(Task task, Offset position) {
+  void _toggleQuestFromMap(Task task, ActionToastOrigin origin) {
     if (task.isDone) {
       AppFeedback.selection();
       AppStateProvider.of(context).uncompleteTask(task.id);
       return;
     }
-    widget.onCompleteTask(
-      task.id,
-      legacyActionToastOrigin(
-        position,
-        zone: ActionToastZone.roadmapInspector,
-        kind: ActionToastOriginKind.roadmapInspectorTask,
-        sourceId: task.id,
-      ),
-    );
+    widget.onCompleteTask(task.id, origin);
   }
 
-  void _minimumActionFromMap(Task task, Offset position) {
-    widget.onMinimumAction(
-      task.id,
-      legacyActionToastOrigin(
-        position,
-        zone: ActionToastZone.roadmapInspector,
-        kind: ActionToastOriginKind.minimumAction,
-        sourceId: task.id,
-      ),
-    );
+  void _minimumActionFromMap(Task task, ActionToastOrigin origin) {
+    widget.onMinimumAction(task.id, origin);
   }
 
   void _addNode(

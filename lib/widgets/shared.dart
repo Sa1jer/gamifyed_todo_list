@@ -1031,6 +1031,7 @@ CompletionToastColors completionToastColorsForTask({
 }
 
 enum ActionToastOriginKind {
+  /// Used only when no actionable control exists, such as keyboard fallback.
   questRow,
   questCheckbox,
   minimumAction,
@@ -1139,11 +1140,54 @@ class ActionToastPlacement {
 
   const ActionToastPlacement(this.topLeft, {this.maxWidth = estimatedWidth});
 
+  /// Local visual envelope around the control that started the completion.
+  /// The envelope is deliberately based on the control type, never on the
+  /// containing task row or workspace.
+  static ActionToastSpawnPolicy policyFor(
+    ActionToastOriginKind kind,
+    ActionToastZone zone,
+  ) {
+    switch (zone) {
+      case ActionToastZone.rightRail:
+      case ActionToastZone.roadmapInspector:
+        return const ActionToastSpawnPolicy(
+          preferredDistance: 150,
+          hardDistance: 190,
+          jitterX: 10,
+          jitterY: 8,
+        );
+      case ActionToastZone.roadmapCanvas:
+        return const ActionToastSpawnPolicy(
+          preferredDistance: 170,
+          hardDistance: 230,
+          jitterX: 14,
+          jitterY: 10,
+        );
+      case ActionToastZone.mobileContent:
+      case ActionToastZone.mobileBottomContextual:
+        return const ActionToastSpawnPolicy(
+          preferredDistance: 140,
+          hardDistance: 190,
+          jitterX: 8,
+          jitterY: 6,
+        );
+      case ActionToastZone.mainWorkspace:
+      case ActionToastZone.fallback:
+        return const ActionToastSpawnPolicy(
+          preferredDistance: 160,
+          hardDistance: 210,
+          jitterX: 12,
+          jitterY: 9,
+        );
+    }
+  }
+
   /// Resolves once, when the completion event is received. `XPBubble` only
   /// consumes the result, so rebuilds cannot move the toast or re-roll jitter.
   factory ActionToastPlacement.resolve({
     required Rect sourceRect,
     required ActionToastOriginKind kind,
+    required ActionToastZone zone,
     required Size viewport,
     Rect? safeRegion,
     Offset jitter = Offset.zero,
@@ -1164,9 +1208,13 @@ class ActionToastPlacement {
       available.bottom - bottomReserved - estimatedHeight,
     );
     const gap = 14.0;
+    // A source-less event is a keyboard/fallback interaction. It is the only
+    // case allowed to use the local safe-region centre; pointer paths always
+    // provide the concrete action-control rect before mutating AppState.
     final source = sourceRect.isEmpty
-        ? available.center & Size.zero
+        ? Rect.fromCenter(center: available.center, width: 1, height: 1)
         : sourceRect;
+    final policy = policyFor(kind, zone);
     final prefersBelow =
         kind == ActionToastOriginKind.minimumAction ||
         kind == ActionToastOriginKind.roadmapCanvasNode;
@@ -1197,7 +1245,9 @@ class ActionToastPlacement {
           rect.right <= available.right &&
           rect.top >= available.top &&
           rect.bottom <= available.bottom - bottomReserved;
-      return isInside && !rect.overlaps(source);
+      return isInside &&
+          !rect.overlaps(source) &&
+          (rect.center - source.center).distance <= policy.hardDistance;
     }
 
     for (final candidate in candidates) {
@@ -1206,8 +1256,37 @@ class ActionToastPlacement {
       }
     }
 
-    // A very small safe region can make every candidate invalid. Clamp the
-    // primary position as a final safe fallback instead of re-centering it.
+    // Clamp each local candidate and choose the closest valid local outcome.
+    // This never falls back to the centre of the workspace for a pointer event.
+    final clamped = candidates
+        .map(
+          (candidate) => Offset(
+            candidate.dx.clamp(available.left, maxLeft),
+            candidate.dy.clamp(available.top, maxTop),
+          ),
+        )
+        .map((topLeft) => topLeft & Size(toastWidth, estimatedHeight))
+        .where((rect) => !rect.overlaps(source))
+        .where(
+          (rect) =>
+              (rect.center - source.center).distance <= policy.hardDistance,
+        )
+        .toList();
+    if (clamped.isNotEmpty) {
+      clamped.sort((a, b) {
+        final aDistance = (a.center - source.center).distance;
+        final bDistance = (b.center - source.center).distance;
+        final aScore = (aDistance - policy.preferredDistance).abs();
+        final bScore = (bDistance - policy.preferredDistance).abs();
+        return aScore == bScore
+            ? aDistance.compareTo(bDistance)
+            : aScore.compareTo(bScore);
+      });
+      return ActionToastPlacement(clamped.first.topLeft, maxWidth: toastWidth);
+    }
+
+    // Extremely constrained regions can leave no non-overlapping candidate.
+    // Stay adjacent to the actual control rather than jumping to a broad zone.
     final fallback = candidates.first;
     return ActionToastPlacement(
       Offset(
@@ -1218,18 +1297,36 @@ class ActionToastPlacement {
     );
   }
 
-  static Offset stableJitter(int seed, Rect safeRegion) {
+  static Offset stableJitter(
+    int seed,
+    ActionToastOriginKind kind,
+    ActionToastZone zone,
+  ) {
     // Deterministic, bounded event variation. It is intentionally calculated
     // outside widget build and stays small on constrained regions.
-    final maxX = math.min(24.0, math.max(0.0, safeRegion.width / 12));
-    final maxY = math.min(18.0, math.max(0.0, safeRegion.height / 18));
-    final x = ((seed * 37) % 49) - 24;
-    final y = ((seed * 19) % 33) - 14;
+    final policy = policyFor(kind, zone);
+    final x = ((seed * 37) % 25) - 12;
+    final y = ((seed * 19) % 19) - 9;
     return Offset(
-      x.clamp(-maxX, maxX).toDouble(),
-      y.clamp(-maxY, maxY).toDouble(),
+      x.clamp(-policy.jitterX, policy.jitterX).toDouble(),
+      y.clamp(-policy.jitterY, policy.jitterY).toDouble(),
     );
   }
+}
+
+@immutable
+class ActionToastSpawnPolicy {
+  final double preferredDistance;
+  final double hardDistance;
+  final double jitterX;
+  final double jitterY;
+
+  const ActionToastSpawnPolicy({
+    required this.preferredDistance,
+    required this.hardDistance,
+    required this.jitterX,
+    required this.jitterY,
+  });
 }
 
 @immutable

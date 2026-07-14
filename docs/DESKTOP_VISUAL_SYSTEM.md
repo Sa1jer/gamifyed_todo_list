@@ -270,6 +270,16 @@ the outgoing bar before continuing from zero at the new level; reduced motion
 swaps directly to the target value. This is presentation-only and does not
 change XP, level, completion, or reward rules.
 
+## 1.3.64 Control-Local Reward Feedback
+
+Every active completion path now captures the global rectangle of the actual
+action control: a task checkbox, focus check, minimum-action button, or
+RoadMap inspector control. The contextual toast resolver uses that rectangle
+as the source and may only vary its placement inside a bounded local halo.
+It must not treat a quest row, header, workspace, or rail as a normal spawn
+source. A safe-region fallback remains only for source-less keyboard and
+accessibility activation.
+
 Desktop Add Skill and Add Quest dialogs now use a fixed header, scrollable
 body, and fixed footer. Their desktop identity and field layouts reuse the
 same field order and semantic controls as the mobile forms without becoming a

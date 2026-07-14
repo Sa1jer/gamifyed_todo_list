@@ -1806,14 +1806,6 @@ class _DesktopQuestRowState extends State<_DesktopQuestRow> {
   bool _hovered = false;
   bool _focused = false;
   bool _menuOpen = false;
-  final GlobalKey _rowKey = GlobalKey();
-
-  ActionToastOrigin _rowOrigin() => actionToastOriginForContext(
-    _rowKey.currentContext ?? context,
-    kind: ActionToastOriginKind.questRow,
-    zone: ActionToastZone.mainWorkspace,
-    sourceId: widget.task.id,
-  );
 
   @override
   Widget build(BuildContext context) {
@@ -1837,7 +1829,6 @@ class _DesktopQuestRowState extends State<_DesktopQuestRow> {
           onEnter: (_) => setState(() => _hovered = true),
           onExit: (_) => setState(() => _hovered = false),
           child: AnimatedContainer(
-            key: _rowKey,
             duration: DesktopJournalTokens.fastMotion,
             curve: DesktopJournalTokens.motionCurve,
             constraints: const BoxConstraints(minHeight: 72),
@@ -1877,7 +1868,7 @@ class _DesktopQuestRowState extends State<_DesktopQuestRow> {
                     if (done) {
                       widget.state.uncompleteTask(task.id);
                     } else {
-                      widget.onComplete(task.id, origin ?? _rowOrigin());
+                      widget.onComplete(task.id, origin);
                     }
                   },
                 ),
@@ -1925,10 +1916,8 @@ class _DesktopQuestRowState extends State<_DesktopQuestRow> {
                             _DesktopMiniAction(
                               label: 'Минимальный шаг',
                               color: widget.skill.color,
-                              onTap: (origin) => widget.onMinimumAction(
-                                task.id,
-                                origin ?? _rowOrigin(),
-                              ),
+                              onTap: (origin) =>
+                                  widget.onMinimumAction(task.id, origin),
                             ),
                         ],
                       ),
@@ -2017,7 +2006,7 @@ class _DesktopQuestRowState extends State<_DesktopQuestRow> {
 class _DesktopQuestCheck extends StatefulWidget {
   final bool done;
   final Color color;
-  final ValueChanged<ActionToastOrigin?> onTap;
+  final ValueChanged<ActionToastOrigin> onTap;
 
   const _DesktopQuestCheck({
     required this.done,
@@ -2034,7 +2023,13 @@ class _DesktopQuestCheckState extends State<_DesktopQuestCheck> {
   final GlobalKey _checkKey = GlobalKey();
 
   void _completeTap() {
-    final origin = _origin;
+    final origin =
+        _origin ??
+        actionToastOriginForContext(
+          _checkKey.currentContext ?? context,
+          kind: ActionToastOriginKind.questCheckbox,
+          zone: ActionToastZone.mainWorkspace,
+        );
     _origin = null;
     widget.onTap(origin);
   }
@@ -2109,7 +2104,7 @@ class _DesktopTypeBadge extends StatelessWidget {
 class _DesktopMiniAction extends StatefulWidget {
   final String label;
   final Color color;
-  final ValueChanged<ActionToastOrigin?> onTap;
+  final ValueChanged<ActionToastOrigin> onTap;
 
   const _DesktopMiniAction({
     required this.label,
@@ -2126,7 +2121,13 @@ class _DesktopMiniActionState extends State<_DesktopMiniAction> {
   final GlobalKey _actionKey = GlobalKey();
 
   void _completeTap() {
-    final origin = _origin;
+    final origin =
+        _origin ??
+        actionToastOriginForContext(
+          _actionKey.currentContext ?? context,
+          kind: ActionToastOriginKind.minimumAction,
+          zone: ActionToastZone.mainWorkspace,
+        );
     _origin = null;
     widget.onTap(origin);
   }
@@ -2462,7 +2463,14 @@ class _DesktopFocusTaskState extends State<_DesktopFocusTask> {
   bool _hovered = false;
   bool _focused = false;
   ActionToastOrigin? _origin;
-  final GlobalKey _surfaceKey = GlobalKey();
+  final GlobalKey _checkKey = GlobalKey();
+
+  ActionToastOrigin _checkOrigin() => actionToastOriginForContext(
+    _checkKey.currentContext ?? context,
+    kind: ActionToastOriginKind.focusTask,
+    zone: ActionToastZone.rightRail,
+    sourceId: widget.task.id,
+  );
 
   void _activate(ActionToastOrigin? origin) {
     final task = widget.task;
@@ -2470,16 +2478,7 @@ class _DesktopFocusTaskState extends State<_DesktopFocusTask> {
       widget.state.uncompleteTask(task.id);
       return;
     }
-    widget.onComplete(
-      task.id,
-      origin ??
-          actionToastOriginForContext(
-            _surfaceKey.currentContext ?? context,
-            kind: ActionToastOriginKind.focusTask,
-            zone: ActionToastZone.rightRail,
-            sourceId: task.id,
-          ),
-    );
+    widget.onComplete(task.id, origin ?? _checkOrigin());
   }
 
   @override
@@ -2520,170 +2519,170 @@ class _DesktopFocusTaskState extends State<_DesktopFocusTask> {
             },
           ),
         },
-        child: GestureDetector(
-          key: _surfaceKey,
-          behavior: HitTestBehavior.opaque,
-          onTapDown: (_) => _origin = actionToastOriginForContext(
-            _surfaceKey.currentContext ?? context,
-            kind: ActionToastOriginKind.focusTask,
-            zone: ActionToastZone.rightRail,
-            sourceId: task.id,
-          ),
-          onTapCancel: () => _origin = null,
-          onTap: () {
-            final origin = _origin;
-            _origin = null;
-            _activate(origin);
-          },
-          child: AnimatedContainer(
-            key: ValueKey('desktop-focus-surface-${task.id}'),
-            duration: reduceMotion
-                ? Duration.zero
-                : const Duration(milliseconds: 110),
-            curve: DesktopJournalTokens.motionCurve,
-            constraints: const BoxConstraints(minHeight: 54),
-            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
-            decoration: BoxDecoration(
+        child: AnimatedContainer(
+          key: ValueKey('desktop-focus-surface-${task.id}'),
+          duration: reduceMotion
+              ? Duration.zero
+              : const Duration(milliseconds: 110),
+          curve: DesktopJournalTokens.motionCurve,
+          constraints: const BoxConstraints(minHeight: 54),
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
+          decoration: BoxDecoration(
+            color: active
+                ? Color.alphaBlend(
+                    color.withValues(alpha: 0.045),
+                    tokens.raisedSurface,
+                  )
+                : task.isDone
+                ? Color.alphaBlend(
+                    tokens.successGreen.withValues(alpha: 0.045),
+                    tokens.cardSurface,
+                  )
+                : tokens.cardSurface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
               color: active
-                  ? Color.alphaBlend(
-                      color.withValues(alpha: 0.045),
-                      tokens.raisedSurface,
-                    )
+                  ? color.withValues(alpha: 0.34)
                   : task.isDone
-                  ? Color.alphaBlend(
-                      tokens.successGreen.withValues(alpha: 0.045),
-                      tokens.cardSurface,
-                    )
-                  : tokens.cardSurface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: active
-                    ? color.withValues(alpha: 0.34)
-                    : task.isDone
-                    ? tokens.successGreen.withValues(alpha: 0.18)
-                    : tokens.outline,
-              ),
+                  ? tokens.successGreen.withValues(alpha: 0.18)
+                  : tokens.outline,
             ),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final textScale = MediaQuery.textScalerOf(context).scale(1);
-                final reflowReward =
-                    constraints.maxWidth < 205 || textScale >= 1.6;
-                final compact = constraints.maxWidth < 188 && textScale < 1.6;
-                final titleMaxLines = textScale >= 1.6
-                    ? 3
-                    : compact
-                    ? 1
-                    : 2;
-                final titleStyle =
-                    (compact ? textTheme.labelLarge : textTheme.titleSmall)
-                        ?.copyWith(
-                          color: task.isDone ? tokens.mutedText : tokens.text,
-                          fontWeight: FontWeight.w800,
-                          decoration: task.isDone
-                              ? TextDecoration.lineThrough
-                              : null,
-                        );
-                final metadata = Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 5,
-                      height: 5,
-                      decoration: BoxDecoration(
-                        color: color,
-                        shape: BoxShape.circle,
-                      ),
+          ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final textScale = MediaQuery.textScalerOf(context).scale(1);
+              final reflowReward =
+                  constraints.maxWidth < 205 || textScale >= 1.6;
+              final compact = constraints.maxWidth < 188 && textScale < 1.6;
+              final titleMaxLines = textScale >= 1.6
+                  ? 3
+                  : compact
+                  ? 1
+                  : 2;
+              final titleStyle =
+                  (compact ? textTheme.labelLarge : textTheme.titleSmall)
+                      ?.copyWith(
+                        color: task.isDone ? tokens.mutedText : tokens.text,
+                        fontWeight: FontWeight.w800,
+                        decoration: task.isDone
+                            ? TextDecoration.lineThrough
+                            : null,
+                      );
+              final metadata = Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 5,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
                     ),
-                    const SizedBox(width: 5),
-                    Flexible(
-                      child: Text(
-                        skill?.name ?? 'Навык',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: roles.compactMetadata.copyWith(
-                          color: tokens.mutedText,
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-                final rewardText = Text(
-                  '+$reward',
-                  key: ValueKey('desktop-focus-reward-${task.id}'),
-                  maxLines: 1,
-                  style: roles.reward.copyWith(
-                    color: task.isDone
-                        ? tokens.successGreen
-                        : tokens.rewardGold,
                   ),
-                );
-                final title = Text(
-                  task.title,
-                  key: ValueKey('desktop-focus-title-${task.id}'),
-                  maxLines: titleMaxLines,
-                  overflow: TextOverflow.ellipsis,
-                  style: titleStyle,
-                );
+                  const SizedBox(width: 5),
+                  Flexible(
+                    child: Text(
+                      skill?.name ?? 'Навык',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: roles.compactMetadata.copyWith(
+                        color: tokens.mutedText,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+              final rewardText = Text(
+                '+$reward',
+                key: ValueKey('desktop-focus-reward-${task.id}'),
+                maxLines: 1,
+                style: roles.reward.copyWith(
+                  color: task.isDone ? tokens.successGreen : tokens.rewardGold,
+                ),
+              );
+              final title = Text(
+                task.title,
+                key: ValueKey('desktop-focus-title-${task.id}'),
+                maxLines: titleMaxLines,
+                overflow: TextOverflow.ellipsis,
+                style: titleStyle,
+              );
 
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 26,
-                      height: 26,
-                      margin: const EdgeInsets.only(top: 1),
-                      decoration: BoxDecoration(
-                        color: task.isDone
-                            ? tokens.successGreen
-                            : color.withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: task.isDone ? tokens.successGreen : color,
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Semantics(
+                    button: true,
+                    checked: task.isDone,
+                    label: task.isDone
+                        ? 'Вернуть квест ${task.title}'
+                        : 'Выполнить квест ${task.title}',
+                    child: InkResponse(
+                      key: _checkKey,
+                      radius: 22,
+                      onTapDown: (_) => _origin = _checkOrigin(),
+                      onTapCancel: () => _origin = null,
+                      onTap: () {
+                        final origin = _origin;
+                        _origin = null;
+                        _activate(origin);
+                      },
+                      child: Container(
+                        width: 26,
+                        height: 26,
+                        margin: const EdgeInsets.only(top: 1),
+                        decoration: BoxDecoration(
+                          color: task.isDone
+                              ? tokens.successGreen
+                              : color.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: task.isDone ? tokens.successGreen : color,
+                          ),
                         ),
-                      ),
-                      child: task.isDone
-                          ? const Icon(
-                              Icons.check_rounded,
-                              color: Colors.white,
-                              size: 15,
-                            )
-                          : null,
-                    ),
-                    const SizedBox(width: 9),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          title,
-                          const SizedBox(height: 4),
-                          if (reflowReward)
-                            Row(
-                              children: [
-                                Expanded(child: metadata),
-                                const SizedBox(width: 8),
-                                rewardText,
-                              ],
-                            )
-                          else
-                            metadata,
-                        ],
+                        child: task.isDone
+                            ? const Icon(
+                                Icons.check_rounded,
+                                color: Colors.white,
+                                size: 15,
+                              )
+                            : null,
                       ),
                     ),
-                    if (!reflowReward) ...[
-                      const SizedBox(width: 8),
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(minWidth: 32),
-                        child: Align(
-                          alignment: Alignment.topRight,
-                          child: rewardText,
-                        ),
+                  ),
+                  const SizedBox(width: 9),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        title,
+                        const SizedBox(height: 4),
+                        if (reflowReward)
+                          Row(
+                            children: [
+                              Expanded(child: metadata),
+                              const SizedBox(width: 8),
+                              rewardText,
+                            ],
+                          )
+                        else
+                          metadata,
+                      ],
+                    ),
+                  ),
+                  if (!reflowReward) ...[
+                    const SizedBox(width: 8),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(minWidth: 32),
+                      child: Align(
+                        alignment: Alignment.topRight,
+                        child: rewardText,
                       ),
-                    ],
+                    ),
                   ],
-                );
-              },
-            ),
+                ],
+              );
+            },
           ),
         ),
       ),
