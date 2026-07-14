@@ -13,6 +13,8 @@ import 'reward_animations.dart';
 import 'shared.dart';
 import 'mobile_journal_tokens.dart';
 import 'dialogs/task_form_controller.dart';
+import 'dialogs/boss_card.dart';
+import 'dialogs/task_form_sections.dart';
 
 part 'dialogs/achievements_history.dart';
 part 'dialogs/shared_controls.dart';

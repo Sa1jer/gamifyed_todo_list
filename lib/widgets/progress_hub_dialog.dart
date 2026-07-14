@@ -1199,13 +1199,27 @@ class _ProgressStorySnapshot {
     final analytics = state.currentAnalytics;
     final today = analytics.dayFor(DateTime.now());
     final leader = analytics.activityLeader;
+    final leaderSkill = leader == null
+        ? null
+        : state.skills.where((skill) => skill.id == leader.skillId).firstOrNull;
+    final leaderHistory = leader == null
+        ? null
+        : state.history
+              .where((entry) => entry.skillId == leader.skillId)
+              .firstOrNull;
     final topSkill = leader == null
         ? null
         : _ProgressSkillStory(
             skillId: leader.skillId,
             name: leader.name,
-            color: leader.color,
-            icon: leader.icon,
+            color:
+                leaderSkill?.color ??
+                leaderHistory?.skillColor ??
+                Colors.blueAccent,
+            icon:
+                leaderSkill?.icon ??
+                leaderHistory?.skillIcon ??
+                Icons.auto_graph_rounded,
             xp: leader.xp,
             questCount: leader.completedTasks,
           );

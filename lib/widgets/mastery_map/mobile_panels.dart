@@ -1064,7 +1064,7 @@ class _MobileMasteryQuestRow extends StatelessWidget {
                 sourceId: task.id,
               ),
             ),
-            child: _QuestToggleCircle(
+            child: MasteryQuestToggleCircle(
               done: task.isDone,
               color: color,
               isDark: isDark,
@@ -1108,7 +1108,7 @@ class _MobileMasteryQuestRow extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           if (canStartMinimum) ...[
-            _RoadmapMinimumButton(
+            MasteryRoadmapMinimumButton(
               key: minimumKey,
               isDark: isDark,
               color: color,

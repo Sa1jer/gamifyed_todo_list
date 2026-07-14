@@ -11,6 +11,7 @@ class DesktopStatisticsSummaryStrip extends StatelessWidget {
   final int todayXp;
   final int weekXp;
   final AnalyticsSkillSummary? mainSkill;
+  final Skill? mainSkillIdentity;
 
   const DesktopStatisticsSummaryStrip({
     super.key,
@@ -18,6 +19,7 @@ class DesktopStatisticsSummaryStrip extends StatelessWidget {
     required this.todayXp,
     required this.weekXp,
     required this.mainSkill,
+    required this.mainSkillIdentity,
   });
 
   @override
@@ -44,12 +46,12 @@ class DesktopStatisticsSummaryStrip extends StatelessWidget {
       const SizedBox(width: 10),
       Expanded(
         child: _summary(
-          mainSkill?.icon ?? Icons.star_outline,
+          mainSkillIdentity?.icon ?? Icons.star_outline,
           'Главный навык',
           mainSkill == null
               ? 'Нет данных'
               : '${mainSkill!.name} · ${mainSkill!.weeklyXp} XP',
-          mainSkill?.color ?? tokens.mutedText,
+          mainSkillIdentity?.color ?? tokens.mutedText,
         ),
       ),
     ],

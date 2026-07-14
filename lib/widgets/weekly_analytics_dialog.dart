@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import '../analytics/analytics_read_model.dart';
+import '../analytics/weekly_analytics_read_model.dart';
 import '../app_state.dart';
-import '../engines/task_ordering.dart';
 import '../feedback_service.dart';
 import '../models.dart';
 import '../utils.dart';
@@ -36,7 +35,7 @@ class _WeeklyAnalyticsDialogState extends State<WeeklyAnalyticsDialog> {
     final isDark = state.isDark;
     final bdr = borderColor(isDark);
     final bg = surface(isDark);
-    final summary = _WeeklySummary.fromState(state, _weekStart);
+    final summary = WeeklyAnalyticsReadModel.fromState(state, _weekStart);
     final canGoNext = _weekStart.isBefore(startOfWeek(DateTime.now()));
     final size = MediaQuery.sizeOf(context);
     final availableWidth = size.width - 36;
@@ -1728,6 +1727,8 @@ class _WeeklySkillBreakdown extends StatelessWidget {
               children: stats.asMap().entries.map((entry) {
                 final index = entry.key;
                 final stat = entry.value;
+                final color = _analyticsSkillColor(summary.state, stat.skillId);
+                final icon = _analyticsSkillIcon(summary.state, stat.skillId);
                 final progress = maxXp == 0 ? 0.0 : stat.xp / maxXp;
                 return MotionListItem(
                   key: ValueKey('week-skill-${stat.skillId}'),
@@ -1741,10 +1742,10 @@ class _WeeklySkillBreakdown extends StatelessWidget {
                           width: 34,
                           height: 34,
                           decoration: BoxDecoration(
-                            color: stat.color.withAlpha(24),
+                            color: color.withAlpha(24),
                             borderRadius: BorderRadius.circular(11),
                           ),
-                          child: Icon(stat.icon, color: stat.color, size: 18),
+                          child: Icon(icon, color: color, size: 18),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
@@ -1768,7 +1769,7 @@ class _WeeklySkillBreakdown extends StatelessWidget {
                                   Text(
                                     '${stat.xp} XP',
                                     style: TextStyle(
-                                      color: stat.color,
+                                      color: color,
                                       fontSize: 11,
                                       fontWeight: FontWeight.w800,
                                     ),
@@ -1778,7 +1779,7 @@ class _WeeklySkillBreakdown extends StatelessWidget {
                               const SizedBox(height: 5),
                               XPBar(
                                 progress: progress,
-                                color: stat.color,
+                                color: color,
                                 height: 5,
                               ),
                               const SizedBox(height: 3),
@@ -1828,6 +1829,8 @@ class _WeeklyTaskList extends StatelessWidget {
               children: entries.take(7).toList().asMap().entries.map((entry) {
                 final index = entry.key;
                 final item = entry.value;
+                final color = _analyticsSkillColor(summary.state, item.skillId);
+                final icon = _analyticsSkillIcon(summary.state, item.skillId);
                 return MotionListItem(
                   key: ValueKey(
                     'week-task-${item.id}-${item.at.millisecondsSinceEpoch}',
@@ -1850,14 +1853,10 @@ class _WeeklyTaskList extends StatelessWidget {
                           width: 28,
                           height: 28,
                           decoration: BoxDecoration(
-                            color: item.skillColor.withAlpha(24),
+                            color: color.withAlpha(24),
                             borderRadius: BorderRadius.circular(9),
                           ),
-                          child: Icon(
-                            item.skillIcon,
-                            color: item.skillColor,
-                            size: 15,
-                          ),
+                          child: Icon(icon, color: color, size: 15),
                         ),
                         const SizedBox(width: 9),
                         Expanded(
@@ -2107,257 +2106,26 @@ class _WeeklyEmptyState extends StatelessWidget {
   }
 }
 
-class _WeeklySummary {
-  final AppState state;
-  final DateTime weekStart;
-  final List<AnalyticsDaySummary> dayStats;
-  final List<HistoryEntry> entries;
-  final List<AnalyticsSkillSummary> skillStats;
-  final List<Task> riskTasks;
-  final WeeklyGoal? weeklyGoal;
-  final _ProcrastinationInsights procrastination;
-
-  const _WeeklySummary({
-    required this.state,
-    required this.weekStart,
-    required this.dayStats,
-    required this.entries,
-    required this.skillStats,
-    required this.riskTasks,
-    required this.weeklyGoal,
-    required this.procrastination,
-  });
-
-  int get totalXp => entries.fold(0, (sum, entry) => sum + entry.xp);
-
-  int get completedTasks => entries.length;
-
-  int get activeDays => dayStats.where((day) => day.completedTasks > 0).length;
-
-  int get averageXpPerActiveDay =>
-      activeDays == 0 ? 0 : (totalXp / activeDays).round();
-
-  String? get topSkillName => skillStats.isEmpty ? null : skillStats.first.name;
-
-  static _WeeklySummary fromState(AppState state, DateTime weekStart) {
-    final analytics = state.analyticsForWeek(weekStart);
-    final normalizedStart = analytics.weekStart;
-
-    final now = DateTime.now();
-    final riskTasks =
-        state.tasks
-            .where((task) => task.type == TaskType.repeating)
-            .where((task) => !task.isDone)
-            .where((task) => task.nextResetAt != null)
-            .where(
-              (task) =>
-                  task.nextResetAt!.difference(now) <= const Duration(days: 1),
-            )
-            .toList()
-          ..sort((a, b) => a.nextResetAt!.compareTo(b.nextResetAt!));
-
-    return _WeeklySummary(
-      state: state,
-      weekStart: normalizedStart,
-      dayStats: analytics.days,
-      entries: analytics.entries,
-      skillStats: analytics.skills
-          .where((skill) => skill.weeklyXp > 0)
-          .toList(growable: false),
-      riskTasks: riskTasks,
-      weeklyGoal: state.weeklyGoalForWeek(normalizedStart),
-      procrastination: _ProcrastinationInsights.fromState(state),
-    );
-  }
+Color _analyticsSkillColor(AppState state, String skillId) {
+  final skill = state.skills.where((item) => item.id == skillId).firstOrNull;
+  if (skill != null) return skill.color;
+  final history = state.history
+      .where((entry) => entry.skillId == skillId)
+      .firstOrNull;
+  return history?.skillColor ?? const Color(0xFF4A9EFF);
 }
 
-class _ProcrastinationInsights {
-  final List<_TaskInsight> stalled;
-  final List<_TaskInsight> oversized;
-  final List<_TaskInsight> minimumStarts;
-
-  const _ProcrastinationInsights({
-    required this.stalled,
-    required this.oversized,
-    required this.minimumStarts,
-  });
-
-  String get signature {
-    final ids = [
-      ...stalled.map((item) => 's:${item.task.id}:${item.daysSinceActivity}'),
-      ...oversized.map((item) => 'o:${item.task.id}'),
-      ...minimumStarts.map((item) => 'm:${item.task.id}'),
-    ];
-    return ids.join('|');
-  }
-
-  int get totalCount =>
-      stalled.length + oversized.length + minimumStarts.length;
-
-  _TaskInsight? get primaryInsight {
-    if (minimumStarts.isNotEmpty) return minimumStarts.first;
-    if (stalled.isNotEmpty) return stalled.first;
-    if (oversized.isNotEmpty) return oversized.first;
-    return null;
-  }
-
-  String get primaryLabel {
-    if (minimumStarts.isNotEmpty) return 'Начни с минимального шага';
-    if (stalled.isNotEmpty) return 'Верни в движение один квест';
-    if (oversized.isNotEmpty) return 'Сделай крупный квест легче';
-    return 'Продолжай спокойный темп';
-  }
-
-  static _ProcrastinationInsights fromState(AppState state) {
-    final now = DateTime.now();
-    final activeTasks = state.tasks
-        .where((task) => task.isSkillTask && !task.isDone)
-        .toList();
-    final skillsById = {for (final skill in state.skills) skill.id: skill};
-
-    final stalled =
-        activeTasks
-            .where(_isStalled)
-            .map(
-              (task) => _TaskInsight(
-                task: task,
-                skill: skillsById[task.skillId],
-                reason: _stalledReason(task, now),
-                minimumAction: state.canCompleteMinimumAction(task)
-                    ? task.minimumAction
-                    : null,
-                daysSinceActivity: _daysSince(_activityDate(task), now),
-              ),
-            )
-            .toList()
-          ..sort((a, b) {
-            final byDays = b.daysSinceActivity.compareTo(a.daysSinceActivity);
-            if (byDays != 0) return byDays;
-            return prioritySortRank(
-              a.task.priority,
-            ).compareTo(prioritySortRank(b.task.priority));
-          });
-
-    final oversized =
-        activeTasks
-            .where(_isOversized)
-            .map(
-              (task) => _TaskInsight(
-                task: task,
-                skill: skillsById[task.skillId],
-                reason: _oversizedReason(task),
-                minimumAction: state.canCompleteMinimumAction(task)
-                    ? task.minimumAction
-                    : null,
-                daysSinceActivity: _daysSince(_activityDate(task), now),
-              ),
-            )
-            .toList()
-          ..sort((a, b) {
-            final byXp = b.task.xpReward.compareTo(a.task.xpReward);
-            if (byXp != 0) return byXp;
-            return prioritySortRank(
-              a.task.priority,
-            ).compareTo(prioritySortRank(b.task.priority));
-          });
-
-    final minimumStarts =
-        activeTasks
-            .where(state.canCompleteMinimumAction)
-            .map(
-              (task) => _TaskInsight(
-                task: task,
-                skill: skillsById[task.skillId],
-                reason:
-                    '+${state.previewMinimumActionXP(task)} XP за лёгкий старт без давления полного закрытия.',
-                minimumAction: task.minimumAction,
-                daysSinceActivity: _daysSince(_activityDate(task), now),
-              ),
-            )
-            .toList()
-          ..sort((a, b) {
-            final byPriority = prioritySortRank(
-              a.task.priority,
-            ).compareTo(prioritySortRank(b.task.priority));
-            if (byPriority != 0) return byPriority;
-            final byStalled = b.daysSinceActivity.compareTo(
-              a.daysSinceActivity,
-            );
-            if (byStalled != 0) return byStalled;
-            return b.task.xpReward.compareTo(a.task.xpReward);
-          });
-
-    return _ProcrastinationInsights(
-      stalled: stalled,
-      oversized: oversized,
-      minimumStarts: minimumStarts,
-    );
-  }
-
-  static bool _isStalled(Task task) {
-    if (task.type == TaskType.repeating) return false;
-    final days = _daysSince(_activityDate(task), DateTime.now());
-    if (task.priority == Priority.high && days >= 3) return true;
-    if (task.isMinimumActionDone && days >= 2) return true;
-    return days >= 7;
-  }
-
-  static bool _isOversized(Task task) {
-    if (task.type == TaskType.repeating) return false;
-    final softCap = typeSoftCap[task.type] ?? 200;
-    final looksLarge =
-        task.type == TaskType.midTerm ||
-        task.type == TaskType.longTerm ||
-        task.xpReward >= (softCap * 0.6).round();
-    if (!looksLarge) return false;
-    return !task.hasMinimumAction || task.subtasks.length < 2;
-  }
-
-  static String _stalledReason(Task task, DateTime now) {
-    final days = _daysSince(_activityDate(task), now);
-    if (task.isMinimumActionDone) {
-      return 'Старт уже сделан, но квест не закрыт $days дн. Подойдёт один следующий маленький шаг.';
-    }
-    if (task.priority == Priority.high) {
-      return 'Квест с высоким фокусом без прогресса $days дн. Лучше снять давление минимумом или разбиением.';
-    }
-    return 'Без движения $days дн. Квест просит более простой вход.';
-  }
-
-  static String _oversizedReason(Task task) {
-    final missing = <String>[];
-    if (!task.hasMinimumAction) missing.add('минимум');
-    if (task.subtasks.length < 2) missing.add('2–3 шага');
-    return 'Похожа на крупный квест: ${task.xpReward} XP, ${typeLabel[task.type]}. Добавь ${missing.join(' и ')}.';
-  }
-
-  static DateTime _activityDate(Task task) {
-    if (task.isMinimumActionDone && task.minimumActionDoneAt != null) {
-      return task.minimumActionDoneAt!;
-    }
-    return task.updatedAt;
-  }
-
-  static int _daysSince(DateTime date, DateTime now) {
-    return dateOnly(now).difference(dateOnly(date)).inDays.clamp(0, 9999);
-  }
+IconData _analyticsSkillIcon(AppState state, String skillId) {
+  final skill = state.skills.where((item) => item.id == skillId).firstOrNull;
+  if (skill != null) return skill.icon;
+  final history = state.history
+      .where((entry) => entry.skillId == skillId)
+      .firstOrNull;
+  return history?.skillIcon ?? Icons.auto_graph_rounded;
 }
 
-class _TaskInsight {
-  final Task task;
-  final Skill? skill;
-  final String reason;
-  final String? minimumAction;
-  final int daysSinceActivity;
-
-  const _TaskInsight({
-    required this.task,
-    required this.skill,
-    required this.reason,
-    required this.minimumAction,
-    required this.daysSinceActivity,
-  });
-}
+typedef _WeeklySummary = WeeklyAnalyticsReadModel;
+typedef _TaskInsight = TaskInsight;
 
 String _weekdayShort(DateTime date) {
   const weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];

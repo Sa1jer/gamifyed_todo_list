@@ -148,7 +148,7 @@ void main() {
     expect(model.activityLeader?.name, 'Новое имя B');
   });
 
-  test('leading current skill preserves AppState order on equal XP', () {
+  test('leading current skill uses a deterministic tie break', () {
     final weekStart = DateTime(2026, 7, 13);
     final model = AnalyticsReadModel.build(
       weekStart: weekStart,
@@ -167,7 +167,7 @@ void main() {
       totalCompletions: 2,
     );
 
-    expect(model.leadingSkill?.skillId, 'z');
+    expect(model.leadingSkill?.skillId, 'a');
     expect(model.skills.map((skill) => skill.skillId), ['a', 'z']);
   });
 
@@ -196,7 +196,7 @@ void main() {
     expect(historical?.name, 'Удалённый навык');
     expect(historical?.weeklyXp, 30);
     expect(historical?.completedTasks, 1);
-    expect(historical?.isCurrentSkill, isFalse);
+    expect(historical?.isExistingSkill, isFalse);
     expect(model.leadingSkill, isNull);
   });
 

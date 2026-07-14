@@ -24,6 +24,7 @@ import 'mastery_map_workspace.dart';
 import 'mobile_journal_tokens.dart';
 import 'main_page/mobile_journal_sections.dart';
 import 'main_page/desktop_statistics_sections.dart';
+import 'main_page/desktop_selected_skill_header.dart';
 import 'desktop_journal_tokens.dart';
 import 'character_timeline_dialog.dart';
 import 'daily_victories_dialog.dart';

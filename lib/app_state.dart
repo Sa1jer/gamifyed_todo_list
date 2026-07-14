@@ -17,7 +17,9 @@ import 'engines/goal_progress_engine.dart';
 import 'engines/roadmap_engine.dart';
 import 'analytics/analytics_read_model.dart';
 import 'coordinators/roadmap_mutation_coordinator.dart';
+import 'coordinators/reward_mutation_coordinator.dart';
 import 'coordinators/task_mutation_coordinator.dart';
+import 'coordinators/task_completion_coordinator.dart';
 
 part 'app_state/provider.dart';
 
@@ -61,8 +63,6 @@ class AppState extends ChangeNotifier {
   static const Duration _saveDebounceDuration = Duration(milliseconds: 750);
   static const int _maxStreakProtectionCharges = 1;
   static const int _maxHistoryEntries = 2000;
-  static const int _maxBuffBonusPercent = 50;
-  static const Duration _buffLifetime = Duration(hours: 24);
 
   bool _isDark = true;
   bool _sfxEnabled = true;
@@ -87,8 +87,12 @@ class AppState extends ChangeNotifier {
   final GoalMilestoneEngine _goalMilestoneEngine = const GoalMilestoneEngine();
   final RoadmapMutationCoordinator _roadmapMutations =
       const RoadmapMutationCoordinator();
+  final RewardMutationCoordinator _rewardMutations =
+      const RewardMutationCoordinator();
   final TaskMutationCoordinator _taskMutations =
       const TaskMutationCoordinator();
+  final TaskCompletionCoordinator _taskCompletions =
+      const TaskCompletionCoordinator();
   Timer? _resetTimer;
   Timer? _saveDebounceTimer;
   Future<void>? _saveInFlight;
@@ -1394,12 +1398,7 @@ class AppState extends ChangeNotifier {
   int get activeSkillCount => roadmapSkills.length;
 
   int previewEarnedXP(Task task) {
-    if (task.isInbox) return 0;
-    final totalReward = _totalRewardFor(task);
-    if (task.type == TaskType.repeating) {
-      return totalReward;
-    }
-    return math.max(0, totalReward - task.minimumActionEarnedXP);
+    return _taskCompletions.baseEarnedFor(task);
   }
 
   int previewBuffBonusXP(Task task) {
@@ -1409,25 +1408,26 @@ class AppState extends ChangeNotifier {
   }
 
   int previewMinimumActionXP(Task task) {
-    if (task.isInbox) return 0;
-    if (!task.hasMinimumAction || task.isMinimumActionDone || task.isDone) {
-      return 0;
-    }
-    return math.max(1, (_totalRewardFor(task) * _minimumActionRatio).round());
+    return _taskCompletions.previewMinimumActionXp(
+      task,
+      ratio: _minimumActionRatio,
+    );
   }
 
   bool canCompleteMinimumAction(Task task) {
-    if (task.isInbox) return false;
-    return task.hasMinimumAction && !task.isDone && !task.isMinimumActionDone;
+    return _taskCompletions.canCompleteMinimumAction(task);
   }
 
   String? openRewardChest(String chestId) {
-    final chest = rewardChests.where((item) => item.id == chestId).firstOrNull;
-    if (chest == null || chest.isOpened) return null;
-
-    chest.openedAt = DateTime.now();
-    final buff = _createBuffFromChest(chest);
-    buffs.add(buff);
+    final buff = _rewardMutations.openChest(
+      chestId: chestId,
+      rewardChests: rewardChests,
+      buffs: buffs,
+      random: _random,
+      skillById: _skillById,
+    );
+    if (buff == null) return null;
+    final chest = rewardChests.firstWhere((item) => item.id == chestId);
 
     notifyListeners();
     _saveAll();
@@ -1453,46 +1453,22 @@ class AppState extends ChangeNotifier {
     final skillId = task.skillId;
     final skill = _skillById(skillId);
     final bossMomentsBefore = _bossMomentsForSkill(skillId);
-    final nextStreak = task.type == TaskType.repeating
-        ? task.streak + 1
-        : task.streak;
-    final totalReward = _totalRewardFor(task);
-    final alreadyEarned = task.type == TaskType.repeating
-        ? 0
-        : task.minimumActionEarnedXP.clamp(0, totalReward);
-    final baseEarned = math.max(0, totalReward - alreadyEarned);
+    final baseEarned = _taskCompletions.baseEarnedFor(task);
     final buffOutcome = _consumeBuffsForTask(task, baseEarned);
-    final earned = baseEarned + buffOutcome.bonusXp;
-
-    task.isDone = true;
-    task.isArchived = false;
-    task.earnedXP = alreadyEarned + earned;
-    task.bonusXpEarned = buffOutcome.bonusXp;
-    task.consumedBuffIds = List.of(buffOutcome.buffIds);
-    task.lastCompletedAt = now;
-    task.updatedAt = now;
-
-    if (task.type == TaskType.repeating) {
-      task.streak = nextStreak;
-      task.nextResetAt = nextResetFrom(
-        now,
-        task.repeatFrequency,
-        task.repeatCustomDays,
-      );
-    }
-
-    profile.totalXpEarned += earned;
-    if (task.streak > _bestStreak) {
-      _bestStreak = task.streak;
-    }
+    final result = _taskCompletions.completeTask(
+      task: task,
+      skill: skill,
+      profile: profile,
+      bonusXp: buffOutcome.bonusXp,
+      consumedBuffIds: buffOutcome.buffIds,
+      currentBestStreak: _bestStreak,
+      now: now,
+    );
+    _bestStreak = result.bestStreak;
     _maybeUnlockStreakRewardChest(task);
 
-    final globalUp = profile.addXP(earned);
-    int skillUp = 0;
-    if (skill != null) skillUp = skill.addXP(earned);
-
-    _updateDailyStats(earned, skillUp);
-    _addHistory(task, skill, earned, isCompletion: true);
+    _updateDailyStats(result.earnedXp, result.skillLevelsGained);
+    _addHistory(task, skill, result.earnedXp, isCompletion: true);
     _maybeGrantBehaviorBuffs(task);
     _checkAchievements();
     _checkBosses(task);
@@ -1504,30 +1480,28 @@ class AppState extends ChangeNotifier {
 
     return _xpMessage(
       skill,
-      globalUp,
-      skillUp,
-      earned,
-      bonusXp: buffOutcome.bonusXp,
+      result.profileLevelsGained,
+      result.skillLevelsGained,
+      result.earnedXp,
+      bonusXp: result.bonusXp,
       bossFeedback: bossFeedback,
     );
   }
 
   String _completeInboxTask(Task task) {
     final now = DateTime.now();
-    task.isDone = true;
-    task.isArchived = false;
-    task.earnedXP = inboxTaskXp;
-    task.bonusXpEarned = 0;
-    task.consumedBuffIds = <String>[];
-    task.lastCompletedAt = now;
-    task.updatedAt = now;
-    profile.totalXpEarned += inboxTaskXp;
-    final profileLevelsGained = profile.addXP(inboxTaskXp);
+    final result = _taskCompletions.completeInboxTask(
+      task: task,
+      profile: profile,
+      earnedXp: inboxTaskXp,
+      currentBestStreak: _bestStreak,
+      now: now,
+    );
     _updateInboxDailyStats(inboxTaskXp);
     _syncTaskNotification(task);
     notifyListeners();
     _saveAll();
-    return profileLevelsGained > 0
+    return result.profileLevelsGained > 0
         ? '+$inboxTaskXp XP · новый уровень профиля'
         : '+$inboxTaskXp XP · быстрое действие';
   }
@@ -1548,46 +1522,22 @@ class AppState extends ChangeNotifier {
     final skill = _skillById(skillId);
     final bossMomentsBefore = _bossMomentsForSkill(skillId);
     final earned = previewMinimumActionXP(task);
-    final nextStreak = task.type == TaskType.repeating
-        ? task.streak + 1
-        : task.streak;
-
-    task.minimumActionDoneAt = now;
-    task.minimumActionEarnedXP = earned;
-    task.bonusXpEarned = 0;
-    task.consumedBuffIds = <String>[];
-    task.updatedAt = now;
-
-    if (task.type == TaskType.repeating) {
-      task.isDone = true;
-      task.isArchived = false;
-      task.earnedXP = earned;
-      task.lastCompletedAt = now;
-      task.streak = nextStreak;
-      task.nextResetAt = nextResetFrom(
-        now,
-        task.repeatFrequency,
-        task.repeatCustomDays,
-      );
-    }
-
-    profile.totalXpEarned += earned;
-    if (task.streak > _bestStreak) {
-      _bestStreak = task.streak;
-    }
+    final result = _taskCompletions.completeMinimumAction(
+      task: task,
+      skill: skill,
+      profile: profile,
+      earnedXp: earned,
+      currentBestStreak: _bestStreak,
+      now: now,
+    );
+    _bestStreak = result.bestStreak;
     _maybeUnlockStreakRewardChest(task);
 
-    final globalUp = profile.addXP(earned);
-    int skillUp = 0;
-    if (skill != null) {
-      skillUp = skill.addXP(earned);
-    }
-
     if (task.type == TaskType.repeating) {
-      _updateDailyStats(earned, skillUp);
+      _updateDailyStats(earned, result.skillLevelsGained);
       _addHistory(task, skill, earned, isCompletion: true);
     } else {
-      _updateDailyXp(earned, skillUp);
+      _updateDailyXp(earned, result.skillLevelsGained);
     }
 
     _checkBosses(task);
@@ -1600,8 +1550,8 @@ class AppState extends ChangeNotifier {
 
     return _xpMessage(
       skill,
-      globalUp,
-      skillUp,
+      result.profileLevelsGained,
+      result.skillLevelsGained,
       earned,
       bonusXp: 0,
       bossFeedback: bossFeedback,
@@ -1740,76 +1690,29 @@ class AppState extends ChangeNotifier {
   void uncompleteTask(String taskId) {
     final task = _taskById(taskId);
     if (task == null || !task.isDone) return;
-    if (task.isInbox) {
-      final earned = task.earnedXP;
-      final completedToday =
-          task.lastCompletedAt != null &&
-          isSameDate(task.lastCompletedAt!, DateTime.now());
-      task.isDone = false;
-      task.isArchived = false;
-      task.earnedXP = 0;
-      task.bonusXpEarned = 0;
-      task.consumedBuffIds = <String>[];
-      task.lastCompletedAt = null;
-      task.updatedAt = DateTime.now();
-      if (earned > 0) {
-        profile.totalXpEarned = math.max(0, profile.totalXpEarned - earned);
-        profile.removeXP(earned);
-        if (completedToday) _decrementDailyStats(earned);
-      }
-      _syncTaskNotification(task);
-      notifyListeners();
-      _saveAll();
-      return;
-    }
-
-    final completedAt = task.lastCompletedAt;
-    final previousStreak = task.streak;
-    final restoresMinimumProgress =
-        task.type != TaskType.repeating &&
-        task.minimumActionDoneAt != null &&
-        task.minimumActionEarnedXP > 0;
-    final earned = restoresMinimumProgress
-        ? math.max(0, task.earnedXP - task.minimumActionEarnedXP)
-        : task.earnedXP;
-    final completedToday =
-        task.lastCompletedAt != null &&
-        isSameDate(task.lastCompletedAt!, DateTime.now());
+    final now = DateTime.now();
     final skillId = task.skillId;
-    final skill = _skillById(skillId);
-    final skillLevelBefore = skill?.level ?? 1;
-
-    task.isDone = false;
-    task.isArchived = false;
-    if (task.type == TaskType.repeating) {
-      task.streak = math.max(0, task.streak - 1);
-    }
-    task.earnedXP = 0;
-    task.bonusXpEarned = 0;
-    task.lastCompletedAt = null;
-    task.updatedAt = DateTime.now();
-    if (!restoresMinimumProgress) {
-      task.minimumActionDoneAt = null;
-      task.minimumActionEarnedXP = 0;
-    }
-    _restoreConsumedBuffs(task.consumedBuffIds);
-    task.consumedBuffIds = <String>[];
-
-    profile.totalXpEarned = math.max(0, profile.totalXpEarned - earned);
-    profile.removeXP(earned);
-    skill?.removeXP(earned);
-    final skillLevelsLost = math.max(0, skillLevelBefore - (skill?.level ?? 1));
-
-    if (completedToday) {
-      _decrementDailyStats(earned, skillLevelsLost);
-    }
-    _addHistory(task, skill, earned, isCompletion: false);
-    _syncBossesForSkill(skillId);
-    _rollbackInvalidRewardsAfterUndo(
-      task,
-      completedAt: completedAt,
-      previousStreak: previousStreak,
+    final skill = task.isInbox ? null : _skillById(skillId);
+    final result = _taskCompletions.undo(
+      task: task,
+      skill: skill,
+      profile: profile,
+      now: now,
     );
+    _restoreConsumedBuffs(result.consumedBuffIds);
+
+    if (result.completedToday) {
+      _decrementDailyStats(result.earnedXp, result.skillLevelsLost);
+    }
+    if (!task.isInbox) {
+      _addHistory(task, skill, result.earnedXp, isCompletion: false);
+      _syncBossesForSkill(skillId);
+      _rollbackInvalidRewardsAfterUndo(
+        task,
+        completedAt: result.completedAt,
+        previousStreak: result.previousStreak,
+      );
+    }
     _syncTaskNotification(task);
     notifyListeners();
     _saveAll();
@@ -2498,196 +2401,57 @@ class AppState extends ChangeNotifier {
 
   // ── Private ──────────────────────────────────────────────────────────────────
 
-  int _totalRewardFor(Task task) {
-    final nextStreak = task.type == TaskType.repeating
-        ? task.streak + 1
-        : task.streak;
-    final multiplier = task.type == TaskType.repeating
-        ? multiplierForStreak(nextStreak)
-        : 1;
-    return task.xpReward * multiplier;
-  }
-
   ({int bonusXp, int bonusPercent}) _previewBuffOutcome(
     Task task,
     int baseEarned,
   ) {
-    if (baseEarned <= 0) return (bonusXp: 0, bonusPercent: 0);
-
-    final applicableBuffs = activeBuffs
-        .where((buff) => _buffAppliesToTask(buff, task))
-        .toList(growable: false);
-    final totalBonusPercent = applicableBuffs.fold<int>(
-      0,
-      (sum, buff) => sum + buff.bonusPercent,
+    return _rewardMutations.previewBuffOutcome(
+      buffs: buffs,
+      task: task,
+      baseEarned: baseEarned,
     );
-    final bonusPercent = math.min(_maxBuffBonusPercent, totalBonusPercent);
-    final bonusXp = bonusPercent <= 0
-        ? 0
-        : math.max(1, (baseEarned * bonusPercent / 100).round());
-    return (bonusXp: bonusXp, bonusPercent: bonusPercent);
   }
 
   ({int bonusXp, int bonusPercent, List<String> buffIds}) _consumeBuffsForTask(
     Task task,
     int baseEarned,
   ) {
-    final outcome = _previewBuffOutcome(task, baseEarned);
-    if (outcome.bonusXp == 0) {
-      return (bonusXp: 0, bonusPercent: 0, buffIds: const <String>[]);
-    }
-
-    final consumedBuffIds = <String>[];
-    var consumedBonusPercent = 0;
-    for (final buff in buffs.where((buff) => buff.isActive).toList()) {
-      if (!_buffAppliesToTask(buff, task)) continue;
-      if (consumedBonusPercent >= _maxBuffBonusPercent) continue;
-      buff.charges = math.max(0, buff.charges - 1);
-      consumedBuffIds.add(buff.id);
-      consumedBonusPercent = math.min(
-        _maxBuffBonusPercent,
-        consumedBonusPercent + buff.bonusPercent,
-      );
-    }
-    return (
-      bonusXp: outcome.bonusXp,
-      bonusPercent: outcome.bonusPercent,
-      buffIds: consumedBuffIds,
+    return _rewardMutations.consumeBuffsForTask(
+      buffs: buffs,
+      task: task,
+      baseEarned: baseEarned,
     );
-  }
-
-  bool _buffAppliesToTask(Buff buff, Task task) {
-    if (task.isInbox) return false;
-    return switch (buff.type) {
-      BuffType.nextQuestXpBoost => true,
-      BuffType.questRushXpBoost => true,
-      BuffType.skillFocusXpBoost =>
-        buff.skillId == null || buff.skillId == task.skillId,
-    };
   }
 
   void _maybeUnlockDailyRewardChest({bool notify = true}) {
-    final stats = todayStats;
-    if (stats == null || stats.tasksCompleted < 5) return;
-
-    final dayKey =
-        '${stats.date.year.toString().padLeft(4, '0')}-'
-        '${stats.date.month.toString().padLeft(2, '0')}-'
-        '${stats.date.day.toString().padLeft(2, '0')}';
-    _unlockRewardChest(
-      sourceKey: 'daily5:$dayKey',
-      title: 'Сундук дисциплины',
-      description:
-          'Пять закрытых квестов за день. Внутри эффект, который усилит следующий рывок.',
-      rarity: RewardRarity.common,
-      notify: notify,
-    );
-
-    if (stats.tasksCompleted < 10) return;
-    _unlockRewardChest(
-      sourceKey: 'daily10:$dayKey',
-      title: 'Редкий сундук продуктивности',
-      description:
-          'Десять закрытых квестов за день. Внутри более сильный эффект на серию квестов.',
-      rarity: RewardRarity.rare,
+    _rewardMutations.unlockDailyRewardChests(
+      stats: todayStats,
+      rewardChests: rewardChests,
+      pendingNotifications: _pendingRewardNotifications,
       notify: notify,
     );
   }
 
   void _maybeUnlockStreakRewardChest(Task task, {bool notify = true}) {
-    if (!task.isSkillTask) return;
-    if (task.type != TaskType.repeating) return;
-
-    final milestone = switch (task.streak) {
-      7 => (rarity: RewardRarity.rare, title: 'Сундук серии'),
-      30 => (rarity: RewardRarity.epic, title: 'Эпический сундук серии'),
-      _ => null,
-    };
-    if (milestone == null) return;
-
-    _unlockRewardChest(
-      sourceKey: 'streak:${task.id}:${task.streak}',
-      title: milestone.title,
-      description:
-          'Трофей за серию ${task.streak} дней по квесту «${task.title}».',
-      rarity: milestone.rarity,
-      skillId: task.skillId,
+    _rewardMutations.unlockStreakRewardChest(
+      task: task,
+      rewardChests: rewardChests,
+      pendingNotifications: _pendingRewardNotifications,
       notify: notify,
     );
   }
 
   void _maybeGrantBehaviorBuffs(Task task) {
-    if (!task.isSkillTask) return;
     final stats = todayStats;
-    if (stats == null) return;
-
-    final dayKey = _dayKey(stats.date);
-    final expiresAt = _buffExpiresAt();
-
-    if (stats.tasksCompleted >= 3) {
-      _grantBehaviorBuff(
-        sourceKey: 'flow3:$dayKey',
-        type: BuffType.questRushXpBoost,
-        title: 'Поток',
-        description:
-            'Три квеста за день запустили поток: следующие 2 квеста дадут +10% XP.',
-        bonusPercent: 10,
-        charges: 2,
-        expiresAt: expiresAt,
-      );
-    }
-
-    final completions = completionHistoryForDate(stats.date);
-    if (completions.length < 2) return;
-
-    final last = completions.last;
-    final previous = completions[completions.length - 2];
-    final skillId = task.skillId;
-    if (last.skillId != skillId || previous.skillId != skillId) {
-      return;
-    }
-
-    _grantBehaviorBuff(
-      sourceKey: 'focus:$dayKey:$skillId',
-      type: BuffType.skillFocusXpBoost,
-      title: 'Фокус',
-      description:
-          'Два квеста одного навыка подряд: следующий квест этого навыка даст +12% XP.',
-      bonusPercent: 12,
-      charges: 1,
-      skillId: skillId,
-      expiresAt: expiresAt,
+    _rewardMutations.grantBehaviorBuffs(
+      task: task,
+      stats: stats,
+      completions: stats == null
+          ? const <HistoryEntry>[]
+          : completionHistoryForDate(stats.date),
+      buffs: buffs,
+      pendingNotifications: _pendingBuffNotifications,
     );
-  }
-
-  void _grantBehaviorBuff({
-    required String sourceKey,
-    required BuffType type,
-    required String title,
-    required String description,
-    required int bonusPercent,
-    required int charges,
-    required DateTime expiresAt,
-    String? skillId,
-  }) {
-    final alreadyGranted = buffs.any((buff) => buff.sourceKey == sourceKey);
-    if (alreadyGranted) return;
-
-    final buff = Buff(
-      id: uid(),
-      type: type,
-      title: title,
-      description: description,
-      bonusPercent: bonusPercent,
-      charges: charges,
-      skillId: skillId,
-      sourceKey: sourceKey,
-      createdAt: DateTime.now(),
-      expiresAt: expiresAt,
-    );
-
-    buffs.add(buff);
-    _pendingBuffNotifications.add(buff);
   }
 
   void _unlockRewardChest({
@@ -2698,124 +2462,20 @@ class AppState extends ChangeNotifier {
     String? skillId,
     bool notify = true,
   }) {
-    final alreadyUnlocked = rewardChests.any(
-      (chest) => chest.sourceKey == sourceKey,
-    );
-    if (alreadyUnlocked) return;
-
-    final chest = RewardChest(
-      id: uid(),
+    _rewardMutations.unlockRewardChest(
+      rewardChests: rewardChests,
+      pendingNotifications: _pendingRewardNotifications,
+      sourceKey: sourceKey,
       title: title,
       description: description,
       rarity: rarity,
-      sourceKey: sourceKey,
       skillId: skillId,
-      unlockedAt: DateTime.now(),
+      notify: notify,
     );
-    rewardChests.add(chest);
-    if (notify) {
-      _pendingRewardNotifications.add(chest);
-    }
-  }
-
-  Buff _createBuffFromChest(RewardChest chest) {
-    final skill = chest.skillId == null ? null : _skillById(chest.skillId!);
-    final now = DateTime.now();
-    final expiresAt = _buffExpiresAt(now);
-
-    switch (chest.rarity) {
-      case RewardRarity.common:
-        return _random.nextBool()
-            ? Buff(
-                id: uid(),
-                type: BuffType.nextQuestXpBoost,
-                title: 'Импульс',
-                description: 'Следующий квест даст +15% XP в течение 24 часов.',
-                bonusPercent: 15,
-                charges: 1,
-                createdAt: now,
-                expiresAt: expiresAt,
-                sourceChestId: chest.id,
-                sourceKey: 'chest:${chest.id}',
-              )
-            : Buff(
-                id: uid(),
-                type: BuffType.questRushXpBoost,
-                title: 'Темп',
-                description:
-                    'Следующие 2 квеста дадут по +10% XP в течение 24 часов.',
-                bonusPercent: 10,
-                charges: 2,
-                createdAt: now,
-                expiresAt: expiresAt,
-                sourceChestId: chest.id,
-                sourceKey: 'chest:${chest.id}',
-              );
-      case RewardRarity.rare:
-        if (skill != null && _random.nextBool()) {
-          return Buff(
-            id: uid(),
-            type: BuffType.skillFocusXpBoost,
-            title: 'Резонанс навыка',
-            description:
-                'Следующий квест по навыку ${skill.name} даст +25% XP в течение 24 часов.',
-            bonusPercent: 25,
-            charges: 1,
-            skillId: skill.id,
-            createdAt: now,
-            expiresAt: expiresAt,
-            sourceChestId: chest.id,
-            sourceKey: 'chest:${chest.id}',
-          );
-        }
-        return Buff(
-          id: uid(),
-          type: BuffType.questRushXpBoost,
-          title: 'Боевой ритм',
-          description:
-              'Следующие 2 квеста дадут по +15% XP в течение 24 часов.',
-          bonusPercent: 15,
-          charges: 2,
-          createdAt: now,
-          expiresAt: expiresAt,
-          sourceChestId: chest.id,
-          sourceKey: 'chest:${chest.id}',
-        );
-      case RewardRarity.epic:
-        return Buff(
-          id: uid(),
-          type: BuffType.questRushXpBoost,
-          title: 'Критический заряд',
-          description:
-              'Следующие 2 квеста дадут по +35% XP в течение 24 часов.',
-          bonusPercent: 35,
-          charges: 2,
-          createdAt: now,
-          expiresAt: expiresAt,
-          sourceChestId: chest.id,
-          sourceKey: 'chest:${chest.id}',
-        );
-    }
-  }
-
-  DateTime _buffExpiresAt([DateTime? now]) {
-    return (now ?? DateTime.now()).add(_buffLifetime);
-  }
-
-  String _dayKey(DateTime date) {
-    return '${date.year.toString().padLeft(4, '0')}-'
-        '${date.month.toString().padLeft(2, '0')}-'
-        '${date.day.toString().padLeft(2, '0')}';
   }
 
   void _restoreConsumedBuffs(List<String> buffIds) {
-    if (buffIds.isEmpty) return;
-    for (final buffId in buffIds) {
-      final buff = buffs.where((item) => item.id == buffId).firstOrNull;
-      if (buff != null) {
-        buff.charges += 1;
-      }
-    }
+    _rewardMutations.restoreConsumedBuffs(buffs: buffs, buffIds: buffIds);
   }
 
   void _rollbackInvalidRewardsAfterUndo(
@@ -2828,7 +2488,7 @@ class AppState extends ChangeNotifier {
     final sourceKeys = <String>{};
 
     if (completedAt != null) {
-      final dayKey = _dayKey(completedAt);
+      final dayKey = _rewardMutations.dayKey(completedAt);
       final dayCompletions = completionHistoryForDate(completedAt);
 
       if (dayCompletions.length < 5) {
@@ -2855,10 +2515,14 @@ class AppState extends ChangeNotifier {
       }
     }
 
-    for (final sourceKey in sourceKeys) {
-      _removeRewardChestBySourceKey(sourceKey);
-      _removeBuffsBySourceKey(sourceKey);
-    }
+    _rewardMutations.removeSources(
+      sourceKeys: sourceKeys,
+      rewardChests: rewardChests,
+      buffs: buffs,
+      tasks: tasks,
+      pendingRewardNotifications: _pendingRewardNotifications,
+      pendingBuffNotifications: _pendingBuffNotifications,
+    );
   }
 
   bool _hasFocusRewardCondition(DateTime date, String skillId) {
@@ -2870,49 +2534,6 @@ class AppState extends ChangeNotifier {
       }
     }
     return false;
-  }
-
-  void _removeRewardChestBySourceKey(String sourceKey) {
-    final removedChestIds = rewardChests
-        .where((chest) => chest.sourceKey == sourceKey)
-        .map((chest) => chest.id)
-        .toSet();
-    if (removedChestIds.isEmpty) return;
-
-    rewardChests.removeWhere((chest) => removedChestIds.contains(chest.id));
-    _pendingRewardNotifications.removeWhere(
-      (chest) =>
-          removedChestIds.contains(chest.id) || chest.sourceKey == sourceKey,
-    );
-    _removeBuffsWhere(
-      (buff) =>
-          removedChestIds.contains(buff.sourceChestId) ||
-          removedChestIds.any((id) => buff.sourceKey == 'chest:$id'),
-    );
-  }
-
-  void _removeBuffsBySourceKey(String sourceKey) {
-    _removeBuffsWhere((buff) => buff.sourceKey == sourceKey);
-  }
-
-  void _removeBuffsWhere(bool Function(Buff buff) shouldRemove) {
-    final removedBuffIds = buffs
-        .where(shouldRemove)
-        .map((buff) => buff.id)
-        .toSet();
-    if (removedBuffIds.isEmpty) return;
-
-    buffs.removeWhere((buff) => removedBuffIds.contains(buff.id));
-    _pendingBuffNotifications.removeWhere(
-      (buff) => removedBuffIds.contains(buff.id),
-    );
-
-    for (final task in tasks) {
-      if (!task.consumedBuffIds.any(removedBuffIds.contains)) continue;
-      task.consumedBuffIds = task.consumedBuffIds
-          .where((id) => !removedBuffIds.contains(id))
-          .toList();
-    }
   }
 
   BossSnapshot _buildBossSnapshot(Boss boss) {

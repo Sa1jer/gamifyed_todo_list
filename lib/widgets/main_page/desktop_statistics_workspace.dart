@@ -65,6 +65,11 @@ class _DesktopStatisticsOverview extends StatelessWidget {
   Widget build(BuildContext context) {
     final week = state.currentAnalytics;
     final mainSkill = week.leadingSkill;
+    final mainSkillIdentity = mainSkill == null
+        ? null
+        : state.skills
+              .where((skill) => skill.id == mainSkill.skillId)
+              .firstOrNull;
     return _DesktopPageScaffold(
       tokens: tokens,
       icon: Icons.auto_stories_rounded,
@@ -79,6 +84,7 @@ class _DesktopStatisticsOverview extends StatelessWidget {
             todayXp: state.todayStats?.xpEarned ?? 0,
             weekXp: week.totalXp,
             mainSkill: mainSkill,
+            mainSkillIdentity: mainSkillIdentity,
           ),
           const SizedBox(height: 22),
           LayoutBuilder(
@@ -520,11 +526,16 @@ class _DesktopStatisticsDetailPage extends StatelessWidget {
 
   Widget _buildDetail(Color color) {
     final week = state.currentAnalytics;
-    final entries = switch (detail) {
+    final historyById = {for (final entry in state.history) entry.id: entry};
+    final List<HistoryEntry> entries = switch (detail) {
       _DesktopStatisticsDetail.daily => state.completionHistoryForDate(
         DateTime.now(),
       ),
-      _DesktopStatisticsDetail.weekly => week.entries,
+      _DesktopStatisticsDetail.weekly =>
+        week.entries
+            .map((entry) => historyById[entry.id])
+            .whereType<HistoryEntry>()
+            .toList(growable: false),
       _ => state.history.where((entry) => entry.isCompletion).toList(),
     };
     if (detail == _DesktopStatisticsDetail.achievements) {
@@ -815,7 +826,7 @@ class _DesktopStatisticsSkillProgress extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 7),
-              _DesktopProgressBar(
+              DesktopProgressBar(
                 value: skill.treeProgress,
                 color: skill.color,
                 background: skill.color.withValues(alpha: 0.12),

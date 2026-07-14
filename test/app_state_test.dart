@@ -219,7 +219,10 @@ void main() {
       final updated = state.currentAnalytics;
       expect(identical(added, updated), isFalse);
       expect(updated.skillById(skill.id)?.name, 'Новое имя');
-      expect(updated.skillById(skill.id)?.color, Colors.red);
+      expect(
+        state.skills.where((item) => item.id == skill.id).single.color,
+        Colors.red,
+      );
 
       state.removeSkill(skill.id);
       final removed = state.currentAnalytics;

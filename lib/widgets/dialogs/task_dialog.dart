@@ -226,10 +226,27 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (_initialStage case final stage?) ...[
-            _buildStageContextCard(stage, txt, sub, bdr, c, isDark),
+            TaskStageContextCard(
+              stage: stage,
+              textColor: txt,
+              subtextColor: sub,
+              accent: c,
+              isDark: isDark,
+            ),
             const SizedBox(height: 14),
           ] else if (_suggestedStage case final stage?) ...[
-            _buildStageSuggestionCard(stage, txt, sub, bdr, c, isDark),
+            TaskStageSuggestionCard(
+              stage: stage,
+              textColor: txt,
+              subtextColor: sub,
+              borderColor: bdr,
+              accent: c,
+              isDark: isDark,
+              onLink: () => setState(() {
+                _treeNodeId = stage.id;
+                _advancedExpanded = true;
+              }),
+            ),
             const SizedBox(height: 14),
           ],
           DlgField(
@@ -258,7 +275,18 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
             ),
           ],
           const SizedBox(height: 16),
-          _buildDescriptionSection(fBg, txt, sub, bdr),
+          DlgField(
+            label: 'Описание · необязательно',
+            hintText: 'Что важно помнить про этот квест?',
+            ctrl: _form.description,
+            fBg: fBg,
+            txt: txt,
+            sub: sub,
+            bdr: bdr,
+            min: widget.fullScreen ? 3 : 2,
+            max: widget.fullScreen ? 8 : 6,
+            fieldKey: const ValueKey('add-task-description-field'),
+          ),
           const SizedBox(height: 16),
           if (widget.showFirstRunHints && widget.existing == null) ...[
             FirstRunDialogHint(
@@ -269,7 +297,17 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
             ),
             const SizedBox(height: 16),
           ],
-          _buildXpSection(sub, bdr, c, isDark),
+          TaskXpSection(
+            xp: _xp,
+            selectorValue: _xpSelectorValue,
+            softCap: _softCap,
+            taskTypeLabel: typeLabel[_type] ?? _type.name,
+            overCap: _overCap,
+            subtextColor: sub,
+            borderColor: bdr,
+            isDark: isDark,
+            onChanged: (value) => setState(() => _xp = _normalizeXp(value)),
+          ),
           const SizedBox(height: 16),
           _buildAdvancedSection(fBg, txt, sub, bdr, c, isDark),
           const SizedBox(height: 22),
@@ -355,224 +393,9 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     if (mounted) Navigator.pop(context);
   }
 
-  Widget _buildStageContextCard(
-    SkillTreeNode stage,
-    Color txt,
-    Color sub,
-    Color bdr,
-    Color color,
-    bool isDark,
-  ) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-      decoration: BoxDecoration(
-        color: color.withAlpha(isDark ? 14 : 9),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withAlpha(48)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 30,
-            height: 30,
-            decoration: BoxDecoration(
-              color: color.withAlpha(24),
-              borderRadius: BorderRadius.circular(9),
-            ),
-            child: Icon(Icons.account_tree, color: color, size: 16),
-          ),
-          const SizedBox(width: 9),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Этап дорожной карты: ${stage.title}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: txt,
-                    fontSize: 12.8,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                Text(
-                  'Квест можно привязать к текущей ступени RoadMap.',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: sub,
-                    fontSize: 11,
-                    height: 1.2,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStageSuggestionCard(
-    SkillTreeNode stage,
-    Color txt,
-    Color sub,
-    Color bdr,
-    Color color,
-    bool isDark,
-  ) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF17171F) : const Color(0xFFFFFFFF),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: bdr.withAlpha(180)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.route_rounded, color: color, size: 17),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Есть активный этап: ${stage.title}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: txt,
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Можно связать квест с текущей ступенью RoadMap.',
-                  style: TextStyle(
-                    color: sub,
-                    fontSize: 11,
-                    height: 1.25,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          SmallBtn(
-            label: 'Привязать',
-            icon: Icons.add_link,
-            color: color,
-            onTap: () {
-              setState(() {
-                _treeNodeId = stage.id;
-                _advancedExpanded = true;
-              });
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
   int get _customDays {
     final parsed = int.tryParse(_form.customDays.text.trim()) ?? 1;
     return parsed < 1 ? 1 : parsed;
-  }
-
-  Widget _buildMinimumActionSection(
-    Color fBg,
-    Color txt,
-    Color sub,
-    Color bdr,
-    Color color,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: fBg,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: bdr),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Icon(Icons.bolt_outlined, color: color, size: 17),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Минимальный шаг',
-                      style: TextStyle(
-                        color: txt,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Лёгкий вход, если квест кажется тяжёлым',
-                      style: TextStyle(color: sub, fontSize: 11.5),
-                    ),
-                  ],
-                ),
-              ),
-              Switch(
-                key: const ValueKey('minimum-action-toggle'),
-                value: _minimumActionEnabled,
-                activeThumbColor: color,
-                onChanged: (value) =>
-                    setState(() => _minimumActionEnabled = value),
-              ),
-            ],
-          ),
-          MotionExpandable(
-            expanded: _minimumActionEnabled,
-            expandedChild: Padding(
-              padding: const EdgeInsets.only(top: 10),
-              child: TextField(
-                controller: _form.minimumAction,
-                focusNode: _form.minimumActionFocusNode,
-                style: TextStyle(color: txt, fontSize: 13),
-                minLines: 2,
-                maxLines: 4,
-                onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(
-                  hintText: 'Например: открыть проект и сделать первый шаг',
-                  hintStyle: TextStyle(color: sub, fontSize: 12),
-                  filled: true,
-                  fillColor: surface(widget.isDark),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: bdr),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: bdr),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: color.withAlpha(180)),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _advancedCard({
@@ -588,130 +411,6 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
         border: Border.all(color: bdr.withAlpha(180)),
       ),
       child: child,
-    );
-  }
-
-  Widget _buildXpSection(Color sub, Color bdr, Color color, bool isDark) {
-    Future<void> editXp() async {
-      final value = await showIntegerEditDialog(
-        context,
-        title: 'XP за квест',
-        initialValue: _xp,
-        min: 10,
-        max: 500,
-        color: MobileJournalTokens.rewardGoldForeground(isDark),
-        isDark: isDark,
-        suffix: 'XP',
-      );
-      if (value != null && mounted) {
-        setState(() => _xp = _normalizeXp(value));
-      }
-    }
-
-    final rewardColor = MobileJournalTokens.rewardGoldForeground(isDark);
-    return _advancedCard(
-      isDark: isDark,
-      bdr: bdr,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              SubLbl('XP за квест', sub),
-              const Spacer(),
-              PressFeedback(
-                scale: 0.96,
-                tooltip: 'Ввести XP числом',
-                onTap: editXp,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: MobileJournalTokens.rewardGoldBackground(isDark),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: MobileJournalTokens.rewardGoldBorder(isDark),
-                    ),
-                  ),
-                  child: Text(
-                    '$_xp XP',
-                    style: TextStyle(
-                      color: rewardColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          Slider(
-            value: _xpSelectorValue.toDouble(),
-            min: 10,
-            max: 500,
-            divisions: 49,
-            activeColor: rewardColor,
-            inactiveColor: rewardColor.withAlpha(40),
-            onChanged: (v) => setState(() => _xp = _normalizeXp(v.round())),
-          ),
-          AnimatedSize(
-            duration: kMotionSlow,
-            curve: kMotionCurve,
-            child: _overCap
-                ? Container(
-                    margin: const EdgeInsets.only(top: 2),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 7,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFF9500).withAlpha(20),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: const Color(0xFFFF9500).withAlpha(80),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.warning_amber_rounded,
-                          color: Color(0xFFFF9500),
-                          size: 15,
-                        ),
-                        const SizedBox(width: 7),
-                        Expanded(
-                          child: Text(
-                            'Не рекомендуется: лимит для «${typeLabel[_type]}» — $_softCap XP.',
-                            style: const TextStyle(
-                              color: Color(0xFFFF9500),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : const SizedBox.shrink(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDescriptionSection(Color fBg, Color txt, Color sub, Color bdr) {
-    return DlgField(
-      label: 'Описание · необязательно',
-      hintText: 'Что важно помнить про этот квест?',
-      ctrl: _form.description,
-      fBg: fBg,
-      txt: txt,
-      sub: sub,
-      bdr: bdr,
-      min: widget.fullScreen ? 3 : 2,
-      max: widget.fullScreen ? 8 : 6,
-      fieldKey: const ValueKey('add-task-description-field'),
     );
   }
 
@@ -750,7 +449,20 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                 children: [
                   _buildBehaviorSection(fBg, txt, sub, bdr, color, isDark),
                   const SizedBox(height: 10),
-                  _buildMinimumActionSection(fBg, txt, sub, bdr, color),
+                  TaskMinimumActionSection(
+                    enabled: _minimumActionEnabled,
+                    controller: _form.minimumAction,
+                    focusNode: _form.minimumActionFocusNode,
+                    fieldBackground: fBg,
+                    textColor: txt,
+                    subtextColor: sub,
+                    borderColor: bdr,
+                    accent: color,
+                    isDark: isDark,
+                    onEnabledChanged: (value) =>
+                        setState(() => _minimumActionEnabled = value),
+                    onTextChanged: (_) => setState(() {}),
+                  ),
                   const SizedBox(height: 10),
                   if (widget.skill?.treeNodes.isNotEmpty ?? false) ...[
                     _buildTreeNodeSection(fBg, txt, sub, bdr, color, isDark),

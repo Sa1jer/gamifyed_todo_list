@@ -375,7 +375,7 @@ class _DesktopTrophyProgressCard extends StatelessWidget {
             style: TextStyle(color: tokens.mutedText, fontSize: 10.5),
           ),
           const SizedBox(height: 9),
-          _DesktopProgressBar(
+          DesktopProgressBar(
             value: progress.value,
             color: progress.color,
             background: progress.color.withValues(alpha: 0.12),

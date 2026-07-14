@@ -1,10 +1,7 @@
-import 'package:flutter/material.dart';
-
 import '../engines/goal_progress_engine.dart';
 import '../models.dart';
 import '../utils.dart';
 
-@immutable
 class AnalyticsDaySummary {
   final DateTime date;
   final int xp;
@@ -17,12 +14,43 @@ class AnalyticsDaySummary {
   });
 }
 
-@immutable
+class AnalyticsHistoryRecord {
+  final String id;
+  final String? taskId;
+  final String taskTitle;
+  final String skillId;
+  final String skillName;
+  final int xp;
+  final bool isCompletion;
+  final DateTime at;
+
+  const AnalyticsHistoryRecord({
+    required this.id,
+    required this.taskId,
+    required this.taskTitle,
+    required this.skillId,
+    required this.skillName,
+    required this.xp,
+    required this.isCompletion,
+    required this.at,
+  });
+
+  factory AnalyticsHistoryRecord.fromEntry(HistoryEntry entry) =>
+      AnalyticsHistoryRecord(
+        id: entry.id,
+        taskId: entry.taskId,
+        taskTitle: entry.taskTitle,
+        skillId: entry.skillId,
+        skillName: entry.skillName,
+        xp: entry.xp,
+        isCompletion: entry.isCompletion,
+        at: entry.at,
+      );
+}
+
 class AnalyticsSkillSummary {
   final String skillId;
   final String name;
-  final IconData icon;
-  final Color color;
   final int weeklyXp;
   final int completedTasks;
   final int activeTasks;
@@ -30,13 +58,11 @@ class AnalyticsSkillSummary {
   final int completedStages;
   final int totalStages;
   final double goalProgress;
-  final bool isCurrentSkill;
+  final bool isExistingSkill;
 
   const AnalyticsSkillSummary({
     required this.skillId,
     required this.name,
-    required this.icon,
-    required this.color,
     required this.weeklyXp,
     required this.completedTasks,
     required this.activeTasks,
@@ -44,7 +70,7 @@ class AnalyticsSkillSummary {
     required this.completedStages,
     required this.totalStages,
     required this.goalProgress,
-    required this.isCurrentSkill,
+    required this.isExistingSkill,
   });
 
   bool get hasRoadmap => totalStages > 0;
@@ -54,20 +80,15 @@ class AnalyticsSkillSummary {
   int get tasksCompleted => completedTasks;
 }
 
-@immutable
 class AnalyticsActivityLeader {
   final String skillId;
   final String name;
-  final IconData icon;
-  final Color color;
   final int xp;
   final int completedTasks;
 
   const AnalyticsActivityLeader({
     required this.skillId,
     required this.name,
-    required this.icon,
-    required this.color,
     required this.xp,
     required this.completedTasks,
   });
@@ -77,11 +98,10 @@ class AnalyticsActivityLeader {
 ///
 /// The snapshot retains only the effective entries for one week and scalar
 /// skill aggregates. It never owns or mutates AppState collections.
-@immutable
 class AnalyticsReadModel {
   final DateTime weekStart;
   final List<AnalyticsDaySummary> days;
-  final List<HistoryEntry> entries;
+  final List<AnalyticsHistoryRecord> entries;
   final List<AnalyticsSkillSummary> skills;
   final Map<String, AnalyticsSkillSummary> _skillsById;
   final AnalyticsSkillSummary? _leadingSkill;
@@ -198,8 +218,6 @@ class AnalyticsReadModel {
         AnalyticsSkillSummary(
           skillId: skill.id,
           name: skill.name,
-          icon: skill.icon,
-          color: skill.color,
           weeklyXp: weeklyXpBySkill[skill.id] ?? 0,
           completedTasks: weeklyTasksBySkill[skill.id] ?? 0,
           activeTasks: activeTasksBySkill[skill.id] ?? 0,
@@ -207,14 +225,15 @@ class AnalyticsReadModel {
           completedStages: progress.completedStages,
           totalStages: progress.totalStages,
           goalProgress: progress.value,
-          isCurrentSkill: true,
+          isExistingSkill: true,
         ),
       );
     }
     AnalyticsSkillSummary? leadingSkill;
     for (final summary in skillSummaries) {
       if (summary.weeklyXp <= 0) continue;
-      if (leadingSkill == null || summary.weeklyXp > leadingSkill.weeklyXp) {
+      if (leadingSkill == null ||
+          _compareSkillActivity(summary, leadingSkill) < 0) {
         leadingSkill = summary;
       }
     }
@@ -230,8 +249,6 @@ class AnalyticsReadModel {
         AnalyticsSkillSummary(
           skillId: entry.key,
           name: source.skillName,
-          icon: source.skillIcon,
-          color: source.skillColor,
           weeklyXp: weeklyXpBySkill[entry.key] ?? 0,
           completedTasks: weeklyTasksBySkill[entry.key] ?? 0,
           activeTasks: 0,
@@ -239,7 +256,7 @@ class AnalyticsReadModel {
           completedStages: 0,
           totalStages: 0,
           goalProgress: 0,
-          isCurrentSkill: false,
+          isExistingSkill: false,
         ),
       );
     }
@@ -258,22 +275,20 @@ class AnalyticsReadModel {
       final candidate = AnalyticsActivityLeader(
         skillId: entry.key,
         name: source.skillName,
-        icon: source.skillIcon,
-        color: source.skillColor,
         xp: weeklyXpBySkill[entry.key] ?? 0,
         completedTasks: weeklyTasksBySkill[entry.key] ?? 0,
       );
       if (activityLeader == null ||
-          candidate.xp > activityLeader.xp ||
-          (candidate.xp == activityLeader.xp &&
-              candidate.completedTasks > activityLeader.completedTasks)) {
+          _compareActivity(candidate, activityLeader) < 0) {
         activityLeader = candidate;
       }
     }
     return AnalyticsReadModel._(
       weekStart: normalizedStart,
       days: List.unmodifiable(daySummaries),
-      entries: List.unmodifiable(weekEntries),
+      entries: List.unmodifiable(
+        weekEntries.map(AnalyticsHistoryRecord.fromEntry),
+      ),
       skills: immutableSkillSummaries,
       skillsById: Map<String, AnalyticsSkillSummary>.unmodifiable({
         for (final summary in immutableSkillSummaries) summary.skillId: summary,
@@ -284,6 +299,32 @@ class AnalyticsReadModel {
       todayCompletedTasks: todayStats?.tasksCompleted ?? 0,
       totalCompletions: totalCompletions,
     );
+  }
+
+  static int _compareActivity(
+    AnalyticsActivityLeader left,
+    AnalyticsActivityLeader right,
+  ) {
+    final byXp = right.xp.compareTo(left.xp);
+    if (byXp != 0) return byXp;
+    final byTasks = right.completedTasks.compareTo(left.completedTasks);
+    if (byTasks != 0) return byTasks;
+    final byName = left.name.compareTo(right.name);
+    if (byName != 0) return byName;
+    return left.skillId.compareTo(right.skillId);
+  }
+
+  static int _compareSkillActivity(
+    AnalyticsSkillSummary left,
+    AnalyticsSkillSummary right,
+  ) {
+    final byXp = right.weeklyXp.compareTo(left.weeklyXp);
+    if (byXp != 0) return byXp;
+    final byTasks = right.completedTasks.compareTo(left.completedTasks);
+    if (byTasks != 0) return byTasks;
+    final byName = left.name.compareTo(right.name);
+    if (byName != 0) return byName;
+    return left.skillId.compareTo(right.skillId);
   }
 }
 
