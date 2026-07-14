@@ -1,19 +1,18 @@
 # AppState Map
 
-Last updated: 2026-07-06
+Last updated: 2026-07-14
 
 This document maps the current responsibilities and mutation boundaries inside
-`AppState`. It is a planning artifact for safe decomposition, not a refactor
-commit. The app remains local-first; no cloud/Firebase implementation is
-introduced by this document.
+`AppState`. The app remains local-first; no cloud/Firebase implementation is
+introduced by these internal boundaries.
 
 ## Current Shape
 
-- `lib/app_state.dart` is the main runtime facade: roughly 3500 lines.
+- `lib/app_state.dart` is the main runtime facade: roughly 3138 lines.
 - `StorageService` owns Hive/local persistence and schema migration.
-- Existing pure engines already cover some evaluation/layout concerns:
-  `BossEngine`, `CourseNudgeEngine`, `GoalEngine`, `ProgressEngine`,
-  `RecurringEngine`, `ReviewEngine`, `RoadmapEngine`.
+- Pure engines/read models cover evaluation, layout, effective completion
+  indexing, and shared analytics. Task and RoadMap coordinators own cohesive
+  mutation policy while remaining unaware of widgets, storage, and listeners.
 - `AppState` still orchestrates mutations, persistence, notifications,
   history, rewards/effects, achievements, tutorial state and reset timers.
 
@@ -25,10 +24,10 @@ introduced by this document.
 | UI settings | Owns theme, sound, tooltip setting, profile setting mutations. | Low-risk, mostly direct meta saves and `notifyListeners`. |
 | Tutorial/session | Owns `TutorialProgress`, onboarding fallback, active tutorial step/module selection and course-nudge session dismiss. | Persisted in meta except course-nudge dismiss, which is runtime-only. |
 | Skills/goals | Owns skill CRUD, selected skill, goal review writes and checklist compatibility. | Goal quality is mostly evaluated outside AppState, but mutations live inside AppState. |
-| RoadMap/stages | Owns stage CRUD, template application, path extension/insertion, mastery, task unlinking on stage deletion. | `RoadmapEngine` already handles template/layout helpers; AppState still mutates graph data. |
-| Tasks | Owns task CRUD, task update, subtask toggles, tree node normalization and notification sync. | Central mutation point; good future sync observation boundary. |
+| RoadMap/stages | Delegates Stage CRUD, template application, path extension/insertion, reorder and link cleanup, then applies cross-domain side effects. | `RoadmapMutationCoordinator` owns graph mutation policy; AppState retains achievements, bosses, analytics invalidation, save and notify ordering. |
+| Tasks | Delegates task CRUD/update/subtask normalization and applies notification/boss/persistence side effects. | `TaskMutationCoordinator` owns entity/collection policy; AppState remains the public observation boundary. |
 | Completion/minimum/undo | Owns XP, streaks, daily stats, history, buffs, rewards, bosses, achievements, tutorial progression and notifications. | Highest-risk orchestration zone. Do not extract before characterization tests. |
-| History/stats | Owns history insertion, undo entries, daily stats, cached completion maps and cache invalidation. | History mutation points are narrow: load, `_addHistory`, debug bulk normalization. |
+| History/stats | Owns history insertion, undo entries, daily stats and explicit cache invalidation. | `CompletionHistoryIndex` owns effective-completion indexing; `AnalyticsReadModelCache` owns bounded weekly snapshots used by three reporting consumers. |
 | Achievements | Owns hardcoded unlock checks, definition compatibility and pending achievement notifications. | Best first extraction candidate because evaluation can be pure. |
 | Rewards/effects | Owns chest unlocks, buff creation/consumption/restoration, source-key idempotency and undo rollback. | Medium/high risk because it is coupled to completion and history. |
 | Resistance | Uses `BossEngine` for sync but owns reward/achievement side effects after boss defeat. | Engine boundary exists; side effects remain in AppState. |
@@ -53,8 +52,8 @@ Selection now rejects unknown skill IDs and exposes an explicit
 | `completeMinimumAction` | Minimum progress, optional repeating completion, XP/profile/skill, stats/history for repeating tasks, bosses/achievements/tutorial. | Syncs notification, notifies, full save. High-risk extraction zone. |
 | `uncompleteTask` | Reverts task/profile/skill XP, history rollback entry, buffs, rewards, bosses, notification. | Uses history and reward rollback helpers. High-risk extraction zone. |
 | Skill CRUD | `skills`, selected skill, linked tasks on delete. | Checks achievements, syncs bosses, notifies/saves. |
-| RoadMap/stage CRUD | `Skill.treeNodes`, stage prerequisites/checklists/mastery, task `treeNodeId` cleanup. | Syncs bosses, checks achievements on mastery, notifies/saves. |
-| Task CRUD | `tasks`, task timestamps, repeat resets, notifications. | Syncs task notification, notifies/saves. |
+| RoadMap/stage CRUD | Coordinator mutates `Skill.treeNodes`, prerequisites/checklists and task `treeNodeId` cleanup. | AppState syncs bosses, invalidates analytics, checks achievements on mastery, then notifies/saves once. |
+| Task CRUD | Coordinator mutates tasks, timestamps, recurrence and Stage links. | AppState syncs/cancels device notification, bosses and analytics, then notifies/saves once. |
 | Rewards/effects | `rewardChests`, `buffs`, pending notifications. | Uses `sourceKey` for idempotency; creates time-limited effects. |
 | `normalizeAfterBulkStateChange` | Repairs achievements, bosses, stats, best streak, history cache after debug scenarios. | Saves and notifies; keep as debug/support boundary for now. |
 
@@ -106,15 +105,20 @@ The future sync boundary should be planned without implementing Firebase/cloud.
 
 - `AchievementEngine`: completed in `1.3.45` as pure evaluation from a snapshot
   to achievement ids. AppState keeps mutation and pending-notification behavior.
-- Additional read-only progress/review evaluators, following the existing
-  engine pattern.
+- `CompletionHistoryIndex`: extracted as a read-only effective-completion index.
+  AppState still owns history mutation and explicit invalidation after loads,
+  history writes and bulk normalization.
+- `AnalyticsReadModel`: immutable weekly/day/skill summaries with an explicit,
+  bounded epoch cache and three migrated consumers.
+- `TaskMutationCoordinator` and `RoadmapMutationCoordinator`: explicit mutation
+  policy behind the stable AppState facade; they do not persist or notify.
 
 ### Medium Risk
 
 - `RewardEngine`: chest/buff decisions, `sourceKey` idempotency and buff
   previews. Needs careful undo tests before mutation extraction.
-- RoadMap mutation helper: template merge/prerequisite validation can become a
-  pure helper, but AppState should still own actual skill mutation at first.
+- Further skill lifecycle extraction: deletion and selection cleanup still span
+  tasks, notifications, achievements, bosses and persistence.
 - `StorageMigrationEngine`: useful later, but migration changes require
   compatibility tests.
 
@@ -130,7 +134,9 @@ The future sync boundary should be planned without implementing Firebase/cloud.
 
 ## Recommended Next Batch
 
-Plan `RewardEngine`, but do not extract mutation yet.
+Characterize `RewardEngine` decisions without extracting mutation yet. See
+[`refactor/ARCHITECTURE_INVENTORY.md`](refactor/ARCHITECTURE_INVENTORY.md) and
+[`refactor/TARGET_ARCHITECTURE.md`](refactor/TARGET_ARCHITECTURE.md).
 
 Implementation direction:
 

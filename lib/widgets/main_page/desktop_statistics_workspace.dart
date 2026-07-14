@@ -63,7 +63,7 @@ class _DesktopStatisticsOverview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final week = _DesktopWeekSnapshot.fromState(state);
+    final week = state.currentAnalytics;
     final mainSkill = week.leadingSkill;
     return _DesktopPageScaffold(
       tokens: tokens,
@@ -74,14 +74,11 @@ class _DesktopStatisticsOverview extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _DesktopStatisticsSummaryStrip(
+          DesktopStatisticsSummaryStrip(
             tokens: tokens,
             todayXp: state.todayStats?.xpEarned ?? 0,
             weekXp: week.totalXp,
             mainSkill: mainSkill,
-            mainSkillXp: mainSkill == null
-                ? 0
-                : week.xpBySkill[mainSkill.id] ?? 0,
           ),
           const SizedBox(height: 22),
           LayoutBuilder(
@@ -134,7 +131,7 @@ class _DesktopStatisticsOverview extends StatelessWidget {
 class _DesktopStatisticsMainContent extends StatelessWidget {
   final AppState state;
   final DesktopJournalTokens tokens;
-  final _DesktopWeekSnapshot week;
+  final AnalyticsReadModel week;
   final ValueChanged<_DesktopStatisticsDetail> onOpen;
 
   const _DesktopStatisticsMainContent({
@@ -152,8 +149,8 @@ class _DesktopStatisticsMainContent extends StatelessWidget {
             .where((skill) => skill.treeNodes.isNotEmpty)
             .toList()
           ..sort((a, b) {
-            final xpCompare = (week.xpBySkill[b.id] ?? 0).compareTo(
-              week.xpBySkill[a.id] ?? 0,
+            final xpCompare = (week.skillById(b.id)?.weeklyXp ?? 0).compareTo(
+              week.skillById(a.id)?.weeklyXp ?? 0,
             );
             return xpCompare != 0 ? xpCompare : a.name.compareTo(b.name);
           });
@@ -190,7 +187,7 @@ class _DesktopStatisticsMainContent extends StatelessWidget {
                 color: tokens.successGreen,
                 icon: Icons.calendar_view_week_outlined,
                 title: 'Неделя',
-                subtitle: '${week.totalXp} XP · ${week.totalTasks} квестов',
+                subtitle: '${week.totalXp} XP · ${week.completedTasks} квестов',
                 onTap: () => onOpen(_DesktopStatisticsDetail.weekly),
               ),
               _DesktopStatisticsLinkCard(
@@ -267,7 +264,7 @@ class _DesktopStatisticsMainContent extends StatelessWidget {
         else
           _DesktopContinuationCard(
             skill: continuation.first,
-            weekXp: week.xpBySkill[continuation.first.id] ?? 0,
+            weekXp: week.skillById(continuation.first.id)?.weeklyXp ?? 0,
             tokens: tokens,
           ),
       ],
@@ -368,7 +365,7 @@ class _DesktopCourseNudgeCard extends StatelessWidget {
 class _DesktopStatisticsRail extends StatelessWidget {
   final AppState state;
   final DesktopJournalTokens tokens;
-  final _DesktopWeekSnapshot week;
+  final AnalyticsReadModel week;
   final ValueChanged<_DesktopStatisticsDetail> onOpen;
 
   const _DesktopStatisticsRail({
@@ -383,80 +380,10 @@ class _DesktopStatisticsRail extends StatelessWidget {
     key: const ValueKey('desktop-statistics-right-rail'),
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      _DesktopSectionCard(
+      DesktopStatisticsAnalyticsPanel(
         tokens: tokens,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'XP ЗА НЕДЕЛЮ',
-                style: TextStyle(
-                  color: tokens.mutedText,
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.7,
-                ),
-              ),
-              const SizedBox(height: 14),
-              _DesktopWeekBars(week: week, tokens: tokens),
-              const SizedBox(height: 24),
-              Divider(color: tokens.subtleOutline, height: 1),
-              const SizedBox(height: 24),
-              Text(
-                'XP ПО НАВЫКАМ',
-                style: TextStyle(
-                  color: tokens.mutedText,
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.7,
-                ),
-              ),
-              const SizedBox(height: 12),
-              if (state.roadmapSkills.isEmpty)
-                Text('Нет данных', style: TextStyle(color: tokens.mutedText))
-              else
-                ...state.roadmapSkills.map(
-                  (skill) => Padding(
-                    padding: const EdgeInsets.only(bottom: 9),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 7,
-                          height: 7,
-                          decoration: BoxDecoration(
-                            color: skill.color,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            skill.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: tokens.text,
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                        Text(
-                          '${week.xpBySkill[skill.id] ?? 0}',
-                          style: TextStyle(
-                            color: skill.color,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
+        week: week,
+        skills: state.roadmapSkills,
       ),
       const SizedBox(height: 16),
       _DesktopSectionLabel(
@@ -592,7 +519,7 @@ class _DesktopStatisticsDetailPage extends StatelessWidget {
   }
 
   Widget _buildDetail(Color color) {
-    final week = _DesktopWeekSnapshot.fromState(state);
+    final week = state.currentAnalytics;
     final entries = switch (detail) {
       _DesktopStatisticsDetail.daily => state.completionHistoryForDate(
         DateTime.now(),
@@ -730,141 +657,6 @@ class _DesktopStatisticsDetailPage extends StatelessWidget {
       ),
     );
   }
-}
-
-class _DesktopWeekSnapshot {
-  final List<int> dailyXp;
-  final List<HistoryEntry> entries;
-  final Map<String, int> xpBySkill;
-  final Skill? leadingSkill;
-
-  const _DesktopWeekSnapshot({
-    required this.dailyXp,
-    required this.entries,
-    required this.xpBySkill,
-    required this.leadingSkill,
-  });
-
-  int get totalXp => dailyXp.fold(0, (sum, value) => sum + value);
-  int get totalTasks => entries.length;
-
-  factory _DesktopWeekSnapshot.fromState(AppState state) {
-    final start = startOfWeek(DateTime.now());
-    final daily = <int>[];
-    final entries = <HistoryEntry>[];
-    final bySkill = <String, int>{};
-    for (var day = 0; day < 7; day++) {
-      final dayEntries = state.completionHistoryForDate(
-        start.add(Duration(days: day)),
-      );
-      daily.add(dayEntries.fold(0, (sum, entry) => sum + entry.xp));
-      entries.addAll(dayEntries);
-      for (final entry in dayEntries) {
-        bySkill.update(
-          entry.skillId,
-          (value) => value + entry.xp,
-          ifAbsent: () => entry.xp,
-        );
-      }
-    }
-    Skill? leading;
-    var leadingXp = -1;
-    for (final skill in state.roadmapSkills) {
-      final xp = bySkill[skill.id] ?? 0;
-      if (xp > leadingXp) {
-        leadingXp = xp;
-        leading = skill;
-      }
-    }
-    return _DesktopWeekSnapshot(
-      dailyXp: daily,
-      entries: entries,
-      xpBySkill: bySkill,
-      leadingSkill: leadingXp > 0 ? leading : null,
-    );
-  }
-}
-
-class _DesktopStatisticsSummaryStrip extends StatelessWidget {
-  final DesktopJournalTokens tokens;
-  final int todayXp;
-  final int weekXp;
-  final Skill? mainSkill;
-  final int mainSkillXp;
-
-  const _DesktopStatisticsSummaryStrip({
-    required this.tokens,
-    required this.todayXp,
-    required this.weekXp,
-    required this.mainSkill,
-    required this.mainSkillXp,
-  });
-
-  @override
-  Widget build(BuildContext context) => Row(
-    key: const ValueKey('desktop-statistics-summary-strip'),
-    children: [
-      Expanded(
-        child: _summary(
-          Icons.today_outlined,
-          'Сегодня',
-          '$todayXp XP',
-          tokens.streakAmber,
-        ),
-      ),
-      const SizedBox(width: 10),
-      Expanded(
-        child: _summary(
-          Icons.trending_up,
-          'Неделя',
-          '$weekXp XP',
-          tokens.successGreen,
-        ),
-      ),
-      const SizedBox(width: 10),
-      Expanded(
-        child: _summary(
-          mainSkill?.icon ?? Icons.star_outline,
-          'Главный навык',
-          mainSkill == null
-              ? 'Нет данных'
-              : '${mainSkill!.name} · $mainSkillXp XP',
-          mainSkill?.color ?? tokens.mutedText,
-        ),
-      ),
-    ],
-  );
-
-  Widget _summary(IconData icon, String label, String value, Color color) =>
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.15)),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: color, size: 17),
-            const SizedBox(width: 8),
-            Text(
-              '$label: ',
-              style: TextStyle(
-                color: tokens.mutedText,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            Expanded(
-              child: Text(
-                value,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: color, fontWeight: FontWeight.w900),
-              ),
-            ),
-          ],
-        ),
-      );
 }
 
 class _DesktopSectionLabel extends StatelessWidget {
@@ -1114,52 +906,6 @@ class _DesktopContinuationCard extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _DesktopWeekBars extends StatelessWidget {
-  final _DesktopWeekSnapshot week;
-  final DesktopJournalTokens tokens;
-  const _DesktopWeekBars({required this.week, required this.tokens});
-
-  @override
-  Widget build(BuildContext context) {
-    final maxValue = week.dailyXp.fold<int>(1, math.max);
-    const labels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-    return Semantics(
-      label: 'Недельный XP: ${week.dailyXp.join(', ')}',
-      child: SizedBox(
-        height: 96,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: List.generate(
-            7,
-            (index) => Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Container(
-                    width: 9,
-                    height: 8 + 55 * (week.dailyXp[index] / maxValue),
-                    decoration: BoxDecoration(
-                      color: tokens.profilePurple.withValues(
-                        alpha: week.dailyXp[index] == 0 ? 0.25 : 0.85,
-                      ),
-                      borderRadius: BorderRadius.circular(5),
-                    ),
-                  ),
-                  const SizedBox(height: 7),
-                  Text(
-                    labels[index],
-                    style: TextStyle(color: tokens.mutedText, fontSize: 9.5),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }

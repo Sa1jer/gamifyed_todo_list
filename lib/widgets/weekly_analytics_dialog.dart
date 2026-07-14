@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../analytics/analytics_read_model.dart';
 import '../app_state.dart';
 import '../engines/task_ordering.dart';
 import '../feedback_service.dart';
@@ -2109,9 +2110,9 @@ class _WeeklyEmptyState extends StatelessWidget {
 class _WeeklySummary {
   final AppState state;
   final DateTime weekStart;
-  final List<_DayWeekStat> dayStats;
+  final List<AnalyticsDaySummary> dayStats;
   final List<HistoryEntry> entries;
-  final List<_SkillWeekStat> skillStats;
+  final List<AnalyticsSkillSummary> skillStats;
   final List<Task> riskTasks;
   final WeeklyGoal? weeklyGoal;
   final _ProcrastinationInsights procrastination;
@@ -2139,54 +2140,8 @@ class _WeeklySummary {
   String? get topSkillName => skillStats.isEmpty ? null : skillStats.first.name;
 
   static _WeeklySummary fromState(AppState state, DateTime weekStart) {
-    final normalizedStart = dateOnly(weekStart);
-    final completionHistoryByDate = state.completionHistoryByDate;
-    final days = List.generate(
-      7,
-      (index) => dateOnly(normalizedStart.add(Duration(days: index))),
-    );
-
-    final dayStats = <_DayWeekStat>[];
-    final entries = <HistoryEntry>[];
-
-    for (final day in days) {
-      final dayEntries = completionHistoryByDate[day] ?? const <HistoryEntry>[];
-      dayStats.add(
-        _DayWeekStat(
-          date: day,
-          xp: dayEntries.fold(0, (sum, entry) => sum + entry.xp),
-          completedTasks: dayEntries.length,
-        ),
-      );
-      entries.addAll(dayEntries);
-    }
-
-    entries.sort((a, b) => b.at.compareTo(a.at));
-
-    final skillsById = {for (final skill in state.skills) skill.id: skill};
-    final skillStatsById = <String, _SkillWeekStat>{};
-
-    for (final entry in entries) {
-      final skill = skillsById[entry.skillId];
-      final stat = skillStatsById.putIfAbsent(
-        entry.skillId,
-        () => _SkillWeekStat(
-          skillId: entry.skillId,
-          name: skill?.name ?? entry.skillName,
-          icon: skill?.icon ?? entry.skillIcon,
-          color: skill?.color ?? entry.skillColor,
-        ),
-      );
-      stat.xp += entry.xp;
-      stat.tasksCompleted++;
-    }
-
-    final skillStats = skillStatsById.values.toList()
-      ..sort((a, b) {
-        final byXp = b.xp.compareTo(a.xp);
-        if (byXp != 0) return byXp;
-        return a.name.compareTo(b.name);
-      });
+    final analytics = state.analyticsForWeek(weekStart);
+    final normalizedStart = analytics.weekStart;
 
     final now = DateTime.now();
     final riskTasks =
@@ -2204,9 +2159,11 @@ class _WeeklySummary {
     return _WeeklySummary(
       state: state,
       weekStart: normalizedStart,
-      dayStats: dayStats,
-      entries: entries,
-      skillStats: skillStats,
+      dayStats: analytics.days,
+      entries: analytics.entries,
+      skillStats: analytics.skills
+          .where((skill) => skill.weeklyXp > 0)
+          .toList(growable: false),
       riskTasks: riskTasks,
       weeklyGoal: state.weeklyGoalForWeek(normalizedStart),
       procrastination: _ProcrastinationInsights.fromState(state),
@@ -2399,34 +2356,6 @@ class _TaskInsight {
     required this.reason,
     required this.minimumAction,
     required this.daysSinceActivity,
-  });
-}
-
-class _DayWeekStat {
-  final DateTime date;
-  final int xp;
-  final int completedTasks;
-
-  const _DayWeekStat({
-    required this.date,
-    required this.xp,
-    required this.completedTasks,
-  });
-}
-
-class _SkillWeekStat {
-  final String skillId;
-  final String name;
-  final IconData icon;
-  final Color color;
-  int xp = 0;
-  int tasksCompleted = 0;
-
-  _SkillWeekStat({
-    required this.skillId,
-    required this.name,
-    required this.icon,
-    required this.color,
   });
 }
 

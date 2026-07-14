@@ -180,6 +180,97 @@ void main() {
     });
   });
 
+  group('analytics read-model invalidation', () {
+    late AppState state;
+    late Skill skill;
+
+    setUp(() {
+      state = AppState(storage: _InMemoryStorageService(), seedDefaults: false);
+      skill = Skill(
+        id: 'analytics-skill',
+        name: 'Исходное имя',
+        goal: 'Закрыть этап',
+        color: Colors.blue,
+        icon: Icons.analytics,
+        treeNodes: [
+          SkillTreeNode(id: 'analytics-stage', title: 'Этап', isMastered: true),
+        ],
+      );
+    });
+
+    tearDown(() => state.dispose());
+
+    test('skill add, update, and removal replace the cached snapshot', () {
+      final empty = state.currentAnalytics;
+
+      state.addSkill(skill);
+      final added = state.currentAnalytics;
+      expect(identical(empty, added), isFalse);
+      expect(added.skillById(skill.id)?.name, 'Исходное имя');
+
+      state.updateSkill(
+        skill,
+        name: 'Новое имя',
+        goal: skill.goal,
+        checklist: skill.checklist,
+        color: Colors.red,
+        icon: Icons.star,
+      );
+      final updated = state.currentAnalytics;
+      expect(identical(added, updated), isFalse);
+      expect(updated.skillById(skill.id)?.name, 'Новое имя');
+      expect(updated.skillById(skill.id)?.color, Colors.red);
+
+      state.removeSkill(skill.id);
+      final removed = state.currentAnalytics;
+      expect(identical(updated, removed), isFalse);
+      expect(removed.skillById(skill.id), isNull);
+    });
+
+    test('starting a new RoadMap invalidates stage progress', () {
+      state.addSkill(skill);
+      final before = state.currentAnalytics;
+      expect(before.skillById(skill.id)?.totalStages, 1);
+      expect(before.skillById(skill.id)?.completedStages, 1);
+
+      expect(
+        state.setNextSkillGoal(skill.id, 'Следующая цель'),
+        NextGoalUpdateResult.updated,
+      );
+      expect(
+        state.startNewRoadmapForNextGoal(skill.id),
+        StartNewRoadmapResult.created,
+      );
+
+      final after = state.currentAnalytics;
+      expect(identical(before, after), isFalse);
+      expect(after.skillById(skill.id)?.totalStages, 0);
+      expect(after.skillById(skill.id)?.completedStages, 0);
+    });
+
+    test('recurring reset invalidates active task counts', () {
+      state.addSkill(skill);
+      final task = Task(
+        id: 'analytics-repeating',
+        title: 'Повторить',
+        skillId: skill.id,
+        xpReward: 20,
+        type: TaskType.repeating,
+        isDone: true,
+        nextResetAt: DateTime.now().subtract(const Duration(minutes: 1)),
+      );
+      state.addTask(task);
+      final before = state.currentAnalytics;
+      expect(before.skillById(skill.id)?.activeTasks, 0);
+
+      state.checkResets();
+
+      final after = state.currentAnalytics;
+      expect(identical(before, after), isFalse);
+      expect(after.skillById(skill.id)?.activeTasks, 1);
+    });
+  });
+
   group('mutable model list safety', () {
     test('sync methods accept fixed-length constructor lists', () {
       final task = Task(

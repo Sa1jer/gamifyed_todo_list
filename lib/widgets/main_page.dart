@@ -3,8 +3,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_slidable/flutter_slidable.dart';
 import '../debug/debug_admin_panel.dart';
+import '../analytics/analytics_read_model.dart';
 import '../app_state.dart';
 import '../feedback_service.dart';
 import '../models.dart';
@@ -22,6 +22,8 @@ import 'faq_dialog.dart';
 import 'progress_hub_dialog.dart';
 import 'mastery_map_workspace.dart';
 import 'mobile_journal_tokens.dart';
+import 'main_page/mobile_journal_sections.dart';
+import 'main_page/desktop_statistics_sections.dart';
 import 'desktop_journal_tokens.dart';
 import 'character_timeline_dialog.dart';
 import 'daily_victories_dialog.dart';

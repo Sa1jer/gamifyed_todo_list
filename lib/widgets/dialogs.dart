@@ -12,6 +12,7 @@ import '../utils.dart';
 import 'reward_animations.dart';
 import 'shared.dart';
 import 'mobile_journal_tokens.dart';
+import 'dialogs/task_form_controller.dart';
 
 part 'dialogs/achievements_history.dart';
 part 'dialogs/shared_controls.dart';

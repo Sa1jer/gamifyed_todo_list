@@ -11,9 +11,13 @@ import 'persistence_status.dart';
 import 'sfx_service.dart';
 import 'engines/achievement_engine.dart';
 import 'engines/boss_engine.dart';
+import 'engines/completion_history_index.dart';
 import 'engines/goal_milestone_engine.dart';
 import 'engines/goal_progress_engine.dart';
 import 'engines/roadmap_engine.dart';
+import 'analytics/analytics_read_model.dart';
+import 'coordinators/roadmap_mutation_coordinator.dart';
+import 'coordinators/task_mutation_coordinator.dart';
 
 part 'app_state/provider.dart';
 
@@ -76,7 +80,15 @@ class AppState extends ChangeNotifier {
   final math.Random _random;
   final AchievementEngine _achievementEngine = const AchievementEngine();
   final BossEngine _bossEngine = const BossEngine();
+  final CompletionHistoryIndex _completionHistoryIndex =
+      CompletionHistoryIndex();
+  final AnalyticsReadModelCache _analyticsReadModelCache =
+      AnalyticsReadModelCache();
   final GoalMilestoneEngine _goalMilestoneEngine = const GoalMilestoneEngine();
+  final RoadmapMutationCoordinator _roadmapMutations =
+      const RoadmapMutationCoordinator();
+  final TaskMutationCoordinator _taskMutations =
+      const TaskMutationCoordinator();
   Timer? _resetTimer;
   Timer? _saveDebounceTimer;
   Future<void>? _saveInFlight;
@@ -141,9 +153,7 @@ class AppState extends ChangeNotifier {
   DailyStats? todayStats;
 
   int _bestStreak = 0;
-  Map<DateTime, List<HistoryEntry>>? _completionHistoryByDateCache;
-  int? _totalTasksCompletedCache;
-  int? _historyCacheFingerprint;
+  int _analyticsEpoch = 0;
 
   AppState({
     required StorageService storage,
@@ -1171,6 +1181,7 @@ class AppState extends ChangeNotifier {
 
   void checkResets() {
     if (_resetExpiredTasks()) {
+      _invalidateAnalyticsReadModel();
       _syncAllTaskNotifications();
       notifyListeners();
       _saveAll();
@@ -1214,114 +1225,48 @@ class AppState extends ChangeNotifier {
   int activeTaskCountForSkill(String skillId) =>
       tasksForSkill(skillId).where((task) => !task.isDone).length;
 
-  Map<DateTime, List<HistoryEntry>> get completionHistoryByDate {
-    assert(_historyCachesAreFreshForDebug());
-    final cached = _completionHistoryByDateCache;
-    if (cached != null) return cached;
-
-    return _rebuildCompletionHistoryCaches();
-  }
-
-  Map<DateTime, List<HistoryEntry>> _rebuildCompletionHistoryCaches() {
-    // History хранится в обратном порядке вставки (новые через insert(0,…)),
-    // поэтому при равных значениях `at` (а это случается, когда несколько
-    // действий выполнены в одну миллисекунду — особенно в тестах) сортировка
-    // по только `at` теряет фактический порядок вставки и может перепутать
-    // completion/undo. Используем индекс в исходном списке как вторичный ключ:
-    // больший index в `history` = добавлено раньше = должно идти раньше
-    // в orderedHistory.
-    final indexedHistory =
-        List<MapEntry<int, HistoryEntry>>.generate(
-          history.length,
-          (i) => MapEntry(i, history[i]),
-        )..sort((a, b) {
-          final byTime = a.value.at.compareTo(b.value.at);
-          if (byTime != 0) return byTime;
-          return b.key.compareTo(a.key);
-        });
-    final orderedHistory = indexedHistory.map((e) => e.value);
-    final effectiveCompletionsByTask = <String, List<HistoryEntry>>{};
-
-    for (final entry in orderedHistory) {
-      final taskKey = _historyTaskKey(entry);
-      final taskCompletions = effectiveCompletionsByTask.putIfAbsent(
-        taskKey,
-        () => <HistoryEntry>[],
-      );
-
-      if (entry.isCompletion) {
-        taskCompletions.add(entry);
-      } else if (taskCompletions.isNotEmpty) {
-        taskCompletions.removeLast();
-      }
-    }
-
-    final completionsByDate = <DateTime, List<HistoryEntry>>{};
-
-    for (final taskCompletions in effectiveCompletionsByTask.values) {
-      for (final completion in taskCompletions) {
-        final day = dateOnly(completion.at);
-        completionsByDate
-            .putIfAbsent(day, () => <HistoryEntry>[])
-            .add(completion);
-      }
-    }
-
-    for (final dayCompletions in completionsByDate.values) {
-      dayCompletions.sort((a, b) => a.at.compareTo(b.at));
-    }
-
-    final stableCompletionsByDate = <DateTime, List<HistoryEntry>>{};
-    var totalCompletions = 0;
-    for (final entry in completionsByDate.entries) {
-      totalCompletions += entry.value.length;
-      stableCompletionsByDate[entry.key] = List.unmodifiable(entry.value);
-    }
-
-    _completionHistoryByDateCache = Map.unmodifiable(stableCompletionsByDate);
-    _totalTasksCompletedCache = totalCompletions;
-    _historyCacheFingerprint = _historyFingerprint();
-    return _completionHistoryByDateCache!;
-  }
+  Map<DateTime, List<HistoryEntry>> get completionHistoryByDate =>
+      _completionHistoryIndex.resolve(history).byDate;
 
   List<HistoryEntry> completionHistoryForDate(DateTime date) {
-    final day = dateOnly(date);
-    final dayCompletions = completionHistoryByDate[day];
-    if (dayCompletions == null) return const <HistoryEntry>[];
-    return List.unmodifiable(dayCompletions);
+    return _completionHistoryIndex.forDate(history, date);
   }
 
   bool hasCompletionOnDate(DateTime date) {
-    return completionHistoryByDate.containsKey(dateOnly(date));
+    return _completionHistoryIndex.hasCompletionOnDate(history, date);
   }
+
+  HistoryEntry? get latestRecordedCompletion =>
+      _completionHistoryIndex.resolve(history).latestRecordedCompletion;
+
+  AnalyticsReadModel analyticsForWeek(DateTime weekStart) {
+    return _analyticsReadModelCache.resolve(
+      epoch: _analyticsEpoch,
+      weekStart: weekStart,
+      build: (normalizedWeekStart) {
+        final completionSnapshot = _completionHistoryIndex.resolve(history);
+        return AnalyticsReadModel.build(
+          weekStart: normalizedWeekStart,
+          completionHistoryByDate: completionSnapshot.byDate,
+          skills: skills,
+          tasks: tasks,
+          todayStats: todayStats,
+          totalCompletions: completionSnapshot.totalCompletions,
+        );
+      },
+    );
+  }
+
+  AnalyticsReadModel get currentAnalytics => analyticsForWeek(DateTime.now());
 
   void _invalidateHistoryCaches() {
-    _completionHistoryByDateCache = null;
-    _totalTasksCompletedCache = null;
-    _historyCacheFingerprint = null;
+    _completionHistoryIndex.invalidate();
+    _invalidateAnalyticsReadModel();
   }
 
-  bool _historyCachesAreFreshForDebug() {
-    if (_completionHistoryByDateCache == null &&
-        _totalTasksCompletedCache == null) {
-      return true;
-    }
-    return _historyCacheFingerprint == _historyFingerprint();
-  }
-
-  int _historyFingerprint() {
-    return Object.hashAll(
-      history.map(
-        (entry) => Object.hash(
-          entry.id,
-          entry.taskId,
-          entry.skillId,
-          entry.xp,
-          entry.isCompletion,
-          entry.at.millisecondsSinceEpoch,
-        ),
-      ),
-    );
+  void _invalidateAnalyticsReadModel() {
+    _analyticsEpoch++;
+    _analyticsReadModelCache.invalidate();
   }
 
   List<Boss> get activeBosses =>
@@ -1669,6 +1614,7 @@ class AppState extends ChangeNotifier {
     todayStats!.tasksCompleted++;
     todayStats!.xpEarned += xp;
     todayStats!.skillsImproved += skillUp;
+    _invalidateAnalyticsReadModel();
     _maybeUnlockDailyRewardChest();
   }
 
@@ -1676,12 +1622,14 @@ class AppState extends ChangeNotifier {
     _resetDailyStatsIfNeeded();
     todayStats!.xpEarned += xp;
     todayStats!.skillsImproved += skillUp;
+    _invalidateAnalyticsReadModel();
   }
 
   void _updateInboxDailyStats(int xp) {
     _resetDailyStatsIfNeeded();
     todayStats!.tasksCompleted++;
     todayStats!.xpEarned += xp;
+    _invalidateAnalyticsReadModel();
   }
 
   void _resetDailyStatsIfNeeded() {
@@ -1962,6 +1910,7 @@ class AppState extends ChangeNotifier {
     } else {
       skills.insert(inboxIndex, s);
     }
+    _invalidateAnalyticsReadModel();
     _checkAchievements();
     notifyListeners();
     _saveAll();
@@ -2004,6 +1953,7 @@ class AppState extends ChangeNotifier {
     skill.icon = icon;
     skill.syncChecklistDone();
     skill.syncTreeNodes();
+    _invalidateAnalyticsReadModel();
     _checkAchievements();
     notifyListeners();
     _saveAll();
@@ -2092,6 +2042,7 @@ class AppState extends ChangeNotifier {
 
     skill.treeNodes.clear();
     skill.syncTreeNodes();
+    _invalidateAnalyticsReadModel();
     _syncBossesForSkill(skillId);
     notifyListeners();
     _saveAll();
@@ -2110,12 +2061,8 @@ class AppState extends ChangeNotifier {
   void addSkillTreeNode(String skillId, SkillTreeNode node) {
     final skill = _skillById(skillId);
     if (skill == null) return;
-    if (node.requiredQuestCompletions < 1) {
-      node.requiredQuestCompletions = 1;
-    }
-    node.syncChecklistDone();
-    skill.treeNodes.add(node);
-    skill.syncTreeNodes();
+    _roadmapMutations.addStage(skill, node);
+    _invalidateAnalyticsReadModel();
     _syncBossesForSkill(skillId);
     notifyListeners();
     _saveAll();
@@ -2124,88 +2071,19 @@ class AppState extends ChangeNotifier {
   bool canReorderRoadmapPath(String skillId, Iterable<String> nodeIds) {
     final skill = _skillById(skillId);
     if (skill == null) return false;
-    return _validatedLinearRoadmapPath(skill, nodeIds) != null;
+    return _roadmapMutations.canReorderPath(skill, nodeIds);
   }
 
   bool reorderRoadmapPath(String skillId, List<String> orderedNodeIds) {
     final skill = _skillById(skillId);
-    if (skill == null || orderedNodeIds.length < 2) return false;
-    final currentPath = _validatedLinearRoadmapPath(skill, orderedNodeIds);
-    if (currentPath == null) return false;
-
-    final nodesById = {for (final node in currentPath) node.id: node};
-    final reordered = orderedNodeIds.map((id) => nodesById[id]!).toList();
-    for (var index = 0; index < reordered.length; index++) {
-      reordered[index].prerequisiteIds = index == 0
-          ? <String>[]
-          : <String>[reordered[index - 1].id];
+    if (skill == null ||
+        !_roadmapMutations.reorderPath(skill, orderedNodeIds)) {
+      return false;
     }
-
-    final pathIds = orderedNodeIds.toSet();
-    final insertionIndex = skill.treeNodes
-        .asMap()
-        .entries
-        .where((entry) => pathIds.contains(entry.value.id))
-        .map((entry) => entry.key)
-        .reduce(math.min);
-    skill.treeNodes.removeWhere((node) => pathIds.contains(node.id));
-    skill.treeNodes.insertAll(insertionIndex, reordered);
-    skill.syncTreeNodes();
     _syncBossesForSkill(skillId);
     notifyListeners();
     _saveAll();
     return true;
-  }
-
-  List<SkillTreeNode>? _validatedLinearRoadmapPath(
-    Skill skill,
-    Iterable<String> requestedNodeIds,
-  ) {
-    final requested = requestedNodeIds.toList(growable: false);
-    final requestedIds = requested.toSet();
-    if (requested.length < 2 || requestedIds.length != requested.length) {
-      return null;
-    }
-
-    final layout = const RoadmapEngine().buildPathLayout(skill);
-    final matchingPaths = layout.paths
-        .where((path) {
-          final ids = path.nodes.map((node) => node.id).toSet();
-          return ids.length == requestedIds.length &&
-              ids.containsAll(requestedIds);
-        })
-        .toList(growable: false);
-    if (matchingPaths.length != 1) return null;
-    final path = matchingPaths.single.nodes;
-
-    for (final node in path) {
-      final appearances = layout.paths
-          .where(
-            (candidate) => candidate.nodes.any((item) => item.id == node.id),
-          )
-          .length;
-      if (appearances != 1) return null;
-    }
-
-    final skillNodeIds = skill.treeNodes.map((node) => node.id).toSet();
-    for (var index = 0; index < path.length; index++) {
-      final validPrerequisites = path[index].prerequisiteIds
-          .where(skillNodeIds.contains)
-          .toList(growable: false);
-      if (index == 0) {
-        if (validPrerequisites.isNotEmpty) return null;
-      } else if (validPrerequisites.length != 1 ||
-          validPrerequisites.single != path[index - 1].id) {
-        return null;
-      }
-    }
-
-    final hasExternalDependent = skill.treeNodes.any(
-      (node) =>
-          !requestedIds.contains(node.id) &&
-          node.prerequisiteIds.any(requestedIds.contains),
-    );
-    return hasExternalDependent ? null : path;
   }
 
   void addRoadmapTemplate(String skillId, RoadmapTemplateConfig config) {
@@ -2214,180 +2092,14 @@ class AppState extends ChangeNotifier {
 
   void applyRoadmapTemplate(String skillId, RoadmapTemplateConfig config) {
     final skill = _skillById(skillId);
-    if (skill == null) return;
-    final engine = const RoadmapEngine();
-    final templatePaths = engine.buildTemplatePaths(config);
-    if (templatePaths.isEmpty) return;
-
-    final linkedNodeIds = tasks
-        .where(
-          (task) =>
-              task.isSkillTask &&
-              task.skillId == skill.id &&
-              task.treeNodeId != null,
-        )
-        .map((task) => task.treeNodeId!)
-        .toSet();
-    final orderedExisting = engine.orderedUniqueStages(skill);
-    final originalPrerequisitesByNodeId = <String, List<String>>{
-      for (final node in orderedExisting)
-        node.id: List<String>.from(node.prerequisiteIds),
-    };
-    final selectedNodes = <SkillTreeNode>[];
-    final selectedIds = <String>{};
-    final reusedNodeIds = <String>{};
-    final requiredPrerequisiteByNodeId = <String, String?>{};
-    var cursor = 0;
-
-    for (final path in templatePaths) {
-      String? previousId;
-      for (final templateNode in path.nodes) {
-        final reused = cursor < orderedExisting.length;
-        final node = reused ? orderedExisting[cursor++] : templateNode;
-        if (reused) {
-          reusedNodeIds.add(node.id);
-        }
-        if (selectedIds.add(node.id)) {
-          selectedNodes.add(node);
-        }
-        requiredPrerequisiteByNodeId[node.id] = previousId;
-        if (node.requiredQuestCompletions < 1) {
-          node.requiredQuestCompletions = 1;
-        }
-        node.syncChecklistDone();
-        previousId = node.id;
-      }
+    if (skill == null ||
+        !_roadmapMutations.applyTemplate(skill, tasks, config)) {
+      return;
     }
-
-    final preservedExtraNodes = orderedExisting
-        .skip(cursor)
-        .where(
-          (node) =>
-              !selectedIds.contains(node.id) &&
-              _shouldPreserveRoadmapStage(node, linkedNodeIds),
-        )
-        .toList(growable: false);
-    final finalNodes = [...selectedNodes, ...preservedExtraNodes];
-    final finalNodeIds = finalNodes.map((node) => node.id).toSet();
-    final prerequisitesByNodeId = <String, List<String>>{
-      for (final node in finalNodes)
-        node.id: List<String>.from(node.prerequisiteIds),
-    };
-
-    for (final node in finalNodes) {
-      final isTemplateNode = requiredPrerequisiteByNodeId.containsKey(node.id);
-      final requiredPrerequisite = requiredPrerequisiteByNodeId[node.id];
-      final isTemplateRoot = isTemplateNode && requiredPrerequisite == null;
-      // A reused stage can become the first stage of a new road. Keeping its
-      // old parent would silently attach that road back to the previous road.
-      final shouldMergeExistingPrerequisites =
-          !isTemplateRoot &&
-          (reusedNodeIds.contains(node.id) ||
-              preservedExtraNodes.any((extra) => extra.id == node.id));
-      final originalPrerequisites =
-          originalPrerequisitesByNodeId[node.id] ?? const <String>[];
-      final existingPrerequisites = shouldMergeExistingPrerequisites
-          ? _roadmapPrerequisitesToPreserve(
-              originalPrerequisites: originalPrerequisites,
-              requiredPrerequisiteId: requiredPrerequisite,
-              templateNodeIds: requiredPrerequisiteByNodeId.keys.toSet(),
-              isPreservedExtraNode: preservedExtraNodes.any(
-                (extra) => extra.id == node.id,
-              ),
-            )
-          : const <String>[];
-      final mergedPrerequisites = _mergeRoadmapPrerequisites(
-        nodeId: node.id,
-        requiredPrerequisiteId: requiredPrerequisite,
-        existingPrerequisiteIds: existingPrerequisites,
-        finalNodeIds: finalNodeIds,
-        prerequisitesByNodeId: prerequisitesByNodeId,
-      );
-      node.prerequisiteIds = mergedPrerequisites;
-      prerequisitesByNodeId[node.id] = mergedPrerequisites;
-    }
-
-    skill.treeNodes
-      ..clear()
-      ..addAll(finalNodes);
-    skill.syncTreeNodes();
+    _invalidateAnalyticsReadModel();
     _syncBossesForSkill(skillId);
     notifyListeners();
     _saveAll();
-  }
-
-  List<String> _roadmapPrerequisitesToPreserve({
-    required Iterable<String> originalPrerequisites,
-    required String? requiredPrerequisiteId,
-    required Set<String> templateNodeIds,
-    required bool isPreservedExtraNode,
-  }) {
-    if (isPreservedExtraNode) return List<String>.from(originalPrerequisites);
-
-    return originalPrerequisites
-        .where(
-          (id) => id == requiredPrerequisiteId || !templateNodeIds.contains(id),
-        )
-        .toList(growable: false);
-  }
-
-  List<String> _mergeRoadmapPrerequisites({
-    required String nodeId,
-    required String? requiredPrerequisiteId,
-    required Iterable<String> existingPrerequisiteIds,
-    required Set<String> finalNodeIds,
-    required Map<String, List<String>> prerequisitesByNodeId,
-  }) {
-    final merged = <String>[];
-
-    void tryAdd(String? prerequisiteId) {
-      if (prerequisiteId == null) return;
-      if (prerequisiteId == nodeId) return;
-      if (!finalNodeIds.contains(prerequisiteId)) return;
-      if (merged.contains(prerequisiteId)) return;
-      final candidateMap = <String, List<String>>{
-        for (final entry in prerequisitesByNodeId.entries)
-          entry.key: List<String>.from(entry.value),
-      };
-      candidateMap[nodeId] = [...merged, prerequisiteId];
-      if (_roadmapPrerequisitesCreateCycle(nodeId, candidateMap)) return;
-      merged.add(prerequisiteId);
-    }
-
-    tryAdd(requiredPrerequisiteId);
-    for (final prerequisiteId in existingPrerequisiteIds) {
-      tryAdd(prerequisiteId);
-    }
-    return merged;
-  }
-
-  bool _roadmapPrerequisitesCreateCycle(
-    String nodeId,
-    Map<String, List<String>> prerequisitesByNodeId,
-  ) {
-    bool visit(String currentId, Set<String> seen) {
-      final prerequisites = prerequisitesByNodeId[currentId];
-      if (prerequisites == null) return false;
-      for (final prerequisiteId in prerequisites) {
-        if (prerequisiteId == nodeId) return true;
-        if (!seen.add(prerequisiteId)) continue;
-        if (visit(prerequisiteId, seen)) return true;
-      }
-      return false;
-    }
-
-    return visit(nodeId, <String>{});
-  }
-
-  bool _shouldPreserveRoadmapStage(
-    SkillTreeNode node,
-    Set<String> linkedNodeIds,
-  ) {
-    return linkedNodeIds.contains(node.id) ||
-        node.isMastered ||
-        node.masteredAt != null ||
-        node.description.trim().isNotEmpty ||
-        node.checklist.isNotEmpty;
   }
 
   SkillTreeNode? extendRoadmapPath(
@@ -2400,25 +2112,16 @@ class AppState extends ChangeNotifier {
   }) {
     final skill = _skillById(skillId);
     if (skill == null) return null;
-    final terminalNode =
-        const RoadmapEngine().terminalStageForNode(skill, pathNodeId) ??
-        skill.treeNodes
-            .where((candidate) => candidate.id == pathNodeId)
-            .firstOrNull;
-    if (terminalNode == null) return null;
-
-    final safeTitle = title.trim().isEmpty ? 'Новый этап' : title.trim();
-    final node = SkillTreeNode(
-      id: uid(),
-      title: safeTitle,
+    final node = _roadmapMutations.extendPath(
+      skill,
+      pathNodeId,
+      title: title,
       description: description,
       xpReward: xpReward,
-      requiredQuestCompletions: math.max(1, requiredQuestCompletions),
-      prerequisiteIds: [terminalNode.id],
-    )..syncChecklistDone();
-
-    skill.treeNodes.add(node);
-    skill.syncTreeNodes();
+      requiredQuestCompletions: requiredQuestCompletions,
+    );
+    if (node == null) return null;
+    _invalidateAnalyticsReadModel();
     _syncBossesForSkill(skillId);
     notifyListeners();
     _saveAll();
@@ -2436,32 +2139,17 @@ class AppState extends ChangeNotifier {
   }) {
     final skill = _skillById(skillId);
     if (skill == null) return null;
-    final leftNodeIndex = skill.treeNodes.indexWhere(
-      (candidate) => candidate.id == leftNodeId,
-    );
-    final rightNodeIndex = skill.treeNodes.indexWhere(
-      (candidate) => candidate.id == beforeNodeId,
-    );
-    if (leftNodeIndex == -1 || rightNodeIndex == -1) return null;
-
-    final rightNode = skill.treeNodes[rightNodeIndex];
-    if (!rightNode.prerequisiteIds.contains(leftNodeId)) return null;
-
-    final safeTitle = title.trim().isEmpty ? 'Новый этап' : title.trim();
-    final node = SkillTreeNode(
-      id: uid(),
-      title: safeTitle,
+    final node = _roadmapMutations.insertStageAfter(
+      skill,
+      leftNodeId,
+      beforeNodeId: beforeNodeId,
+      title: title,
       description: description,
       xpReward: xpReward,
-      requiredQuestCompletions: math.max(1, requiredQuestCompletions),
-      prerequisiteIds: [leftNodeId],
-    )..syncChecklistDone();
-
-    rightNode.prerequisiteIds = rightNode.prerequisiteIds
-        .map((id) => id == leftNodeId ? node.id : id)
-        .toList(growable: true);
-    skill.treeNodes.insert(rightNodeIndex, node);
-    skill.syncTreeNodes();
+      requiredQuestCompletions: requiredQuestCompletions,
+    );
+    if (node == null) return null;
+    _invalidateAnalyticsReadModel();
     _syncBossesForSkill(skillId);
     notifyListeners();
     _saveAll();
@@ -2475,15 +2163,15 @@ class AppState extends ChangeNotifier {
     int? xpReward,
   }) {
     final skill = _skillById(skillId);
-    final node = skill?.treeNodes
-        .where((candidate) => candidate.id == nodeId)
-        .firstOrNull;
-    if (skill == null || node == null) return;
-    node.requiredQuestCompletions = math.max(1, requiredQuestCompletions);
-    if (xpReward != null) {
-      node.xpReward = math.max(0, xpReward);
+    if (skill == null ||
+        !_roadmapMutations.updatePracticeTarget(
+          skill,
+          nodeId,
+          requiredQuestCompletions,
+          xpReward: xpReward,
+        )) {
+      return;
     }
-    skill.syncTreeNodes();
     _syncBossesForSkill(skillId);
     notifyListeners();
     _saveAll();
@@ -2491,14 +2179,9 @@ class AppState extends ChangeNotifier {
 
   void renameSkillTreeNode(String skillId, String nodeId, String title) {
     final skill = _skillById(skillId);
-    final node = skill?.treeNodes
-        .where((candidate) => candidate.id == nodeId)
-        .firstOrNull;
-    final safeTitle = title.trim();
-    if (skill == null || node == null || safeTitle.isEmpty) return;
-    if (node.title == safeTitle) return;
-    node.title = safeTitle;
-    skill.syncTreeNodes();
+    if (skill == null || !_roadmapMutations.renameStage(skill, nodeId, title)) {
+      return;
+    }
     _syncBossesForSkill(skillId);
     notifyListeners();
     _saveAll();
@@ -2506,16 +2189,16 @@ class AppState extends ChangeNotifier {
 
   void removeSkillTreeNode(String skillId, String nodeId) {
     final skill = _skillById(skillId);
-    if (skill == null) return;
-    skill.treeNodes.removeWhere((node) => node.id == nodeId);
-    for (final node in skill.treeNodes) {
-      node.prerequisiteIds.remove(nodeId);
+    if (skill == null ||
+        !_roadmapMutations.removeStage(
+          skill,
+          tasks,
+          nodeId,
+          now: DateTime.now(),
+        )) {
+      return;
     }
-    for (final task in tasksForTreeNode(skillId, nodeId)) {
-      task.treeNodeId = null;
-      task.updatedAt = DateTime.now();
-    }
-    skill.syncTreeNodes();
+    _invalidateAnalyticsReadModel();
     _syncBossesForSkill(skillId);
     notifyListeners();
     _saveAll();
@@ -2523,18 +2206,10 @@ class AppState extends ChangeNotifier {
 
   void toggleSkillTreeNodeChecklist(String skillId, String nodeId, int index) {
     final skill = _skillById(skillId);
-    final node = skill?.treeNodes
-        .where((item) => item.id == nodeId)
-        .firstOrNull;
     if (skill == null ||
-        node == null ||
-        index < 0 ||
-        index >= node.checklistDone.length ||
-        node.isMastered) {
+        !_roadmapMutations.toggleChecklist(skill, nodeId, index)) {
       return;
     }
-
-    node.checklistDone[index] = !node.checklistDone[index];
     _syncBossesForSkill(skillId);
     notifyListeners();
     _saveAll();
@@ -2646,21 +2321,20 @@ class AppState extends ChangeNotifier {
     rewardChests.removeWhere((chest) => chest.skillId == id);
     buffs.removeWhere((buff) => buff.skillId == id);
     if (selectedSkillId == id) selectedSkillId = null;
+    _invalidateAnalyticsReadModel();
     notifyListeners();
     _saveAll();
   }
 
   void addTask(Task t) {
-    t.syncSubtaskDone();
-    t.normalizeScope();
-    t.treeNodeId = t.isSkillTask
-        ? _normalizedTreeNodeId(t.skillId, t.treeNodeId)
-        : null;
-    if (t.repeatCustomDays < 1) t.repeatCustomDays = 1;
-    t.createdAt = DateTime.now();
-    t.updatedAt = t.createdAt;
-    tasks.add(t);
+    _taskMutations.add(
+      tasks: tasks,
+      skills: skills,
+      task: t,
+      now: DateTime.now(),
+    );
     if (t.isSkillTask) _completeOnboardingAfterFirstTask();
+    _invalidateAnalyticsReadModel();
     _syncTaskNotification(t);
     notifyListeners();
     _saveAll();
@@ -2701,93 +2375,57 @@ class AppState extends ChangeNotifier {
     required int? notificationMinute,
     required String? treeNodeId,
   }) {
-    final oldType = task.type;
-    final hadNotification = task.notificationsEnabled;
-    final oldMinimumAction = task.minimumAction;
-    if (task.isInbox) {
-      task.title = title;
-      task.description = description.trim();
-      task.priority = priority;
-      task.subtasks = List.of(subtasks);
-      task.syncSubtaskDone();
-      task.tags = List.of(tags);
-      task.updatedAt = DateTime.now();
-      task.normalizeScope();
-      _syncTaskNotification(task);
-      notifyListeners();
-      _saveAll();
-      return;
+    final result = _taskMutations.update(
+      task: task,
+      skills: skills,
+      data: TaskUpdateData(
+        title: title,
+        description: description,
+        xpReward: xpReward,
+        type: type,
+        repeatFrequency: repeatFrequency,
+        repeatCustomDays: repeatCustomDays,
+        priority: priority,
+        minimumAction: minimumAction,
+        subtasks: subtasks,
+        tags: tags,
+        notificationsEnabled: notificationsEnabled,
+        notificationHour: notificationHour,
+        notificationMinute: notificationMinute,
+        treeNodeId: treeNodeId,
+      ),
+      now: DateTime.now(),
+    );
+    if (result.skillIdToSync case final skillId?) {
+      _syncBossesForSkill(skillId);
     }
-    task.title = title;
-    task.description = description.trim();
-    task.xpReward = xpReward;
-    task.type = type;
-    task.repeatFrequency = repeatFrequency;
-    task.repeatCustomDays = repeatCustomDays < 1 ? 1 : repeatCustomDays;
-    task.priority = priority;
-    final nextMinimumAction = minimumAction.trim();
-    if (nextMinimumAction.isEmpty && task.isMinimumActionDone) {
-      task.minimumAction = oldMinimumAction;
-    } else {
-      task.minimumAction = nextMinimumAction;
-    }
-    task.subtasks = List.of(subtasks);
-    task.syncSubtaskDone();
-    task.tags = List.of(tags);
-    task.treeNodeId = _normalizedTreeNodeId(task.skillId, treeNodeId);
-    task.notificationsEnabled = notificationsEnabled;
-    task.notificationHour = notificationHour;
-    task.notificationMinute = notificationMinute;
-    task.normalizeScope();
-    task.updatedAt = DateTime.now();
-
-    if (oldType == TaskType.repeating && type != TaskType.repeating) {
-      task.streak = 0;
-      task.nextResetAt = null;
-    } else if (type == TaskType.repeating && task.isDone) {
-      task.nextResetAt = nextResetFrom(
-        task.lastCompletedAt ?? DateTime.now(),
-        task.repeatFrequency,
-        task.repeatCustomDays,
-      );
-    }
-
-    _syncBossesForSkill(task.skillId);
-    if (hadNotification && !task.notificationsEnabled) {
+    if (result.notificationWasDisabled) {
       _notifications.cancelNotification(_notificationId(task.id));
     }
+    _invalidateAnalyticsReadModel();
     _syncTaskNotification(task);
     notifyListeners();
     _saveAll();
   }
 
-  String? _normalizedTreeNodeId(String skillId, String? nodeId) {
-    final trimmed = nodeId?.trim();
-    if (trimmed == null || trimmed.isEmpty) return null;
-    final skill = _skillById(skillId);
-    if (skill == null) return null;
-    final exists = skill.treeNodes.any((node) => node.id == trimmed);
-    return exists ? trimmed : null;
-  }
-
   void removeTask(String id) {
-    final task = _taskById(id);
-    if (task != null) {
-      _notifications.cancelNotification(_notificationId(task.id));
-    }
-    tasks.removeWhere((t) => t.id == id);
-    if (task != null && task.isSkillTask) {
+    final task = _taskMutations.remove(tasks, id);
+    if (task == null) return;
+    _notifications.cancelNotification(_notificationId(task.id));
+    if (task.isSkillTask) {
       _syncBossesForSkill(task.skillId);
     }
+    _invalidateAnalyticsReadModel();
     notifyListeners();
     _saveAll();
   }
 
   void toggleSubtask(String taskId, int index) {
     final task = _taskById(taskId);
-    if (task == null || index < 0 || index >= task.subtaskDone.length) return;
-    task.subtaskDone[index] = !task.subtaskDone[index];
-    task.updatedAt = DateTime.now();
+    if (task == null ||
+        !_taskMutations.toggleSubtask(task, index, now: DateTime.now())) {
+      return;
+    }
     notifyListeners();
     _saveAll();
   }
@@ -2809,14 +2447,8 @@ class AppState extends ChangeNotifier {
 
   // ── Statistics helpers ───────────────────────────────────────────────────────
 
-  int get totalTasksCompleted {
-    assert(_historyCachesAreFreshForDebug());
-    final cached = _totalTasksCompletedCache;
-    if (cached != null) return cached;
-
-    _rebuildCompletionHistoryCaches();
-    return _totalTasksCompletedCache ?? 0;
-  }
+  int get totalTasksCompleted =>
+      _completionHistoryIndex.resolve(history).totalCompletions;
 
   int get bestStreak => _bestStreak;
 
@@ -3344,10 +2976,6 @@ class AppState extends ChangeNotifier {
       if (s.id == id) return s;
     }
     return null;
-  }
-
-  String _historyTaskKey(HistoryEntry entry) {
-    return entry.taskId ?? '${entry.skillId}::${entry.taskTitle}';
   }
 
   int _notificationId(String taskId) {

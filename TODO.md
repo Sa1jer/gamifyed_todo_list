@@ -36,6 +36,17 @@ This file tracks the active implementation roadmap and completed project work. U
 - [ ] Capture a native macOS profile trace for intermittent UI unresponsiveness. The `1.3.60` static audit found no deterministic rebuild, timer, or RoadMap-layout loop; record the active workspace and CPU timeline before changing lifecycle or animation code.
 - [ ] Run native desktop pointer and visual QA for `1.3.64` reward feedback: repeated completion must keep the local halo beside its checkbox, minimum-action button, focus task check, or RoadMap inspector control without crossing into neighbouring rails or the Inbox composer.
 
+## P1 — Architecture Decomposition
+
+- [x] Inventory large files, mixed responsibilities, lifecycle/memory risks and define the evolutionary target architecture in `docs/refactor/`.
+- [x] Extract effective completion-history indexing and immutable cache ownership behind the stable AppState query facade.
+- [x] Extract a bounded immutable analytics read model with explicit invalidation and migrate Desktop Statistics, Weekly Analytics, and Progress Hub.
+- [x] Decompose mobile journal sections, desktop statistics sections, and quest-form resource lifecycle without changing platform composition.
+- [x] Extract Task and RoadMap mutation policy into coordinators while AppState retains public APIs, side effects, persistence, and final notification ownership.
+- [ ] Characterize reward/effect completion and undo behavior before extracting any pure reward decisions from AppState.
+- [ ] Migrate one coherent desktop workspace region from the `part` library to a public widget with explicit data/callback inputs and geometry coverage; do not split it into more giant part files.
+- [ ] Keep storage and lifecycle decomposition in separate fault-injection batches; preserve failed-load save blocking and authoritative empty snapshots.
+
 ## Reminder — Product Follow-ups After Hardening
 
 Do not mix these product decisions into Release / Regression Hardening. Revisit them explicitly in the next product-planning pass:
@@ -140,7 +151,7 @@ before it enters an implementation brief.
 - [ ] Perform native macOS screenshot comparison at 1440/1920/2560 widths and tune only presentation tokens/spacing.
 - [ ] Capture native visual regressions for content-driven Effects/Chests, desktop first-quest guidance, and mobile Focus Full/Compact/Minimal states; no golden package is configured yet.
 - [ ] Profile sidebar/main/right-rail rebuild cost with 20+ skills and a large completion history before adding selectors or state decomposition.
-- [ ] Profile Statistics history scans and extract a shared `StatisticsSnapshot` only if native frame evidence shows repeated expensive aggregation.
+- [x] Replace repeated Statistics/Weekly/Progress Hub history scans with the shared bounded `AnalyticsReadModel`; native memory/frame profiling remains evidence-only follow-up.
 - [ ] Decide whether the currently unreachable `PlanningWorkspace` is a future product surface or removable legacy code.
 - [ ] Characterize reward/chest/buff decision idempotency before extracting a pure `RewardEngine`; keep mutations in AppState initially.
 - [ ] Complete native visual recovery QA for `1.3.53`: RoadMap at 1/2/many stages and 1024/1366/1920 widths, all eight Statistics details, Trophies/Settings, rapid skill switching, and five-click Admin entry on macOS plus Windows QHD.

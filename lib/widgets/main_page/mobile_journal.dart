@@ -11,7 +11,6 @@ abstract final class _MobileJournalTokens {
   static const inbox = MobileJournalTokens.inbox;
 
   static const radiusLarge = MobileJournalTokens.radiusLarge;
-  static const radiusMedium = MobileJournalTokens.radiusMedium;
   static const motion = MobileJournalTokens.motion;
   static const curve = MobileJournalTokens.curve;
 
@@ -229,6 +228,9 @@ class _MobileActJournalState extends State<_MobileActJournal> {
   Widget _buildOverview(BuildContext context, AppState state) {
     final isDark = state.isDark;
     final skills = state.roadmapSkills;
+    final streak = state.tasks
+        .where((task) => task.type == TaskType.repeating && task.streak > 0)
+        .fold<int>(0, (current, task) => math.max(current, task.streak));
     final nextAction = const NextActionResolver().resolve(
       skills: skills,
       tasks: state.tasks,
@@ -262,7 +264,14 @@ class _MobileActJournalState extends State<_MobileActJournal> {
                     ),
                   ),
                 ),
-                SliverToBoxAdapter(child: _MobileMomentumRow(state: state)),
+                SliverToBoxAdapter(
+                  child: MobileMomentumRow(
+                    todayXp: state.todayStats?.xpEarned ?? 0,
+                    completedToday: state.todayStats?.tasksCompleted ?? 0,
+                    streak: streak,
+                    isDark: isDark,
+                  ),
+                ),
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.only(top: 16, bottom: 9),
@@ -307,7 +316,8 @@ class _MobileActJournalState extends State<_MobileActJournal> {
                 ),
                 if (skills.isEmpty)
                   SliverToBoxAdapter(
-                    child: _MobileJournalEmptySkills(
+                    child: MobileJournalEmptySkills(
+                      isDark: isDark,
                       onCreate: widget.onCreateSkill,
                     ),
                   )
@@ -326,7 +336,7 @@ class _MobileActJournalState extends State<_MobileActJournal> {
                             .tasksForSkill(skill.id)
                             .where((task) => !task.isDone)
                             .length;
-                        final card = _MobileSkillOverviewCard(
+                        final card = MobileSkillOverviewCard(
                           skill: skill,
                           activeQuestCount: activeCount,
                           isDark: isDark,
@@ -597,380 +607,6 @@ class _MobileActJournalState extends State<_MobileActJournal> {
   }
 }
 
-class _MobileMomentumRow extends StatelessWidget {
-  final AppState state;
-
-  const _MobileMomentumRow({required this.state});
-
-  @override
-  Widget build(BuildContext context) {
-    final stats = state.todayStats;
-    final streak = state.tasks
-        .where((task) => task.type == TaskType.repeating && task.streak > 0)
-        .fold<int>(0, (current, task) => math.max(current, task.streak));
-    final cards = <Widget>[
-      _MobileMomentumCard(
-        key: const ValueKey('mobile-momentum-xp'),
-        icon: Icons.bolt_rounded,
-        value: '+${stats?.xpEarned ?? 0}',
-        label: 'XP сегодня',
-        color: _MobileJournalTokens.amber,
-        isDark: state.isDark,
-      ),
-      _MobileMomentumCard(
-        key: const ValueKey('mobile-momentum-completed'),
-        icon: Icons.task_alt_rounded,
-        value: '${stats?.tasksCompleted ?? 0}',
-        label: 'Закрыто сегодня',
-        color: _MobileJournalTokens.violet,
-        isDark: state.isDark,
-      ),
-      if (streak > 0)
-        _MobileMomentumCard(
-          key: const ValueKey('mobile-momentum-streak'),
-          icon: Icons.local_fire_department_rounded,
-          value: '$streak дн.',
-          label: 'Серия',
-          color: const Color(0xFFFF5C45),
-          isDark: state.isDark,
-        ),
-    ];
-
-    return Row(
-      key: const ValueKey('mobile-momentum-row'),
-      children: [
-        for (var index = 0; index < cards.length; index++) ...[
-          Expanded(child: cards[index]),
-          if (index != cards.length - 1) const SizedBox(width: 8),
-        ],
-      ],
-    );
-  }
-}
-
-class _MobileMomentumCard extends StatelessWidget {
-  final IconData icon;
-  final String value;
-  final String label;
-  final Color color;
-  final bool isDark;
-
-  const _MobileMomentumCard({
-    super.key,
-    required this.icon,
-    required this.value,
-    required this.label,
-    required this.color,
-    required this.isDark,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      constraints: const BoxConstraints(minHeight: 84),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
-      decoration: BoxDecoration(
-        color: color.withAlpha(isDark ? 13 : 10),
-        borderRadius: BorderRadius.circular(_MobileJournalTokens.radiusMedium),
-        border: Border.all(color: color.withAlpha(isDark ? 46 : 55)),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: color, size: 18),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            maxLines: 1,
-            style: TextStyle(
-              color: _MobileJournalTokens.text(isDark),
-              fontSize: 17,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            maxLines: 2,
-            textAlign: TextAlign.center,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: _MobileJournalTokens.muted(isDark),
-              fontSize: 10.5,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MobileSkillOverviewCard extends StatelessWidget {
-  final Skill skill;
-  final int activeQuestCount;
-  final bool isDark;
-  final int reorderIndex;
-  final VoidCallback onTap;
-  final VoidCallback onLongPress;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
-
-  const _MobileSkillOverviewCard({
-    required this.skill,
-    required this.activeQuestCount,
-    required this.isDark,
-    required this.reorderIndex,
-    required this.onTap,
-    required this.onLongPress,
-    required this.onEdit,
-    required this.onDelete,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final progress = skill.progress.clamp(0.0, 1.0);
-    final progressLabel = '${(progress * 100).round()}%';
-    final semanticsProgress = 'Прогресс уровня: $progressLabel';
-
-    ActionPane actions() => ActionPane(
-      motion: const DrawerMotion(),
-      extentRatio: 0.44,
-      children: [
-        SlidableAction(
-          onPressed: (_) => onEdit(),
-          backgroundColor: const Color(0xFF4A9EFF),
-          foregroundColor: Colors.white,
-          icon: Icons.edit_rounded,
-          label: 'Править',
-          borderRadius: BorderRadius.circular(18),
-        ),
-        SlidableAction(
-          onPressed: (_) => onDelete(),
-          backgroundColor: const Color(0xFFFF3B30),
-          foregroundColor: Colors.white,
-          icon: Icons.delete_outline_rounded,
-          label: 'Удалить',
-          borderRadius: BorderRadius.circular(18),
-        ),
-      ],
-    );
-
-    return Slidable(
-      key: ValueKey('mobile-skill-slidable-${skill.id}'),
-      startActionPane: actions(),
-      endActionPane: actions(),
-      child: Semantics(
-        button: true,
-        label:
-            '${skill.name}, уровень ${skill.level}, активных квестов $activeQuestCount',
-        value: semanticsProgress,
-        hint: 'Долгое нажатие открывает действия с навыком',
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onLongPress: onLongPress,
-          child: PressFeedback(
-            scale: 0.985,
-            onTap: onTap,
-            child: Container(
-              key: ValueKey('mobile-skill-chip-${skill.id}'),
-              constraints: const BoxConstraints(minHeight: 94),
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-              decoration: BoxDecoration(
-                color: _MobileJournalTokens.surfaceColor(isDark),
-                borderRadius: BorderRadius.circular(
-                  _MobileJournalTokens.radiusLarge,
-                ),
-                border: Border.all(color: skill.color.withAlpha(62)),
-              ),
-              child: Row(
-                children: [
-                  _MobileGoalRing(
-                    value: progress,
-                    empty: false,
-                    color: skill.color,
-                    icon: skill.icon,
-                    semanticsLabel: semanticsProgress,
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          skill.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: _MobileJournalTokens.text(isDark),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                        const SizedBox(height: 5),
-                        Text(
-                          'Ур. ${skill.level} · $activeQuestCount ${_questWord(activeQuestCount)}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: _MobileJournalTokens.muted(isDark),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        if (skill.goal.trim().isNotEmpty) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            skill.goal,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: _MobileJournalTokens.muted(isDark),
-                              fontSize: 11,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        progressLabel,
-                        key: ValueKey('mobile-skill-progress-${skill.id}'),
-                        style: TextStyle(
-                          color: skill.color,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      ReorderableDelayedDragStartListener(
-                        key: ValueKey('compact-skill-reorder-${skill.id}'),
-                        index: reorderIndex,
-                        child: Tooltip(
-                          message: 'Переместить навык',
-                          child: SizedBox.square(
-                            dimension: 44,
-                            child: Icon(
-                              Icons.drag_handle_rounded,
-                              color: _MobileJournalTokens.muted(isDark),
-                              size: 20,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MobileGoalRing extends StatelessWidget {
-  final double value;
-  final bool empty;
-  final Color color;
-  final IconData icon;
-  final String semanticsLabel;
-
-  const _MobileGoalRing({
-    required this.value,
-    required this.empty,
-    required this.color,
-    required this.icon,
-    required this.semanticsLabel,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final disableAnimations = MediaQuery.disableAnimationsOf(context);
-    return Semantics(
-      label: semanticsLabel,
-      child: TweenAnimationBuilder<double>(
-        tween: Tween(end: value),
-        duration: disableAnimations
-            ? Duration.zero
-            : const Duration(milliseconds: 360),
-        curve: _MobileJournalTokens.curve,
-        builder: (context, animatedValue, child) => CustomPaint(
-          painter: _MobileGoalRingPainter(
-            value: animatedValue,
-            color: color,
-            empty: empty,
-          ),
-          child: child,
-        ),
-        child: SizedBox.square(
-          dimension: 62,
-          child: Center(
-            child: Icon(
-              icon,
-              color: empty ? color.withAlpha(145) : color,
-              size: 24,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MobileGoalRingPainter extends CustomPainter {
-  final double value;
-  final Color color;
-  final bool empty;
-
-  const _MobileGoalRingPainter({
-    required this.value,
-    required this.color,
-    required this.empty,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = Offset.zero & size;
-    final stroke = 5.0;
-    final ring = rect.deflate(stroke / 2);
-    canvas.drawArc(
-      ring,
-      -math.pi / 2,
-      math.pi * 2,
-      false,
-      Paint()
-        ..color = color.withAlpha(empty ? 30 : 36)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = stroke,
-    );
-    if (!empty && value > 0) {
-      canvas.drawArc(
-        ring,
-        -math.pi / 2,
-        math.pi * 2 * value.clamp(0, 1),
-        false,
-        Paint()
-          ..color = color
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = stroke
-          ..strokeCap = StrokeCap.round,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(_MobileGoalRingPainter oldDelegate) =>
-      value != oldDelegate.value ||
-      color != oldDelegate.color ||
-      empty != oldDelegate.empty;
-}
-
 class _MobileInboxAccordion extends StatelessWidget {
   final bool expanded;
   final int taskCount;
@@ -1214,59 +850,6 @@ class _MobileInboxPressFeedbackState extends State<_MobileInboxPressFeedback> {
             child: widget.child,
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _MobileJournalEmptySkills extends StatelessWidget {
-  final VoidCallback onCreate;
-
-  const _MobileJournalEmptySkills({required this.onCreate});
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = AppStateProvider.of(context).isDark;
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: _MobileJournalTokens.surfaceColor(isDark),
-        borderRadius: BorderRadius.circular(_MobileJournalTokens.radiusLarge),
-        border: Border.all(color: _MobileJournalTokens.outline(isDark)),
-      ),
-      child: Column(
-        children: [
-          const Icon(
-            Icons.explore_outlined,
-            color: _MobileJournalTokens.violet,
-            size: 30,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Создай первый навык',
-            style: TextStyle(
-              color: _MobileJournalTokens.text(isDark),
-              fontSize: 16,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'После этого здесь появятся квесты и фокус.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: _MobileJournalTokens.muted(isDark)),
-          ),
-          const SizedBox(height: 12),
-          FilledButton.icon(
-            onPressed: onCreate,
-            style: FilledButton.styleFrom(
-              backgroundColor: _MobileJournalTokens.violet,
-              foregroundColor: Colors.white,
-            ),
-            icon: const Icon(Icons.add_rounded),
-            label: const Text('Создать навык'),
-          ),
-        ],
       ),
     );
   }

@@ -1196,19 +1196,32 @@ class _ProgressStorySnapshot {
   });
 
   factory _ProgressStorySnapshot.fromState(AppState state) {
-    final todayEntries = _todayEntries(state);
-    final weekEntries = _currentWeekEntries(state);
-    final topSkill = _topSkillStory(weekEntries);
-    final lastCompletedEntry = _latestCompletedEntry(state);
+    final analytics = state.currentAnalytics;
+    final today = analytics.dayFor(DateTime.now());
+    final leader = analytics.activityLeader;
+    final topSkill = leader == null
+        ? null
+        : _ProgressSkillStory(
+            skillId: leader.skillId,
+            name: leader.name,
+            color: leader.color,
+            icon: leader.icon,
+            xp: leader.xp,
+            questCount: leader.completedTasks,
+          );
 
     return _ProgressStorySnapshot(
-      todayXp: todayEntries.fold<int>(0, (sum, entry) => sum + entry.xp),
-      todayQuestCount: todayEntries.length,
-      weekXp: weekEntries.fold<int>(0, (sum, entry) => sum + entry.xp),
-      weekQuestCount: weekEntries.length,
+      todayXp: today?.xp ?? 0,
+      todayQuestCount: today?.completedTasks ?? 0,
+      weekXp: analytics.totalXp,
+      weekQuestCount: analytics.completedTasks,
       completedDays: state.completionHistoryByDate.length,
       topSkill: topSkill,
-      continuation: _buildContinuation(state, topSkill, lastCompletedEntry),
+      continuation: _buildContinuation(
+        state,
+        topSkill,
+        state.latestRecordedCompletion,
+      ),
     );
   }
 
@@ -1261,42 +1274,6 @@ class _ProgressContinuation {
     required this.value,
     required this.prefersWeekly,
   });
-}
-
-_ProgressSkillStory? _topSkillStory(List<HistoryEntry> entries) {
-  if (entries.isEmpty) return null;
-
-  final bySkill = <String, List<HistoryEntry>>{};
-  for (final entry in entries) {
-    bySkill.putIfAbsent(entry.skillId, () => []).add(entry);
-  }
-
-  _ProgressSkillStory? best;
-  for (final skillEntries in bySkill.values) {
-    final first = skillEntries.first;
-    final xp = skillEntries.fold<int>(0, (sum, entry) => sum + entry.xp);
-    final story = _ProgressSkillStory(
-      skillId: first.skillId,
-      name: first.skillName,
-      color: first.skillColor,
-      icon: first.skillIcon,
-      xp: xp,
-      questCount: skillEntries.length,
-    );
-    if (best == null ||
-        story.xp > best.xp ||
-        (story.xp == best.xp && story.questCount > best.questCount)) {
-      best = story;
-    }
-  }
-
-  return best;
-}
-
-HistoryEntry? _latestCompletedEntry(AppState state) {
-  final entries = state.history.where((entry) => entry.isCompletion).toList()
-    ..sort((a, b) => b.at.compareTo(a.at));
-  return entries.firstOrNull;
 }
 
 _ProgressContinuation _buildContinuation(
@@ -1573,28 +1550,6 @@ class _ProgressContinueCard extends StatelessWidget {
       ],
     );
   }
-}
-
-List<HistoryEntry> _currentWeekEntries(AppState state) {
-  final now = DateTime.now();
-  final weekStart = startOfWeek(now);
-  final completionHistoryByDate = state.completionHistoryByDate;
-  final entries = <HistoryEntry>[];
-
-  for (var i = 0; i < 7; i++) {
-    final day = weekStart.add(Duration(days: i));
-    entries.addAll(completionHistoryByDate[day] ?? const <HistoryEntry>[]);
-  }
-
-  return entries;
-}
-
-List<HistoryEntry> _todayEntries(AppState state) {
-  final entries = List<HistoryEntry>.of(
-    state.completionHistoryForDate(DateTime.now()),
-  );
-  entries.sort((a, b) => b.at.compareTo(a.at));
-  return entries;
 }
 
 String _questCount(int count) => '$count ${_questWord(count)}';

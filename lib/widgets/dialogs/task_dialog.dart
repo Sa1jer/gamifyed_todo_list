@@ -47,12 +47,7 @@ class AddTaskDialog extends StatefulWidget {
 }
 
 class _AddTaskDialogState extends State<AddTaskDialog> {
-  final _titleCtrl = TextEditingController();
-  final _descriptionCtrl = TextEditingController();
-  final _minimumActionCtrl = TextEditingController();
-  final _minimumActionFocusNode = FocusNode();
-  final _customCtrl = TextEditingController(text: '1');
-  final _subtaskCtrl = TextEditingController();
+  late final TaskFormController _form;
   int _xp = 20;
   TaskType _type = TaskType.shortTerm;
   RepeatFrequency _freq = RepeatFrequency.daily;
@@ -72,14 +67,14 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   late final String _initialDraftSignature;
 
   String get _draftSignature => jsonEncode({
-    'title': _titleCtrl.text,
-    'description': _descriptionCtrl.text,
-    'minimumAction': _minimumActionCtrl.text,
+    'title': _form.title.text,
+    'description': _form.description.text,
+    'minimumAction': _form.minimumAction.text,
     'minimumEnabled': _minimumActionEnabled,
     'xp': _xp,
     'type': _type.name,
     'frequency': _freq.name,
-    'customDays': _customCtrl.text,
+    'customDays': _form.customDays.text,
     'priority': _priority.name,
     'subtasks': _subtasks,
     'tags': _tags,
@@ -141,16 +136,18 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   @override
   void initState() {
     super.initState();
+    _form = TaskFormController();
     if (widget.existing case final ex?) {
-      _titleCtrl.text = ex.title;
-      _descriptionCtrl.text = ex.description;
-      _minimumActionCtrl.text = ex.minimumAction;
+      _form.title.text = ex.title;
+      _form.description.text = ex.description;
+      _form.minimumAction.text = ex.minimumAction;
       _minimumActionEnabled =
           ex.minimumAction.trim().isNotEmpty || widget.focusMinimumAction;
       _xp = ex.xpReward;
       _type = ex.type;
       _freq = ex.repeatFrequency;
-      _customCtrl.text = '${ex.repeatCustomDays < 1 ? 1 : ex.repeatCustomDays}';
+      _form.customDays.text =
+          '${ex.repeatCustomDays < 1 ? 1 : ex.repeatCustomDays}';
       _priority = ex.priority;
       _subtasks.addAll(ex.subtasks);
       _tags.addAll(ex.tags);
@@ -171,37 +168,30 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
       final initialTitle = widget.initialTitle?.trim();
       final initialMinimum = widget.initialMinimumAction?.trim();
       if (initialTitle != null && initialTitle.isNotEmpty) {
-        _titleCtrl.text = initialTitle;
+        _form.title.text = initialTitle;
       }
       if (initialMinimum != null && initialMinimum.isNotEmpty) {
-        _minimumActionCtrl.text = initialMinimum;
+        _form.minimumAction.text = initialMinimum;
       }
       _treeNodeId = widget.initialTreeNodeId;
       _minimumActionEnabled =
-          _minimumActionCtrl.text.trim().isNotEmpty ||
+          _form.minimumAction.text.trim().isNotEmpty ||
           widget.focusMinimumAction;
       _advancedExpanded = _minimumActionEnabled;
     }
     _initialDraftSignature = _draftSignature;
-    _titleCtrl.addListener(_refreshDraft);
-    _descriptionCtrl.addListener(_refreshDraft);
-    _minimumActionCtrl.addListener(_refreshDraft);
-    _customCtrl.addListener(_refreshDraft);
+    _form.addListener(_refreshDraft);
     if (widget.focusMinimumAction) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _minimumActionFocusNode.requestFocus();
+        if (mounted) _form.minimumActionFocusNode.requestFocus();
       });
     }
   }
 
   @override
   void dispose() {
-    _titleCtrl.dispose();
-    _descriptionCtrl.dispose();
-    _minimumActionCtrl.dispose();
-    _minimumActionFocusNode.dispose();
-    _customCtrl.dispose();
-    _subtaskCtrl.dispose();
+    _form.removeListener(_refreshDraft);
+    _form.dispose();
     super.dispose();
   }
 
@@ -245,7 +235,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
           DlgField(
             label: 'Название квеста',
             hintText: 'Создай задачу, которую хочешь реализовать.',
-            ctrl: _titleCtrl,
+            ctrl: _form.title,
             fBg: fBg,
             txt: txt,
             sub: sub,
@@ -491,7 +481,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   }
 
   int get _customDays {
-    final parsed = int.tryParse(_customCtrl.text.trim()) ?? 1;
+    final parsed = int.tryParse(_form.customDays.text.trim()) ?? 1;
     return parsed < 1 ? 1 : parsed;
   }
 
@@ -549,8 +539,8 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
             expandedChild: Padding(
               padding: const EdgeInsets.only(top: 10),
               child: TextField(
-                controller: _minimumActionCtrl,
-                focusNode: _minimumActionFocusNode,
+                controller: _form.minimumAction,
+                focusNode: _form.minimumActionFocusNode,
                 style: TextStyle(color: txt, fontSize: 13),
                 minLines: 2,
                 maxLines: 4,
@@ -714,7 +704,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     return DlgField(
       label: 'Описание · необязательно',
       hintText: 'Что важно помнить про этот квест?',
-      ctrl: _descriptionCtrl,
+      ctrl: _form.description,
       fBg: fBg,
       txt: txt,
       sub: sub,
@@ -771,7 +761,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                       title: 'Большой квест',
                       hint: '+ Добавить шаг',
                       items: _subtasks,
-                      ctrl: _subtaskCtrl,
+                      ctrl: _form.subtask,
                       color: color,
                       txt: txt,
                       sub: sub,
@@ -913,7 +903,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                           SizedBox(
                             width: 64,
                             child: TextField(
-                              controller: _customCtrl,
+                              controller: _form.customDays,
                               style: TextStyle(color: txt, fontSize: 13),
                               keyboardType: TextInputType.number,
                               onChanged: (_) => setState(() {}),
@@ -1342,7 +1332,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
 
   Future<void> _save() async {
     if (_submitting) return;
-    if (_titleCtrl.text.trim().isEmpty) {
+    if (_form.title.text.trim().isEmpty) {
       setState(() => _titleError = 'Введите название квеста');
       return;
     }
@@ -1353,14 +1343,14 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
       if (!mounted) return;
     }
     widget.onSave(
-      _titleCtrl.text.trim(),
-      _descriptionCtrl.text.trim(),
+      _form.title.text.trim(),
+      _form.description.text.trim(),
       _xp,
       _type,
       _freq,
       _customDays,
       _priority,
-      _minimumActionEnabled ? _minimumActionCtrl.text.trim() : '',
+      _minimumActionEnabled ? _form.minimumAction.text.trim() : '',
       List.of(_subtasks),
       List.of(_tags),
       _notificationsEnabled,
