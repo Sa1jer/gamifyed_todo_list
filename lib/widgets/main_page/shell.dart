@@ -1086,6 +1086,7 @@ class _MainPageState extends State<MainPage> {
                       state: s,
                       tokens: DesktopJournalTokens.resolve(isDark),
                       onOpenProfile: openProfile,
+                      onToggleTheme: widget.onToggleTheme,
                     ),
                     WorkspaceMode.act => null,
                   },

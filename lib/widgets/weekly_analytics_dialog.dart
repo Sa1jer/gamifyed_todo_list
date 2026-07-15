@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import '../analytics/weekly_analytics_read_model.dart';
 import '../app_state.dart';
 import '../feedback_service.dart';
-import '../models.dart';
 import '../utils.dart';
 import 'shared.dart';
+import 'weekly_analytics/weekly_goal_section.dart';
+import 'weekly_analytics/weekly_section.dart';
 
 class WeeklyAnalyticsDialog extends StatefulWidget {
   final AppState state;
@@ -35,7 +36,50 @@ class _WeeklyAnalyticsDialogState extends State<WeeklyAnalyticsDialog> {
     final isDark = state.isDark;
     final bdr = borderColor(isDark);
     final bg = surface(isDark);
-    final summary = WeeklyAnalyticsReadModel.fromState(state, _weekStart);
+    final analytics = state.analyticsForWeek(_weekStart);
+    final skillNames = {for (final skill in state.skills) skill.id: skill.name};
+    final taskInputs = state.tasks
+        .where((task) => task.isSkillTask && !task.isDone)
+        .map(
+          (task) => WeeklyTaskInputData(
+            taskId: task.id,
+            title: task.title,
+            skillId: task.skillId,
+            skillName: skillNames[task.skillId] ?? 'Навык',
+            xpReward: task.xpReward,
+            type: task.type,
+            priority: task.priority,
+            streak: task.streak,
+            nextResetAt: task.nextResetAt,
+            updatedAt: task.updatedAt,
+            minimumActionDoneAt: task.minimumActionDoneAt,
+            minimumAction: task.minimumAction,
+            subtaskCount: task.subtasks.length,
+            canCompleteMinimumAction: state.canCompleteMinimumAction(task),
+            minimumActionXp: state.previewMinimumActionXP(task),
+          ),
+        )
+        .toList(growable: false);
+    final weeklyGoal = state.weeklyGoalForWeek(analytics.weekStart);
+    final summary = const WeeklyAnalyticsBuilder().build(
+      analytics: analytics,
+      tasks: taskInputs,
+      weeklyGoal: weeklyGoal == null
+          ? null
+          : WeeklyGoalData.fromGoal(weeklyGoal),
+      now: DateTime.now(),
+    );
+    final skillVisuals = <String, _WeeklySkillVisual>{
+      for (final skill in state.skills)
+        skill.id: _WeeklySkillVisual(color: skill.color, icon: skill.icon),
+    };
+    for (final entry in state.history) {
+      skillVisuals.putIfAbsent(
+        entry.skillId,
+        () =>
+            _WeeklySkillVisual(color: entry.skillColor, icon: entry.skillIcon),
+      );
+    }
     final canGoNext = _weekStart.isBefore(startOfWeek(DateTime.now()));
     final size = MediaQuery.sizeOf(context);
     final availableWidth = size.width - 36;
@@ -108,6 +152,7 @@ class _WeeklyAnalyticsDialogState extends State<WeeklyAnalyticsDialog> {
                         'week-procrastination-${summary.procrastination.signature}',
                       ),
                       summary: summary,
+                      skillVisuals: skillVisuals,
                       isDark: isDark,
                       onStartMinimum: (taskId) {
                         final message = widget.state.completeMinimumAction(
@@ -130,6 +175,7 @@ class _WeeklyAnalyticsDialogState extends State<WeeklyAnalyticsDialog> {
                       final skills = _WeeklySkillBreakdown(
                         summary: summary,
                         isDark: isDark,
+                        skillVisuals: skillVisuals,
                       );
                       final graph = _WeeklyXpChart(
                         summary: summary,
@@ -159,10 +205,12 @@ class _WeeklyAnalyticsDialogState extends State<WeeklyAnalyticsDialog> {
                       final tasks = _WeeklyTaskList(
                         summary: summary,
                         isDark: isDark,
+                        skillVisuals: skillVisuals,
                       );
                       final risks = _WeeklyStreakRisks(
                         summary: summary,
                         isDark: isDark,
+                        skillVisuals: skillVisuals,
                       );
 
                       if (!wide) {
@@ -183,7 +231,7 @@ class _WeeklyAnalyticsDialogState extends State<WeeklyAnalyticsDialog> {
                   ),
                   const SizedBox(height: 14),
                   MotionFadeSlideSwitcher(
-                    child: _WeeklyGoalCard(
+                    child: WeeklyGoalCard(
                       key: ValueKey(
                         'week-goal-${summary.weeklyGoal?.id ?? 'empty'}-${summary.weeklyGoal?.updatedAt.millisecondsSinceEpoch ?? 0}',
                       ),
@@ -224,13 +272,11 @@ class _WeeklyAnalyticsDialogState extends State<WeeklyAnalyticsDialog> {
   }
 
   Future<void> _openGoalEditor(_WeeklySummary summary) async {
-    final draft = await showDialog<_WeeklyGoalDraft>(
+    final draft = await showWeeklyGoalEditor(
       context: context,
-      builder: (_) => _WeeklyGoalEditorDialog(
-        isDark: widget.state.isDark,
-        weekStart: summary.weekStart,
-        goal: summary.weeklyGoal,
-      ),
+      isDark: widget.state.isDark,
+      weekStart: summary.weekStart,
+      goal: summary.weeklyGoal,
     );
     if (draft == null) return;
 
@@ -393,7 +439,7 @@ class _WeeklyOverview extends StatelessWidget {
         ? 'Закрой один маленький квест или минимальный шаг, и здесь появится история роста.'
         : '${summary.completedTasks} ${_questWord(summary.completedTasks)} · ${summary.totalXp} XP · ${summary.activeDays} активн. дн.';
 
-    return _WeeklySection(
+    return WeeklyAnalyticsSection(
       isDark: isDark,
       icon: Icons.auto_stories,
       color: const Color(0xFF34C759),
@@ -618,538 +664,17 @@ class _WeeklyMetricCard extends StatelessWidget {
   }
 }
 
-class _WeeklyGoalCard extends StatelessWidget {
-  final _WeeklySummary summary;
-  final bool isDark;
-  final VoidCallback onEdit;
-  final ValueChanged<String> onToggleKeyResult;
-
-  const _WeeklyGoalCard({
-    super.key,
-    required this.summary,
-    required this.isDark,
-    required this.onEdit,
-    required this.onToggleKeyResult,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final goal = summary.weeklyGoal;
-    final txt = textColor(isDark);
-    final sub = subtext(isDark);
-    const color = Color(0xFF34C759);
-
-    return _WeeklySection(
-      isDark: isDark,
-      icon: Icons.flag,
-      color: color,
-      title: 'Цель недели',
-      subtitle: 'Фокус недели остаётся ниже истории роста.',
-      trailing: PressFeedback(
-        scale: 0.94,
-        tooltip: goal == null ? 'Задать цель недели' : 'Редактировать цель',
-        onTap: onEdit,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-          decoration: BoxDecoration(
-            color: color.withAlpha(22),
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: color.withAlpha(64)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                goal == null ? Icons.add : Icons.edit,
-                color: color,
-                size: 14,
-              ),
-              const SizedBox(width: 5),
-              Text(
-                goal == null ? 'Задать' : 'Изменить',
-                style: const TextStyle(
-                  color: color,
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-      child: goal == null
-          ? Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: color.withAlpha(12),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: color.withAlpha(38)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.track_changes, color: color, size: 24),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Цель недели ещё не задана',
-                          style: TextStyle(
-                            color: txt,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Сформулируй один главный результат и 2–3 измеримых шага.',
-                          style: TextStyle(color: sub, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        goal.title,
-                        style: TextStyle(
-                          color: txt,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 9,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: color.withAlpha(22),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        '${(goal.progress * 100).round()}%',
-                        style: const TextStyle(
-                          color: color,
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                XPBar(progress: goal.progress, color: color, height: 6),
-                const SizedBox(height: 10),
-                if (goal.keyResults.isEmpty)
-                  Text(
-                    'Key results не заданы. Добавь 2–3 результата, чтобы цель стала измеримой.',
-                    style: TextStyle(color: sub, fontSize: 12),
-                  )
-                else
-                  ...goal.keyResults.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final result = entry.value;
-                    return MotionListItem(
-                      key: ValueKey('weekly-kr-${result.id}-${result.isDone}'),
-                      index: index,
-                      slide: 4,
-                      child: _WeeklyKeyResultRow(
-                        result: result,
-                        isDark: isDark,
-                        onTap: () => onToggleKeyResult(result.id),
-                      ),
-                    );
-                  }),
-              ],
-            ),
-    );
-  }
-}
-
-class _WeeklyKeyResultRow extends StatelessWidget {
-  final WeeklyKeyResult result;
-  final bool isDark;
-  final VoidCallback onTap;
-
-  const _WeeklyKeyResultRow({
-    required this.result,
-    required this.isDark,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final txt = textColor(isDark);
-    final sub = subtext(isDark);
-    const color = Color(0xFF34C759);
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 7),
-      child: PressFeedback(
-        scale: 0.98,
-        tooltip: result.isDone ? 'Вернуть key result' : 'Отметить key result',
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-          decoration: BoxDecoration(
-            color: result.isDone ? color.withAlpha(16) : sub.withAlpha(10),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: result.isDone ? color.withAlpha(70) : borderColor(isDark),
-            ),
-          ),
-          child: Row(
-            children: [
-              AnimatedContainer(
-                duration: kMotionStandard,
-                curve: kMotionCurve,
-                width: 18,
-                height: 18,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: result.isDone ? color : Colors.transparent,
-                  border: Border.all(
-                    color: result.isDone ? color : sub.withAlpha(150),
-                    width: 1.6,
-                  ),
-                ),
-                child: result.isDone
-                    ? const Icon(Icons.check, color: Colors.white, size: 12)
-                    : null,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  result.title,
-                  style: TextStyle(
-                    color: result.isDone ? sub : txt,
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w700,
-                    decoration: result.isDone
-                        ? TextDecoration.lineThrough
-                        : TextDecoration.none,
-                    decorationColor: sub,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _WeeklyGoalDraft {
-  final String title;
-  final List<WeeklyKeyResult> keyResults;
-
-  const _WeeklyGoalDraft({required this.title, required this.keyResults});
-}
-
-class _WeeklyGoalEditorDialog extends StatefulWidget {
-  final bool isDark;
-  final DateTime weekStart;
-  final WeeklyGoal? goal;
-
-  const _WeeklyGoalEditorDialog({
-    required this.isDark,
-    required this.weekStart,
-    required this.goal,
-  });
-
-  @override
-  State<_WeeklyGoalEditorDialog> createState() =>
-      _WeeklyGoalEditorDialogState();
-}
-
-class _WeeklyGoalEditorDialogState extends State<_WeeklyGoalEditorDialog> {
-  late final TextEditingController _titleCtrl;
-  late final List<_KeyResultEditorItem> _items;
-
-  @override
-  void initState() {
-    super.initState();
-    _titleCtrl = TextEditingController(text: widget.goal?.title ?? '');
-    _items = [
-      ...?widget.goal?.keyResults.map(
-        (result) => _KeyResultEditorItem(
-          id: result.id,
-          controller: TextEditingController(text: result.title),
-          isDone: result.isDone,
-          completedAt: result.completedAt,
-        ),
-      ),
-    ];
-    while (_items.length < 3) {
-      _items.add(_KeyResultEditorItem.empty());
-    }
-  }
-
-  @override
-  void dispose() {
-    _titleCtrl.dispose();
-    for (final item in _items) {
-      item.controller.dispose();
-    }
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = widget.isDark;
-    final bg = surface(isDark);
-    final txt = textColor(isDark);
-    final sub = subtext(isDark);
-    const color = Color(0xFF34C759);
-
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-      child: Container(
-        width: 520,
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: borderColor(isDark)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withAlpha(isDark ? 90 : 25),
-              blurRadius: 24,
-              offset: const Offset(0, 14),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.flag, color: color, size: 22),
-                const SizedBox(width: 9),
-                Expanded(
-                  child: Text(
-                    'Цель недели',
-                    style: TextStyle(
-                      color: txt,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
-                PressFeedback(
-                  scale: 0.94,
-                  tooltip: 'Закрыть без сохранения',
-                  onTap: () => Navigator.pop(context),
-                  child: Icon(Icons.close, color: sub, size: 22),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '${_formatDayMonth(widget.weekStart)} — ${_formatDayMonth(widget.weekStart.add(const Duration(days: 6)))}',
-              style: TextStyle(color: sub, fontSize: 12),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _titleCtrl,
-              style: TextStyle(color: txt),
-              decoration: _fieldDecoration(
-                isDark,
-                label: 'Главная цель недели',
-                hint: 'Например: закрыть MVP недельной аналитики',
-              ),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              'Key results',
-              style: TextStyle(
-                color: txt,
-                fontSize: 13,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            const SizedBox(height: 8),
-            ..._items.asMap().entries.map((entry) {
-              final index = entry.key;
-              final item = entry.value;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: 24,
-                      child: Text(
-                        '${index + 1}.',
-                        style: TextStyle(
-                          color: sub,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: TextField(
-                        controller: item.controller,
-                        style: TextStyle(color: txt),
-                        decoration: _fieldDecoration(
-                          isDark,
-                          label: 'Измеримый результат',
-                          hint: 'Например: 3 закрытых квеста по Python',
-                        ),
-                      ),
-                    ),
-                    if (_items.length > 3) ...[
-                      const SizedBox(width: 8),
-                      PressFeedback(
-                        scale: 0.94,
-                        tooltip: 'Удалить key result',
-                        onTap: () => setState(() {
-                          final removed = _items.removeAt(index);
-                          removed.controller.dispose();
-                        }),
-                        child: Icon(
-                          Icons.close,
-                          color: sub.withAlpha(180),
-                          size: 18,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              );
-            }),
-            const SizedBox(height: 4),
-            PressFeedback(
-              scale: 0.98,
-              tooltip: 'Добавить ещё один ключевой результат',
-              onTap: _items.length >= 5
-                  ? () {}
-                  : () => setState(
-                      () => _items.add(_KeyResultEditorItem.empty()),
-                    ),
-              child: Text(
-                _items.length >= 5
-                    ? 'Максимум 5 результатов'
-                    : '+ Добавить результат',
-                style: TextStyle(
-                  color: _items.length >= 5 ? sub : color,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ),
-            const SizedBox(height: 18),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Совет: цель отвечает “зачем”, результаты — “как пойму, что неделя удалась”.',
-                    style: TextStyle(color: sub, fontSize: 11.5, height: 1.3),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                SmallBtn(
-                  label: 'Сохранить',
-                  icon: Icons.check,
-                  color: color,
-                  onTap: _save,
-                  tooltip: 'Сохранить цель недели',
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  InputDecoration _fieldDecoration(
-    bool isDark, {
-    required String label,
-    required String hint,
-  }) {
-    return InputDecoration(
-      labelText: label,
-      hintText: hint,
-      hintStyle: TextStyle(color: subtext(isDark).withAlpha(150)),
-      labelStyle: TextStyle(color: subtext(isDark)),
-      filled: true,
-      fillColor: isDark ? const Color(0xFF121219) : const Color(0xFFF7F8FC),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: borderColor(isDark)),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFF34C759), width: 1.4),
-      ),
-    );
-  }
-
-  void _save() {
-    final keyResults = _items
-        .map(
-          (item) => WeeklyKeyResult(
-            id: item.id,
-            title: item.controller.text,
-            isDone: item.isDone,
-            completedAt: item.completedAt,
-          ),
-        )
-        .toList();
-
-    Navigator.pop(
-      context,
-      _WeeklyGoalDraft(title: _titleCtrl.text, keyResults: keyResults),
-    );
-  }
-}
-
-class _KeyResultEditorItem {
-  final String id;
-  final TextEditingController controller;
-  final bool isDone;
-  final DateTime? completedAt;
-
-  _KeyResultEditorItem({
-    required this.id,
-    required this.controller,
-    required this.isDone,
-    required this.completedAt,
-  });
-
-  factory _KeyResultEditorItem.empty() {
-    return _KeyResultEditorItem(
-      id: '',
-      controller: TextEditingController(),
-      isDone: false,
-      completedAt: null,
-    );
-  }
-}
-
 class _ProcrastinationInsightsCard extends StatelessWidget {
   final _WeeklySummary summary;
   final bool isDark;
+  final Map<String, _WeeklySkillVisual> skillVisuals;
   final ValueChanged<String> onStartMinimum;
 
   const _ProcrastinationInsightsCard({
     super.key,
     required this.summary,
     required this.isDark,
+    required this.skillVisuals,
     required this.onStartMinimum,
   });
 
@@ -1165,9 +690,9 @@ class _ProcrastinationInsightsCard extends StatelessWidget {
     final primary = insights.primaryInsight;
     final primaryCanStart =
         primary != null &&
-        insights.minimumStarts.any((item) => item.task.id == primary.task.id);
+        insights.minimumStarts.any((item) => item.taskId == primary.taskId);
 
-    return _WeeklySection(
+    return WeeklyAnalyticsSection(
       isDark: isDark,
       icon: Icons.next_plan,
       color: const Color(0xFF4A9EFF),
@@ -1181,6 +706,7 @@ class _ProcrastinationInsightsCard extends StatelessWidget {
                   _PrimaryInsightCard(
                     insight: primary,
                     isDark: isDark,
+                    skillVisuals: skillVisuals,
                     label: insights.primaryLabel,
                     onStartMinimum: primaryCanStart ? onStartMinimum : null,
                   ),
@@ -1231,6 +757,7 @@ class _ProcrastinationInsightsCard extends StatelessWidget {
                                 icon: Icons.hourglass_bottom,
                                 color: const Color(0xFFFF3B30),
                                 items: insights.stalled,
+                                skillVisuals: skillVisuals,
                                 emptyText: 'Нет зависших квестов',
                               ),
                               _InsightColumn(
@@ -1240,6 +767,7 @@ class _ProcrastinationInsightsCard extends StatelessWidget {
                                 icon: Icons.account_tree,
                                 color: const Color(0xFFFF9500),
                                 items: insights.oversized,
+                                skillVisuals: skillVisuals,
                                 emptyText: 'Крупные квесты под контролем',
                               ),
                               _InsightColumn(
@@ -1249,6 +777,7 @@ class _ProcrastinationInsightsCard extends StatelessWidget {
                                 icon: Icons.play_circle,
                                 color: const Color(0xFF34C759),
                                 items: insights.minimumStarts,
+                                skillVisuals: skillVisuals,
                                 emptyText: 'Нет доступных лёгких стартов',
                                 onStartMinimum: onStartMinimum,
                               ),
@@ -1287,7 +816,7 @@ class _ProcrastinationInsightsCard extends StatelessWidget {
                 ),
               ],
             )
-          : _WeeklyEmptyState(
+          : WeeklyAnalyticsEmptyState(
               icon: Icons.shield,
               title: 'Неделя выглядит устойчиво',
               subtitle: 'Квесты достаточно понятны для продолжения без аудита.',
@@ -1300,12 +829,14 @@ class _ProcrastinationInsightsCard extends StatelessWidget {
 class _PrimaryInsightCard extends StatelessWidget {
   final _TaskInsight insight;
   final bool isDark;
+  final Map<String, _WeeklySkillVisual> skillVisuals;
   final String label;
   final ValueChanged<String>? onStartMinimum;
 
   const _PrimaryInsightCard({
     required this.insight,
     required this.isDark,
+    required this.skillVisuals,
     required this.label,
     required this.onStartMinimum,
   });
@@ -1356,6 +887,7 @@ class _PrimaryInsightCard extends StatelessWidget {
           _InsightTaskTile(
             insight: insight,
             isDark: isDark,
+            skillVisuals: skillVisuals,
             color: color,
             onStartMinimum: onStartMinimum,
           ),
@@ -1372,6 +904,7 @@ class _InsightColumn extends StatelessWidget {
   final IconData icon;
   final Color color;
   final List<_TaskInsight> items;
+  final Map<String, _WeeklySkillVisual> skillVisuals;
   final String emptyText;
   final ValueChanged<String>? onStartMinimum;
 
@@ -1382,6 +915,7 @@ class _InsightColumn extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.items,
+    required this.skillVisuals,
     required this.emptyText,
     this.onStartMinimum,
   });
@@ -1448,12 +982,13 @@ class _InsightColumn extends StatelessWidget {
               final index = entry.key;
               final insight = entry.value;
               return MotionListItem(
-                key: ValueKey('$title-${insight.task.id}'),
+                key: ValueKey('$title-${insight.taskId}'),
                 index: index,
                 slide: 4,
                 child: _InsightTaskTile(
                   insight: insight,
                   isDark: isDark,
+                  skillVisuals: skillVisuals,
                   color: color,
                   onStartMinimum: onStartMinimum,
                 ),
@@ -1468,22 +1003,24 @@ class _InsightColumn extends StatelessWidget {
 class _InsightTaskTile extends StatelessWidget {
   final _TaskInsight insight;
   final bool isDark;
+  final Map<String, _WeeklySkillVisual> skillVisuals;
   final Color color;
   final ValueChanged<String>? onStartMinimum;
 
   const _InsightTaskTile({
     required this.insight,
     required this.isDark,
+    required this.skillVisuals,
     required this.color,
     required this.onStartMinimum,
   });
 
   @override
   Widget build(BuildContext context) {
-    final task = insight.task;
     final txt = textColor(isDark);
     final sub = subtext(isDark);
-    final skillColor = insight.skill?.color ?? color;
+    final skillVisual = skillVisuals[insight.skillId];
+    final skillColor = skillVisual?.color ?? color;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -1499,14 +1036,14 @@ class _InsightTaskTile extends StatelessWidget {
           Row(
             children: [
               Icon(
-                insight.skill?.icon ?? Icons.bolt,
+                skillVisual?.icon ?? Icons.bolt,
                 color: skillColor,
                 size: 15,
               ),
               const SizedBox(width: 7),
               Expanded(
                 child: Text(
-                  task.title,
+                  insight.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -1546,7 +1083,7 @@ class _InsightTaskTile extends StatelessWidget {
                   PressFeedback(
                     scale: 0.94,
                     tooltip: 'Сделать лёгкий старт',
-                    onTap: () => onStartMinimum!(task.id),
+                    onTap: () => onStartMinimum!(insight.taskId),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
@@ -1594,7 +1131,7 @@ class _WeeklyXpChart extends StatelessWidget {
       (max, day) => day.xp > max ? day.xp : max,
     );
 
-    return _WeeklySection(
+    return WeeklyAnalyticsSection(
       isDark: isDark,
       icon: Icons.bar_chart,
       color: const Color(0xFFFFCC00),
@@ -1603,7 +1140,7 @@ class _WeeklyXpChart extends StatelessWidget {
       child: Column(
         children: [
           if (summary.completedTasks == 0)
-            _WeeklyEmptyState(
+            WeeklyAnalyticsEmptyState(
               icon: Icons.hourglass_empty,
               title: 'Неделя ещё пустая',
               subtitle: 'Закрой первый квест, и график начнёт жить.',
@@ -1697,8 +1234,13 @@ class _WeeklyXpChart extends StatelessWidget {
 class _WeeklySkillBreakdown extends StatelessWidget {
   final _WeeklySummary summary;
   final bool isDark;
+  final Map<String, _WeeklySkillVisual> skillVisuals;
 
-  const _WeeklySkillBreakdown({required this.summary, required this.isDark});
+  const _WeeklySkillBreakdown({
+    required this.summary,
+    required this.isDark,
+    required this.skillVisuals,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1709,14 +1251,14 @@ class _WeeklySkillBreakdown extends StatelessWidget {
       (max, stat) => stat.xp > max ? stat.xp : max,
     );
 
-    return _WeeklySection(
+    return WeeklyAnalyticsSection(
       isDark: isDark,
       icon: Icons.auto_graph,
       color: const Color(0xFF4A9EFF),
       title: 'Навыки недели',
       subtitle: 'Какие направления двигали неделю',
       child: stats.isEmpty
-          ? _WeeklyEmptyState(
+          ? WeeklyAnalyticsEmptyState(
               icon: Icons.bolt,
               title: 'Пока нет лидера',
               subtitle:
@@ -1727,8 +1269,9 @@ class _WeeklySkillBreakdown extends StatelessWidget {
               children: stats.asMap().entries.map((entry) {
                 final index = entry.key;
                 final stat = entry.value;
-                final color = _analyticsSkillColor(summary.state, stat.skillId);
-                final icon = _analyticsSkillIcon(summary.state, stat.skillId);
+                final visual = skillVisuals[stat.skillId];
+                final color = visual?.color ?? const Color(0xFF4A9EFF);
+                final icon = visual?.icon ?? Icons.bolt;
                 final progress = maxXp == 0 ? 0.0 : stat.xp / maxXp;
                 return MotionListItem(
                   key: ValueKey('week-skill-${stat.skillId}'),
@@ -1803,8 +1346,13 @@ class _WeeklySkillBreakdown extends StatelessWidget {
 class _WeeklyTaskList extends StatelessWidget {
   final _WeeklySummary summary;
   final bool isDark;
+  final Map<String, _WeeklySkillVisual> skillVisuals;
 
-  const _WeeklyTaskList({required this.summary, required this.isDark});
+  const _WeeklyTaskList({
+    required this.summary,
+    required this.isDark,
+    required this.skillVisuals,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1812,14 +1360,14 @@ class _WeeklyTaskList extends StatelessWidget {
     final txt = textColor(isDark);
     final sub = subtext(isDark);
 
-    return _WeeklySection(
+    return WeeklyAnalyticsSection(
       isDark: isDark,
       icon: Icons.task_alt,
       color: const Color(0xFF34C759),
       title: 'Квесты недели',
       subtitle: 'Последние фактические закрытия',
       child: entries.isEmpty
-          ? _WeeklyEmptyState(
+          ? WeeklyAnalyticsEmptyState(
               icon: Icons.task_alt,
               title: 'Нет закрытых квестов',
               subtitle: 'Эта неделя пока ждёт первый выполненный шаг.',
@@ -1829,8 +1377,9 @@ class _WeeklyTaskList extends StatelessWidget {
               children: entries.take(7).toList().asMap().entries.map((entry) {
                 final index = entry.key;
                 final item = entry.value;
-                final color = _analyticsSkillColor(summary.state, item.skillId);
-                final icon = _analyticsSkillIcon(summary.state, item.skillId);
+                final visual = skillVisuals[item.skillId];
+                final color = visual?.color ?? const Color(0xFF4A9EFF);
+                final icon = visual?.icon ?? Icons.bolt;
                 return MotionListItem(
                   key: ValueKey(
                     'week-task-${item.id}-${item.at.millisecondsSinceEpoch}',
@@ -1905,8 +1454,13 @@ class _WeeklyTaskList extends StatelessWidget {
 class _WeeklyStreakRisks extends StatelessWidget {
   final _WeeklySummary summary;
   final bool isDark;
+  final Map<String, _WeeklySkillVisual> skillVisuals;
 
-  const _WeeklyStreakRisks({required this.summary, required this.isDark});
+  const _WeeklyStreakRisks({
+    required this.summary,
+    required this.isDark,
+    required this.skillVisuals,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1914,14 +1468,14 @@ class _WeeklyStreakRisks extends StatelessWidget {
     final txt = textColor(isDark);
     final sub = subtext(isDark);
 
-    return _WeeklySection(
+    return WeeklyAnalyticsSection(
       isDark: isDark,
       icon: Icons.local_fire_department,
       color: const Color(0xFFFF9500),
       title: 'Риски серии',
       subtitle: 'Повторяющиеся квесты, которые лучше мягко поддержать.',
       child: risks.isEmpty
-          ? _WeeklyEmptyState(
+          ? WeeklyAnalyticsEmptyState(
               icon: Icons.shield,
               title: 'Риски не горят',
               subtitle: 'Сейчас нет повторяющихся квестов на грани сброса.',
@@ -1931,12 +1485,10 @@ class _WeeklyStreakRisks extends StatelessWidget {
               children: risks.asMap().entries.map((entry) {
                 final index = entry.key;
                 final task = entry.value;
-                final skill = summary.state.skills
-                    .where((skill) => skill.id == task.skillId)
-                    .firstOrNull;
-                final color = skill?.color ?? const Color(0xFFFF9500);
+                final visual = skillVisuals[task.skillId];
+                final color = visual?.color ?? const Color(0xFFFF9500);
                 return MotionListItem(
-                  key: ValueKey('week-risk-${task.id}'),
+                  key: ValueKey('week-risk-${task.taskId}'),
                   index: index,
                   slide: 4,
                   child: Container(
@@ -1967,7 +1519,7 @@ class _WeeklyStreakRisks extends StatelessWidget {
                               ),
                               const SizedBox(height: 3),
                               Text(
-                                '${skill?.name ?? 'Навык'} • серия ${task.streak} д. • ${formatResetLabel(task.nextResetAt)}',
+                                '${task.skillName} • серия ${task.streak} д. • ${formatResetLabel(task.nextResetAt)}',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(color: sub, fontSize: 10.5),
@@ -1985,147 +1537,15 @@ class _WeeklyStreakRisks extends StatelessWidget {
   }
 }
 
-class _WeeklySection extends StatelessWidget {
-  final bool isDark;
-  final IconData icon;
+typedef _WeeklySummary = WeeklyAnalyticsViewData;
+typedef _TaskInsight = WeeklyTaskInsightData;
+
+class _WeeklySkillVisual {
   final Color color;
-  final String title;
-  final String subtitle;
-  final Widget child;
-  final Widget? trailing;
-
-  const _WeeklySection({
-    required this.isDark,
-    required this.icon,
-    required this.color,
-    required this.title,
-    required this.subtitle,
-    required this.child,
-    this.trailing,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final txt = textColor(isDark);
-    final sub = subtext(isDark);
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF101016) : Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: borderColor(isDark)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: color, size: 18),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        color: txt,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: sub, fontSize: 10.5),
-                    ),
-                  ],
-                ),
-              ),
-              if (trailing != null) ...[const SizedBox(width: 10), trailing!],
-            ],
-          ),
-          const SizedBox(height: 14),
-          child,
-        ],
-      ),
-    );
-  }
-}
-
-class _WeeklyEmptyState extends StatelessWidget {
   final IconData icon;
-  final String title;
-  final String subtitle;
-  final bool isDark;
 
-  const _WeeklyEmptyState({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.isDark,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final sub = subtext(isDark);
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 22),
-      decoration: BoxDecoration(
-        color: sub.withAlpha(10),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: borderColor(isDark)),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: sub, size: 26),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: sub,
-              fontSize: 13,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            textAlign: TextAlign.center,
-            style: TextStyle(color: sub.withAlpha(180), fontSize: 11),
-          ),
-        ],
-      ),
-    );
-  }
+  const _WeeklySkillVisual({required this.color, required this.icon});
 }
-
-Color _analyticsSkillColor(AppState state, String skillId) {
-  final skill = state.skills.where((item) => item.id == skillId).firstOrNull;
-  if (skill != null) return skill.color;
-  final history = state.history
-      .where((entry) => entry.skillId == skillId)
-      .firstOrNull;
-  return history?.skillColor ?? const Color(0xFF4A9EFF);
-}
-
-IconData _analyticsSkillIcon(AppState state, String skillId) {
-  final skill = state.skills.where((item) => item.id == skillId).firstOrNull;
-  if (skill != null) return skill.icon;
-  final history = state.history
-      .where((entry) => entry.skillId == skillId)
-      .firstOrNull;
-  return history?.skillIcon ?? Icons.auto_graph_rounded;
-}
-
-typedef _WeeklySummary = WeeklyAnalyticsReadModel;
-typedef _TaskInsight = TaskInsight;
 
 String _weekdayShort(DateTime date) {
   const weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];

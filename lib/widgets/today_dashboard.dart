@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../app_state.dart';
-import '../engines/task_ordering.dart';
 import '../models.dart';
+import '../presentation/today_dashboard_view_data.dart';
 import '../utils.dart';
 import 'shared.dart';
 import 'today_dashboard_sections.dart';
@@ -38,79 +38,6 @@ class TodayDashboard extends StatefulWidget {
         skill.treeNodeStatus(stage) == SkillTreeNodeStatus.active;
   }
 
-  static Task? _pickNextTask(AppState state, List<Task> tasks) {
-    final sorted = _sortedTasks(state, tasks);
-    if (sorted.isEmpty) return null;
-    return sorted.first;
-  }
-
-  static List<Task> _sortedTasks(AppState state, List<Task> tasks) {
-    final result = [...tasks];
-    result.sort((a, b) {
-      final byRisk = _riskScore(a).compareTo(_riskScore(b));
-      if (byRisk != 0) return byRisk;
-
-      final byMinimum = _minimumScore(a).compareTo(_minimumScore(b));
-      if (byMinimum != 0) return byMinimum;
-
-      final byStage = _stageScore(state, a).compareTo(_stageScore(state, b));
-      if (byStage != 0) return byStage;
-
-      final byRepeating = _repeatingScore(a).compareTo(_repeatingScore(b));
-      if (byRepeating != 0) return byRepeating;
-
-      final byPriority = prioritySortRank(
-        a.priority,
-      ).compareTo(prioritySortRank(b.priority));
-      if (byPriority != 0) return byPriority;
-
-      final byXp = state.previewEarnedXP(b).compareTo(state.previewEarnedXP(a));
-      if (byXp != 0) return byXp;
-
-      final byUpdated = b.updatedAt.compareTo(a.updatedAt);
-      if (byUpdated != 0) return byUpdated;
-
-      final byCreated = b.createdAt.compareTo(a.createdAt);
-      if (byCreated != 0) return byCreated;
-
-      return a.title.compareTo(b.title);
-    });
-    return result;
-  }
-
-  static List<Task> _riskTasks(List<Task> tasks) {
-    final now = DateTime.now();
-    final result = tasks
-        .where((task) => task.nextResetAt != null)
-        .where(
-          (task) =>
-              task.nextResetAt!.difference(now) <= const Duration(days: 1),
-        )
-        .toList();
-    result.sort((a, b) => a.nextResetAt!.compareTo(b.nextResetAt!));
-    return result;
-  }
-
-  static int _riskScore(Task task) {
-    final resetAt = task.nextResetAt;
-    if (task.type != TaskType.repeating || resetAt == null) return 1;
-    final untilReset = resetAt.difference(DateTime.now());
-    return !untilReset.isNegative && untilReset <= const Duration(hours: 24)
-        ? 0
-        : 1;
-  }
-
-  static int _minimumScore(Task task) =>
-      task.hasMinimumAction && !task.isDone && !task.isMinimumActionDone
-      ? 0
-      : 1;
-
-  static int _stageScore(AppState state, Task task) =>
-      _isActiveStageTask(state, task) ? 0 : 1;
-
-  static int _repeatingScore(Task task) =>
-      task.type == TaskType.repeating ? 0 : 1;
-
   @override
   State<TodayDashboard> createState() => _TodayDashboardState();
 }
@@ -130,15 +57,28 @@ class _TodayDashboardState extends State<TodayDashboard> {
     final isDark = state.isDark;
     final txt = textColor(isDark);
     final sub = subtext(isDark);
-    final activeTasks = state.tasks
-        .where((task) => task.isSkillTask && !task.isDone)
-        .toList();
-    final dailyTasks = activeTasks
-        .where((task) => task.type == TaskType.repeating)
-        .toList();
-    final nextTask = TodayDashboard._pickNextTask(state, activeTasks);
-    final riskyTasks = TodayDashboard._riskTasks(dailyTasks);
     final stats = state.todayStats;
+    final viewData = const TodayDashboardViewDataBuilder().build(
+      tasks: state.tasks,
+      now: DateTime.now(),
+      completedToday: stats?.tasksCompleted ?? 0,
+      xpToday: stats?.xpEarned ?? 0,
+      previewEarnedXp: state.previewEarnedXP,
+      isActiveStageTask: (task) =>
+          TodayDashboard._isActiveStageTask(state, task),
+    );
+    final tasksById = <String, Task>{
+      for (final task in state.tasks) task.id: task,
+    };
+    List<Task> resolveTasks(List<String> ids) => ids
+        .map((id) => tasksById[id])
+        .whereType<Task>()
+        .toList(growable: false);
+    final activeTasks = resolveTasks(viewData.activeTaskIds);
+    final dailyTasks = resolveTasks(viewData.dailyTaskIds);
+    final riskyTasks = resolveTasks(viewData.riskyTaskIds);
+    final focusTasks = resolveTasks(viewData.focusTaskIds);
+    final nextTask = tasksById[viewData.nextTaskId];
     final statusLabels = _todayStatusLabels();
 
     return LayoutBuilder(
@@ -338,10 +278,11 @@ class _TodayDashboardState extends State<TodayDashboard> {
                                       state: state,
                                       nextTask: nextTask,
                                       riskyTasks: riskyTasks,
+                                      focusTasks: focusTasks,
                                       activeTasks: activeTasks,
                                       dailyTasks: dailyTasks,
-                                      todayTasks: stats?.tasksCompleted ?? 0,
-                                      todayXp: stats?.xpEarned ?? 0,
+                                      todayTasks: viewData.completedToday,
+                                      todayXp: viewData.xpToday,
                                       isDark: isDark,
                                       onComplete: widget.onComplete,
                                       onMinimumAction: widget.onMinimumAction,
@@ -405,6 +346,7 @@ class _DashboardContent extends StatelessWidget {
   final AppState state;
   final Task? nextTask;
   final List<Task> riskyTasks;
+  final List<Task> focusTasks;
   final List<Task> activeTasks;
   final List<Task> dailyTasks;
   final int todayTasks;
@@ -420,6 +362,7 @@ class _DashboardContent extends StatelessWidget {
     required this.state,
     required this.nextTask,
     required this.riskyTasks,
+    required this.focusTasks,
     required this.activeTasks,
     required this.dailyTasks,
     required this.todayTasks,
@@ -474,10 +417,7 @@ class _DashboardContent extends StatelessWidget {
                 ? 'Начни с малого — поток придёт после первого действия'
                 : 'Эти квесты лучше закрыть первыми',
             tasks: riskyTasks.isEmpty
-                ? TodayDashboard._sortedTasks(
-                    state,
-                    activeTasks,
-                  ).take(3).toList()
+                ? focusTasks
                 : riskyTasks.take(3).toList(),
             isDark: isDark,
             onComplete: onComplete,

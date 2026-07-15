@@ -181,16 +181,21 @@ void main() {
   });
 
   test('action toast stays inside a bottom-navigation safe region', () {
+    const viewport = Size(400, 800);
+    const bottomReserved = 96.0;
     final placement = ActionToastPlacement.resolve(
       sourceRect: const Rect.fromLTWH(370, 730, 20, 20),
       kind: ActionToastOriginKind.questCheckbox,
       zone: ActionToastZone.mobileContent,
-      viewport: const Size(400, 800),
-      bottomReserved: 96,
+      viewport: viewport,
+      bottomReserved: bottomReserved,
     );
 
     expect(placement.topLeft.dx, inInclusiveRange(12, 128));
-    expect(placement.topLeft.dy, lessThanOrEqualTo(588));
+    expect(
+      placement.topLeft.dy + ActionToastPlacement.estimatedHeight,
+      lessThanOrEqualTo(viewport.height - bottomReserved - 12),
+    );
     expect(placement.topLeft.dy, greaterThanOrEqualTo(12));
   });
 

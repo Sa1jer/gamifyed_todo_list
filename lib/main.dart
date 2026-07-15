@@ -70,7 +70,6 @@ class _RPGAppState extends State<RPGApp>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _state = AppState(storage: widget.storage, seedDefaults: false);
-    _state.addListener(_onStateChange);
     _revealCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 620),
@@ -94,12 +93,9 @@ class _RPGAppState extends State<RPGApp>
     await _state.retryLoadSavedData();
   }
 
-  void _onStateChange() => setState(() {});
-
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _state.removeListener(_onStateChange);
     _state.dispose();
     _revealCtrl.dispose();
     super.dispose();
@@ -130,6 +126,7 @@ class _RPGAppState extends State<RPGApp>
 
       _revealCorner = _resolveRevealCorner();
       _state.toggleTheme();
+      setState(() {});
       _setOverlayImage(frame);
 
       if (frame != null) {
@@ -219,22 +216,56 @@ class _RPGAppState extends State<RPGApp>
       theme: _buildTheme(_state.isDark),
       home: AppStateProvider(
         state: _state,
-        child: PersistenceGate(
+        child: _AppContent(
           state: _state,
           onRetryLoad: _initializeStorageAndLoad,
-          child: TooltipVisibility(
-            visible: _state.tooltipsEnabled,
-            child: Stack(
-              children: [
-                RepaintBoundary(
-                  key: _repaintKey,
-                  child: MainPage(onToggleTheme: _handleThemeToggle),
-                ),
-                if (_overlayImage != null) _buildRevealOverlay(),
-              ],
-            ),
+          child: Stack(
+            children: [
+              RepaintBoundary(
+                key: _repaintKey,
+                child: MainPage(onToggleTheme: _handleThemeToggle),
+              ),
+              if (_overlayImage != null) _buildRevealOverlay(),
+            ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _AppContent extends StatelessWidget {
+  const _AppContent({
+    required this.state,
+    required this.onRetryLoad,
+    required this.child,
+  });
+
+  final AppState state;
+  final Future<void> Function() onRetryLoad;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppStateSelector(
+      selector: (state) {
+        final status = state.persistenceStatus;
+        return (
+          loaded: state.hasLoadedSavedData,
+          tooltips: state.tooltipsEnabled,
+          phase: status.phase,
+          message: status.message,
+          debugDetails: status.debugDetails,
+          canRetry: status.canRetry,
+          isDirty: status.isDirty,
+          blocksSaving: status.blocksSaving,
+        );
+      },
+      child: child,
+      builder: (context, selection, child) => PersistenceGate(
+        state: state,
+        onRetryLoad: onRetryLoad,
+        child: TooltipVisibility(visible: selection.tooltips, child: child!),
       ),
     );
   }

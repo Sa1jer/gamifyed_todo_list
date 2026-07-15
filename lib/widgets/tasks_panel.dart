@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../feedback_service.dart';
 import '../models.dart';
 import '../app_state.dart';
+import '../presentation/tasks_panel_view_data.dart';
 import '../utils.dart';
 import 'shared.dart';
 import 'dialogs.dart';
@@ -117,12 +118,10 @@ class _TasksPanelState extends State<TasksPanel> {
       );
     }
 
-    final allTasks = s.tasksForSkill(skill.id);
-    final active = allTasks.where((t) => !t.isDone).toList();
-    final done = allTasks.where((t) => t.isDone && !t.isArchived).toList()
-      ..sort(_compareCompletedTasksNewestFirst);
-    final archived = allTasks.where((t) => t.isDone && t.isArchived).toList()
-      ..sort(_compareCompletedTasksNewestFirst);
+    final tasks = TasksPanelViewData.fromTasks(s.tasksForSkill(skill.id));
+    final active = tasks.active;
+    final done = tasks.completed;
+    final archived = tasks.archived;
     if (_lastSkillId != skill.id) {
       _lastSkillId = skill.id;
       _completedExpanded = false;
@@ -309,7 +308,7 @@ class _TasksPanelState extends State<TasksPanel> {
           // ── Task list ────────────────────────────────────────────────────────────
           Expanded(
             child: MotionFadeSlideSwitcher(
-              child: allTasks.isEmpty
+              child: tasks.isEmpty
                   ? _EmptyTasksState(
                       key: const ValueKey('tasks-empty-state'),
                       isDark: isDark,
@@ -1488,12 +1487,4 @@ class _MobileQuestCopy extends StatelessWidget {
       ],
     );
   }
-}
-
-int _compareCompletedTasksNewestFirst(Task a, Task b) {
-  final aDate = a.lastCompletedAt ?? a.updatedAt;
-  final bDate = b.lastCompletedAt ?? b.updatedAt;
-  final byCompletion = bDate.compareTo(aDate);
-  if (byCompletion != 0) return byCompletion;
-  return b.createdAt.compareTo(a.createdAt);
 }

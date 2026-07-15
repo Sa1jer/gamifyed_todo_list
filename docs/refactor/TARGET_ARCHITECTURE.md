@@ -1,115 +1,101 @@
 # Target Architecture
 
-Last updated: 2026-07-14
+Last updated: 2026-07-15
 
-The target is evolutionary: keep the public `AppState` facade and persisted
-models stable while narrow, tested owners replace embedded responsibilities.
+The target is evolutionary: keep `AppState` and persisted payloads compatible
+while giving expensive reads, mutation policy, persistence mechanics and
+presentation sections explicit owners.
 
 ## Dependency Direction
 
 ```text
-widgets -> AppState facade + immutable read models
-AppState -> coordinators + engines + storage/device services
+widgets -> AppState facade + presentation/read data
+AppState -> coordinators + engines + persistence + device services
 coordinators -> models + pure engines/utilities
-analytics/engines -> models + pure utilities
-storage -> models + snapshot codecs
+analytics -> explicit domain inputs -> scalar immutable outputs
+persistence facade -> scheduler + store + codec + migration policy
 ```
 
-Forbidden directions include coordinators/engines importing widgets or
-`AppState`, widgets writing Hive, storage invoking UI, and presentation code
-reimplementing domain calculations.
+The architecture audit rejects analytics outputs that retain live mutable
+models, coordinators/persistence importing Flutter UI or AppState, and model
+declarations returning to the compatibility barrel.
 
-## Implemented Evolutionary Boundaries
+## Current Runtime Shape
 
 ```text
-AppState
-├── CompletionHistoryIndex        effective completion reads/cache
-├── AnalyticsReadModelCache       bounded immutable analytics snapshots
-├── TaskMutationCoordinator       quest collection/entity mutation policy
-├── RoadmapMutationCoordinator    Stage graph and link mutation policy
-├── StorageService                unchanged snapshot/legacy persistence
-└── NotificationService           unchanged local-device side effects
-
-Presentation
-├── MobileJournal                 page composition
-│   └── MobileJournalSections     momentum/cards/empty state
-├── DesktopStatisticsWorkspace    workspace composition
-│   └── DesktopStatisticsSections summary/analytics sections
-└── TaskDialog
-    └── TaskFormController        text/focus lifecycle ownership
+AppState facade
+├── CompletionHistoryIndex
+├── AnalyticsReadModelCache
+├── TaskMutationCoordinator
+├── RoadmapMutationCoordinator
+├── TaskCompletionCoordinator
+├── RewardMutationCoordinator
+├── SkillGoalMutationCoordinator
+├── ReviewSessionCoordinator
+├── SaveScheduler
+├── StorageService
+└── Notification/SFX/feedback services
 ```
 
-`AppState` acknowledges coordinator results, performs cross-domain side
-effects, schedules one save, and sends one final notification. Coordinators do
-not persist or notify.
+For a mutation, the preferred flow is:
 
-## Runtime Contracts
+```text
+AppState public method
+  -> coordinator with explicit inputs
+  -> typed/no-op result
+  -> cross-domain/device side effects
+  -> one save request
+  -> one final notification
+```
 
-### Immutable analytics
+Coordinators do not call `notifyListeners()` and do not write storage.
 
-- Inputs are explicit skills, tasks, effective completion index, daily stats,
-  total completions, and week start.
-- Outputs are unmodifiable day/skill/entry collections and scalar summaries.
-- Cache key is `(analytics epoch, normalized week start)` and is bounded to
-  eight weeks.
-- Relevant mutations advance the epoch; unrelated UI preferences do not.
-- The cache references effective history entries but does not duplicate full
-  task/skill collections.
+## Read Contracts
 
-### Mutation coordinators
+- Analytics outputs are deeply projected scalar records with unmodifiable
+  collections. Builders may read model inputs transiently but outputs do not
+  retain them.
+- Cache keys are normalized week plus AppState analytics epoch. Cache size is
+  bounded and an epoch change clears retained weeks.
+- Widget-specific filtering/sorting belongs in a presentation data builder,
+  not in repeated list-item builds.
+- Time-sensitive builders receive `now` explicitly where deterministic tests
+  are required.
 
-- Mutation rules receive concrete mutable entities/collections and explicit
-  `now` when timestamps are required.
-- Results report whether mutation occurred and any notification/skill sync
-  hints.
-- `AppState` remains the compatibility facade and final side-effect owner.
-- No-op results must not schedule saves or notifications.
+## Persistence Contracts
 
-### Presentation
+- `SaveScheduler` serializes writes and preserves a trailing request that
+  arrives during an in-flight write.
+- Flush waits for the full trailing sequence; failures remain observable and
+  keep dirty state.
+- `SnapshotStore`/codec/migration helpers are internal to `StorageService`.
+- Commit marker last, current/previous fallback, authoritative committed empty
+  collections and startup failed-load write blocking remain mandatory.
+- No coordinator performs independent full-snapshot writes.
 
-- Mobile and desktop keep intentionally different compositions.
-- Extracted sections receive focused inputs/callbacks rather than full mutable
-  lists where practical.
-- Controllers, focus nodes, timers, and animation resources have one closest
-  widget/controller owner and deterministic disposal.
-- Extraction uses ordinary modules, not permanent `part` fragmentation.
+## Presentation Contracts
 
-### Persistence and lifecycle
+- Mobile and desktop retain different compositions.
+- Large shells compose ordinary modules with focused inputs/callbacks where a
+  safe boundary exists.
+- `shared.dart` is compatibility only; new reusable controls go to the closest
+  cohesive module under `widgets/shared/`.
+- Controller/listener resources have one lifecycle owner and deterministic
+  disposal.
+- Remaining `part` migration is incremental and must not be replaced by new
+  giant `part` files.
 
-- Snapshot/manifest commit order, previous fallback, failed-load write block,
-  and authoritative committed empty collections are unchanged.
-- Save debounce, lifecycle flush, and startup recovery remain coordinated by
-  `AppState` until a dedicated fault-injection batch proves a smaller owner.
+## Next Evolutionary Steps
 
-## Completed Migration Sequence
+1. Profile broad feature-level rebuilds and retained routes before extending
+   selector use beyond the completed root-shell boundary.
+2. Extract desktop sidebar/main composition and the remaining Weekly Analytics
+   groups using explicit view data and callbacks.
+3. Add real-Hive interrupted-write/restart coverage around the new persistence
+   mechanics.
+4. Consider moving Flutter visual metadata out of domain models only with a
+   separate compatibility/schema plan.
 
-1. Inventory and completion-history indexing.
-2. Shared immutable analytics read model and three migrated consumers.
-3. Three presentation boundaries, including independent form resource
-   ownership.
-4. Task and RoadMap mutation coordinators behind stable `AppState` APIs.
-5. Logic/allocation hardening: complete analytics invalidation, bounded cache,
-   no-op mutation suppression, and stale Inbox notification cancellation.
-
-## Next Safe Sequence
-
-1. Characterize reward/effect grant and undo idempotency before extracting
-   decisions.
-2. Decompose one coherent region of `desktop_workspace.dart` with geometry and
-   pointer regression coverage.
-3. Profile broad `AppState` rebuilds and retained desktop workspaces before
-   adding selectors or changing keep-alive behavior.
-4. Treat persistence lifecycle decomposition as a separate real-Hive
-   fault-injection batch.
-
-Do not start with completion/minimum/undo orchestration or the save pipeline.
-
-## Exit Criteria for Later Extractions
-
-- Public behavior and persisted data stay compatible.
-- Normal, empty, stale/invalid, and relevant boundary cases are covered.
-- Mutation ordering, save scheduling, and notification ownership remain
-  explicit.
-- Format/analyze/focused tests pass; unrelated failures are identified with
-  evidence rather than hidden.
-- Documentation names the actual owner and unresolved risk.
+These are follow-ups, not evidence that the completed boundaries are wrappers:
+the current coordinators own policy, the persistence helpers own scheduling and
+encoding mechanics, and analytics outputs are independent snapshots.

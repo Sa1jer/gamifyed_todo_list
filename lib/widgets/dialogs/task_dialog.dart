@@ -48,50 +48,10 @@ class AddTaskDialog extends StatefulWidget {
 
 class _AddTaskDialogState extends State<AddTaskDialog> {
   late final TaskFormController _form;
-  int _xp = 20;
-  TaskType _type = TaskType.shortTerm;
-  RepeatFrequency _freq = RepeatFrequency.daily;
-  Priority _priority = Priority.medium;
-  final List<String> _subtasks = [];
-  final List<String> _tags = [];
-  String? _treeNodeId;
-  bool _minimumActionEnabled = false;
-  bool _notificationsEnabled = false;
-  TimeOfDay _notificationTime = const TimeOfDay(hour: 9, minute: 0);
-  bool _advancedExpanded = false;
-  bool _subtasksExpanded = false;
   bool _submitting = false;
   bool _allowPop = false;
   bool _discardDialogOpen = false;
   String? _titleError;
-  late final String _initialDraftSignature;
-
-  String get _draftSignature => jsonEncode({
-    'title': _form.title.text,
-    'description': _form.description.text,
-    'minimumAction': _form.minimumAction.text,
-    'minimumEnabled': _minimumActionEnabled,
-    'xp': _xp,
-    'type': _type.name,
-    'frequency': _freq.name,
-    'customDays': _form.customDays.text,
-    'priority': _priority.name,
-    'subtasks': _subtasks,
-    'tags': _tags,
-    'treeNodeId': _treeNodeId,
-    'notificationsEnabled': _notificationsEnabled,
-    'notificationHour': _notificationTime.hour,
-    'notificationMinute': _notificationTime.minute,
-  });
-
-  bool get _isDirty => _draftSignature != _initialDraftSignature;
-
-  int get _softCap => typeSoftCap[_type]!;
-  bool get _overCap => _xp > _softCap;
-  bool get _showBigQuestTools =>
-      _type == TaskType.midTerm ||
-      _type == TaskType.longTerm ||
-      _subtasks.isNotEmpty;
 
   SkillTreeNode? get _initialStage {
     if (widget.existing != null) return null;
@@ -105,7 +65,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   SkillTreeNode? get _suggestedStage {
     if (widget.existing != null ||
         widget.initialTreeNodeId != null ||
-        _treeNodeId != null) {
+        _form.treeNodeId != null) {
       return null;
     }
     final skill = widget.skill;
@@ -117,16 +77,6 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
         .firstOrNull;
   }
 
-  int get _xpSelectorValue {
-    final clamped = _xp.clamp(10, 500);
-    return (((clamped + 5) ~/ 10) * 10).clamp(10, 500);
-  }
-
-  int _normalizeXp(int value) {
-    final clamped = value.clamp(10, 500);
-    return (((clamped + 5) ~/ 10) * 10).clamp(10, 500);
-  }
-
   void _refreshDraft() {
     if (mounted) {
       setState(() {});
@@ -136,50 +86,13 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   @override
   void initState() {
     super.initState();
-    _form = TaskFormController();
-    if (widget.existing case final ex?) {
-      _form.title.text = ex.title;
-      _form.description.text = ex.description;
-      _form.minimumAction.text = ex.minimumAction;
-      _minimumActionEnabled =
-          ex.minimumAction.trim().isNotEmpty || widget.focusMinimumAction;
-      _xp = ex.xpReward;
-      _type = ex.type;
-      _freq = ex.repeatFrequency;
-      _form.customDays.text =
-          '${ex.repeatCustomDays < 1 ? 1 : ex.repeatCustomDays}';
-      _priority = ex.priority;
-      _subtasks.addAll(ex.subtasks);
-      _tags.addAll(ex.tags);
-      _treeNodeId = ex.treeNodeId;
-      _notificationsEnabled = ex.notificationsEnabled;
-      _advancedExpanded =
-          ex.subtasks.isNotEmpty ||
-          ex.treeNodeId != null ||
-          _minimumActionEnabled;
-      _subtasksExpanded = ex.subtasks.isNotEmpty;
-      if (ex.notificationHour != null && ex.notificationMinute != null) {
-        _notificationTime = TimeOfDay(
-          hour: ex.notificationHour!,
-          minute: ex.notificationMinute!,
-        );
-      }
-    } else {
-      final initialTitle = widget.initialTitle?.trim();
-      final initialMinimum = widget.initialMinimumAction?.trim();
-      if (initialTitle != null && initialTitle.isNotEmpty) {
-        _form.title.text = initialTitle;
-      }
-      if (initialMinimum != null && initialMinimum.isNotEmpty) {
-        _form.minimumAction.text = initialMinimum;
-      }
-      _treeNodeId = widget.initialTreeNodeId;
-      _minimumActionEnabled =
-          _form.minimumAction.text.trim().isNotEmpty ||
-          widget.focusMinimumAction;
-      _advancedExpanded = _minimumActionEnabled;
-    }
-    _initialDraftSignature = _draftSignature;
+    _form = TaskFormController(
+      existing: widget.existing,
+      initialTitle: widget.initialTitle,
+      initialMinimumAction: widget.initialMinimumAction,
+      initialTreeNodeId: widget.initialTreeNodeId,
+      focusMinimumAction: widget.focusMinimumAction,
+    );
     _form.addListener(_refreshDraft);
     if (widget.focusMinimumAction) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -243,8 +156,8 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
               accent: c,
               isDark: isDark,
               onLink: () => setState(() {
-                _treeNodeId = stage.id;
-                _advancedExpanded = true;
+                _form.treeNodeId = stage.id;
+                _form.advancedExpanded = true;
               }),
             ),
             const SizedBox(height: 14),
@@ -298,15 +211,16 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
             const SizedBox(height: 16),
           ],
           TaskXpSection(
-            xp: _xp,
-            selectorValue: _xpSelectorValue,
-            softCap: _softCap,
-            taskTypeLabel: typeLabel[_type] ?? _type.name,
-            overCap: _overCap,
+            xp: _form.xp,
+            selectorValue: _form.xpSelectorValue,
+            softCap: _form.softCap,
+            taskTypeLabel: typeLabel[_form.type] ?? _form.type.name,
+            overCap: _form.isOverSoftCap,
             subtextColor: sub,
             borderColor: bdr,
             isDark: isDark,
-            onChanged: (value) => setState(() => _xp = _normalizeXp(value)),
+            onChanged: (value) =>
+                setState(() => _form.xp = _form.normalizeXp(value)),
           ),
           const SizedBox(height: 16),
           _buildAdvancedSection(fBg, txt, sub, bdr, c, isDark),
@@ -317,7 +231,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
 
     if (widget.fullScreen) {
       return PopScope(
-        canPop: _submitting || _allowPop || !_isDirty,
+        canPop: _submitting || _allowPop || !_form.isDirty,
         onPopInvokedWithResult: (didPop, _) {
           if (!didPop) unawaited(_requestClose());
         },
@@ -376,7 +290,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
 
   Future<void> _requestClose() async {
     if (!mounted) return;
-    if (_submitting || _allowPop || !_isDirty) {
+    if (_submitting || _allowPop || !_form.isDirty) {
       Navigator.pop(context);
       return;
     }
@@ -391,11 +305,6 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     setState(() => _allowPop = true);
     await WidgetsBinding.instance.endOfFrame;
     if (mounted) Navigator.pop(context);
-  }
-
-  int get _customDays {
-    final parsed = int.tryParse(_form.customDays.text.trim()) ?? 1;
-    return parsed < 1 ? 1 : parsed;
   }
 
   Widget _advancedCard({
@@ -434,14 +343,16 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
           _sectionToggle(
             icon: Icons.tune_rounded,
             title: 'Настройки квеста',
-            expanded: _advancedExpanded,
+            expanded: _form.advancedExpanded,
             color: color,
             txt: txt,
             sub: sub,
-            onTap: () => setState(() => _advancedExpanded = !_advancedExpanded),
+            onTap: () => setState(
+              () => _form.advancedExpanded = !_form.advancedExpanded,
+            ),
           ),
           MotionExpandable(
-            expanded: _advancedExpanded,
+            expanded: _form.advancedExpanded,
             expandedChild: Padding(
               padding: const EdgeInsets.only(top: 12),
               child: Column(
@@ -450,7 +361,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                   _buildBehaviorSection(fBg, txt, sub, bdr, color, isDark),
                   const SizedBox(height: 10),
                   TaskMinimumActionSection(
-                    enabled: _minimumActionEnabled,
+                    enabled: _form.minimumActionEnabled,
                     controller: _form.minimumAction,
                     focusNode: _form.minimumActionFocusNode,
                     fieldBackground: fBg,
@@ -460,7 +371,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                     accent: color,
                     isDark: isDark,
                     onEnabledChanged: (value) =>
-                        setState(() => _minimumActionEnabled = value),
+                        setState(() => _form.minimumActionEnabled = value),
                     onTextChanged: (_) => setState(() {}),
                   ),
                   const SizedBox(height: 10),
@@ -468,19 +379,19 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                     _buildTreeNodeSection(fBg, txt, sub, bdr, color, isDark),
                     const SizedBox(height: 10),
                   ],
-                  if (_showBigQuestTools) ...[
+                  if (_form.showBigQuestTools) ...[
                     _buildTextListEditor(
                       title: 'Большой квест',
                       hint: '+ Добавить шаг',
-                      items: _subtasks,
+                      items: _form.subtasks,
                       ctrl: _form.subtask,
                       color: color,
                       txt: txt,
                       sub: sub,
                       bdr: bdr,
-                      expanded: _subtasksExpanded,
+                      expanded: _form.subtasksExpanded,
                       onToggle: () => setState(
-                        () => _subtasksExpanded = !_subtasksExpanded,
+                        () => _form.subtasksExpanded = !_form.subtasksExpanded,
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -541,7 +452,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
             spacing: 7,
             runSpacing: 7,
             children: TaskType.values.map((type) {
-              final selected = _type == type;
+              final selected = _form.type == type;
               return _DialogChoiceChip(
                 label: typeLabel[type]!,
                 color: typeColor[type]!,
@@ -557,12 +468,12 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                 ),
                 radius: 999,
                 selectedWeight: FontWeight.w700,
-                onTap: () => setState(() => _type = type),
+                onTap: () => setState(() => _form.type = type),
               );
             }).toList(),
           ),
           MotionExpandable(
-            expanded: _type == TaskType.repeating,
+            expanded: _form.type == TaskType.repeating,
             expandedChild: Padding(
               padding: const EdgeInsets.only(top: 12),
               child: Column(
@@ -580,7 +491,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                               freq != RepeatFrequency.every3Days,
                         )
                         .map((freq) {
-                          final selected = _freq == freq;
+                          final selected = _form.frequency == freq;
                           return _DialogChoiceChip(
                             label: freqLabel[freq]!,
                             color: color,
@@ -596,13 +507,13 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                             ),
                             radius: 999,
                             selectedWeight: FontWeight.w700,
-                            onTap: () => setState(() => _freq = freq),
+                            onTap: () => setState(() => _form.frequency = freq),
                           );
                         })
                         .toList(),
                   ),
                   MotionExpandable(
-                    expanded: _freq == RepeatFrequency.custom,
+                    expanded: _form.frequency == RepeatFrequency.custom,
                     expandedChild: Padding(
                       padding: const EdgeInsets.only(top: 10),
                       child: Row(
@@ -683,15 +594,15 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                       ),
                     ),
                     Switch(
-                      value: _notificationsEnabled,
+                      value: _form.notificationsEnabled,
                       activeThumbColor: color,
                       onChanged: (value) =>
-                          setState(() => _notificationsEnabled = value),
+                          setState(() => _form.notificationsEnabled = value),
                     ),
                   ],
                 ),
                 MotionExpandable(
-                  expanded: _notificationsEnabled,
+                  expanded: _form.notificationsEnabled,
                   expandedChild: Padding(
                     padding: const EdgeInsets.only(top: 8),
                     child: PressFeedback(
@@ -713,7 +624,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                             Icon(Icons.schedule, color: color, size: 16),
                             const SizedBox(width: 8),
                             Text(
-                              'Время: ${_formatTimeOfDay(_notificationTime)}',
+                              'Время: ${_formatTimeOfDay(_form.notificationTime)}',
                               style: TextStyle(color: color, fontSize: 13),
                             ),
                             const Spacer(),
@@ -743,8 +654,8 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     final skill = widget.skill;
     final nodes = skill?.treeNodes ?? [];
     if (nodes.isEmpty) return const SizedBox.shrink();
-    final selectedNodeExists = nodes.any((node) => node.id == _treeNodeId);
-    final selectedNodeId = selectedNodeExists ? _treeNodeId : null;
+    final selectedNodeExists = nodes.any((node) => node.id == _form.treeNodeId);
+    final selectedNodeId = selectedNodeExists ? _form.treeNodeId : null;
 
     return Container(
       padding: const EdgeInsets.all(10),
@@ -802,7 +713,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                 ),
                 radius: 999,
                 selectedWeight: FontWeight.w700,
-                onTap: () => setState(() => _treeNodeId = null),
+                onTap: () => setState(() => _form.treeNodeId = null),
               ),
               ...nodes.map((node) {
                 final nodeColor = node.isMastered
@@ -823,7 +734,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                   ),
                   radius: 999,
                   selectedWeight: FontWeight.w700,
-                  onTap: () => setState(() => _treeNodeId = node.id),
+                  onTap: () => setState(() => _form.treeNodeId = node.id),
                 );
               }),
             ],
@@ -1030,10 +941,10 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   Future<void> _pickNotificationTime() async {
     final picked = await showTimePicker(
       context: context,
-      initialTime: _notificationTime,
+      initialTime: _form.notificationTime,
     );
     if (picked == null || !mounted) return;
-    setState(() => _notificationTime = picked);
+    setState(() => _form.notificationTime = picked);
   }
 
   String _formatTimeOfDay(TimeOfDay time) {
@@ -1057,18 +968,18 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     widget.onSave(
       _form.title.text.trim(),
       _form.description.text.trim(),
-      _xp,
-      _type,
-      _freq,
-      _customDays,
-      _priority,
-      _minimumActionEnabled ? _form.minimumAction.text.trim() : '',
-      List.of(_subtasks),
-      List.of(_tags),
-      _notificationsEnabled,
-      _notificationsEnabled ? _notificationTime.hour : null,
-      _notificationsEnabled ? _notificationTime.minute : null,
-      _treeNodeId,
+      _form.xp,
+      _form.type,
+      _form.frequency,
+      _form.customDayCount,
+      _form.priority,
+      _form.minimumActionEnabled ? _form.minimumAction.text.trim() : '',
+      List.of(_form.subtasks),
+      List.of(_form.tags),
+      _form.notificationsEnabled,
+      _form.notificationsEnabled ? _form.notificationTime.hour : null,
+      _form.notificationsEnabled ? _form.notificationTime.minute : null,
+      _form.treeNodeId,
     );
     if (mounted) Navigator.pop(context);
   }

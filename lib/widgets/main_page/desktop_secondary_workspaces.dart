@@ -459,12 +459,14 @@ class _DesktopSettingsWorkspace extends StatelessWidget {
   final AppState state;
   final DesktopJournalTokens tokens;
   final VoidCallback onOpenProfile;
+  final VoidCallback onToggleTheme;
 
   const _DesktopSettingsWorkspace({
     super.key,
     required this.state,
     required this.tokens,
     required this.onOpenProfile,
+    required this.onToggleTheme,
   });
 
   @override
@@ -506,7 +508,7 @@ class _DesktopSettingsWorkspace extends StatelessWidget {
                     title: 'Тёмная тема',
                     subtitle: 'Переключается сразу и сохраняется на устройстве',
                     value: state.isDark,
-                    onChanged: (_) => state.toggleTheme(),
+                    onChanged: (_) => onToggleTheme(),
                   ),
                   _DesktopSettingsSwitch(
                     key: const ValueKey('desktop-settings-motion'),

@@ -1,56 +1,72 @@
 # Memory and Allocation Audit
 
-Last updated: 2026-07-14
+Last updated: 2026-07-15
 
-This is a static ownership/allocation audit. No process-memory improvement is
-claimed without a native before/after profile.
+Static ownership findings and runtime measurements are deliberately separated.
+No leak claim is made from source inspection alone.
 
-## Improvements Made
+## Allocation Improvements
 
-- Three statistics surfaces no longer independently filter, group, normalize,
-  and sort the same weekly history/task data during build.
-- `AnalyticsReadModel` uses one seven-day completion pass and one task pass.
-  Its outputs are immutable and reusable by desktop and mobile/report dialogs.
-- `AnalyticsReadModelCache` stores at most eight normalized weeks and clears on
-  an explicit analytics epoch change. It cannot grow with unbounded calendar
-  browsing.
-- Skill lookup is backed by an unmodifiable map pointing at the same summary
-  instances already held by the immutable list; it does not duplicate models.
-- Snapshot data retains effective `HistoryEntry` references for the selected
-  weeks, not copied task/skill object graphs.
-- Extracted presentation sections receive prepared summaries and avoid repeated
-  local list construction.
-- Progress Hub no longer creates a grouped map of weekly entries, per-skill
-  entry lists, a filtered today list, or a sorted full-history copy during
-  build. Its leader and latest-completion reads reuse bounded snapshots.
-- Quest form text/focus resources have one bounded lifecycle owner.
+- Analytics consumers share bounded immutable snapshots rather than repeatedly
+  filtering/grouping/sorting full history and task collections.
+- Analytics outputs contain scalar copies and no longer retain `AppState` or
+  mutable `Task`, `Skill`, `WeeklyGoal`, or `HistoryEntry` graphs.
+- The weekly cache is bounded to eight weeks and clears on epoch change.
+- Today Dashboard and TasksPanel construct one prepared view-data object per
+  parent rebuild instead of multiple intermediate lists in repeated children.
+- Completion/reward coordinators return compact result data and do not cache
+  models or closures.
+- `SaveScheduler` retains one writer callback, one timer, one in-flight future
+  and boolean trailing state; it does not retain snapshot byte buffers.
+- Snapshot codec payload maps/bytes are local variables, not service fields.
+- Form controllers and listeners have one bounded dialog lifecycle.
 
-## Staleness and Retention Policy
+## Rebuild Findings
 
-Relevant task, skill, RoadMap, recurring reset, daily-stat, and history
-mutations advance the AppState analytics epoch. Resolution with a new epoch
-clears every cached week before rebuilding. Loads and committed empty history
-also invalidate the completion and analytics indexes, so a prior snapshot
-cannot survive authoritative empty state.
+- Local hover/right-rail state has a focused widget boundary and does not call
+  broad AppState notifications.
+- Expensive weekly analytics construction is outside section/list-item builds.
+- The root no longer listens broadly or recreates `MaterialApp` for every
+  mutation. `AppStateProvider` propagates feature updates, while
+  `AppStateSelector` rebuilds the persistence/tooltips shell only when its
+  selected record changes.
+- `TasksPanel`, Today, RoadMap and parts of the desktop composition still
+  observe the broad AppState facade. Further selector work requires native
+  frame/rebuild evidence to avoid speculative state-management churn.
+- Hidden responsive branches are selected conditionally; the touched code does
+  not eagerly build both mobile and desktop trees.
 
-## Remaining Risks
+## Retention Risks Still Open
 
-- `AppState` is still broadly watched by several large desktop/mobile surfaces;
-  unrelated mutations can rebuild more UI than necessary.
-- `desktop_workspace.dart`, RoadMap inspector, and reporting dialogs remain
-  large and may retain sizeable widget trees while visible.
-- Snapshot serialization and Hive buffers were not changed or measured.
-- The observed macOS process size near 1 GB may include Flutter engine, native
-  surfaces, image/font caches, and retained routes; static source inspection
-  cannot attribute it reliably.
-- The unrelated toast geometry change in `shared.dart` was preserved and not
-  included in this audit's allocation claims.
+- Large desktop shells and routes can retain sizeable widget trees while
+  visible.
+- Flutter engine, native surfaces, fonts/images and Hive buffers are outside
+  the Dart object-graph evidence in this audit.
+- Public mutable collections mean external code can retain domain references;
+  coordinators do not solve ownership at the model API boundary.
+- Native route cycling and RoadMap/Statistics open-close scenarios need heap
+  snapshots before asserting stable memory.
 
-## Required Native Profiling
+## Runtime Profiling Protocol
 
-Use a macOS profile build and DevTools Memory view. Record heap snapshots after
-startup, repeated Statistics open/close, repeated RoadMap switching, 20+ skill
-selection changes, and a return to idle. Compare retained Dart objects and
-external memory, then use allocation tracing only for a confirmed growing type.
-Do not force GC, clear caches on navigation, or disable keep-alive without this
-evidence.
+Use a macOS profile build. Record RSS plus DevTools heap snapshots after:
+
+1. idle startup;
+2. 20 skill switches;
+3. repeated Statistics and Trophies open/close;
+4. repeated RoadMap entry/orientation changes;
+5. return to idle.
+
+A bounded idle RSS sample proves only that the profile app starts; it does not
+prove absence of a leak. Compare retained Dart types and external memory before
+changing keep-alive, caches or route ownership. Never force GC or clear caches
+on navigation as a substitute for evidence.
+
+## Current Runtime Baseline
+
+On 2026-07-15 the final macOS profile process started successfully and exposed
+a VM Service. RSS was `846944 KB` at process age `01:35` and `846976 KB` at
+`03:30`, a 32 KB change during the short idle interval. The automation environment could
+not foreground the app (`open returned 1`), so route cycling, DevTools heap
+snapshots and frame/rebuild traces were not performed. This is an idle baseline,
+not a leak verdict.

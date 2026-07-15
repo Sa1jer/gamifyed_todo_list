@@ -1,84 +1,72 @@
-# Application Decomposition Batch 2 Result
+# Application Decomposition Program Result
 
-Last updated: 2026-07-14
+Last updated: 2026-07-15
 
-## Phase 1 — Analytics Read Models
+This result covers the consecutive decomposition commits plus the corrective
+completion batch. It does not claim that every large file has disappeared.
 
-- Added `AnalyticsReadModel` and bounded `AnalyticsReadModelCache`.
-- Moved weekly completion grouping, XP aggregation, task counts, Stage
-  progress, sorting, and skill lookup out of widgets/AppState getters.
-- Migrated Desktop Statistics, Weekly Analytics, and Progress Hub.
-- Preserved existing history, Goal progress, Inbox exclusion, and date/week
-  semantics.
-- Added direct analytics equivalence/cache tests.
+## Phase 1 - Analytics and Read Models
 
-## Phase 2 — Presentation Decomposition
+- Extracted completion-history indexing and bounded base analytics snapshots.
+- Replaced Weekly Analytics' live `AppState`/model graph with explicit scalar
+  `WeeklyAnalyticsViewData`.
+- Migrated Statistics, Weekly Analytics, Progress Hub, Today Dashboard and
+  TasksPanel calculations to shared or feature read data.
+- Added direct equivalence, immutability, tie-break and stale-cache coverage.
 
-- Extracted mobile journal momentum, skill overview, goal ring, and empty state
-  into `mobile_journal_sections.dart` (`mobile_journal.dart`: 1289 -> 872).
-- Extracted desktop statistics summary and analytics panel into
-  `desktop_statistics_sections.dart`
-  (`desktop_statistics_workspace.dart`: 1305 -> 1051).
-- Extracted quest form text/focus lifecycle to `TaskFormController`
-  (`task_dialog.dart`: 1377 -> 1367).
-- Preserved visual composition, callbacks, navigation, and responsive behavior.
+## Phase 2 - Presentation Decomposition
 
-## Phase 3 — AppState Domain Decomposition
+- Extracted mobile journal and desktop statistics sections.
+- Extracted desktop selected-skill header and right rail as ordinary modules.
+- Extracted Weekly Analytics shared sections and weekly-goal editor.
+- Extracted Today Dashboard sections/view data and TasksPanel partition data.
+- Extracted task form controller/sections and RoadMap/boss/task tiles in the
+  preceding batch.
+- Split shared surfaces, buttons, progress/badges, dashed border, form and
+  motion controls while retaining compatibility exports.
 
-- Added `TaskMutationCoordinator` for quest normalization, CRUD, subtask,
-  recurrence, Inbox, and Stage-link policy.
-- Added `RoadmapMutationCoordinator` for Stage graph CRUD, path reorder,
-  template merge, prerequisite and linked-task cleanup.
-- Kept the public AppState API and centralized notification/save/listener
-  ordering.
-- `app_state.dart`: approximately 3405 -> 3138 lines in Batch 2 (about 3510 ->
-  3138 across the two consecutive decomposition batches).
+The remaining desktop and Weekly Analytics shells are explicitly listed as P1
+follow-ups; this batch did not hide them behind more `part` files.
 
-## Phase 4 — Logic, Readability, Rebuild, and Memory Hardening
+## Phase 3 - AppState Domain Decomposition
 
-- Completed analytics invalidation for skill, RoadMap, recurring reset,
-  daily-stat, and history mutations.
-- Avoided save/notify work after no-op task/Stage removal.
-- Preserved cancellation of stale Inbox notifications after normalization.
-- Added O(1) snapshot skill lookup without duplicate model copies.
-- Removed Progress Hub's per-build weekly grouping, today filtering, and
-  full-history sorting by extending the immutable analytics/history reads.
-- Verified controller/listener ownership and documented remaining profile-only
-  memory questions.
+- Extracted task, RoadMap, completion, reward, skill/goal and review/session
+  mutation coordinators behind stable AppState APIs.
+- Kept final notification, device side effects and persistence request ordering
+  in AppState.
+- Reduced AppState from 3405 to 2592 lines across the program (2759 to 2592 in
+  the corrective completion batch).
+- Added direct coordinator tests for completion/reward plus existing task and
+  RoadMap coordinator suites.
+
+## Phase 4 - Persistence, Models and Hardening
+
+- Split model declarations into cohesive files under `lib/models/`; retained
+  `lib/models.dart` as an eight-line compatibility barrel. No serialized shape
+  changed.
+- Extracted save scheduling, snapshot store access, codec and migration policy
+  from `StorageService`/AppState without changing recovery semantics.
+- Added scheduler single-flight/trailing/failure tests and snapshot/migration
+  fault tests.
+- Removed live mutable references from analytics outputs, made ordering
+  deterministic, and corrected the stale toast safe-region test.
+- Narrowed application-root observation with `AppStateSelector` while keeping
+  existing feature notification behavior through `InheritedNotifier`.
+- Added `tool/architecture_audit.dart` and made it part of the cross-platform
+  verify gate.
 
 ## Quantitative Result
 
-- Substantial coordinators/engines extracted across the program: 4
-  (`CompletionHistoryIndex`, analytics read model/cache, task coordinator,
-  RoadMap coordinator).
-- Presentation monoliths decomposed in Batch 2: 3.
-- New focused presentation components: 5 public section/card components plus
-  private focused subcomponents.
-- Large form lifecycle owners separated: 1.
-- Duplicate analytics implementations removed: 3 consumer paths now share one
-  model.
-- Confirmed logic issues fixed: 5.
-- Persisted schema/model changes: 0.
-- New dependencies: 0.
+| Metric | Result |
+|---|---:|
+| AppState lines | 3405 -> 2592 |
+| Substantial coordinators/indexes/read owners | 11 |
+| Persistence owners extracted | 4 |
+| Model declaration modules | 8 |
+| Presentation monoliths materially decomposed | 9 |
+| Direct new coordinator/persistence/read-data test files | 11 |
+| Storage schema changes | 0 |
+| New dependencies | 0 |
 
-## Validation and Known Failure
-
-The final focused analytics/coordinator/AppState run passed 101/101 tests and
-`flutter analyze` reported no issues. The complete suite passed 389 tests and
-retained one known failure: the `mobile_journal_tokens_test.dart` bottom bound
-expected `<= 588` while the current toast resolves to `672`. That failure
-predates Batch 2 and is associated with a separate uncommitted toast-size
-change in `lib/widgets/shared.dart`; this refactor deliberately does not modify
-it. Consequently `dart run tool/verify.dart` exits with code 1 at that same
-test after its format and analyze stages pass. The macOS release build
-completed successfully at 52.4 MB.
-
-Independent review found two analytics-equivalence defects before acceptance:
-historical entries for a deleted skill were omitted from weekly summaries, and
-the leading-skill tie-break had changed from AppState skill order to alphabetic
-order. The builder now retains historical-only summaries and computes the
-current leading skill before presentation sorting; direct regression tests
-cover both cases.
-
-See `ARCHITECTURE_INVENTORY.md`, `LOGIC_AND_READABILITY_AUDIT.md`, and
-`MEMORY_AUDIT.md` for remaining risks and evidence limits.
+Current large-file measurements and the acceptance status are in
+`FINAL_ARCHITECTURE_INVENTORY.md` and `COMPLETION_MATRIX.md`.

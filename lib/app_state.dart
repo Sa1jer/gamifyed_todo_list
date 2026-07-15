@@ -17,27 +17,17 @@ import 'engines/goal_progress_engine.dart';
 import 'engines/roadmap_engine.dart';
 import 'analytics/analytics_read_model.dart';
 import 'coordinators/roadmap_mutation_coordinator.dart';
+import 'coordinators/review_session_coordinator.dart';
 import 'coordinators/reward_mutation_coordinator.dart';
+import 'coordinators/skill_goal_mutation_coordinator.dart';
 import 'coordinators/task_mutation_coordinator.dart';
 import 'coordinators/task_completion_coordinator.dart';
+import 'persistence/save_scheduler.dart';
+
+export 'coordinators/skill_goal_mutation_coordinator.dart'
+    show NextGoalUpdateResult, StartNewRoadmapResult;
 
 part 'app_state/provider.dart';
-
-enum NextGoalUpdateResult {
-  updated,
-  invalid,
-  unchanged,
-  notCompleted,
-  notFound,
-}
-
-enum StartNewRoadmapResult {
-  created,
-  notFound,
-  noCompletedGoal,
-  noStages,
-  notCompleted,
-}
 
 class GoalMilestoneEvent {
   final String id;
@@ -60,7 +50,6 @@ class AppState extends ChangeNotifier {
 
   static const double _minimumActionRatio = 0.3;
   static const Duration _resetCheckInterval = Duration(minutes: 15);
-  static const Duration _saveDebounceDuration = Duration(milliseconds: 750);
   static const int _maxStreakProtectionCharges = 1;
   static const int _maxHistoryEntries = 2000;
 
@@ -87,16 +76,18 @@ class AppState extends ChangeNotifier {
   final GoalMilestoneEngine _goalMilestoneEngine = const GoalMilestoneEngine();
   final RoadmapMutationCoordinator _roadmapMutations =
       const RoadmapMutationCoordinator();
+  final ReviewSessionCoordinator _reviewSessions =
+      const ReviewSessionCoordinator();
   final RewardMutationCoordinator _rewardMutations =
       const RewardMutationCoordinator();
+  final SkillGoalMutationCoordinator _skillGoalMutations =
+      const SkillGoalMutationCoordinator();
   final TaskMutationCoordinator _taskMutations =
       const TaskMutationCoordinator();
   final TaskCompletionCoordinator _taskCompletions =
       const TaskCompletionCoordinator();
   Timer? _resetTimer;
-  Timer? _saveDebounceTimer;
-  Future<void>? _saveInFlight;
-  bool _saveAgainAfterInFlight = false;
+  late final SaveScheduler _saveScheduler;
 
   bool get isDark => _isDark;
   bool get sfxEnabled => _sfxEnabled;
@@ -167,6 +158,40 @@ class AppState extends ChangeNotifier {
   }) : _storage = storage,
        _notifications = notifications ?? NotificationService(),
        _random = random ?? math.Random() {
+    _saveScheduler = SaveScheduler(
+      writer: _writeAllUnlocked,
+      isBlocked: () => _persistenceStatus.blocksSaving,
+      onSaving: () => _setPersistenceStatus(
+        _persistenceStatus.copyWith(
+          phase: PersistencePhase.saving,
+          canRetry: false,
+          blocksSaving: false,
+          clearError: true,
+        ),
+      ),
+      onSaved: (savedAt) => _setPersistenceStatus(
+        _persistenceStatus.copyWith(
+          phase: PersistencePhase.ready,
+          lastSuccessfulSaveAt: savedAt,
+          canRetry: false,
+          isDirty: false,
+          blocksSaving: false,
+          clearError: true,
+        ),
+      ),
+      onFailure: (error, stackTrace) => _setPersistenceStatus(
+        _persistenceStatus.copyWith(
+          phase: PersistencePhase.saveFailed,
+          message: 'Не удалось сохранить изменения',
+          errorType: error.runtimeType.toString(),
+          debugDetails: '$error\n$stackTrace',
+          lastFailureAt: DateTime.now(),
+          canRetry: true,
+          isDirty: true,
+          blocksSaving: false,
+        ),
+      ),
+    );
     if (seedDefaults) {
       _initDefaults();
     }
@@ -178,14 +203,14 @@ class AppState extends ChangeNotifier {
   void dispose() {
     _isDisposed = true;
     pauseBackgroundWork();
+    _saveScheduler.dispose();
     super.dispose();
   }
 
   void pauseBackgroundWork() {
     _resetTimer?.cancel();
     _resetTimer = null;
-    _saveDebounceTimer?.cancel();
-    _saveDebounceTimer = null;
+    _saveScheduler.cancelPending();
     if (_persistenceStatus.isDirty) {
       unawaited(_runObservedSave());
     }
@@ -677,27 +702,10 @@ class AppState extends ChangeNotifier {
 
   Future<void> _saveAll({bool immediate = false}) {
     _markPersistenceDirty();
-    if (_persistenceStatus.blocksSaving) return Future.value();
-    if (_saveInFlight != null) {
-      _saveAgainAfterInFlight = true;
-      return Future.value();
-    }
-    if (immediate) return flushSaves();
-
-    _saveDebounceTimer?.cancel();
-    _saveDebounceTimer = Timer(_saveDebounceDuration, () {
-      _saveDebounceTimer = null;
-      unawaited(_runObservedSave());
-    });
-    return Future.value();
+    return _saveScheduler.request(immediate: immediate);
   }
 
-  Future<void> flushSaves() {
-    _saveDebounceTimer?.cancel();
-    _saveDebounceTimer = null;
-    if (_persistenceStatus.blocksSaving) return Future.value();
-    return _writeAll();
-  }
+  Future<void> flushSaves() => _saveScheduler.flush();
 
   Future<bool> retrySave() async {
     if (_persistenceStatus.blocksSaving) return false;
@@ -710,74 +718,13 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> _runObservedSave() async {
-    try {
-      await flushSaves();
-    } catch (_) {
-      // _writeAll records the failure before this observed future completes.
-    }
+    await _saveScheduler.runObserved();
   }
 
   void _requestObservedImmediateSave() {
     _markPersistenceDirty();
     if (_persistenceStatus.blocksSaving) return;
     unawaited(_runObservedSave());
-  }
-
-  Future<void> _writeAll() {
-    final inFlight = _saveInFlight;
-    if (inFlight != null) {
-      _saveAgainAfterInFlight = true;
-      return inFlight;
-    }
-
-    final completer = Completer<void>();
-    _saveInFlight = completer.future;
-    _setPersistenceStatus(
-      _persistenceStatus.copyWith(
-        phase: PersistencePhase.saving,
-        canRetry: false,
-        blocksSaving: false,
-        clearError: true,
-      ),
-    );
-
-    () async {
-      try {
-        do {
-          _saveAgainAfterInFlight = false;
-          await _writeAllUnlocked();
-        } while (_saveAgainAfterInFlight);
-        _setPersistenceStatus(
-          _persistenceStatus.copyWith(
-            phase: PersistencePhase.ready,
-            lastSuccessfulSaveAt: DateTime.now(),
-            canRetry: false,
-            isDirty: false,
-            blocksSaving: false,
-            clearError: true,
-          ),
-        );
-        completer.complete();
-      } catch (error, stackTrace) {
-        _setPersistenceStatus(
-          _persistenceStatus.copyWith(
-            phase: PersistencePhase.saveFailed,
-            message: 'Не удалось сохранить изменения',
-            errorType: error.runtimeType.toString(),
-            debugDetails: '$error\n$stackTrace',
-            lastFailureAt: DateTime.now(),
-            canRetry: true,
-            isDirty: true,
-            blocksSaving: false,
-          ),
-        );
-        completer.completeError(error, stackTrace);
-      } finally {
-        _saveInFlight = null;
-      }
-    }();
-
-    return completer.future;
   }
 
   Future<void> _writeAllUnlocked() async {
@@ -876,7 +823,7 @@ class AppState extends ChangeNotifier {
       _dismissedCourseNudgeKeys.contains(key);
 
   void dismissCourseNudge(String key) {
-    if (_dismissedCourseNudgeKeys.add(key)) {
+    if (_reviewSessions.dismissNudge(_dismissedCourseNudgeKeys, key)) {
       notifyListeners();
     }
   }
@@ -1185,7 +1132,6 @@ class AppState extends ChangeNotifier {
 
   void checkResets() {
     if (_resetExpiredTasks()) {
-      _invalidateAnalyticsReadModel();
       _syncAllTaskNotifications();
       notifyListeners();
       _saveAll();
@@ -1265,12 +1211,30 @@ class AppState extends ChangeNotifier {
 
   void _invalidateHistoryCaches() {
     _completionHistoryIndex.invalidate();
+  }
+
+  /// A listener notification is the cache-invalidation boundary for all
+  /// externally observable state changes. This deliberately favors
+  /// correctness over retaining a derived snapshot across unrelated updates:
+  /// a new mutation path cannot expose stale analytics by forgetting a manual
+  /// epoch increment.
+  @override
+  void notifyListeners() {
     _invalidateAnalyticsReadModel();
+    super.notifyListeners();
   }
 
   void _invalidateAnalyticsReadModel() {
     _analyticsEpoch++;
     _analyticsReadModelCache.invalidate();
+  }
+
+  void _commitMutation({bool invalidatesHistory = false, bool persist = true}) {
+    if (invalidatesHistory) {
+      _invalidateHistoryCaches();
+    }
+    if (!_isDisposed) notifyListeners();
+    if (persist) _saveAll();
   }
 
   List<Boss> get activeBosses =>
@@ -1301,67 +1265,25 @@ class AppState extends ChangeNotifier {
     required String title,
     required List<WeeklyKeyResult> keyResults,
   }) {
-    final normalizedStart = startOfWeek(weekStart);
-    final normalizedTitle = title.trim();
-    final normalizedResults = keyResults
-        .map(
-          (result) => WeeklyKeyResult(
-            id: result.id.isEmpty ? uid() : result.id,
-            title: result.title.trim(),
-            isDone: result.isDone,
-            completedAt: result.completedAt,
-          ),
-        )
-        .where((result) => result.title.isNotEmpty)
-        .take(5)
-        .toList();
-
-    final existing = weeklyGoalForWeek(normalizedStart);
-    if (normalizedTitle.isEmpty && normalizedResults.isEmpty) {
-      if (existing == null) return;
-      weeklyGoals.remove(existing);
-      notifyListeners();
-      _saveAll();
-      return;
-    }
-
-    final now = DateTime.now();
-    if (existing == null) {
-      weeklyGoals.add(
-        WeeklyGoal(
-          id: uid(),
-          weekStart: normalizedStart,
-          title: normalizedTitle.isEmpty ? 'Цель недели' : normalizedTitle,
-          keyResults: normalizedResults,
-          createdAt: now,
-          updatedAt: now,
-        ),
-      );
-    } else {
-      existing.title = normalizedTitle.isEmpty
-          ? 'Цель недели'
-          : normalizedTitle;
-      existing.keyResults = normalizedResults;
-      existing.updatedAt = now;
-    }
-
-    weeklyGoals.sort((a, b) => b.weekStart.compareTo(a.weekStart));
-    notifyListeners();
-    _saveAll();
+    final changed = _reviewSessions.saveWeeklyGoal(
+      goals: weeklyGoals,
+      weekStart: weekStart,
+      title: title,
+      keyResults: keyResults,
+      idFactory: uid,
+      now: DateTime.now(),
+    );
+    if (changed) _commitMutation();
   }
 
   void toggleWeeklyKeyResult(String goalId, String keyResultId) {
-    final goal = weeklyGoals.where((item) => item.id == goalId).firstOrNull;
-    final keyResult = goal?.keyResults
-        .where((item) => item.id == keyResultId)
-        .firstOrNull;
-    if (goal == null || keyResult == null) return;
-
-    keyResult.isDone = !keyResult.isDone;
-    keyResult.completedAt = keyResult.isDone ? DateTime.now() : null;
-    goal.updatedAt = DateTime.now();
-    notifyListeners();
-    _saveAll();
+    final changed = _reviewSessions.toggleWeeklyKeyResult(
+      goals: weeklyGoals,
+      goalId: goalId,
+      keyResultId: keyResultId,
+      now: DateTime.now(),
+    );
+    if (changed) _commitMutation();
   }
 
   List<RewardChest> consumeRewardChestNotifications() {
@@ -1564,7 +1486,6 @@ class AppState extends ChangeNotifier {
     todayStats!.tasksCompleted++;
     todayStats!.xpEarned += xp;
     todayStats!.skillsImproved += skillUp;
-    _invalidateAnalyticsReadModel();
     _maybeUnlockDailyRewardChest();
   }
 
@@ -1572,14 +1493,12 @@ class AppState extends ChangeNotifier {
     _resetDailyStatsIfNeeded();
     todayStats!.xpEarned += xp;
     todayStats!.skillsImproved += skillUp;
-    _invalidateAnalyticsReadModel();
   }
 
   void _updateInboxDailyStats(int xp) {
     _resetDailyStatsIfNeeded();
     todayStats!.tasksCompleted++;
     todayStats!.xpEarned += xp;
-    _invalidateAnalyticsReadModel();
   }
 
   void _resetDailyStatsIfNeeded() {
@@ -1788,9 +1707,13 @@ class AppState extends ChangeNotifier {
   // ── CRUD ─────────────────────────────────────────────────────────────────────
 
   void selectSkill(String id) {
-    if (_skillById(id) == null) return;
-    final next = selectedSkillId == id ? null : id;
-    _setSelectedSkill(next);
+    final result = _reviewSessions.select(
+      currentSkillId: selectedSkillId,
+      requestedSkillId: id,
+      skills: skills,
+      toggle: true,
+    );
+    if (result.changed) _setSelectedSkill(result.skillId);
   }
 
   void clearSkillSelection() {
@@ -1804,40 +1727,19 @@ class AppState extends ChangeNotifier {
   }
 
   void addSkill(Skill s) {
-    s.syncChecklistDone();
-    s.syncTreeNodes();
-    final inboxIndex = skills.indexWhere((skill) => skill.id == kInboxSkillId);
-    if (inboxIndex == -1) {
-      skills.add(s);
-      _ensureInboxSkill();
-    } else {
-      skills.insert(inboxIndex, s);
-    }
-    _invalidateAnalyticsReadModel();
+    if (!_skillGoalMutations.add(skills: skills, skill: s)) return;
+    _ensureInboxSkill();
     _checkAchievements();
-    notifyListeners();
-    _saveAll();
+    _commitMutation();
   }
 
   void reorderSkills(int oldIndex, int newIndex) {
-    if (oldIndex < 0 ||
-        oldIndex >= skills.length ||
-        newIndex < 0 ||
-        newIndex >= skills.length ||
-        newIndex == oldIndex) {
-      return;
-    }
-    if (skills[oldIndex].id == kInboxSkillId) return;
-
-    final skill = skills.removeAt(oldIndex);
-    skills.insert(newIndex, skill);
-    final inboxIndex = skills.indexWhere((item) => item.id == kInboxSkillId);
-    if (inboxIndex != -1 && inboxIndex != skills.length - 1) {
-      final inbox = skills.removeAt(inboxIndex);
-      skills.add(inbox);
-    }
-    notifyListeners();
-    _saveAll();
+    final changed = _skillGoalMutations.reorder(
+      skills: skills,
+      oldIndex: oldIndex,
+      newIndex: newIndex,
+    );
+    if (changed) _commitMutation();
   }
 
   void updateSkill(
@@ -1848,18 +1750,17 @@ class AppState extends ChangeNotifier {
     required Color color,
     required IconData icon,
   }) {
-    if (skill.id == kInboxSkillId) return;
-    skill.name = name;
-    skill.goal = goal;
-    skill.checklist = List.of(checklist);
+    final changed = _skillGoalMutations.update(
+      skill: skill,
+      name: name,
+      goal: goal,
+      checklist: checklist,
+    );
+    if (!changed) return;
     skill.color = color;
     skill.icon = icon;
-    skill.syncChecklistDone();
-    skill.syncTreeNodes();
-    _invalidateAnalyticsReadModel();
     _checkAchievements();
-    notifyListeners();
-    _saveAll();
+    _commitMutation();
   }
 
   NextGoalUpdateResult setNextSkillGoal(
@@ -1867,105 +1768,46 @@ class AppState extends ChangeNotifier {
     String nextGoal, {
     DateTime? completedAt,
   }) {
-    final normalizedGoal = nextGoal.trim();
-    if (normalizedGoal.isEmpty) return NextGoalUpdateResult.invalid;
-
-    final skill = _skillById(skillId);
-    if (skill == null) return NextGoalUpdateResult.notFound;
-    final progress = const GoalProgressEngine().snapshotForSkill(skill);
-    if (!progress.isComplete) {
-      return NextGoalUpdateResult.notCompleted;
+    final result = _skillGoalMutations.setNextGoal(
+      skill: _skillById(skillId),
+      nextGoal: nextGoal,
+      idFactory: uid,
+      completedAt: completedAt ?? DateTime.now(),
+    );
+    if (result == NextGoalUpdateResult.updated) {
+      _commitMutation();
     }
-    if (normalizedGoal == skill.goal.trim()) {
-      return NextGoalUpdateResult.unchanged;
-    }
-
-    final previousGoal = skill.goal.trim();
-    if (previousGoal.isNotEmpty) {
-      skill.completedGoals.insert(
-        0,
-        CompletedGoal(
-          id: uid(),
-          skillId: skill.id,
-          goalText: previousGoal,
-          completedAt: completedAt ?? DateTime.now(),
-          progressAtCompletion: progress.value,
-          completedStages: progress.completedStages,
-          totalStages: progress.totalStages,
-        ),
-      );
-    }
-    skill.goal = normalizedGoal;
-    skill.triggeredGoalMilestones.clear();
-    notifyListeners();
-    _saveAll();
-    return NextGoalUpdateResult.updated;
+    return result;
   }
 
   StartNewRoadmapResult startNewRoadmapForNextGoal(String skillId) {
     final skill = _skillById(skillId);
-    if (skill == null) return StartNewRoadmapResult.notFound;
-    if (skill.treeNodes.isEmpty) return StartNewRoadmapResult.noStages;
-
-    final progress = const GoalProgressEngine().snapshotForSkill(skill);
-    if (!progress.isComplete) return StartNewRoadmapResult.notCompleted;
-
-    final completedGoal = skill.completedGoals.firstOrNull;
-    if (completedGoal == null) {
-      return StartNewRoadmapResult.noCompletedGoal;
-    }
-
-    final archivedNodeIds = skill.treeNodes.map((node) => node.id).toSet();
-    skill.completedRoadmaps.insert(
-      0,
-      CompletedRoadmap(
-        id: uid(),
-        skillId: skill.id,
-        completedGoalId: completedGoal.id,
-        goalText: completedGoal.goalText,
-        completedAt: completedGoal.completedAt,
-        progressAtCompletion: progress.value,
-        completedStages: progress.completedStages,
-        totalStages: progress.totalStages,
-        stages: skill.treeNodes.map(RoadmapStageSnapshot.fromNode),
-      ),
+    final result = _skillGoalMutations.startNewRoadmap(
+      skill: skill,
+      tasks: tasks,
+      idFactory: uid,
+      now: DateTime.now(),
     );
-
-    final now = DateTime.now();
-    for (final task in tasks.where(
-      (task) =>
-          task.isSkillTask &&
-          task.skillId == skill.id &&
-          task.treeNodeId != null &&
-          archivedNodeIds.contains(task.treeNodeId),
-    )) {
-      task.treeNodeId = null;
-      task.updatedAt = now;
+    if (result == StartNewRoadmapResult.created) {
+      _syncBossesForSkill(skillId);
+      _commitMutation();
     }
-
-    skill.treeNodes.clear();
-    skill.syncTreeNodes();
-    _invalidateAnalyticsReadModel();
-    _syncBossesForSkill(skillId);
-    notifyListeners();
-    _saveAll();
-    return StartNewRoadmapResult.created;
+    return result;
   }
 
   void addGoalReview(String skillId, GoalReviewEntry review) {
-    final skill = _skillById(skillId);
-    if (skill == null) return;
-    skill.goalSpec.reviews.insert(0, review);
-    skill.goalSpec.updatedAt = DateTime.now();
-    notifyListeners();
-    _saveAll();
+    final changed = _reviewSessions.addGoalReview(
+      skill: _skillById(skillId),
+      review: review,
+      now: DateTime.now(),
+    );
+    if (changed) _commitMutation();
   }
 
   void addSkillTreeNode(String skillId, SkillTreeNode node) {
     final skill = _skillById(skillId);
     if (skill == null) return;
     _roadmapMutations.addStage(skill, node);
-    _invalidateAnalyticsReadModel();
     _syncBossesForSkill(skillId);
     notifyListeners();
     _saveAll();
@@ -1999,7 +1841,6 @@ class AppState extends ChangeNotifier {
         !_roadmapMutations.applyTemplate(skill, tasks, config)) {
       return;
     }
-    _invalidateAnalyticsReadModel();
     _syncBossesForSkill(skillId);
     notifyListeners();
     _saveAll();
@@ -2024,7 +1865,6 @@ class AppState extends ChangeNotifier {
       requiredQuestCompletions: requiredQuestCompletions,
     );
     if (node == null) return null;
-    _invalidateAnalyticsReadModel();
     _syncBossesForSkill(skillId);
     notifyListeners();
     _saveAll();
@@ -2052,7 +1892,6 @@ class AppState extends ChangeNotifier {
       requiredQuestCompletions: requiredQuestCompletions,
     );
     if (node == null) return null;
-    _invalidateAnalyticsReadModel();
     _syncBossesForSkill(skillId);
     notifyListeners();
     _saveAll();
@@ -2101,7 +1940,6 @@ class AppState extends ChangeNotifier {
         )) {
       return;
     }
-    _invalidateAnalyticsReadModel();
     _syncBossesForSkill(skillId);
     notifyListeners();
     _saveAll();
@@ -2209,24 +2047,21 @@ class AppState extends ChangeNotifier {
   }
 
   void removeSkill(String id) {
-    if (id == kInboxSkillId) return;
-    final removedTaskIds = tasks
-        .where((t) => t.isSkillTask && t.skillId == id)
-        .map((t) => t.id)
-        .toList();
-    for (final taskId in removedTaskIds) {
+    final result = _skillGoalMutations.remove(
+      skillId: id,
+      skills: skills,
+      tasks: tasks,
+      bosses: bosses,
+      rewardChests: rewardChests,
+      buffs: buffs,
+      selectedSkillId: selectedSkillId,
+    );
+    if (!result.changed) return;
+    for (final taskId in result.removedTaskIds) {
       _notifications.cancelNotification(_notificationId(taskId));
     }
-
-    skills.removeWhere((s) => s.id == id);
-    tasks.removeWhere((t) => t.isSkillTask && t.skillId == id);
-    bosses.removeWhere((b) => b.skillId == id);
-    rewardChests.removeWhere((chest) => chest.skillId == id);
-    buffs.removeWhere((buff) => buff.skillId == id);
-    if (selectedSkillId == id) selectedSkillId = null;
-    _invalidateAnalyticsReadModel();
-    notifyListeners();
-    _saveAll();
+    if (result.clearsSelection) selectedSkillId = null;
+    _commitMutation();
   }
 
   void addTask(Task t) {
@@ -2237,7 +2072,6 @@ class AppState extends ChangeNotifier {
       now: DateTime.now(),
     );
     if (t.isSkillTask) _completeOnboardingAfterFirstTask();
-    _invalidateAnalyticsReadModel();
     _syncTaskNotification(t);
     notifyListeners();
     _saveAll();
@@ -2305,7 +2139,6 @@ class AppState extends ChangeNotifier {
     if (result.notificationWasDisabled) {
       _notifications.cancelNotification(_notificationId(task.id));
     }
-    _invalidateAnalyticsReadModel();
     _syncTaskNotification(task);
     notifyListeners();
     _saveAll();
@@ -2318,7 +2151,6 @@ class AppState extends ChangeNotifier {
     if (task.isSkillTask) {
       _syncBossesForSkill(task.skillId);
     }
-    _invalidateAnalyticsReadModel();
     notifyListeners();
     _saveAll();
   }

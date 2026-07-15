@@ -12,9 +12,11 @@ Future<void> main() async {
         '--set-exit-if-changed',
         'lib',
         'test',
+        'tool',
       ],
     ),
     (executable: 'flutter', arguments: ['analyze']),
+    (executable: 'dart', arguments: ['run', 'tool/architecture_audit.dart']),
     (
       executable: 'flutter',
       arguments: ['test', '-r', 'expanded', '--timeout', '30s'],
