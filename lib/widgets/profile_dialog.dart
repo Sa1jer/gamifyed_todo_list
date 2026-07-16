@@ -328,6 +328,7 @@ class _ProfileDialogState extends State<ProfileDialog> {
   // ── Banner + Avatar ────────────────────────────────────────────────────────
 
   Widget _buildBannerSection(BuildContext context, AppState s, UserProfile p) {
+    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
     return SizedBox(
       height: 160,
       child: Stack(
@@ -349,7 +350,11 @@ class _ProfileDialogState extends State<ProfileDialog> {
                     width: double.infinity,
                     height: 160,
                     child: p.bannerBytes != null
-                        ? Image.memory(p.bannerBytes!, fit: BoxFit.cover)
+                        ? Image.memory(
+                            p.bannerBytes!,
+                            fit: BoxFit.cover,
+                            cacheHeight: (160 * pixelRatio).round(),
+                          )
                         : Container(
                             decoration: const BoxDecoration(
                               gradient: LinearGradient(
@@ -408,6 +413,8 @@ class _ProfileDialogState extends State<ProfileDialog> {
     UserProfile p,
     bool isDark,
   ) {
+    final avatarDecodeSize = (80 * MediaQuery.devicePixelRatioOf(context))
+        .round();
     return Tooltip(
       message: 'Изменить аватар',
       child: GestureDetector(
@@ -434,7 +441,11 @@ class _ProfileDialogState extends State<ProfileDialog> {
                     : null,
                 image: p.avatarBytes != null
                     ? DecorationImage(
-                        image: MemoryImage(p.avatarBytes!),
+                        image: ResizeImage.resizeIfNeeded(
+                          avatarDecodeSize,
+                          avatarDecodeSize,
+                          MemoryImage(p.avatarBytes!),
+                        ),
                         fit: BoxFit.cover,
                       )
                     : null,

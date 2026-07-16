@@ -1,10 +1,10 @@
-part of '../main_page.dart';
+import 'package:flutter/material.dart';
 
 enum WorkspaceMode { act, mastery, rewards, stats, settings }
 
-const _primaryWorkspaceModes = [WorkspaceMode.act, WorkspaceMode.mastery];
+const primaryWorkspaceModes = [WorkspaceMode.act, WorkspaceMode.mastery];
 
-extension _WorkspaceModeMeta on WorkspaceMode {
+extension WorkspaceModeMeta on WorkspaceMode {
   String get shortLabel => switch (this) {
     WorkspaceMode.act => 'Сейчас',
     WorkspaceMode.mastery => 'Карта',

@@ -1,4 +1,4 @@
-import '../models.dart';
+import '../models/activity_models.dart';
 import '../utils.dart';
 
 class CompletionHistorySnapshot {

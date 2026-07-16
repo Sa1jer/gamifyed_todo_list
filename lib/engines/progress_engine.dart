@@ -1,4 +1,5 @@
-import '../models.dart';
+import '../models/activity_models.dart';
+import '../models/skill_models.dart';
 import 'roadmap_engine.dart';
 
 enum ProgressBasis { metric, roadmap, skillLevel }

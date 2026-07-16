@@ -1036,7 +1036,7 @@ class _MainPageState extends State<MainPage> {
             key: _pageStackKey,
             children: [
               if (desktopShell)
-                _DesktopWorkspaceShell(
+                DesktopWorkspaceShell(
                   state: s,
                   mode: displayedMode,
                   metrics: desktopMetrics,

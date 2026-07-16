@@ -96,6 +96,8 @@ class _RPGAppState extends State<RPGApp>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _overlayImage?.dispose();
+    _overlayImage = null;
     _state.dispose();
     _revealCtrl.dispose();
     super.dispose();
@@ -182,8 +184,13 @@ class _RPGAppState extends State<RPGApp>
   }
 
   void _setOverlayImage(ui.Image? image) {
-    if (!mounted) return;
+    if (!mounted) {
+      image?.dispose();
+      return;
+    }
+    final previous = _overlayImage;
     setState(() => _overlayImage = image);
+    if (!identical(previous, image)) previous?.dispose();
   }
 
   Widget _buildRevealOverlay() {

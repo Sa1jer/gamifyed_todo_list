@@ -1,65 +1,55 @@
 # Final Architecture
 
-Last updated: 2026-07-15
+Last updated: 2026-07-16
 
-## Runtime Shape
+## Runtime Dependency Direction
 
 ```text
-Platform-specific widgets
-        |
-        v
-AppStateProvider / narrow root-shell selector
-        |
-        v
-AppState public facade and feature observation boundary
-        |
-        +--> immutable analytics/presentation builders
-        +--> mutation coordinators and pure engines
-        +--> device side effects
-        +--> SaveScheduler
-                 |
-                 v
-          StorageService
-                 |
-                 +--> SnapshotStore
-                 +--> StorageSnapshotCodec
-                 +--> StorageMigrationPolicy
+platform composition
+  -> AppStateProvider / focused AppStateSelector
+  -> AppState compatibility facade
+       -> immutable read-data builders
+       -> pure engines / mutation coordinators
+       -> device side effects
+       -> SaveScheduler
+            -> StorageService compatibility facade
+                 -> snapshot, migration, legacy-domain and preference owners
 ```
 
-The dependency direction is one-way. Read models do not retain `AppState` or
-mutable domain graphs. Coordinators do not import widgets, notify listeners or
-write storage. Persistence helpers do not know presentation state.
+Widgets do not import persistence. Analytics, coordinators, engines, and
+persistence helpers use narrow model-module imports. Coordinators never notify
+widgets or write storage; AppState applies cross-domain side effects and owns
+the final save/notification boundary.
 
-## Stable Compatibility Boundaries
+## Observation And Cache Policy
 
-- `AppState` remains the public API used by existing widgets.
-- `lib/models.dart` remains the import barrel for persisted models.
-- Hive type IDs, payload keys and snapshot/manifest behavior are unchanged.
-- `StorageService` remains the startup/recovery facade.
-- Desktop and mobile remain different compositions over shared domain rules.
+`AppStateProvider` remains the compatibility notifier. High-cost Tasks, Today,
+and RoadMap feature roots select `coreWorkspaceRevision` plus the small local
+values they render, then use `AppStateProvider.read` for callbacks. The revision
+advances for task, skill, completion, and RoadMap mutations, not for profile,
+preference, persistence-status, weekly-goal, or selection-only changes.
 
-## Cache and Invalidation Policy
+Analytics invalidation follows the same mutation boundary but is independent
+from presentation selection. `_commitMutation` defaults to conservative
+analytics invalidation; explicitly characterized unrelated mutations opt out.
+This keeps new domain paths safe by default without discarding snapshots for
+every listener notification.
 
-Analytics snapshots are recomputable, bounded and scalar. AppState invalidates
-them at the public notification boundary. This is intentionally conservative:
-it prevents stale results even when a new mutation path forgets a specialized
-epoch call. It may recompute after unrelated notifications, which should be
-optimized only after rebuild profiling.
+## Persistence Boundary
 
-## Presentation Policy
+`StorageService` owns box lifecycle and compatibility orchestration. Payload
+encoding, legacy domain access, local preferences, committed snapshot storage,
+migration policy, and save scheduling have focused owners. No helper knows
+AppState or widgets, and no helper independently notifies presentation.
 
-Large pages should compose feature sections with explicit data and callbacks.
-Heavy sorting/grouping belongs in deterministic presentation builders rather
-than repeated item builds. Controllers, focus nodes, timers and subscriptions
-have one lifecycle owner. Compatibility exports are temporary migration aids,
-not a reason to add new catch-all components.
+## Compatibility Rules
 
-## Evolution Rules
-
-1. Preserve the facade and schema while extracting one characterized domain.
-2. Return simple typed mutation results for cross-domain cleanup.
-3. Keep final save and notification sequencing explicit.
-4. Replace `part` boundaries incrementally with ordinary modules.
-5. Extend selectors beyond the root shell only after native rebuild evidence
-   identifies a valuable feature boundary; do not migrate state management as
-   a shortcut.
+- Keep AppState as the public facade until a separately characterized API
+  migration exists.
+- Keep `models.dart` as a presentation/legacy compatibility barrel; low-level
+  code imports concrete model modules.
+- Do not change Hive keys, type IDs, snapshot semantics, or authoritative-empty
+  behavior during structural refactors.
+- Desktop and mobile remain platform-appropriate compositions over shared
+  domain rules.
+- Add an audit rule before declaring a new extraction boundary complete.

@@ -1,6 +1,6 @@
 # Target Architecture
 
-Last updated: 2026-07-15
+Last updated: 2026-07-16
 
 The target is evolutionary: keep `AppState` and persisted payloads compatible
 while giving expensive reads, mutation policy, persistence mechanics and
@@ -55,8 +55,9 @@ Coordinators do not call `notifyListeners()` and do not write storage.
 - Analytics outputs are deeply projected scalar records with unmodifiable
   collections. Builders may read model inputs transiently but outputs do not
   retain them.
-- Cache keys are normalized week plus AppState analytics epoch. Cache size is
-  bounded and an epoch change clears retained weeks.
+- Cache keys are normalized week plus the AppState analytics revision. Cache
+  size is bounded; only characterized analytics-affecting mutations advance the
+  revision, while unknown mutation paths remain conservative by default.
 - Widget-specific filtering/sorting belongs in a presentation data builder,
   not in repeated list-item builds.
 - Time-sensitive builders receive `now` explicitly where deterministic tests
@@ -68,7 +69,8 @@ Coordinators do not call `notifyListeners()` and do not write storage.
   arrives during an in-flight write.
 - Flush waits for the full trailing sequence; failures remain observable and
   keep dirty state.
-- `SnapshotStore`/codec/migration helpers are internal to `StorageService`.
+- Snapshot, migration, legacy-domain, codec and preference helpers are internal
+  to the stable `StorageService` facade.
 - Commit marker last, current/previous fallback, authoritative committed empty
   collections and startup failed-load write blocking remain mandatory.
 - No coordinator performs independent full-snapshot writes.
@@ -82,18 +84,17 @@ Coordinators do not call `notifyListeners()` and do not write storage.
   cohesive module under `widgets/shared/`.
 - Controller/listener resources have one lifecycle owner and deterministic
   disposal.
-- Remaining `part` migration is incremental and must not be replaced by new
-  giant `part` files.
+- The desktop Act, Weekly Analytics, Progress Hub and Tasks extraction modules
+  use ordinary imports. Existing bounded RoadMap/secondary-workspace `part`
+  libraries remain compatibility exceptions and may not grow into new shells.
 
 ## Next Evolutionary Steps
 
-1. Profile broad feature-level rebuilds and retained routes before extending
-   selector use beyond the completed root-shell boundary.
-2. Extract desktop sidebar/main composition and the remaining Weekly Analytics
-   groups using explicit view data and callbacks.
-3. Add real-Hive interrupted-write/restart coverage around the new persistence
-   mechanics.
-4. Consider moving Flutter visual metadata out of domain models only with a
+1. Profile lower-priority feature rebuilds and retained routes before extending
+   selector use beyond the completed Tasks/Today/RoadMap boundaries.
+2. Add true process-kill/disk-full recovery coverage beyond the completed
+   disposable-directory Hive close/reopen tests.
+3. Consider moving Flutter visual metadata out of domain models only with a
    separate compatibility/schema plan.
 
 These are follow-ups, not evidence that the completed boundaries are wrappers:

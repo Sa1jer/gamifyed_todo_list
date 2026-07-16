@@ -1,26 +1,42 @@
 # Refactor Completion Matrix
 
-Last updated: 2026-07-15
+Last updated: 2026-07-16
+
+Sizes are physical line counts. `Before` is the verified start of the closing
+batch after commit `76891a8`; unchanged rows are included so the matrix does
+not confuse inspection with decomposition.
+
+| Area | Before | After | Responsibility before -> after | Files created / owners | Tests | Runtime / manual evidence | Remaining limitation |
+|---|---:|---:|---|---|---|---|---|
+| Desktop workspace | 2240 | 152 entry | One `part` owned navigation, selection, sidebar, workspace, quest rows and dialog routing -> ordinary composition entry with explicit modules | `desktop_sidebar.dart`, `desktop_main_workspace.dart`, `desktop_quest_row.dart`, `desktop_workspace_support.dart`; existing right rail retained | Desktop/widget suite and architecture ordinary-module guard | Analyzer and macOS build; interactive routing remains manual | `desktop_sidebar.dart` is cohesive but still 901 lines |
+| Weekly Analytics | 1571 | 293 entry | One dialog owned all sections -> shell owns week/state projection and delegates immutable section data | `weekly_header.dart`, `weekly_overview.dart`, `weekly_charts.dart`, `weekly_insights.dart`, `weekly_goal_section.dart`, `weekly_section.dart`, presentation data | Analytics equivalence and full widget suite | Analyzer/build; chart visual QA remains manual | Goal section is 550 lines but owns one form lifecycle |
+| Progress Hub | 1778 | 467 entry | Dialog mixed story, cards, review, actions and tutorial -> shell plus focused sections | `progress_hub_story.dart`, `progress_hub_cards.dart`, `progress_hub_goal_review.dart`, `progress_hub_actions.dart`, `progress_hub_tutorial.dart` | Existing Progress Hub/widget regressions | Analyzer/build; route cycling remains manual | No runtime rebuild trace captured for every subsection |
+| TasksPanel | 1490 | 890 entry | Desktop and mobile focus composition mixed with list preparation -> prepared data remains single source and mobile focus is detached | `tasks/mobile_focus_content.dart`; existing `task_tile.dart` reused | Selector tests, task/AppState tests, full widget suite | Analyzer/build | Entry is at the upper target bound and still owns desktop orchestration |
+| Skill-tree dialogs | 1473 | 706 entry | Shell, inspector and add/edit node flows shared one file -> focused dialog owners | `skill_tree_inspector.dart`, `add_skill_tree_node_dialog.dart`, `dialog_choice_chip.dart` | Existing RoadMap/dialog regressions and full suite | Analyzer/build; destructive-flow QA remains manual | Progression logic deliberately remains in existing engines/coordinator |
+| Rewards / bosses | 1326 | 295 entry | Bosses, reward visuals and tutorial were coupled -> separate visual/dialog owners | `bosses_dialog.dart`, `boss_card.dart`, `reward_components.dart`, `rewards_tutorial.dart` | Direct reward coordinator tests and full widget suite | Analyzer/build | Reward product rules intentionally unchanged |
+| RoadMap inspector | 1293 | 1293 | Already one cohesive selected-node inspector; audited, not falsely split -> remains bounded under presentation ceiling | No new file for this area | Existing RoadMap engine/widget tests | Analyzer/build; native interaction manual | Large cohesive file; future change should extract only with a concrete ownership seam |
+| Skill dialogs | 1219 | 1219 | Existing create/edit skill form audited for controller ownership -> unchanged | Existing shared controls retained | Existing skill dialog/widget tests | Analyzer/build | No decomposition claimed in this closing batch |
+| Main shell | 1215 | 1215 | Mobile/desktop routing remained stable; observation/read paths were audited -> unchanged composition | No new file | Shell/widget suite | Analyzer/build | Large but below enforced ceiling; native Back/window QA remains manual |
+| Statistics calendar | 1205 | 1205 | Calendar dialog remained one feature with local state -> inspected only | No new file | Existing statistics/widget suite | Analyzer/build | No decomposition claimed; visual/date-boundary QA remains manual |
+| Profile | 1189 | 1189 | Profile dialog remained one feature; image decoding/lifecycle changed outside its layout -> composition unchanged | Root image owner hardened in `main.dart` | Existing profile/widget tests | Analyzer/build | Native picker and large-image interaction remain manual |
+| AppState observation | Broad feature notifications | `coreWorkspaceRevision` on Tasks, Today and RoadMap roots | High-cost roots observed every notification -> domain revision ignores profile/persistence noise; mutation callbacks use non-listening `read` | Existing `AppStateSelector` | `app_state_selector_test.dart` proves unrelated updates do not rebuild and domain changes do | Deterministic widget tests | Lower-cost feature observers remain broad until a measured trace justifies more selectors |
+| Analytics invalidation | Every `notifyListeners()` | Mutation-effect flags | Any view/persistence event dropped cache -> `_commitMutation` separates analytics, history, core workspace and persistence effects | AppState facade remains invalidation owner | AppState identity/invalidation tests for profile, preference, selection, weekly goal, task, completion and RoadMap | Focused tests | Public mutable collections require conservative `refresh()` invalidation |
+| StorageService | 1306 | 401 facade | Boxes, preferences and every codec lived in facade -> initialization/stable API delegates to explicit stores/codecs | `legacy_storage_codec.dart`, `legacy_hive_domain_store.dart`, `hive_preference_store.dart`; snapshot owners retained | Snapshot, reliability, migration and reopen tests | Disposable Hive directory open/close/reopen | True process-kill and disk-full cannot be safely automated here |
+| Real-Hive reopen | No process-like facade test | 3 reopen scenarios | In-memory protocol tests only -> real Hive boxes close and reopen with new service instances | `test/storage_service_reopen_test.dart` | Legacy+snapshot reopen, corrupt-current fallback, authoritative empty snapshot | Same-process native Hive I/O | OS process kill and filesystem exhaustion remain manual |
+| Skill/Goal coordinator | Indirect AppState coverage | Dedicated direct suite | Facade tests obscured coordinator invariants -> direct pure mutation coverage | `test/coordinators/skill_goal_mutation_coordinator_test.dart` | Add/duplicate/Inbox/reorder/update/Goal/RoadMap/deletion cleanup cases | 7 direct cases | Mutable model ownership is intentionally unchanged |
+| Review/session coordinator | Indirect AppState coverage | Dedicated direct suite | Session and weekly Goal policy covered only through facade -> direct coordinator coverage | `test/coordinators/review_session_coordinator_test.dart` | Selection/nudge/Goal normalization/update/toggle/delete/review no-op cases | Direct deterministic cases | Wall-clock timestamps are asserted relationally, not mocked globally |
+| Lifecycle resources | Distributed owners | Explicit owner audit | Dynamic form controllers and decoded overlay images were high-risk -> controller removal disposes resources; root image replacement/unmount disposes `ui.Image` | Existing feature modules plus `main.dart` owner | Full widget suite catches dispose/setState regressions | Static audit and build | Native route/dialog cycling still required |
+| Image memory | Full source bytes could decode at native size | Display-bounded decode plus explicit `ui.Image` disposal | Avatar/banner and transition image lifetime were implicit -> decode constraints and replacement disposal are explicit | `main.dart`, existing profile image helpers | Existing image/profile tests and analyzer | macOS build; RSS profile recorded separately | No comparable before/after heap snapshot, so no memory reduction claim |
+| Runtime profile | Prior idle 846944 -> 846976 KB | Profile idle 22688 -> 23264 KB | Short idle sample only -> closing batch launched the current profile build and sampled the main process twice after startup | No production instrumentation added | N/A | `flutter run -d macos --profile`; main-process RSS increased 576 KB without runaway growth | Flutter could not foreground the app (`open returned 1`), so route/dialog cycling and heap snapshots remain unverified |
+| Architecture audit | Basic dependency checks | Dependency, barrel, module and size drift guards | Audit missed replacement monoliths/part drift -> checks key facade budgets, ordinary modules, narrow low-level imports and selector roots | `tool/architecture_audit.dart` integrated in `tool/verify.dart` | Audit is executed by verification | CLI audit | It is a targeted guard, not a general Dart architecture linter |
+
+## Cross-Cutting Status
 
 | Criterion | Status | Evidence / limitation |
 |---|---|---|
-| Weekly analytics does not retain AppState/live models | Confirmed | Scalar `WeeklyAnalyticsViewData` and direct tests. |
-| Base analytics is immutable by value | Confirmed | Scalar history records, unmodifiable collections and deterministic ties. |
-| Cache cannot miss a relevant public notification | Confirmed | Conservative invalidation in AppState notification boundary. |
-| Completion and reward domains extracted | Confirmed | Dedicated coordinators plus direct regression tests. |
-| At least two further AppState responsibilities extracted | Confirmed | Skill/goal and review/session coordinators. |
-| AppState materially smaller | Confirmed | About 3405 -> 2591 lines. |
-| Persistence scheduling extracted | Confirmed | `SaveScheduler` with debounce/single-flight/trailing/failure tests. |
-| Storage helper responsibilities split | Confirmed | Store, codec and migration policy; StorageService remains compatibility facade. |
-| Models declarations split | Confirmed | Eight modules and unchanged compatibility barrel/schema. |
-| Desktop workspace fully modular/no `part` | Not complete | Right rail is an ordinary module, but the 2240-line shell remains a `part`. P1 follow-up. |
-| Weekly Analytics fully decomposed | Partially confirmed | Scalar read data and repeated UI sections extracted; 1571-line shell remains. P1 follow-up. |
-| Shared catch-all reduced | Confirmed with follow-up | Cohesive modules extracted; compatibility barrel still contains legacy categories. |
-| Task form has independent lifecycle owner | Confirmed | Expanded `TaskFormController`; shell remains sizeable. |
-| Today/Tasks repeated build calculations reduced | Confirmed | Deterministic prepared view-data objects and tests. |
-| Root rebuild selector migration | Confirmed at shell boundary | `InheritedNotifier` preserves feature updates; `AppStateSelector` prevents unrelated domain mutations from rebuilding the root shell. Feature-level broad observation remains a P1 profile target. |
-| Toast geometry suite green without product revert | Confirmed | Stale hard-coded test value replaced by production safe-region contract. |
-| Architecture drift gate exists | Confirmed | `tool/architecture_audit.dart`, run by `tool/verify.dart`. |
-| Storage schema/product semantics unchanged | Confirmed | No type/key/formula changes in diff. |
-| Runtime memory improvement measured | Partially verified | Profile idle RSS was 846944 -> 846976 KB; interactive heap/rebuild scenarios remain. |
-| Full validation | Confirmed | Non-mutating format, analyze, architecture audit, 416 tests, diff check and macOS release build passed. |
+| Analytics outputs do not retain AppState/live mutable models | Confirmed | Scalar records and direct tests in `lib/analytics/`. |
+| AppState materially smaller | Confirmed | Approximately 3405 -> 2579 lines across the program. |
+| Low-level imports are narrow | Confirmed | Analytics/coordinator/engine/persistence folders do not import `models.dart`; audit enforces it. |
+| Storage schema/product behavior unchanged | Confirmed | No persisted field/key/formula changes in the diff. |
+| RoadMap `part` library removed | Not in this scope | Existing painter/editor library remains bounded; its feature root observation was narrowed. |
+| Full validation | Confirmed | `dart run tool/verify.dart` passed format-check, analyzer, architecture audit, 438 tests and whitespace check; macOS release and Android debug builds passed. |

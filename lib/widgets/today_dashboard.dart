@@ -53,7 +53,20 @@ class _TodayDashboardState extends State<TodayDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    final state = AppStateProvider.of(context);
+    return AppStateSelector<
+      ({int revision, String? selectedSkillId, bool isDark})
+    >(
+      selector: (state) => (
+        revision: state.coreWorkspaceRevision,
+        selectedSkillId: state.selectedSkillId,
+        isDark: state.isDark,
+      ),
+      builder: (context, _, _) =>
+          _buildDashboard(context, AppStateProvider.read(context)),
+    );
+  }
+
+  Widget _buildDashboard(BuildContext context, AppState state) {
     final isDark = state.isDark;
     final txt = textColor(isDark);
     final sub = subtext(isDark);

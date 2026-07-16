@@ -1,6 +1,35 @@
 import 'dart:io';
 
 const _largestFileCount = 15;
+const _maxProductionFileLines = 2700;
+const _maxPresentationFileLines = 1350;
+
+const _fileLineBudgets = <String, int>{
+  'lib/app_state.dart': 2650,
+  'lib/storage_service.dart': 500,
+  'lib/widgets/shared.dart': 1000,
+  'lib/widgets/main_page/desktop_workspace.dart': 250,
+  'lib/widgets/weekly_analytics_dialog.dart': 400,
+  'lib/widgets/progress_hub_dialog.dart': 500,
+  'lib/widgets/tasks_panel.dart': 950,
+  'lib/widgets/today_dashboard.dart': 1150,
+};
+
+const _ordinaryExtractedModules = <String>{
+  'lib/widgets/main_page/desktop_main_workspace.dart',
+  'lib/widgets/main_page/desktop_quest_row.dart',
+  'lib/widgets/main_page/desktop_right_rail.dart',
+  'lib/widgets/main_page/desktop_selected_skill_header.dart',
+  'lib/widgets/main_page/desktop_sidebar.dart',
+  'lib/widgets/main_page/desktop_workspace.dart',
+  'lib/widgets/main_page/desktop_workspace_support.dart',
+};
+
+const _selectorMigratedFeatureRoots = <String>{
+  'lib/widgets/tasks_panel.dart',
+  'lib/widgets/today_dashboard.dart',
+  'lib/widgets/mastery_map/workspace_shell.dart',
+};
 
 Future<void> main() async {
   final root = Directory.current;
@@ -22,24 +51,67 @@ Future<void> main() async {
   for (final file in dartFiles) {
     final relative = _relativePath(root, file);
     final source = await file.readAsString();
-    measurements.add(
-      _FileMeasurement(relative, '\n'.allMatches(source).length + 1),
-    );
+    final lines = '\n'.allMatches(source).length + 1;
+    measurements.add(_FileMeasurement(relative, lines));
+
+    if (lines > _maxProductionFileLines) {
+      violations.add(
+        '$relative has $lines lines; production files must remain at or below '
+        '$_maxProductionFileLines lines.',
+      );
+    }
+    if (relative.startsWith('lib/widgets/') &&
+        lines > _maxPresentationFileLines) {
+      violations.add(
+        '$relative has $lines lines; presentation files must remain at or '
+        'below $_maxPresentationFileLines lines.',
+      );
+    }
+    final fileBudget = _fileLineBudgets[relative];
+    if (fileBudget != null && lines > fileBudget) {
+      violations.add(
+        '$relative regressed above its $fileBudget-line decomposition budget '
+        '($lines lines).',
+      );
+    }
 
     if (relative.startsWith('lib/analytics/')) {
       _forbidImport(relative, source, 'app_state.dart', violations);
       _forbidImport(relative, source, 'package:flutter/', violations);
+      _forbidImport(relative, source, '/models.dart', violations);
       _forbidLiveModelField(relative, source, violations);
     }
     if (relative.startsWith('lib/coordinators/')) {
       _forbidImport(relative, source, 'app_state.dart', violations);
       _forbidImport(relative, source, '/widgets/', violations);
       _forbidImport(relative, source, 'package:flutter/', violations);
+      _forbidImport(relative, source, '/models.dart', violations);
+    }
+    if (relative.startsWith('lib/engines/')) {
+      _forbidImport(relative, source, '/models.dart', violations);
     }
     if (relative.startsWith('lib/persistence/')) {
       _forbidImport(relative, source, 'app_state.dart', violations);
       _forbidImport(relative, source, '/widgets/', violations);
       _forbidImport(relative, source, 'package:flutter/', violations);
+      _forbidImport(relative, source, '/models.dart', violations);
+    }
+    if (relative.startsWith('lib/widgets/')) {
+      _forbidImport(relative, source, 'storage_service.dart', violations);
+      _forbidImport(relative, source, '/persistence/', violations);
+    }
+    if (_ordinaryExtractedModules.contains(relative) ||
+        relative.startsWith('lib/widgets/weekly_analytics/') ||
+        relative.startsWith('lib/widgets/progress_hub/') ||
+        relative.startsWith('lib/widgets/tasks/')) {
+      _forbidPartOf(relative, source, violations);
+    }
+    if (_selectorMigratedFeatureRoots.contains(relative) &&
+        source.contains('AppStateProvider.of(context)')) {
+      violations.add(
+        '$relative must use AppStateSelector plus AppStateProvider.read at its '
+        'feature root; broad AppStateProvider.of observation is forbidden.',
+      );
     }
   }
 
@@ -79,6 +151,14 @@ Future<void> main() async {
     stderr.writeln('- $violation');
   }
   exitCode = 1;
+}
+
+void _forbidPartOf(String path, String source, List<String> violations) {
+  if (RegExp(r'^\s*part\s+of\s+', multiLine: true).hasMatch(source)) {
+    violations.add(
+      '$path is an extracted ordinary module and must not regress to part of.',
+    );
+  }
 }
 
 void _forbidImport(

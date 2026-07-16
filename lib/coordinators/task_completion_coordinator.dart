@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 
-import '../models.dart';
+import '../models/skill_models.dart';
+import '../models/task_models.dart';
+import '../models/user_profile.dart';
 import '../utils.dart';
 
 class TaskCompletionMutationResult {

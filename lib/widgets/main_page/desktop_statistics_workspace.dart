@@ -350,7 +350,7 @@ class _DesktopCourseNudgeCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          _DesktopCompactButton(
+          DesktopCompactButton(
             label: nudge.actionLabel,
             icon: Icons.arrow_forward_rounded,
             color: nudge.skill.color,
@@ -724,7 +724,7 @@ class _DesktopStatisticsLinkCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => _DesktopInteractiveSurface(
+  Widget build(BuildContext context) => DesktopInteractiveSurface(
     baseColor: tokens.cardSurface,
     hoverColor: color.withValues(alpha: 0.07),
     borderColor: color.withValues(alpha: 0.18),
@@ -939,7 +939,7 @@ class _DesktopRailLink extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(bottom: 8),
-    child: _DesktopInteractiveSurface(
+    child: DesktopInteractiveSurface(
       baseColor: tokens.cardSurface,
       hoverColor: color.withValues(alpha: 0.07),
       borderColor: color.withValues(alpha: 0.16),

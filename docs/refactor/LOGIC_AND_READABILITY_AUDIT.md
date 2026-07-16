@@ -1,6 +1,6 @@
 # Logic and Readability Audit
 
-Last updated: 2026-07-15
+Last updated: 2026-07-16
 
 ## Scope
 
@@ -19,9 +19,9 @@ presentation paths.
 3. `isCurrentSkill` actually meant “the skill still exists”; it is now
    `isExistingSkill`. Full activity-leader ties have an explicit stable ID
    tie-break.
-4. Manual per-method analytics invalidation was easy to omit. The facade now
-   invalidates conservatively at its notification boundary, so stale snapshots
-   cannot survive a state notification.
+4. Analytics invalidation is classified at the central mutation boundary.
+   Relevant domain mutations invalidate by default; characterized profile,
+   preference, persistence, selection and weekly-goal-only paths opt out.
 5. Completion and reward extraction preserves quick-task isolation, consumed
    buff IDs, source-key idempotency and undo restoration in typed results.
 6. Skill deletion still clears linked tasks, rewards, buffs, bosses,
@@ -33,6 +33,10 @@ presentation paths.
    user-owned toast geometry itself was not reverted.
 9. TasksPanel no longer repeats partition/sort logic in build. Completed and
    archived ordering has a deterministic task-ID tie-break.
+10. Missing boss removal is a true no-op, and startup reset changes use the
+    same single commit/save/notification path as other mutations.
+11. Skill/Goal and Review/session coordinators now have direct no-op,
+    normalization and cleanup coverage.
 
 ## Preserved Invariants
 
@@ -61,10 +65,9 @@ presentation paths.
 - Public mutable model/list ownership still permits callers holding references
   after coordinator insertion. Changing that requires a larger API and storage
   compatibility plan.
-- Conservative analytics invalidation may rebuild snapshots after unrelated
-  preference notifications. It is correct but should be optimized only with
-  measured selector/rebuild work.
+- Lower-priority feature observers remain broad by design until native rebuild
+  traces demonstrate a useful selector boundary.
 - Skill and achievement models still contain Flutter visual metadata. That is
   a known layering compromise, not a new regression.
-- Remaining large presentation shells should be decomposed further, but no
-  behavioral bug justified a risky all-at-once rewrite.
+- Existing RoadMap/secondary-workspace `part` libraries are bounded
+  compatibility areas; no new giant `part` shell was introduced.

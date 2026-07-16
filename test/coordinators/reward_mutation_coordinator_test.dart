@@ -123,5 +123,7 @@ Buff _buff(
   bonusPercent: bonus,
   charges: charges,
   createdAt: now,
-  expiresAt: now.add(const Duration(days: 1)),
+  // Buff.isActive reads the wall clock, so keep this coordinator fixture
+  // active independently of the date on which the suite is executed.
+  expiresAt: DateTime.utc(9999),
 );

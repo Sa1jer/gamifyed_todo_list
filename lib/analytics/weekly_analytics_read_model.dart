@@ -1,5 +1,6 @@
 import '../engines/task_ordering.dart';
-import '../models.dart';
+import '../models/activity_models.dart';
+import '../models/task_models.dart';
 import '../utils.dart';
 import 'analytics_read_model.dart';
 

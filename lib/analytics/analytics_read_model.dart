@@ -1,5 +1,7 @@
 import '../engines/goal_progress_engine.dart';
-import '../models.dart';
+import '../models/activity_models.dart';
+import '../models/skill_models.dart';
+import '../models/task_models.dart';
 import '../utils.dart';
 
 class AnalyticsDaySummary {

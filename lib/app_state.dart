@@ -149,6 +149,14 @@ class AppState extends ChangeNotifier {
 
   int _bestStreak = 0;
   int _analyticsEpoch = 0;
+  int _coreWorkspaceRevision = 0;
+
+  /// Changes only when task, skill, or RoadMap presentation data may be stale.
+  ///
+  /// Persistence progress and profile/session-only notifications deliberately
+  /// do not advance this revision, so task-heavy feature roots can avoid broad
+  /// rebuilds while continuing to observe domain mutations through AppState.
+  int get coreWorkspaceRevision => _coreWorkspaceRevision;
 
   AppState({
     required StorageService storage,
@@ -513,6 +521,8 @@ class AppState extends ChangeNotifier {
     }
 
     _hasLoadedSavedData = true;
+    _invalidateAnalyticsReadModel();
+    _coreWorkspaceRevision++;
     _setPersistenceStatus(
       _persistenceStatus.copyWith(
         phase: PersistencePhase.ready,
@@ -781,21 +791,21 @@ class AppState extends ChangeNotifier {
 
   void _setPersistenceStatus(PersistenceStatus status) {
     _persistenceStatus = status;
-    if (!_isDisposed) notifyListeners();
+    _notifyViewStateChanged();
   }
 
   // ── Theme ────────────────────────────────────────────────────────────────────
 
   void toggleTheme() {
     _isDark = !_isDark;
-    notifyListeners();
+    _notifyViewStateChanged();
     _requestObservedImmediateSave();
   }
 
   void toggleSfxEnabled() {
     _sfxEnabled = !_sfxEnabled;
     _applySfxEnabled();
-    notifyListeners();
+    _notifyViewStateChanged();
     _requestObservedImmediateSave();
   }
 
@@ -809,13 +819,13 @@ class AppState extends ChangeNotifier {
 
   void toggleTooltipsEnabled() {
     _tooltipsEnabled = !_tooltipsEnabled;
-    notifyListeners();
+    _notifyViewStateChanged();
     _requestObservedImmediateSave();
   }
 
   void toggleReducedMotion() {
     _reducedMotion = !_reducedMotion;
-    notifyListeners();
+    _notifyViewStateChanged();
     _requestObservedImmediateSave();
   }
 
@@ -824,7 +834,7 @@ class AppState extends ChangeNotifier {
 
   void dismissCourseNudge(String key) {
     if (_reviewSessions.dismissNudge(_dismissedCourseNudgeKeys, key)) {
-      notifyListeners();
+      _notifyViewStateChanged();
     }
   }
 
@@ -858,7 +868,7 @@ class AppState extends ChangeNotifier {
       updatedAt: DateTime.now(),
     );
     _persistTutorialProgress();
-    notifyListeners();
+    _notifyViewStateChanged();
   }
 
   void completeTutorialStep(String stepId) {
@@ -888,7 +898,7 @@ class AppState extends ChangeNotifier {
     }
 
     _persistTutorialProgress();
-    notifyListeners();
+    _notifyViewStateChanged();
   }
 
   void completeTutorialModule(String id) {
@@ -913,7 +923,7 @@ class AppState extends ChangeNotifier {
       updatedAt: DateTime.now(),
     );
     _persistTutorialProgress();
-    notifyListeners();
+    _notifyViewStateChanged();
   }
 
   void dismissTutorialModule(String id) {
@@ -932,7 +942,7 @@ class AppState extends ChangeNotifier {
       updatedAt: DateTime.now(),
     );
     _persistTutorialProgress();
-    notifyListeners();
+    _notifyViewStateChanged();
   }
 
   void dismissActiveTutorial() {
@@ -945,7 +955,7 @@ class AppState extends ChangeNotifier {
     _onboardingSeen = false;
     _tutorialProgress = const TutorialProgress.empty();
     _persistTutorialProgress();
-    notifyListeners();
+    _notifyViewStateChanged();
   }
 
   void _persistTutorialProgress() {
@@ -1133,8 +1143,7 @@ class AppState extends ChangeNotifier {
   void checkResets() {
     if (_resetExpiredTasks()) {
       _syncAllTaskNotifications();
-      notifyListeners();
-      _saveAll();
+      _commitMutation();
     }
   }
 
@@ -1213,27 +1222,31 @@ class AppState extends ChangeNotifier {
     _completionHistoryIndex.invalidate();
   }
 
-  /// A listener notification is the cache-invalidation boundary for all
-  /// externally observable state changes. This deliberately favors
-  /// correctness over retaining a derived snapshot across unrelated updates:
-  /// a new mutation path cannot expose stale analytics by forgetting a manual
-  /// epoch increment.
-  @override
-  void notifyListeners() {
-    _invalidateAnalyticsReadModel();
-    super.notifyListeners();
-  }
-
   void _invalidateAnalyticsReadModel() {
     _analyticsEpoch++;
     _analyticsReadModelCache.invalidate();
   }
 
-  void _commitMutation({bool invalidatesHistory = false, bool persist = true}) {
+  void _notifyViewStateChanged() {
+    if (!_isDisposed) super.notifyListeners();
+  }
+
+  void _commitMutation({
+    bool affectsAnalytics = true,
+    bool affectsCoreWorkspaces = true,
+    bool invalidatesHistory = false,
+    bool persist = true,
+  }) {
     if (invalidatesHistory) {
       _invalidateHistoryCaches();
     }
-    if (!_isDisposed) notifyListeners();
+    if (affectsAnalytics) {
+      _invalidateAnalyticsReadModel();
+    }
+    if (affectsCoreWorkspaces) {
+      _coreWorkspaceRevision++;
+    }
+    _notifyViewStateChanged();
     if (persist) _saveAll();
   }
 
@@ -1273,7 +1286,9 @@ class AppState extends ChangeNotifier {
       idFactory: uid,
       now: DateTime.now(),
     );
-    if (changed) _commitMutation();
+    if (changed) {
+      _commitMutation(affectsAnalytics: false, affectsCoreWorkspaces: false);
+    }
   }
 
   void toggleWeeklyKeyResult(String goalId, String keyResultId) {
@@ -1283,7 +1298,9 @@ class AppState extends ChangeNotifier {
       keyResultId: keyResultId,
       now: DateTime.now(),
     );
-    if (changed) _commitMutation();
+    if (changed) {
+      _commitMutation(affectsAnalytics: false, affectsCoreWorkspaces: false);
+    }
   }
 
   List<RewardChest> consumeRewardChestNotifications() {
@@ -1351,8 +1368,7 @@ class AppState extends ChangeNotifier {
     if (buff == null) return null;
     final chest = rewardChests.firstWhere((item) => item.id == chestId);
 
-    notifyListeners();
-    _saveAll();
+    _commitMutation(affectsAnalytics: false);
 
     return '🎁 ${chest.title}: ${buff.title}';
   }
@@ -1364,8 +1380,7 @@ class AppState extends ChangeNotifier {
     final task = _taskById(taskId);
     if (task == null || task.isDone) {
       if (hadResetChanges) {
-        notifyListeners();
-        _saveAll();
+        _commitMutation();
       }
       return null;
     }
@@ -1397,8 +1412,7 @@ class AppState extends ChangeNotifier {
     _completeCoreTutorialAfterFirstAction();
     final bossFeedback = _bossFeedbackForSkill(skillId, bossMomentsBefore);
     _syncTaskNotification(task);
-    notifyListeners();
-    _saveAll();
+    _commitMutation();
 
     return _xpMessage(
       skill,
@@ -1421,8 +1435,7 @@ class AppState extends ChangeNotifier {
     );
     _updateInboxDailyStats(inboxTaskXp);
     _syncTaskNotification(task);
-    notifyListeners();
-    _saveAll();
+    _commitMutation();
     return result.profileLevelsGained > 0
         ? '+$inboxTaskXp XP · новый уровень профиля'
         : '+$inboxTaskXp XP · быстрое действие';
@@ -1433,8 +1446,7 @@ class AppState extends ChangeNotifier {
     final task = _taskById(taskId);
     if (task == null || !canCompleteMinimumAction(task)) {
       if (hadResetChanges) {
-        notifyListeners();
-        _saveAll();
+        _commitMutation();
       }
       return null;
     }
@@ -1467,8 +1479,7 @@ class AppState extends ChangeNotifier {
     _checkAchievements();
     _completeCoreTutorialAfterFirstAction();
     _syncTaskNotification(task);
-    notifyListeners();
-    _saveAll();
+    _commitMutation();
 
     return _xpMessage(
       skill,
@@ -1633,8 +1644,7 @@ class AppState extends ChangeNotifier {
       );
     }
     _syncTaskNotification(task);
-    notifyListeners();
-    _saveAll();
+    _commitMutation();
   }
 
   void archiveCompletedTask(String taskId) {
@@ -1642,8 +1652,7 @@ class AppState extends ChangeNotifier {
     if (task == null || task.isInbox || !task.isDone || task.isArchived) return;
     task.isArchived = true;
     task.updatedAt = DateTime.now();
-    notifyListeners();
-    _saveAll();
+    _commitMutation();
   }
 
   void restoreArchivedTask(String taskId) {
@@ -1651,8 +1660,7 @@ class AppState extends ChangeNotifier {
     if (task == null || !task.isArchived) return;
     task.isArchived = false;
     task.updatedAt = DateTime.now();
-    notifyListeners();
-    _saveAll();
+    _commitMutation();
   }
 
   // ── Checklist ────────────────────────────────────────────────────────────────
@@ -1665,8 +1673,7 @@ class AppState extends ChangeNotifier {
     skill.checklistDone[index] = !skill.checklistDone[index];
     _syncBossesForSkill(skillId);
     _checkAchievements();
-    notifyListeners();
-    _saveAll();
+    _commitMutation();
   }
 
   // ── Profile updates ──────────────────────────────────────────────────────────
@@ -1674,34 +1681,29 @@ class AppState extends ChangeNotifier {
   void updateProfileName(String name) {
     if (name.trim().isEmpty) return;
     profile.name = name.trim();
-    notifyListeners();
-    _saveAll();
+    _commitMutation(affectsAnalytics: false, affectsCoreWorkspaces: false);
   }
 
   void updateProfileAge(int? age) {
     profile.age = age;
-    notifyListeners();
-    _saveAll();
+    _commitMutation(affectsAnalytics: false, affectsCoreWorkspaces: false);
   }
 
   void updateProfileGender(Gender? gender) {
     profile.gender = gender;
-    notifyListeners();
-    _saveAll();
+    _commitMutation(affectsAnalytics: false, affectsCoreWorkspaces: false);
   }
 
   void updateProfileAvatar(Uint8List? bytes) {
     if (bytes != null && !hasSupportedImageMagicBytes(bytes)) return;
     profile.avatarBytes = bytes;
-    notifyListeners();
-    _saveAll();
+    _commitMutation(affectsAnalytics: false, affectsCoreWorkspaces: false);
   }
 
   void updateProfileBanner(Uint8List? bytes) {
     if (bytes != null && !hasSupportedImageMagicBytes(bytes)) return;
     profile.bannerBytes = bytes;
-    notifyListeners();
-    _saveAll();
+    _commitMutation(affectsAnalytics: false, affectsCoreWorkspaces: false);
   }
 
   // ── CRUD ─────────────────────────────────────────────────────────────────────
@@ -1723,7 +1725,7 @@ class AppState extends ChangeNotifier {
   void _setSelectedSkill(String? id) {
     if (selectedSkillId == id) return;
     selectedSkillId = id;
-    notifyListeners();
+    _notifyViewStateChanged();
   }
 
   void addSkill(Skill s) {
@@ -1809,8 +1811,7 @@ class AppState extends ChangeNotifier {
     if (skill == null) return;
     _roadmapMutations.addStage(skill, node);
     _syncBossesForSkill(skillId);
-    notifyListeners();
-    _saveAll();
+    _commitMutation();
   }
 
   bool canReorderRoadmapPath(String skillId, Iterable<String> nodeIds) {
@@ -1826,8 +1827,7 @@ class AppState extends ChangeNotifier {
       return false;
     }
     _syncBossesForSkill(skillId);
-    notifyListeners();
-    _saveAll();
+    _commitMutation();
     return true;
   }
 
@@ -1842,8 +1842,7 @@ class AppState extends ChangeNotifier {
       return;
     }
     _syncBossesForSkill(skillId);
-    notifyListeners();
-    _saveAll();
+    _commitMutation();
   }
 
   SkillTreeNode? extendRoadmapPath(
@@ -1866,8 +1865,7 @@ class AppState extends ChangeNotifier {
     );
     if (node == null) return null;
     _syncBossesForSkill(skillId);
-    notifyListeners();
-    _saveAll();
+    _commitMutation();
     return node;
   }
 
@@ -1893,8 +1891,7 @@ class AppState extends ChangeNotifier {
     );
     if (node == null) return null;
     _syncBossesForSkill(skillId);
-    notifyListeners();
-    _saveAll();
+    _commitMutation();
     return node;
   }
 
@@ -1915,8 +1912,7 @@ class AppState extends ChangeNotifier {
       return;
     }
     _syncBossesForSkill(skillId);
-    notifyListeners();
-    _saveAll();
+    _commitMutation();
   }
 
   void renameSkillTreeNode(String skillId, String nodeId, String title) {
@@ -1925,8 +1921,7 @@ class AppState extends ChangeNotifier {
       return;
     }
     _syncBossesForSkill(skillId);
-    notifyListeners();
-    _saveAll();
+    _commitMutation();
   }
 
   void removeSkillTreeNode(String skillId, String nodeId) {
@@ -1941,8 +1936,7 @@ class AppState extends ChangeNotifier {
       return;
     }
     _syncBossesForSkill(skillId);
-    notifyListeners();
-    _saveAll();
+    _commitMutation();
   }
 
   void toggleSkillTreeNodeChecklist(String skillId, String nodeId, int index) {
@@ -1952,8 +1946,7 @@ class AppState extends ChangeNotifier {
       return;
     }
     _syncBossesForSkill(skillId);
-    notifyListeners();
-    _saveAll();
+    _commitMutation();
   }
 
   bool canMasterSkillTreeNode(String skillId, String nodeId) {
@@ -2032,8 +2025,7 @@ class AppState extends ChangeNotifier {
     _syncBossesForSkill(skillId);
     final bossFeedback = _bossFeedbackForSkill(skillId, bossMomentsBefore);
     _checkAchievements();
-    notifyListeners();
-    _saveAll();
+    _commitMutation();
 
     return _xpMessage(
       skill,
@@ -2073,8 +2065,7 @@ class AppState extends ChangeNotifier {
     );
     if (t.isSkillTask) _completeOnboardingAfterFirstTask();
     _syncTaskNotification(t);
-    notifyListeners();
-    _saveAll();
+    _commitMutation();
   }
 
   bool addInboxTask(String title, {String description = ''}) {
@@ -2140,8 +2131,7 @@ class AppState extends ChangeNotifier {
       _notifications.cancelNotification(_notificationId(task.id));
     }
     _syncTaskNotification(task);
-    notifyListeners();
-    _saveAll();
+    _commitMutation();
   }
 
   void removeTask(String id) {
@@ -2151,8 +2141,7 @@ class AppState extends ChangeNotifier {
     if (task.isSkillTask) {
       _syncBossesForSkill(task.skillId);
     }
-    notifyListeners();
-    _saveAll();
+    _commitMutation();
   }
 
   void toggleSubtask(String taskId, int index) {
@@ -2161,8 +2150,7 @@ class AppState extends ChangeNotifier {
         !_taskMutations.toggleSubtask(task, index, now: DateTime.now())) {
       return;
     }
-    notifyListeners();
-    _saveAll();
+    _commitMutation();
   }
 
   // ── Bosses ──────────────────────────────────────────────────────────────────
@@ -2170,14 +2158,14 @@ class AppState extends ChangeNotifier {
   void addBoss(Boss b) {
     bosses.add(b);
     _syncBossesForSkill(b.skillId);
-    notifyListeners();
-    _saveAll();
+    _commitMutation(affectsAnalytics: false, affectsCoreWorkspaces: false);
   }
 
   void removeBoss(String id) {
+    final previousLength = bosses.length;
     bosses.removeWhere((b) => b.id == id);
-    notifyListeners();
-    _saveAll();
+    if (bosses.length == previousLength) return;
+    _commitMutation(affectsAnalytics: false, affectsCoreWorkspaces: false);
   }
 
   // ── Statistics helpers ───────────────────────────────────────────────────────
@@ -2218,17 +2206,16 @@ class AppState extends ChangeNotifier {
       _bestStreak = 0;
     }
     _recalculateBestStreakFromTasks();
-    _invalidateHistoryCaches();
     _syncAllBosses();
     _checkAchievements();
     _syncAllTaskNotifications();
-    notifyListeners();
-    _saveAll();
+    _commitMutation(invalidatesHistory: true);
   }
 
   void refresh() {
-    notifyListeners();
-    _saveAll();
+    // Legacy callers may mutate public model collections before asking the
+    // facade to refresh, so this remains a conservative domain boundary.
+    _commitMutation();
   }
 
   // ── Private ──────────────────────────────────────────────────────────────────

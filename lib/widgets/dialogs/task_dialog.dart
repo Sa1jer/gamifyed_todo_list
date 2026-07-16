@@ -453,7 +453,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
             runSpacing: 7,
             children: TaskType.values.map((type) {
               final selected = _form.type == type;
-              return _DialogChoiceChip(
+              return DialogChoiceChip(
                 label: typeLabel[type]!,
                 color: typeColor[type]!,
                 selected: selected,
@@ -492,7 +492,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                         )
                         .map((freq) {
                           final selected = _form.frequency == freq;
-                          return _DialogChoiceChip(
+                          return DialogChoiceChip(
                             label: freqLabel[freq]!,
                             color: color,
                             selected: selected,
@@ -698,7 +698,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
             spacing: 7,
             runSpacing: 7,
             children: [
-              _DialogChoiceChip(
+              DialogChoiceChip(
                 label: 'Без этапа',
                 color: const Color(0xFF8E8E93),
                 selected: selectedNodeId == null,
@@ -719,7 +719,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                 final nodeColor = node.isMastered
                     ? const Color(0xFF34C759)
                     : color;
-                return _DialogChoiceChip(
+                return DialogChoiceChip(
                   label: node.title,
                   color: nodeColor,
                   selected: selectedNodeId == node.id,

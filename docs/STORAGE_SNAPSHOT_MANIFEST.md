@@ -114,3 +114,28 @@ background errors, initialization retry, and responsive recovery/save UI.
 
 Native restart, process-kill, disk-full, backup/export, retention, and eventual
 legacy cleanup remain separate release-hardening work.
+
+## Implementation Ownership
+
+`StorageService` remains the stable compatibility facade used by AppState and
+tests. The closing decomposition did not change a box name, key, serialized
+field, enum fallback, or snapshot version. Its collaborators now own distinct
+mechanics:
+
+- `SnapshotStore` owns current/previous manifest commit and fallback.
+- `StorageSnapshotCodec` owns full-snapshot encoding and structural decoding.
+- `StorageMigrationPolicy` decides snapshot-first versus legacy fallback.
+- `LegacyHiveDomainStore` owns legacy entity-box reads and writes.
+- `LegacyStorageCodec` owns legacy entity encoding/decoding and guarded JSON
+  primitives.
+- `HivePreferenceStore` owns theme, sound, tooltip, onboarding, tutorial,
+  profile image and other preference keys.
+- `SaveScheduler` remains the AppState-facing debounce/in-flight coordinator.
+
+`test/storage_service_reopen_test.dart` uses a disposable real Hive directory,
+closes all boxes, creates a new `StorageService`, and verifies three
+process-like boundaries: legacy plus committed snapshot recovery, corrupt
+current snapshot fallback to previous, and authoritative committed empty
+collections despite stale legacy data. This is stronger than an in-memory
+mock, but it is not a substitute for an actual OS process kill or disk-full
+test.

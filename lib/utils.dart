@@ -72,6 +72,20 @@ Color subtext(bool d) => d ? const Color(0xFF8E8E93) : const Color(0xFF555560);
 Color borderColor(bool d) =>
     d ? const Color(0xFF2A2A35) : const Color(0xFFD8D8E4);
 
+/// Compatibility bridge for persisted ARGB values.
+///
+/// Persistence codecs stay Flutter-independent while the persisted numeric
+/// representation remains unchanged.
+Color storageColorFromArgb(int value) => Color(value);
+
+int storageArgbFromColor(Color color) {
+  int channel(double value) => (value * 255).round().clamp(0, 255).toInt();
+  return (channel(color.a) << 24) |
+      (channel(color.r) << 16) |
+      (channel(color.g) << 8) |
+      channel(color.b);
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // RANKS
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -368,6 +382,15 @@ const kIconsExtra = <IconData>[
   Icons.sailing,
   Icons.snowboarding,
 ];
+
+IconData storageIconFromCodePoint(String codePoint) {
+  final parsed = int.tryParse(codePoint);
+  if (parsed == null) return Icons.bolt;
+  for (final icon in [...kIconsPrimary, ...kIconsExtra]) {
+    if (icon.codePoint == parsed) return icon;
+  }
+  return Icons.bolt;
+}
 
 const kColors = <Color>[
   Color(0xFFFF3B30),

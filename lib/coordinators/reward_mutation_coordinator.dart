@@ -1,6 +1,9 @@
 import 'dart:math' as math;
 
-import '../models.dart';
+import '../models/activity_models.dart';
+import '../models/reward_models.dart';
+import '../models/skill_models.dart';
+import '../models/task_models.dart';
 import '../utils.dart';
 
 typedef BuffPreview = ({int bonusXp, int bonusPercent});

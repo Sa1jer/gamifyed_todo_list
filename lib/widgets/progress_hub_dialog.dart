@@ -2,13 +2,13 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import '../app_state.dart';
-import '../engines/course_nudge_engine.dart';
 import '../engines/progress_engine.dart';
-import '../models.dart';
 import '../utils.dart';
-import 'course_nudge_card.dart';
-import 'dialogs.dart';
-import 'goal_header.dart';
+import 'progress_hub/progress_hub_actions.dart';
+import 'progress_hub/progress_hub_cards.dart';
+import 'progress_hub/progress_hub_goal_review.dart';
+import 'progress_hub/progress_hub_story.dart';
+import 'progress_hub/progress_hub_tutorial.dart';
 import 'shared.dart';
 import 'weekly_review_card.dart';
 
@@ -140,7 +140,7 @@ class ProgressHubContent extends StatelessWidget {
     final txt = textColor(isDark);
     final sub = subtext(isDark);
     final bdr = borderColor(isDark);
-    final story = _ProgressStorySnapshot.fromState(state);
+    final story = ProgressStorySnapshot.fromState(state);
     final goalProgress = const ProgressEngine().buildSnapshot(
       state.skills,
       state.history,
@@ -223,7 +223,7 @@ class ProgressHubContent extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 9),
-                            _ProgressStoryFacts(story: story, isDark: isDark),
+                            ProgressStoryFacts(story: story, isDark: isDark),
                           ],
                         ),
                       ),
@@ -245,14 +245,14 @@ class ProgressHubContent extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _ProgressHubSection(
+                      ProgressHubSection(
                         isDark: isDark,
                         title: 'История роста',
                         subtitle:
                             'Сначала то, что уже получилось и стало частью пути.',
                         startIndex: 0,
                         cards: [
-                          _ProgressHubCard(
+                          ProgressHubCard(
                             isDark: isDark,
                             icon: Icons.celebration,
                             color: const Color(0xFFFF9500),
@@ -261,7 +261,7 @@ class ProgressHubContent extends StatelessWidget {
                             value: story.todayValue,
                             onTap: onOpenDailyVictories,
                           ),
-                          _ProgressHubCard(
+                          ProgressHubCard(
                             isDark: isDark,
                             icon: Icons.calendar_view_week,
                             color: const Color(0xFF34C759),
@@ -270,7 +270,7 @@ class ProgressHubContent extends StatelessWidget {
                             value: story.weekValue,
                             onTap: onOpenWeekly,
                           ),
-                          _ProgressHubCard(
+                          ProgressHubCard(
                             isDark: isDark,
                             icon: Icons.auto_stories,
                             color: const Color(0xFFAF52DE),
@@ -284,10 +284,10 @@ class ProgressHubContent extends StatelessWidget {
                       ),
                       if (!goalProgress.isEmpty) ...[
                         const SizedBox(height: 14),
-                        _GoalProgressOverview(
+                        GoalProgressOverview(
                           snapshot: goalProgress,
                           isDark: isDark,
-                          onReviewSkill: (skill) => _showGoalReviewSheet(
+                          onReviewSkill: (skill) => showProgressGoalReviewSheet(
                             context,
                             state,
                             isDark,
@@ -296,7 +296,7 @@ class ProgressHubContent extends StatelessWidget {
                         ),
                       ],
                       const SizedBox(height: 14),
-                      _ProgressContinueCard(
+                      ProgressContinueCard(
                         story: story,
                         isDark: isDark,
                         onTap: story.continuationPrefersWeekly
@@ -305,7 +305,7 @@ class ProgressHubContent extends StatelessWidget {
                       ),
                       if (state.roadmapSkills.isNotEmpty) ...[
                         const SizedBox(height: 14),
-                        _ProgressReviewBlock(
+                        ProgressReviewBlock(
                           isDark: isDark,
                           nudge: courseNudge,
                           onApplyNudge: courseNudge == null
@@ -337,14 +337,14 @@ class ProgressHubContent extends StatelessWidget {
                         ),
                       ],
                       const SizedBox(height: 14),
-                      _ProgressHubSection(
+                      ProgressHubSection(
                         isDark: isDark,
                         title: 'Разобраться глубже',
                         subtitle:
                             'Цифры и журнал остаются рядом, но не первыми.',
                         startIndex: 4,
                         cards: [
-                          _ProgressHubCard(
+                          ProgressHubCard(
                             isDark: isDark,
                             icon: Icons.bar_chart,
                             color: const Color(0xFF4A9EFF),
@@ -354,7 +354,7 @@ class ProgressHubContent extends StatelessWidget {
                                 '${state.todayStats?.xpEarned ?? 0} XP сегодня',
                             onTap: onOpenStats,
                           ),
-                          _ProgressHubCard(
+                          ProgressHubCard(
                             isDark: isDark,
                             icon: Icons.calendar_month,
                             color: const Color(0xFF30D158),
@@ -363,7 +363,7 @@ class ProgressHubContent extends StatelessWidget {
                             value: '${story.completedDays} активных дней',
                             onTap: onOpenCalendar,
                           ),
-                          _ProgressHubCard(
+                          ProgressHubCard(
                             isDark: isDark,
                             icon: Icons.history,
                             color: const Color(0xFF8E8E93),
@@ -375,14 +375,14 @@ class ProgressHubContent extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 14),
-                      _ProgressHubSection(
+                      ProgressHubSection(
                         isDark: isDark,
                         title: 'Трофеи и события',
                         subtitle:
                             'Трофеи, достижения и сопротивление — последствия прогресса, а не работа на сегодня.',
                         startIndex: 7,
                         cards: [
-                          _ProgressHubCard(
+                          ProgressHubCard(
                             isDark: isDark,
                             icon: Icons.emoji_events,
                             color: const Color(0xFFFFCC00),
@@ -392,7 +392,7 @@ class ProgressHubContent extends StatelessWidget {
                                 '$unlockedAchievements / ${state.achievements.length}',
                             onTap: onOpenAchievements,
                           ),
-                          _ProgressHubCard(
+                          ProgressHubCard(
                             isDark: isDark,
                             icon: Icons.redeem,
                             color: const Color(0xFFFF9500),
@@ -401,7 +401,7 @@ class ProgressHubContent extends StatelessWidget {
                             value: trophyValue,
                             onTap: onOpenRewards,
                           ),
-                          _ProgressHubCard(
+                          ProgressHubCard(
                             isDark: isDark,
                             icon: Icons.shield,
                             color: const Color(0xFFFF2D55),
@@ -455,1324 +455,13 @@ class ProgressHubContent extends StatelessWidget {
         ),
         if (showTutorialHint && onTutorialComplete != null)
           Positioned.fill(
-            child: _ProgressTutorialSpotlight(
+            child: ProgressTutorialSpotlight(
               targetKey: tutorialTargetKey,
               isDark: isDark,
               onComplete: onTutorialComplete!,
             ),
           ),
       ],
-    );
-  }
-}
-
-class _ProgressTutorialSpotlight extends StatefulWidget {
-  final GlobalKey targetKey;
-  final bool isDark;
-  final VoidCallback onComplete;
-
-  const _ProgressTutorialSpotlight({
-    required this.targetKey,
-    required this.isDark,
-    required this.onComplete,
-  });
-
-  @override
-  State<_ProgressTutorialSpotlight> createState() =>
-      _ProgressTutorialSpotlightState();
-}
-
-class _ProgressTutorialSpotlightState
-    extends State<_ProgressTutorialSpotlight> {
-  Rect? _targetRect;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _updateTargetRect());
-  }
-
-  void _updateTargetRect() {
-    if (!mounted) return;
-    final overlayBox = context.findRenderObject() as RenderBox?;
-    final targetContext = widget.targetKey.currentContext;
-    final targetBox = targetContext?.findRenderObject() as RenderBox?;
-    if (overlayBox == null || targetBox == null || !targetBox.attached) {
-      setState(() => _targetRect = null);
-      return;
-    }
-    final topLeft = targetBox.localToGlobal(Offset.zero, ancestor: overlayBox);
-    setState(() => _targetRect = topLeft & targetBox.size);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    const color = Color(0xFFFF9500);
-    final size = MediaQuery.of(context).size;
-    final txt = textColor(widget.isDark);
-    final sub = subtext(widget.isDark);
-    final panelWidth = math.min(size.width - 32, 420.0);
-    final rect = _targetRect;
-    final top = rect == null
-        ? (size.height - 250) / 2
-        : (rect.bottom + 18).clamp(18.0, size.height - 250.0).toDouble();
-    final left = rect == null
-        ? (size.width - panelWidth) / 2
-        : (rect.center.dx - panelWidth / 2)
-              .clamp(16.0, math.max(16.0, size.width - panelWidth - 16))
-              .toDouble();
-
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: 1),
-      duration: kMotionSlow,
-      curve: kMotionCurve,
-      builder: (context, t, child) {
-        return Opacity(
-          opacity: t,
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: CustomPaint(
-                  painter: _ProgressTutorialSpotlightPainter(
-                    targetRect: rect,
-                    color: color,
-                  ),
-                ),
-              ),
-              Positioned(
-                left: left,
-                top: top,
-                width: panelWidth,
-                child: Transform.scale(scale: 0.96 + 0.04 * t, child: child),
-              ),
-            ],
-          ),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: surface(widget.isDark),
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: borderColor(widget.isDark)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withAlpha(80),
-              blurRadius: 28,
-              offset: const Offset(0, 16),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: color.withAlpha(34),
-                    borderRadius: BorderRadius.circular(13),
-                  ),
-                  child: const Icon(Icons.auto_stories, color: color, size: 21),
-                ),
-                const SizedBox(width: 11),
-                Expanded(
-                  child: Text(
-                    'Статистика',
-                    style: TextStyle(
-                      color: txt,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Статистика — это история роста: что сделано, какой навык рос и что продолжить.',
-              style: TextStyle(
-                color: sub,
-                fontSize: 13.5,
-                height: 1.35,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: SmallBtn(
-                label: 'Завершить обучение',
-                icon: Icons.check_rounded,
-                color: color,
-                onTap: widget.onComplete,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ProgressTutorialSpotlightPainter extends CustomPainter {
-  final Rect? targetRect;
-  final Color color;
-
-  const _ProgressTutorialSpotlightPainter({
-    required this.targetRect,
-    required this.color,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final overlay = Paint()..color = Colors.black.withAlpha(184);
-    final base = Path()..addRect(Offset.zero & size);
-    final rect = targetRect?.inflate(10);
-    if (rect == null) {
-      canvas.drawRect(Offset.zero & size, overlay);
-      return;
-    }
-    final cutout = Path()
-      ..addRRect(RRect.fromRectAndRadius(rect, const Radius.circular(22)));
-    canvas.drawPath(
-      Path.combine(PathOperation.difference, base, cutout),
-      overlay,
-    );
-    final glow = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3
-      ..color = color.withAlpha(210);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(rect, const Radius.circular(22)),
-      glow,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _ProgressTutorialSpotlightPainter oldDelegate) {
-    return oldDelegate.targetRect != targetRect || oldDelegate.color != color;
-  }
-}
-
-void _showGoalReviewSheet(
-  BuildContext context,
-  AppState state,
-  bool isDark,
-  Skill skill,
-) {
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (context) {
-      return SafeArea(
-        child: Padding(
-          padding: EdgeInsets.only(
-            left: 14,
-            right: 14,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 14,
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: surface(isDark),
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: borderColor(isDark)),
-            ),
-            child: WeeklyReviewCard(
-              state: state,
-              isDark: isDark,
-              skill: skill,
-              initiallyExpanded: true,
-              showSavedNudge: true,
-              buildNudgeForSkill: (skill) =>
-                  visibleCourseNudgeForSkill(state, skill),
-              onApplyNudge: (nudge) =>
-                  handleCourseNudge(context, state, isDark, nudge),
-              onDismissNudge: (nudge) => state.dismissCourseNudge(nudge.key),
-            ),
-          ),
-        ),
-      );
-    },
-  );
-}
-
-CourseNudge? visiblePrimaryCourseNudge(AppState state) {
-  final nudge = const CourseNudgeEngine().suggestPrimary(
-    state.skills,
-    state.tasks,
-  );
-  if (nudge == null || state.isCourseNudgeDismissed(nudge.key)) return null;
-  return nudge;
-}
-
-CourseNudge? visibleCourseNudgeForSkill(AppState state, Skill skill) {
-  final nudge = const CourseNudgeEngine().suggestForSkill(skill, state.tasks);
-  if (nudge == null || state.isCourseNudgeDismissed(nudge.key)) return null;
-  return nudge;
-}
-
-void handleCourseNudge(
-  BuildContext context,
-  AppState state,
-  bool isDark,
-  CourseNudge nudge,
-) {
-  switch (nudge.kind) {
-    case CourseNudgeKind.addMinimumToTask:
-      final task = nudge.task;
-      if (task == null) return;
-      _showTaskDialogForNudge(
-        context,
-        state,
-        skill: nudge.skill,
-        existing: task,
-        focusMinimumAction: true,
-      );
-    case CourseNudgeKind.createStageQuest:
-    case CourseNudgeKind.createFocusQuest:
-      _showTaskDialogForNudge(
-        context,
-        state,
-        skill: nudge.skill,
-        initialTreeNodeId: nudge.stage?.id,
-        initialTitle: nudge.initialTitle,
-        initialMinimumAction: nudge.initialMinimumAction,
-        focusMinimumAction: nudge.initialMinimumAction?.isNotEmpty ?? false,
-      );
-    case CourseNudgeKind.clarifyFocus:
-      _showGoalReviewSheet(context, state, isDark, nudge.skill);
-    case CourseNudgeKind.clarifyGoal:
-      _showSkillGoalDialogForNudge(context, state, nudge.skill);
-  }
-}
-
-void _showTaskDialogForNudge(
-  BuildContext context,
-  AppState state, {
-  required Skill skill,
-  Task? existing,
-  String? initialTreeNodeId,
-  String? initialTitle,
-  String? initialMinimumAction,
-  bool focusMinimumAction = false,
-}) {
-  Widget buildForm(bool fullScreen) => AddTaskDialog(
-    isDark: state.isDark,
-    fullScreen: fullScreen,
-    skillColor: skill.color,
-    skill: skill,
-    existing: existing,
-    initialTreeNodeId: initialTreeNodeId,
-    initialTitle: initialTitle,
-    initialMinimumAction: initialMinimumAction,
-    focusMinimumAction: focusMinimumAction,
-    onSave:
-        (
-          title,
-          description,
-          xp,
-          type,
-          freq,
-          customDays,
-          priority,
-          minimumAction,
-          subtasks,
-          tags,
-          notificationsEnabled,
-          notificationHour,
-          notificationMinute,
-          treeNodeId,
-        ) {
-          if (existing == null) {
-            state.addTask(
-              Task(
-                id: uid(),
-                title: title,
-                description: description,
-                skillId: skill.id,
-                xpReward: xp,
-                type: type,
-                repeatFrequency: freq,
-                repeatCustomDays: customDays,
-                priority: priority,
-                minimumAction: minimumAction,
-                subtasks: subtasks,
-                tags: tags,
-                treeNodeId: treeNodeId,
-                notificationsEnabled: notificationsEnabled,
-                notificationHour: notificationHour,
-                notificationMinute: notificationMinute,
-              ),
-            );
-          } else {
-            state.updateTask(
-              existing,
-              title: title,
-              description: description,
-              xpReward: xp,
-              type: type,
-              repeatFrequency: freq,
-              repeatCustomDays: customDays,
-              priority: priority,
-              minimumAction: minimumAction,
-              subtasks: subtasks,
-              tags: tags,
-              notificationsEnabled: notificationsEnabled,
-              notificationHour: notificationHour,
-              notificationMinute: notificationMinute,
-              treeNodeId: treeNodeId,
-            );
-          }
-        },
-  );
-
-  if (existing == null) {
-    showAdaptiveCreationForm<void>(
-      context: context,
-      builder: (_, fullScreen) => buildForm(fullScreen),
-    );
-  } else {
-    showDialog<void>(context: context, builder: (_) => buildForm(false));
-  }
-}
-
-void _showSkillGoalDialogForNudge(
-  BuildContext context,
-  AppState state,
-  Skill skill,
-) {
-  showDialog(
-    context: context,
-    builder: (_) => AddSkillDialog(
-      isDark: state.isDark,
-      existing: skill,
-      onSave: (name, goal, checklist, color, icon, _, _) => state.updateSkill(
-        skill,
-        name: name,
-        goal: goal,
-        checklist: checklist,
-        color: color,
-        icon: icon,
-      ),
-    ),
-  );
-}
-
-class _ProgressReviewBlock extends StatelessWidget {
-  final bool isDark;
-  final CourseNudge? nudge;
-  final VoidCallback? onApplyNudge;
-  final VoidCallback? onDismissNudge;
-  final Widget reviewCard;
-
-  const _ProgressReviewBlock({
-    required this.isDark,
-    required this.nudge,
-    required this.onApplyNudge,
-    required this.onDismissNudge,
-    required this.reviewCard,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final txt = textColor(isDark);
-    final sub = subtext(isDark);
-    final bdr = borderColor(isDark);
-
-    return Container(
-      padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF15151C) : const Color(0xFFF7F7FA),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: bdr),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF4A9EFF).withAlpha(22),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.route_rounded,
-                  color: Color(0xFF4A9EFF),
-                  size: 18,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Review цели',
-                      style: TextStyle(
-                        color: txt,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      'Коротко сверяем курс и, если нужно, делаем одну маленькую корректировку.',
-                      style: TextStyle(
-                        color: sub,
-                        fontSize: 12,
-                        height: 1.3,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          reviewCard,
-          if (nudge != null) ...[
-            const SizedBox(height: 12),
-            CourseNudgeCard(
-              nudge: nudge!,
-              isDark: isDark,
-              onPrimary: onApplyNudge ?? () {},
-              onDismiss: onDismissNudge ?? () {},
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _GoalProgressOverview extends StatelessWidget {
-  final ProgressSnapshot snapshot;
-  final bool isDark;
-  final ValueChanged<Skill> onReviewSkill;
-
-  const _GoalProgressOverview({
-    required this.snapshot,
-    required this.isDark,
-    required this.onReviewSkill,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final txt = textColor(isDark);
-    final sub = subtext(isDark);
-    final visibleGoals = snapshot.visibleGoals;
-    final needsReviewCount = snapshot.needsReview.length;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Цели и путь',
-                    style: TextStyle(
-                      color: txt,
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    'Где ты сейчас по навыкам и какой этап двигается дальше.',
-                    style: TextStyle(color: sub, fontSize: 11.5),
-                  ),
-                ],
-              ),
-            ),
-            if (needsReviewCount > 0)
-              TaskBadge(
-                icon: Icons.rate_review,
-                label: '$needsReviewCount review',
-                color: const Color(0xFFFF9500),
-              ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final columns = constraints.maxWidth < 620
-                ? 1
-                : visibleGoals.length;
-            const spacing = 10.0;
-            final cardWidth =
-                (constraints.maxWidth - spacing * (columns - 1)) / columns;
-
-            return Wrap(
-              spacing: spacing,
-              runSpacing: spacing,
-              children: [
-                for (final goal in visibleGoals)
-                  SizedBox(
-                    width: cardWidth,
-                    child: _GoalProgressCard(
-                      snapshot: goal,
-                      isDark: isDark,
-                      onReview: () => onReviewSkill(goal.skill),
-                    ),
-                  ),
-              ],
-            );
-          },
-        ),
-      ],
-    );
-  }
-}
-
-class _GoalProgressCard extends StatelessWidget {
-  final SkillProgressSnapshot snapshot;
-  final bool isDark;
-  final VoidCallback onReview;
-
-  const _GoalProgressCard({
-    required this.snapshot,
-    required this.isDark,
-    required this.onReview,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final skill = snapshot.skill;
-    final txt = textColor(isDark);
-    final sub = subtext(isDark);
-    final stage = snapshot.currentStage;
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF121219) : const Color(0xFFF7F8FC),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: snapshot.needsAdjust
-              ? const Color(0xFFFF9500).withAlpha(80)
-              : borderColor(isDark),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: skill.color.withAlpha(24),
-                  borderRadius: BorderRadius.circular(11),
-                ),
-                child: Icon(skill.icon, color: skill.color, size: 18),
-              ),
-              const SizedBox(width: 9),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      skill.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: txt,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    GoalHeader(
-                      skill: skill,
-                      isDark: isDark,
-                      maxLines: 1,
-                      emptyText: snapshot.basisLabel,
-                    ),
-                  ],
-                ),
-              ),
-              Text(
-                snapshot.percentLabel,
-                style: TextStyle(
-                  color: skill.color,
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          XPBar(
-            progress: snapshot.percent.clamp(0.0, 1.0),
-            color: skill.color,
-            height: 5,
-          ),
-          const SizedBox(height: 9),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              TaskBadge(
-                icon: Icons.route,
-                label: stage == null ? snapshot.basisLabel : stage.title,
-                color: skill.color,
-              ),
-              TaskBadge(
-                icon: Icons.calendar_view_week,
-                label: snapshot.weeklyQuestCount == 0
-                    ? 'неделя тихая'
-                    : '+${snapshot.weeklyDelta} XP',
-                color: const Color(0xFF34C759),
-              ),
-              if (snapshot.needsAdjust)
-                TaskBadge(
-                  icon: Icons.hourglass_bottom,
-                  label: 'пора review',
-                  color: const Color(0xFFFF9500),
-                ),
-            ],
-          ),
-          if (snapshot.recentWins.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              'Свежая победа: ${snapshot.recentWins.first.taskTitle}',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: sub,
-                fontSize: 11.3,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-          if (snapshot.needsAdjust) ...[
-            const SizedBox(height: 10),
-            SmallBtn(
-              label: 'Сделать review',
-              icon: Icons.rate_review,
-              color: const Color(0xFFFF9500),
-              onTap: onReview,
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _ProgressStorySnapshot {
-  final int todayXp;
-  final int todayQuestCount;
-  final int weekXp;
-  final int weekQuestCount;
-  final int completedDays;
-  final _ProgressSkillStory? topSkill;
-  final _ProgressContinuation continuation;
-
-  const _ProgressStorySnapshot({
-    required this.todayXp,
-    required this.todayQuestCount,
-    required this.weekXp,
-    required this.weekQuestCount,
-    required this.completedDays,
-    required this.topSkill,
-    required this.continuation,
-  });
-
-  factory _ProgressStorySnapshot.fromState(AppState state) {
-    final analytics = state.currentAnalytics;
-    final today = analytics.dayFor(DateTime.now());
-    final leader = analytics.activityLeader;
-    final leaderSkill = leader == null
-        ? null
-        : state.skills.where((skill) => skill.id == leader.skillId).firstOrNull;
-    final leaderHistory = leader == null
-        ? null
-        : state.history
-              .where((entry) => entry.skillId == leader.skillId)
-              .firstOrNull;
-    final topSkill = leader == null
-        ? null
-        : _ProgressSkillStory(
-            skillId: leader.skillId,
-            name: leader.name,
-            color:
-                leaderSkill?.color ??
-                leaderHistory?.skillColor ??
-                Colors.blueAccent,
-            icon:
-                leaderSkill?.icon ??
-                leaderHistory?.skillIcon ??
-                Icons.auto_graph_rounded,
-            xp: leader.xp,
-            questCount: leader.completedTasks,
-          );
-
-    return _ProgressStorySnapshot(
-      todayXp: today?.xp ?? 0,
-      todayQuestCount: today?.completedTasks ?? 0,
-      weekXp: analytics.totalXp,
-      weekQuestCount: analytics.completedTasks,
-      completedDays: state.completionHistoryByDate.length,
-      topSkill: topSkill,
-      continuation: _buildContinuation(
-        state,
-        topSkill,
-        state.latestRecordedCompletion,
-      ),
-    );
-  }
-
-  String get todayValue => todayQuestCount == 0
-      ? 'ждёт первой победы'
-      : '$todayXp XP • ${_questCount(todayQuestCount)}';
-
-  String get weekValue => weekQuestCount == 0
-      ? 'пока пусто'
-      : '$weekXp XP • ${_questCount(weekQuestCount)}';
-
-  String get topSkillValue => topSkill == null
-      ? 'пока нет фокуса'
-      : '${topSkill!.name} • ${topSkill!.xp} XP';
-
-  bool get continuationPrefersWeekly => continuation.prefersWeekly;
-}
-
-class _ProgressSkillStory {
-  final String skillId;
-  final String name;
-  final Color color;
-  final IconData icon;
-  final int xp;
-  final int questCount;
-
-  const _ProgressSkillStory({
-    required this.skillId,
-    required this.name,
-    required this.color,
-    required this.icon,
-    required this.xp,
-    required this.questCount,
-  });
-}
-
-class _ProgressContinuation {
-  final IconData icon;
-  final Color color;
-  final String title;
-  final String subtitle;
-  final String value;
-  final bool prefersWeekly;
-
-  const _ProgressContinuation({
-    required this.icon,
-    required this.color,
-    required this.title,
-    required this.subtitle,
-    required this.value,
-    required this.prefersWeekly,
-  });
-}
-
-_ProgressContinuation _buildContinuation(
-  AppState state,
-  _ProgressSkillStory? topSkill,
-  HistoryEntry? lastCompletedEntry,
-) {
-  final weeklySkill = topSkill == null
-      ? null
-      : state.skills.where((skill) => skill.id == topSkill.skillId).firstOrNull;
-
-  if (topSkill != null && weeklySkill != null) {
-    final activeStage = weeklySkill.treeNodes
-        .where(
-          (node) =>
-              weeklySkill.treeNodeStatus(node) == SkillTreeNodeStatus.active,
-        )
-        .firstOrNull;
-    final activeTasks = state
-        .tasksForSkill(weeklySkill.id)
-        .where((task) => !task.isDone)
-        .toList();
-
-    if (activeStage != null) {
-      return _ProgressContinuation(
-        icon: weeklySkill.icon,
-        color: weeklySkill.color,
-        title: 'Продолжить ${weeklySkill.name}',
-        subtitle: 'Активный этап: ${activeStage.title}',
-        value: '${topSkill.xp} XP на неделе',
-        prefersWeekly: true,
-      );
-    }
-    if (activeTasks.isNotEmpty) {
-      return _ProgressContinuation(
-        icon: weeklySkill.icon,
-        color: weeklySkill.color,
-        title: 'Продолжить ${weeklySkill.name}',
-        subtitle: 'Следующий квест: ${activeTasks.first.title}',
-        value: '${topSkill.questCount} квест. на неделе',
-        prefersWeekly: true,
-      );
-    }
-  }
-
-  if (lastCompletedEntry != null) {
-    return _ProgressContinuation(
-      icon: lastCompletedEntry.skillIcon,
-      color: lastCompletedEntry.skillColor,
-      title: 'Вернуться к ${lastCompletedEntry.skillName}',
-      subtitle: 'Последний квест: ${lastCompletedEntry.taskTitle}',
-      value: '+${lastCompletedEntry.xp} XP последним',
-      prefersWeekly: false,
-    );
-  }
-
-  final firstSkill = state.roadmapSkills.firstOrNull;
-  if (firstSkill != null) {
-    final activeStage = firstSkill.treeNodes
-        .where(
-          (node) =>
-              firstSkill.treeNodeStatus(node) == SkillTreeNodeStatus.active,
-        )
-        .firstOrNull;
-    return _ProgressContinuation(
-      icon: firstSkill.icon,
-      color: firstSkill.color,
-      title: 'Начать рост: ${firstSkill.name}',
-      subtitle: activeStage == null
-          ? 'Сделай первый квест и получи стартовый XP.'
-          : 'Первый этап: ${activeStage.title}',
-      value: 'ждёт первой победы',
-      prefersWeekly: false,
-    );
-  }
-
-  return const _ProgressContinuation(
-    icon: Icons.bolt,
-    color: Color(0xFF4A9EFF),
-    title: 'Рост начнётся после первого квеста',
-    subtitle: 'Создай навык, закрой минимальный шаг и вернись сюда.',
-    value: 'пока пусто',
-    prefersWeekly: false,
-  );
-}
-
-class _ProgressStoryFacts extends StatelessWidget {
-  final _ProgressStorySnapshot story;
-  final bool isDark;
-
-  const _ProgressStoryFacts({required this.story, required this.isDark});
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 6,
-      runSpacing: 6,
-      children: [
-        _ProgressStoryFactChip(
-          isDark: isDark,
-          label: 'Сегодня',
-          value: story.todayQuestCount == 0
-              ? 'нет побед'
-              : '${story.todayXp} XP',
-          color: const Color(0xFFFF9500),
-        ),
-        _ProgressStoryFactChip(
-          isDark: isDark,
-          label: 'Неделя',
-          value: story.weekQuestCount == 0 ? 'пусто' : '${story.weekXp} XP',
-          color: const Color(0xFF34C759),
-        ),
-        _ProgressStoryFactChip(
-          isDark: isDark,
-          label: 'Главный навык',
-          value: story.topSkillValue,
-          color: story.topSkill?.color ?? const Color(0xFF4A9EFF),
-        ),
-      ],
-    );
-  }
-}
-
-class _ProgressStoryFactChip extends StatelessWidget {
-  final bool isDark;
-  final String label;
-  final String value;
-  final Color color;
-
-  const _ProgressStoryFactChip({
-    required this.isDark,
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      decoration: BoxDecoration(
-        color: color.withAlpha(isDark ? 16 : 11),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withAlpha(40)),
-      ),
-      child: Text.rich(
-        TextSpan(
-          text: '$label: ',
-          style: TextStyle(
-            color: subtext(isDark),
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-          ),
-          children: [
-            TextSpan(
-              text: value,
-              style: TextStyle(color: color, fontWeight: FontWeight.w900),
-            ),
-          ],
-        ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
-  }
-}
-
-class _ProgressContinueCard extends StatelessWidget {
-  final _ProgressStorySnapshot story;
-  final bool isDark;
-  final VoidCallback onTap;
-
-  const _ProgressContinueCard({
-    required this.story,
-    required this.isDark,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final continuation = story.continuation;
-    final txt = textColor(isDark);
-    final sub = subtext(isDark);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Что продолжить',
-          style: TextStyle(
-            color: txt,
-            fontSize: 13.5,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        const SizedBox(height: 3),
-        Text(
-          'Один мягкий ориентир из уже сделанного.',
-          style: TextStyle(color: sub, fontSize: 11.5),
-        ),
-        const SizedBox(height: 10),
-        PressFeedback(
-          onTap: onTap,
-          tooltip: 'Открыть подробности роста',
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(13),
-            decoration: BoxDecoration(
-              color: continuation.color.withAlpha(isDark ? 13 : 9),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: continuation.color.withAlpha(46)),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: continuation.color.withAlpha(24),
-                    borderRadius: BorderRadius.circular(13),
-                  ),
-                  child: Icon(
-                    continuation.icon,
-                    color: continuation.color,
-                    size: 21,
-                  ),
-                ),
-                const SizedBox(width: 11),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        continuation.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: txt,
-                          fontSize: 13.8,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        continuation.subtitle,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: sub,
-                          fontSize: 11.5,
-                          height: 1.2,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        continuation.value,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: continuation.color,
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(Icons.chevron_right, color: sub.withAlpha(150), size: 18),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-String _questCount(int count) => '$count ${_questWord(count)}';
-
-String _questWord(int count) {
-  final lastTwo = count % 100;
-  if (lastTwo >= 11 && lastTwo <= 14) return 'квестов';
-  return switch (count % 10) {
-    1 => 'квест',
-    2 || 3 || 4 => 'квеста',
-    _ => 'квестов',
-  };
-}
-
-class _ProgressHubSection extends StatelessWidget {
-  final bool isDark;
-  final String title;
-  final String subtitle;
-  final int startIndex;
-  final List<_ProgressHubCard> cards;
-
-  const _ProgressHubSection({
-    required this.isDark,
-    required this.title,
-    required this.subtitle,
-    required this.startIndex,
-    required this.cards,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final txt = textColor(isDark);
-    final sub = subtext(isDark);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: TextStyle(
-            color: txt,
-            fontSize: 13.5,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        const SizedBox(height: 3),
-        Text(subtitle, style: TextStyle(color: sub, fontSize: 11.5)),
-        const SizedBox(height: 10),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final columns = constraints.maxWidth < 520
-                ? 1
-                : constraints.maxWidth >= 980
-                ? 3
-                : 2;
-            const spacing = 12.0;
-            final cardWidth =
-                (constraints.maxWidth - spacing * (columns - 1)) / columns;
-
-            return Wrap(
-              spacing: spacing,
-              runSpacing: spacing,
-              children: [
-                for (var i = 0; i < cards.length; i++)
-                  SizedBox(
-                    width: cardWidth,
-                    child: MotionListItem(
-                      key: ValueKey('$title-card-$i'),
-                      index: startIndex + i,
-                      child: cards[i],
-                    ),
-                  ),
-              ],
-            );
-          },
-        ),
-      ],
-    );
-  }
-}
-
-class _ProgressHubCard extends StatefulWidget {
-  final bool isDark;
-  final IconData icon;
-  final Color color;
-  final String title;
-  final String subtitle;
-  final String value;
-  final VoidCallback onTap;
-
-  const _ProgressHubCard({
-    required this.isDark,
-    required this.icon,
-    required this.color,
-    required this.title,
-    required this.subtitle,
-    required this.value,
-    required this.onTap,
-  });
-
-  @override
-  State<_ProgressHubCard> createState() => _ProgressHubCardState();
-}
-
-class _ProgressHubCardState extends State<_ProgressHubCard> {
-  bool _hovered = false;
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final txt = textColor(widget.isDark);
-    final sub = subtext(widget.isDark);
-
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() {
-        _hovered = false;
-        _pressed = false;
-      }),
-      child: GestureDetector(
-        onTapDown: (_) => setState(() => _pressed = true),
-        onTapCancel: () => setState(() => _pressed = false),
-        onTapUp: (_) {
-          setState(() => _pressed = false);
-          widget.onTap();
-        },
-        child: AnimatedScale(
-          scale: _pressed ? 0.97 : 1,
-          duration: kMotionFast,
-          curve: kMotionCurve,
-          child: AnimatedContainer(
-            duration: kMotionStandard,
-            curve: kMotionCurve,
-            padding: const EdgeInsets.all(13),
-            decoration: BoxDecoration(
-              color: _hovered
-                  ? widget.color.withAlpha(widget.isDark ? 12 : 10)
-                  : widget.isDark
-                  ? const Color(0xFF121219)
-                  : const Color(0xFFF7F8FC),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: _hovered
-                    ? widget.color.withAlpha(44)
-                    : borderColor(widget.isDark),
-              ),
-              boxShadow: _hovered
-                  ? [
-                      BoxShadow(
-                        color: widget.color.withAlpha(widget.isDark ? 20 : 16),
-                        blurRadius: 18,
-                        offset: const Offset(0, 8),
-                      ),
-                    ]
-                  : null,
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: widget.color.withAlpha(24),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(widget.icon, color: widget.color, size: 20),
-                ),
-                const SizedBox(width: 11),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.title,
-                        style: TextStyle(
-                          color: txt,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 13.5,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        widget.subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: sub, fontSize: 11.5),
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        widget.value,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: widget.color,
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(Icons.chevron_right, color: sub.withAlpha(150), size: 18),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

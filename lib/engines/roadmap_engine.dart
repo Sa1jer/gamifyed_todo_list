@@ -1,4 +1,4 @@
-import '../models.dart';
+import '../models/skill_models.dart';
 import '../utils.dart';
 
 enum RoadmapStageRole { completed, current, next, locked }

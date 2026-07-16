@@ -1,4 +1,4 @@
-import '../models.dart';
+import '../models/task_models.dart';
 
 int prioritySortRank(Priority priority) => switch (priority) {
   Priority.high => 0,

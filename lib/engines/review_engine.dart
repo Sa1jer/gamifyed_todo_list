@@ -1,4 +1,5 @@
-import '../models.dart';
+import '../models/activity_models.dart';
+import '../models/skill_models.dart';
 
 class ReviewSuggestion {
   final Skill skill;

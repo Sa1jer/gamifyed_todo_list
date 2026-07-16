@@ -272,6 +272,123 @@ void main() {
       expect(identical(before, after), isFalse);
       expect(after.skillById(skill.id)?.activeTasks, 1);
     });
+
+    test(
+      'view and persistence notifications retain snapshot identity',
+      () async {
+        state.addSkill(skill);
+        final snapshot = state.currentAnalytics;
+
+        state.toggleTheme();
+        state.toggleTooltipsEnabled();
+        state.selectSkill(skill.id);
+        state.updateProfileName('Новое имя профиля');
+        await state.flushSaves();
+
+        expect(identical(snapshot, state.currentAnalytics), isTrue);
+      },
+    );
+
+    test('task and completion mutations replace the cached snapshot', () {
+      state.addSkill(skill);
+      final beforeTask = state.currentAnalytics;
+      final task = Task(
+        id: 'analytics-task',
+        title: 'Закрыть квест',
+        skillId: skill.id,
+        xpReward: 20,
+        type: TaskType.shortTerm,
+      );
+
+      state.addTask(task);
+      final afterTask = state.currentAnalytics;
+      expect(identical(beforeTask, afterTask), isFalse);
+      expect(afterTask.skillById(skill.id)?.activeTasks, 1);
+
+      expect(state.completeTask(task.id), isNotNull);
+      final afterCompletion = state.currentAnalytics;
+      expect(identical(afterTask, afterCompletion), isFalse);
+      expect(afterCompletion.skillById(skill.id)?.activeTasks, 0);
+      expect(afterCompletion.totalCompletions, 1);
+    });
+
+    test('weekly goal edits do not invalidate unrelated core analytics', () {
+      state.addSkill(skill);
+      final snapshot = state.currentAnalytics;
+
+      state.saveWeeklyGoal(
+        weekStart: DateTime(2026, 7, 13),
+        title: 'Фокус недели',
+        keyResults: [WeeklyKeyResult(id: 'kr-1', title: 'Первый шаг')],
+      );
+
+      expect(identical(snapshot, state.currentAnalytics), isTrue);
+      expect(state.weeklyGoals.single.title, 'Фокус недели');
+    });
+  });
+
+  group('core-workspace revision', () {
+    late AppState state;
+    late Skill skill;
+
+    setUp(() {
+      state = AppState(storage: _InMemoryStorageService(), seedDefaults: false);
+      skill = Skill(
+        id: 'surface-skill',
+        name: 'Surface skill',
+        goal: 'Keep core workspaces current',
+        color: Colors.blue,
+        icon: Icons.task_alt,
+      );
+    });
+
+    tearDown(() => state.dispose());
+
+    test(
+      'ignores profile, weekly-goal, and persistence notifications',
+      () async {
+        final initial = state.coreWorkspaceRevision;
+
+        state.updateProfileName('Updated profile');
+        state.saveWeeklyGoal(
+          weekStart: DateTime(2026, 7, 13),
+          title: 'Weekly focus',
+          keyResults: const [],
+        );
+        await state.flushSaves();
+
+        expect(state.coreWorkspaceRevision, initial);
+      },
+    );
+
+    test('advances for skill, task, completion, and RoadMap mutations', () {
+      var revision = state.coreWorkspaceRevision;
+
+      state.addSkill(skill);
+      expect(state.coreWorkspaceRevision, greaterThan(revision));
+      revision = state.coreWorkspaceRevision;
+
+      final task = Task(
+        id: 'surface-task',
+        title: 'Update surface',
+        skillId: skill.id,
+        xpReward: 20,
+        type: TaskType.shortTerm,
+      );
+      state.addTask(task);
+      expect(state.coreWorkspaceRevision, greaterThan(revision));
+      revision = state.coreWorkspaceRevision;
+
+      expect(state.completeTask(task.id), isNotNull);
+      expect(state.coreWorkspaceRevision, greaterThan(revision));
+      revision = state.coreWorkspaceRevision;
+
+      state.addSkillTreeNode(
+        skill.id,
+        SkillTreeNode(id: 'surface-stage', title: 'Surface stage'),
+      );
+      expect(state.coreWorkspaceRevision, greaterThan(revision));
+    });
   });
 
   group('mutable model list safety', () {

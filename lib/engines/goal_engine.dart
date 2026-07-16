@@ -1,4 +1,4 @@
-import '../models.dart';
+import '../models/skill_models.dart';
 
 enum SmarterCriterion {
   specific,

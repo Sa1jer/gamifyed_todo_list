@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 
-import '../models.dart';
+import '../models/reward_models.dart';
+import '../models/skill_models.dart';
+import '../models/task_models.dart';
 import '../utils.dart' show TaskType;
 
 /// Pure, side-effect-free engine that derives [BossSnapshot]s and applies

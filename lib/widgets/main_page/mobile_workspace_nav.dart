@@ -32,7 +32,7 @@ class _MobileWorkspaceNav extends StatelessWidget {
         ),
         child: Row(
           children: [
-            for (final item in _primaryWorkspaceModes)
+            for (final item in primaryWorkspaceModes)
               Expanded(
                 child: KeyedSubtree(
                   key: item == WorkspaceMode.mastery ? roadmapKey : null,

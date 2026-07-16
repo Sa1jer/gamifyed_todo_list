@@ -125,7 +125,14 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
 
   @override
   Widget build(BuildContext context) {
-    final state = AppStateProvider.of(context);
+    return AppStateSelector<int>(
+      selector: (state) => state.coreWorkspaceRevision,
+      builder: (context, _, _) =>
+          _buildWorkspace(context, AppStateProvider.read(context)),
+    );
+  }
+
+  Widget _buildWorkspace(BuildContext context, AppState state) {
     final selection = _validSelection(state);
     final isDark = widget.isDark;
     final mobile = MobileResponsiveMetrics.isMobileWidth(
@@ -274,7 +281,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
   void _toggleQuestFromMap(Task task, ActionToastOrigin origin) {
     if (task.isDone) {
       AppFeedback.selection();
-      AppStateProvider.of(context).uncompleteTask(task.id);
+      AppStateProvider.read(context).uncompleteTask(task.id);
       return;
     }
     widget.onCompleteTask(task.id, origin);
@@ -290,7 +297,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
     SkillTreeNode? parentNode,
     ValueChanged<_MasterySelection>? onCreated,
   }) {
-    final state = AppStateProvider.of(context);
+    final state = AppStateProvider.read(context);
     showDialog(
       context: context,
       builder: (_) => AddSkillTreeNodeDialog(
@@ -324,7 +331,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
     SkillTreeNode node, {
     ValueChanged<_MasterySelection>? onCreated,
   }) {
-    final state = AppStateProvider.of(context);
+    final state = AppStateProvider.read(context);
     final terminalNode =
         _roadmapEngine.terminalStageForNode(skill, node.id) ?? node;
     showDialog(
@@ -357,7 +364,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
     SkillTreeNode node, {
     ValueChanged<_MasterySelection>? onSaved,
   }) {
-    final state = AppStateProvider.of(context);
+    final state = AppStateProvider.read(context);
     showDialog<void>(
       context: context,
       useRootNavigator: true,
@@ -388,7 +395,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
     SkillTreeNode rightNode, {
     ValueChanged<_MasterySelection>? onCreated,
   }) {
-    final state = AppStateProvider.of(context);
+    final state = AppStateProvider.read(context);
     showDialog(
       context: context,
       builder: (_) => AddSkillTreeNodeDialog(
@@ -420,7 +427,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
     SkillTreeNode? node,
     ValueChanged<_MasterySelection?>? onCreated,
   }) {
-    final state = AppStateProvider.of(context);
+    final state = AppStateProvider.read(context);
     showAdaptiveCreationForm<void>(
       context: context,
       builder: (_, fullScreen) => AddTaskDialog(
@@ -483,7 +490,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
     Task task, {
     ValueChanged<_MasterySelection?>? onSaved,
   }) {
-    final state = AppStateProvider.of(context);
+    final state = AppStateProvider.read(context);
     showDialog(
       context: context,
       builder: (_) => AddTaskDialog(
@@ -536,7 +543,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
   }
 
   void _openFullscreen(BuildContext context, _MasterySelection? selection) {
-    final state = AppStateProvider.of(context);
+    final state = AppStateProvider.read(context);
     var fullscreenSelection = selection;
     showDialog(
       context: context,

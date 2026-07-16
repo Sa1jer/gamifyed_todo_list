@@ -1,6 +1,6 @@
 # Application Decomposition Program Result
 
-Last updated: 2026-07-15
+Last updated: 2026-07-16
 
 This result covers the consecutive decomposition commits plus the corrective
 completion batch. It does not claim that every large file has disappeared.
@@ -25,8 +25,11 @@ completion batch. It does not claim that every large file has disappeared.
 - Split shared surfaces, buttons, progress/badges, dashed border, form and
   motion controls while retaining compatibility exports.
 
-The remaining desktop and Weekly Analytics shells are explicitly listed as P1
-follow-ups; this batch did not hide them behind more `part` files.
+- Replaced the desktop Act `part` monolith with ordinary shell, sidebar,
+  workspace, quest-row and support modules.
+- Reduced Weekly Analytics and Progress Hub to composition shells over focused
+  ordinary modules; split Tasks mobile focus, skill-tree and reward/boss
+  sections at cohesive boundaries.
 
 ## Phase 3 - AppState Domain Decomposition
 
@@ -34,24 +37,25 @@ follow-ups; this batch did not hide them behind more `part` files.
   mutation coordinators behind stable AppState APIs.
 - Kept final notification, device side effects and persistence request ordering
   in AppState.
-- Reduced AppState from 3405 to 2592 lines across the program (2759 to 2592 in
+- Reduced AppState from 3405 to 2579 lines across the program (2759 to 2579 in
   the corrective completion batch).
-- Added direct coordinator tests for completion/reward plus existing task and
-  RoadMap coordinator suites.
+- Added direct coordinator tests for completion, reward, Skill/Goal and
+  Review/session plus existing Task and RoadMap suites.
 
 ## Phase 4 - Persistence, Models and Hardening
 
 - Split model declarations into cohesive files under `lib/models/`; retained
   `lib/models.dart` as an eight-line compatibility barrel. No serialized shape
   changed.
-- Extracted save scheduling, snapshot store access, codec and migration policy
-  from `StorageService`/AppState without changing recovery semantics.
+- Extracted save scheduling, snapshot store access, migration, legacy domain,
+  codec and preference ownership from `StorageService`/AppState without
+  changing recovery semantics.
 - Added scheduler single-flight/trailing/failure tests and snapshot/migration
   fault tests.
 - Removed live mutable references from analytics outputs, made ordering
   deterministic, and corrected the stale toast safe-region test.
-- Narrowed application-root observation with `AppStateSelector` while keeping
-  existing feature notification behavior through `InheritedNotifier`.
+- Narrowed application-root observation and the high-cost Tasks, Today and
+  RoadMap roots with stable selector records/revisions.
 - Added `tool/architecture_audit.dart` and made it part of the cross-platform
   verify gate.
 
@@ -59,12 +63,12 @@ follow-ups; this batch did not hide them behind more `part` files.
 
 | Metric | Result |
 |---|---:|
-| AppState lines | 3405 -> 2592 |
+| AppState lines | 3405 -> 2579 |
 | Substantial coordinators/indexes/read owners | 11 |
-| Persistence owners extracted | 4 |
+| Persistence owners extracted | 7 |
 | Model declaration modules | 8 |
-| Presentation monoliths materially decomposed | 9 |
-| Direct new coordinator/persistence/read-data test files | 11 |
+| Presentation monoliths materially decomposed | 14 |
+| Direct new coordinator/persistence/read-data test files | 14 |
 | Storage schema changes | 0 |
 | New dependencies | 0 |
 

@@ -475,6 +475,8 @@ class _ProfileAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final avatarDecodeSize = (size * MediaQuery.devicePixelRatioOf(context))
+        .round();
     return Container(
       width: size,
       height: size,
@@ -488,7 +490,11 @@ class _ProfileAvatar extends StatelessWidget {
             : null,
         image: profile.avatarBytes != null
             ? DecorationImage(
-                image: MemoryImage(profile.avatarBytes!),
+                image: ResizeImage.resizeIfNeeded(
+                  avatarDecodeSize,
+                  avatarDecodeSize,
+                  MemoryImage(profile.avatarBytes!),
+                ),
                 fit: BoxFit.cover,
               )
             : null,

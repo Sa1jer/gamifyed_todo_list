@@ -1,44 +1,44 @@
 # Final Logic Audit
 
-Last updated: 2026-07-15
+Last updated: 2026-07-16
 
 ## Confirmed Corrections
 
-- Weekly analytics no longer retains `AppState`, `Task`, `Skill` or
-  `WeeklyGoal`; the builder copies scalar fields into immutable view records.
-- Base analytics history also copies scalar fields. `isExistingSkill` now
-  reflects the actual meaning, and activity ties use a deterministic ID
-  fallback.
-- Analytics invalidation is centralized at the facade notification boundary.
-- Completion and reward behavior now has direct coordinator coverage for
-  normal, minimum, Inbox, undo, buff restoration and idempotent reward paths.
-- Save scheduling has one owner and tested debounce, single-flight, trailing
-  write, flush and failure semantics.
-- Task and RoadMap deletion cleanup remains explicit and tested.
-- TasksPanel ordering uses deterministic prepared data instead of repeated
-  ad-hoc build-time sorts.
-- The mobile contextual-toast test now asserts the production safe-region
-  contract rather than an obsolete hard-coded height; user-owned toast sizing
-  was not changed.
+- Weekly and base analytics project scalar records and deterministic ties; no
+  read model retains AppState or mutable Task/Skill/History graphs.
+- Analytics cache invalidation moved from every listener notification to the
+  characterized mutation boundary. Tests cover relevant replacement and
+  unrelated identity retention.
+- `coreWorkspaceRevision` prevents profile and persistence noise from
+  rebuilding Tasks, Today, and RoadMap roots while retaining domain updates.
+- Completion, Minimum Action, Inbox, undo, buff restoration, Skill/Goal, and
+  Review/session policies have direct coordinator coverage.
+- Removing a missing boss is now a true no-op instead of scheduling a save and
+  notification.
+- Startup reset changes use the same single mutation/save/notification
+  contract as other domain mutations.
+- Storage close/reopen behavior is covered using real Hive boxes in one
+  process; extracted codecs preserve existing payload fallbacks.
+- Native overlay images are disposed on replacement/unmount, and profile
+  image decoding is bounded to rendered dimensions.
 
-## Compatibility Verified by Design
+## Preserved Invariants
 
-- No XP, goal, RoadMap, recurring, quick-task or completion formula changed.
-- No Hive schema, type ID or serialized field changed.
-- Empty committed snapshots remain authoritative.
-- Failed startup load still blocks automatic destructive writes.
-- Existing public AppState and model import paths remain available.
+- XP, goal, RoadMap, recurring, quick-task, reward, and completion formulas are
+  unchanged.
+- Coordinator mutations do not notify or persist independently.
+- Failed startup load still blocks automatic destructive saves.
+- Task and Skill deletion cleanup, stable IDs, and Stage links remain behind
+  AppState's characterized public APIs.
 
-## Unresolved or Ambiguous
+## Ambiguous / Deferred
 
-- Public mutable model ownership can still bypass the facade by retaining a
-  reference. A defensive-copy/immutable-model migration is a separate API and
-  persistence compatibility decision.
-- AppState still orchestrates achievements, bosses, notifications and reset
-  lifecycle. Further extraction requires characterization rather than a bulk
-  move.
-- Root-shell observation is narrowed and directly tested. Broad observation
-  remains in several feature roots; static review cannot prove which further
-  selector boundaries are worthwhile without frame/rebuild evidence.
-
-Detailed evidence is in `LOGIC_AND_READABILITY_AUDIT.md` and focused tests.
+- Public mutable models can still be aliased outside AppState. Immutable model
+  ownership would be an API and persistence compatibility project, not a safe
+  cleanup.
+- Achievements, boss/device notifications, and reset orchestration remain
+  cross-domain facade work; extraction needs dedicated characterization.
+- Lower-priority feature roots still use broad observation. Migrate only after
+  native rebuild traces show a meaningful target.
+- The existing RoadMap `part` library is bounded and tested but not converted
+  by this batch.

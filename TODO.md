@@ -28,7 +28,7 @@ This file tracks the active implementation roadmap and completed project work. U
 - [ ] Add native restart, process-kill, and disposable-filesystem disk-full recovery tests.
 - [ ] Decide backup/export and encrypted-at-rest policy before public distribution.
 - [ ] Consider legacy-box cleanup only after export/restore support and several releases of verified snapshot recovery.
-- [ ] Bound or downsample profile image input before loading full bytes to avoid memory pressure from very large files.
+- [x] Bound profile avatar/banner decoding to rendered dimensions and dispose replaced native overlay images; physical-device image-memory profiling remains part of the native pass.
 - [ ] Validate native Windows/macOS pointer tracking after skill-card hit-region alignment; capture a platform repro if compositor hover still differs.
 - [ ] Profile mobile theme switching after the `2x` snapshot cap and add a reduced-motion fallback only if frame timings still show jank.
 - [ ] Add a sustained-mutation storage stress test to characterize repeated save follow-up passes and lifecycle flush completion.
@@ -46,10 +46,12 @@ This file tracks the active implementation roadmap and completed project work. U
 - [x] Split persisted model declarations into cohesive modules with an unchanged `models.dart` compatibility barrel and storage schema.
 - [x] Decompose mobile journal, desktop statistics/right rail, Weekly Analytics sections, Today/Tasks preparation, task-form lifecycle, RoadMap/task/reward sections, and shared widget categories.
 - [x] Add direct completion/reward coordinator tests, persistence fault tests, prepared-view tests, and a cross-platform architecture audit in `tool/verify.dart`.
-- [ ] Continue replacing the remaining 2240-line desktop `part` shell with ordinary modules using explicit inputs/callbacks; preserve one responsive shell and add geometry coverage per extraction.
-- [ ] Continue decomposing the 1571-line Weekly Analytics shell and other current top-15 presentation files only at cohesive feature boundaries.
-- [ ] Profile native feature-level rebuilds and retained routes before extending the root `AppStateSelector` pattern; focus on Today, Tasks, RoadMap and Statistics rather than changing state management.
-- [ ] Add process-restart/kill and real-Hive interrupted-write coverage beyond the in-memory scheduler/store fault tests.
+- [x] Replace the 2240-line desktop `part` shell with ordinary sidebar, main-workspace, quest-row, support and composition modules using explicit inputs/callbacks.
+- [x] Decompose Weekly Analytics, Progress Hub, Tasks, skill-tree and reward/boss presentation monoliths at cohesive feature boundaries.
+- [x] Narrow the high-cost Tasks, Today and RoadMap roots with a stable `coreWorkspaceRevision`; mutation-only callbacks use non-listening AppState reads.
+- [x] Split the legacy Hive domain/codec/preference responsibilities behind the stable `StorageService` facade and add disposable-directory close/reopen coverage.
+- [ ] Add true process-kill/disk-full fault injection around committed snapshot replacement; same-process real-Hive reopen and current/previous corruption fallback are already covered.
+- [ ] Capture native route/dialog heap snapshots and rebuild traces after repeated Tasks, RoadMap, Statistics, Weekly Analytics, Progress Hub and profile cycles; do not widen selector migration without evidence.
 
 ## Reminder — Product Follow-ups After Hardening
 

@@ -1,42 +1,43 @@
 # Final Memory Audit
 
-Last updated: 2026-07-15
+Last updated: 2026-07-16
 
 ## Static Improvements
 
-- Analytics caches retain bounded scalar snapshots, not AppState or mutable
-  domain graphs.
-- The weekly cache keeps at most eight weeks and clears on epoch change.
-- Today Dashboard and TasksPanel prepare lists once per parent rebuild instead
-  of repeatedly filtering and sorting in child sections.
-- Save scheduling does not retain encoded payload buffers; codec maps and byte
-  arrays remain local to a write.
-- Extracted form controllers and listeners have one dialog lifecycle owner.
-- Extracted coordinators hold no caches, widget contexts or long-lived
-  closures over presentation state.
-- The root shell selects only persistence/tooltips data instead of rebuilding
-  `MaterialApp` for every AppState mutation; selector replacement and
-  unrelated-notification behavior have direct widget coverage.
+- Analytics caches retain bounded scalar data and no AppState/live model graph.
+- Selective invalidation avoids rebuilding large snapshots for profile,
+  preference, selection, persistence-progress, and weekly-goal notifications.
+- Tasks, Today, and RoadMap roots no longer broadly observe every AppState
+  notification; callbacks use non-observing reads.
+- Desktop/weekly/progress/task extraction makes heavy sibling construction and
+  controller ownership visible at section boundaries.
+- Root overlay `ui.Image` instances are disposed when replaced or unmounted.
+- Profile banner/avatar decode targets are bounded by display size and device
+  pixel ratio instead of always retaining full source resolution.
+- Save scheduling and storage codecs keep transient payload buffers local and
+  bounded; no unbounded cache was added.
 
-## What Static Review Cannot Prove
+## Current Evidence
 
-No source audit or successful build proves the absence of a native/Dart heap
-leak. Flutter engine surfaces, fonts, images, plugins and Hive/native buffers
-need runtime evidence.
+The previous macOS profile idle sample was approximately `846944 KB -> 846976
+KB` over two minutes. It ruled out an obvious short idle runaway but did not
+prove an improvement or the absence of interaction leaks.
 
-## Measured Baseline
+On 2026-07-16 the closing batch launched the current application with
+`flutter run -d macos --profile`. The main process remained alive and its RSS
+was sampled at `22688 KB` and `23264 KB`, a `576 KB` increase over the control
+interval. This is evidence against an immediate idle runaway in that run, not
+a before/after memory improvement claim. Flutter reported `open returned 1`,
+so the application could not be foregrounded from the execution environment;
+interactive route cycling and DevTools heap snapshots were not performed.
 
-The macOS profile app started and exposed a VM Service. RSS measured `846944
-KB` at `01:35` and `846976 KB` at `03:30`. The 32 KB short idle delta does not
-show runaway idle growth, but the app could not be foregrounded by the
-automation environment, so interactive route cycling and heap snapshots remain
-unverified.
+## Required Native Profile Scenario
 
-## Required Native Profile Pass
+Measure the same build before and after repeated skill switches, RoadMap
+open/close, Statistics/Trophies dialogs, Inbox expansion, quest forms, and
+theme changes. Capture DevTools heap snapshots after returning to idle and
+compare retained controllers, decoded images, overlay images, external memory,
+and route objects. Do not force GC or clear caches to manufacture a result.
 
-On macOS profile mode, record RSS and DevTools heap snapshots at idle, after
-skill switching, repeated Statistics/Trophies open-close, RoadMap cycling and
-return to idle. Compare retained Dart classes and external memory. Do not force
-GC or clear navigation caches to manufacture a result.
-
-The full static findings and protocol are in `MEMORY_AUDIT.md`.
+Static ownership review and the idle sample cannot replace this native pass,
+especially on Windows and Android.

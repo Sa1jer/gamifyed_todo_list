@@ -1,14 +1,16 @@
-import 'dart:convert';
 import 'dart:io';
+
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+
 import 'models.dart';
-import 'storage_snapshot.dart';
-import 'utils.dart';
+import 'persistence/hive_preference_store.dart';
+import 'persistence/legacy_hive_domain_store.dart';
+import 'persistence/legacy_storage_codec.dart';
 import 'persistence/snapshot_store.dart';
 import 'persistence/storage_migration_policy.dart';
 import 'persistence/storage_snapshot_codec.dart';
+import 'storage_snapshot.dart';
 
 export 'persistence/snapshot_store.dart' show SnapshotBackend;
 
@@ -24,6 +26,11 @@ class _HiveSnapshotBackend implements SnapshotBackend {
   Future<void> write(String key, String value) => box.put(key, value);
 }
 
+/// Stable compatibility facade for local persistence.
+///
+/// Snapshot recovery, legacy box IO, preferences, migration, and payload
+/// codecs have separate owners. This facade preserves the historical public
+/// API used by AppState and test doubles.
 class StorageService {
   static const String _skillsBox = 'skills';
   static const String _tasksBox = 'tasks';
@@ -37,6 +44,7 @@ class StorageService {
   static const String _weeklyGoalsBox = 'weekly_goals';
   static const String _metaBox = 'meta';
   static const String _snapshotsBox = 'storage_snapshots';
+
   static const String _skillsSavedKey = 'skillsSaved';
   static const String _tasksSavedKey = 'tasksSaved';
   static const String _isDarkKey = 'isDark';
@@ -47,62 +55,78 @@ class StorageService {
   static const String _tutorialProgressKey = 'tutorialProgress';
   static const String _bestStreakKey = 'bestStreak';
   static const String _schemaVersionKey = 'schemaVersion';
-  static const int _maxJsonDecodeDepth = 64;
+
+  final String? _hivePath;
+  final LegacyStorageCodec _codec = const LegacyStorageCodec();
+  final StorageMigrationPolicy _migrationPolicy =
+      const StorageMigrationPolicy();
 
   late Box<String> _skills;
-  late Box<String> _tasks;
-  late Box<String> _profile;
-  late Box<String> _history;
-  late Box<String> _achievements;
-  late Box<String> _stats;
-  late Box<String> _bosses;
-  late Box<String> _rewardChests;
-  late Box<String> _buffs;
-  late Box<String> _weeklyGoals;
   late Box<String> _meta;
+  late LegacyHiveDomainStore _domains;
+  late HivePreferenceStore _preferences;
   SnapshotBackend? _snapshotBackend;
 
   bool _initialized = false;
   bool? _runtimeReducedMotion;
-  final StorageMigrationPolicy _migrationPolicy =
-      const StorageMigrationPolicy();
 
-  StorageService({SnapshotBackend? snapshotBackend})
-    : _snapshotBackend = snapshotBackend;
+  StorageService({SnapshotBackend? snapshotBackend, String? hivePath})
+    : _snapshotBackend = snapshotBackend,
+      _hivePath = hivePath;
 
   bool get supportsSnapshots => _snapshotBackend != null;
 
   Future<void> init() async {
     if (_initialized) return;
 
-    await Hive.initFlutter();
+    final hivePath = _hivePath;
+    if (hivePath == null) {
+      await Hive.initFlutter();
+    } else {
+      Hive.init(hivePath);
+    }
 
     _skills = await _openBox<String>(_skillsBox);
-    _tasks = await _openBox<String>(_tasksBox);
-    _profile = await _openBox<String>(_profileBox);
-    _history = await _openBox<String>(_historyBox);
-    _achievements = await _openBox<String>(_achievementsBox);
-    _stats = await _openBox<String>(_statsBox);
-    _bosses = await _openBox<String>(_bossesBox);
-    _rewardChests = await _openBox<String>(_rewardChestsBox);
-    _buffs = await _openBox<String>(_buffsBox);
-    _weeklyGoals = await _openBox<String>(_weeklyGoalsBox);
+    final tasks = await _openBox<String>(_tasksBox);
+    final profile = await _openBox<String>(_profileBox);
+    final history = await _openBox<String>(_historyBox);
+    final achievements = await _openBox<String>(_achievementsBox);
+    final stats = await _openBox<String>(_statsBox);
+    final bosses = await _openBox<String>(_bossesBox);
+    final rewardChests = await _openBox<String>(_rewardChestsBox);
+    final buffs = await _openBox<String>(_buffsBox);
+    final weeklyGoals = await _openBox<String>(_weeklyGoalsBox);
     _meta = await _openBox<String>(_metaBox);
     final snapshots = await _openBox<String>(_snapshotsBox);
+
+    _domains = LegacyHiveDomainStore(
+      skills: _skills,
+      tasks: tasks,
+      profile: profile,
+      history: history,
+      achievements: achievements,
+      stats: stats,
+      bosses: bosses,
+      rewardChests: rewardChests,
+      buffs: buffs,
+      weeklyGoals: weeklyGoals,
+      meta: _meta,
+      codec: _codec,
+      skillsSavedKey: _skillsSavedKey,
+      tasksSavedKey: _tasksSavedKey,
+    );
+    _preferences = HivePreferenceStore(meta: _meta, codec: _codec);
     _snapshotBackend = _HiveSnapshotBackend(snapshots);
 
     await _migrateIfNeeded();
-
     _initialized = true;
   }
 
-  Future<CommittedSnapshot?> loadLatestSnapshot() async {
-    return _snapshotStore().loadLatest();
-  }
+  Future<CommittedSnapshot?> loadLatestSnapshot() =>
+      _snapshotStore().loadLatest();
 
-  Future<void> saveSnapshot(StorageSnapshot snapshot) async {
-    await _snapshotStore().save(snapshot);
-  }
+  Future<void> saveSnapshot(StorageSnapshot snapshot) =>
+      _snapshotStore().save(snapshot);
 
   SnapshotStore _snapshotStore() {
     final backend = _snapshotBackend;
@@ -117,53 +141,50 @@ class StorageService {
   }
 
   StorageSnapshotCodec _snapshotCodec() => StorageSnapshotCodec(
-    encodeSkill: _encodeSkill,
-    decodeSkill: _decodeSkill,
-    encodeTask: _encodeTask,
-    decodeTask: _decodeTask,
-    encodeProfile: _encodeProfile,
-    decodeProfile: _decodeProfile,
-    encodeHistoryEntry: _encodeHistoryEntry,
-    decodeHistoryEntry: _decodeHistoryEntry,
-    encodeAchievement: _encodeAchievement,
-    decodeAchievement: _decodeAchievement,
-    encodeDailyStats: _encodeDailyStats,
-    decodeDailyStats: _decodeDailyStats,
-    encodeBoss: _encodeBoss,
-    decodeBoss: _decodeBoss,
-    encodeRewardChest: _encodeRewardChest,
-    decodeRewardChest: _decodeRewardChest,
-    encodeBuff: _encodeBuff,
-    decodeBuff: _decodeBuff,
-    encodeWeeklyGoal: _encodeWeeklyGoal,
-    decodeWeeklyGoal: _decodeWeeklyGoal,
-    decodeMap: _decodeMap,
+    encodeSkill: _codec.encodeSkill,
+    decodeSkill: _codec.decodeSkill,
+    encodeTask: _codec.encodeTask,
+    decodeTask: _codec.decodeTask,
+    encodeProfile: _codec.encodeProfile,
+    decodeProfile: _codec.decodeProfile,
+    encodeHistoryEntry: _codec.encodeHistoryEntry,
+    decodeHistoryEntry: _codec.decodeHistoryEntry,
+    encodeAchievement: _codec.encodeAchievement,
+    decodeAchievement: _codec.decodeAchievement,
+    encodeDailyStats: _codec.encodeDailyStats,
+    decodeDailyStats: _codec.decodeDailyStats,
+    encodeBoss: _codec.encodeBoss,
+    decodeBoss: _codec.decodeBoss,
+    encodeRewardChest: _codec.encodeRewardChest,
+    decodeRewardChest: _codec.decodeRewardChest,
+    encodeBuff: _codec.encodeBuff,
+    decodeBuff: _codec.decodeBuff,
+    encodeWeeklyGoal: _codec.encodeWeeklyGoal,
+    decodeWeeklyGoal: _codec.decodeWeeklyGoal,
+    decodeMap: _codec.decodeMap,
   );
 
-  Future<void> _migrateIfNeeded() async {
-    await _migrationPolicy.migrate(
-      storedVersionValue: _meta.get(_schemaVersionKey),
-      skillKeys: _skills.keys,
-      readSkill: _skills.get,
-      writeSkill: _skills.put,
-      writeVersion: (version) =>
-          _meta.put(_schemaVersionKey, version.toString()),
-      migrateSkillPayload: _migrateSkillPayloadV1ToV2,
-    );
-  }
+  Future<void> _migrateIfNeeded() => _migrationPolicy.migrate(
+    storedVersionValue: _meta.get(_schemaVersionKey),
+    skillKeys: _skills.keys,
+    readSkill: _skills.get,
+    writeSkill: _skills.put,
+    writeVersion: (version) => _meta.put(_schemaVersionKey, version.toString()),
+    migrateSkillPayload: _migrateSkillPayloadV1ToV2,
+  );
 
-  String? _migrateSkillPayloadV1ToV2(String raw) {
-    return _migrationPolicy.migrateSkillPayloadV1ToV2<Skill>(
-      raw: raw,
-      decodeMapOrNull: (value) => _decodeOrNull(value, _decodeMap),
-      decodeSkillOrNull: (value) => _decodeOrNull(value, _decodeSkill),
-      encodeSkill: _encodeSkill,
-    );
-  }
+  String? _migrateSkillPayloadV1ToV2(String raw) =>
+      _migrationPolicy.migrateSkillPayloadV1ToV2<Skill>(
+        raw: raw,
+        decodeMapOrNull: (value) =>
+            _codec.decodeOrNull(value, _codec.decodeMap),
+        decodeSkillOrNull: (value) =>
+            _codec.decodeOrNull(value, _codec.decodeSkill),
+        encodeSkill: _codec.encodeSkill,
+      );
 
   Future<Box<T>> _openBox<T>(String name) async {
     const maxAttempts = 8;
-
     for (var attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         return await Hive.openBox<T>(name);
@@ -173,7 +194,6 @@ class StorageService {
         await Future<void>.delayed(Duration(milliseconds: 120 * attempt));
       }
     }
-
     return Hive.openBox<T>(name);
   }
 
@@ -183,1124 +203,199 @@ class StorageService {
     }
   }
 
-  T? _decodeOrNull<T>(String raw, T Function(String raw) decode) {
-    try {
-      return decode(raw);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  Map<String, dynamic> _decodeMap(String raw) {
-    final decoded = jsonDecode(raw);
-    if (!_jsonDepthWithinLimit(decoded)) {
-      throw const FormatException('Storage JSON payload is too deeply nested.');
-    }
-    if (decoded is Map<String, dynamic>) return decoded;
-    if (decoded is Map) return Map<String, dynamic>.from(decoded);
-    throw const FormatException('Storage JSON payload must be an object.');
-  }
-
-  bool _jsonDepthWithinLimit(Object? root) {
-    final stack = <({Object? value, int depth})>[(value: root, depth: 1)];
-    while (stack.isNotEmpty) {
-      final item = stack.removeLast();
-      if (item.depth > _maxJsonDecodeDepth) return false;
-      switch (item.value) {
-        case final Map map:
-          for (final value in map.values) {
-            stack.add((value: value, depth: item.depth + 1));
-          }
-        case final List list:
-          for (final value in list) {
-            stack.add((value: value, depth: item.depth + 1));
-          }
-      }
-    }
-    return true;
-  }
-
-  String _readString(
-    Map<String, dynamic> data,
-    String key, [
-    String fallback = '',
-  ]) {
-    final value = data[key];
-    if (value is String) return value;
-    return fallback;
-  }
-
-  String? _readNullableString(Map<String, dynamic> data, String key) {
-    final value = data[key];
-    if (value is String && value.isNotEmpty) return value;
-    return null;
-  }
-
-  int _readInt(Map<String, dynamic> data, String key, [int fallback = 0]) {
-    final value = data[key];
-    return _readNullableIntValue(value) ?? fallback;
-  }
-
-  int? _readNullableInt(Map<String, dynamic> data, String key) {
-    return _readNullableIntValue(data[key]);
-  }
-
-  int? _readNullableIntValue(Object? value) {
-    if (value is int) return value;
-    if (value is num) return value.toInt();
-    if (value is String) return int.tryParse(value);
-    return null;
-  }
-
-  double? _readNullableDouble(Map<String, dynamic> data, String key) {
-    final value = data[key];
-    if (value is num) return value.toDouble();
-    if (value is String) return double.tryParse(value);
-    return null;
-  }
-
-  int _readPositiveInt(
-    Map<String, dynamic> data,
-    String key, [
-    int fallback = 1,
-  ]) {
-    final value = _readInt(data, key, fallback);
-    return value < 1 ? fallback : value;
-  }
-
-  bool _readBool(
-    Map<String, dynamic> data,
-    String key, [
-    bool fallback = false,
-  ]) {
-    final value = data[key];
-    if (value is bool) return value;
-    if (value is String) return value.toLowerCase() == 'true';
-    return fallback;
-  }
-
-  List<String> _readStringList(Map<String, dynamic> data, String key) {
-    final value = data[key];
-    if (value is! List) return [];
-    return value.whereType<String>().toList();
-  }
-
-  List<bool> _readBoolList(Map<String, dynamic> data, String key) {
-    final value = data[key];
-    if (value is! List) return [];
-    return value.map((item) {
-      if (item is bool) return item;
-      if (item is String) return item.toLowerCase() == 'true';
-      return false;
-    }).toList();
-  }
-
-  List<int> _readIntList(Map<String, dynamic> data, String key) {
-    final value = data[key];
-    if (value is! List) return [];
-    return value
-        .map(_readNullableIntValue)
-        .whereType<int>()
-        .toList(growable: false);
-  }
-
-  DateTime? _readDate(Map<String, dynamic> data, String key) {
-    final value = data[key];
-    if (value is! String || value.isEmpty) return null;
-    return DateTime.tryParse(value);
-  }
-
-  Uint8List? _readBytes(Map<String, dynamic> data, String key) {
-    final value = data[key];
-    if (value is! String || value.isEmpty) return null;
-    try {
-      final bytes = base64Decode(value);
-      return hasSupportedImageMagicBytes(bytes) ? bytes : null;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  T _readEnum<T extends Enum>(List<T> values, Object? raw, T fallback) {
-    if (raw is String) {
-      final byName = values.where((value) => value.name == raw).firstOrNull;
-      if (byName != null) return byName;
-    }
-
-    final index = raw is int
-        ? raw
-        : raw is num
-        ? raw.toInt()
-        : raw is String
-        ? int.tryParse(raw)
-        : null;
-    if (index == null || index < 0 || index >= values.length) return fallback;
-    return values[index];
-  }
-
-  Future<bool> hasSavedSkills() async {
+  Future<bool> hasSavedSkills() {
     _ensureInit();
-    return _meta.get(_skillsSavedKey) == 'true';
+    return _domains.hasSavedSkills();
   }
 
-  Future<bool> hasSavedTasks() async {
+  Future<bool> hasSavedTasks() {
     _ensureInit();
-    return _meta.get(_tasksSavedKey) == 'true';
+    return _domains.hasSavedTasks();
   }
 
-  Future<bool?> loadTheme() async {
+  Future<bool?> loadTheme() => _loadBool(_isDarkKey);
+  Future<void> saveTheme(bool value) => _saveBool(_isDarkKey, value);
+  Future<bool?> loadSfxEnabled() => _loadBool(_sfxEnabledKey);
+  Future<void> saveSfxEnabled(bool value) => _saveBool(_sfxEnabledKey, value);
+  Future<bool?> loadTooltipsEnabled() => _loadBool(_tooltipsEnabledKey);
+  Future<void> saveTooltipsEnabled(bool value) =>
+      _saveBool(_tooltipsEnabledKey, value);
+  Future<bool?> loadOnboardingSeen() => _loadBool(_onboardingSeenKey);
+  Future<void> saveOnboardingSeen(bool value) =>
+      _saveBool(_onboardingSeenKey, value);
+
+  Future<bool?> _loadBool(String key) {
     _ensureInit();
-    final raw = _meta.get(_isDarkKey);
-    if (raw == null) return null;
-    return raw == 'true';
+    return _preferences.loadBool(key);
   }
 
-  Future<void> saveTheme(bool isDark) async {
+  Future<void> _saveBool(String key, bool value) {
     _ensureInit();
-    await _meta.put(_isDarkKey, isDark ? 'true' : 'false');
-  }
-
-  Future<bool?> loadSfxEnabled() async {
-    _ensureInit();
-    final raw = _meta.get(_sfxEnabledKey);
-    if (raw == null) return null;
-    return raw == 'true';
-  }
-
-  Future<void> saveSfxEnabled(bool enabled) async {
-    _ensureInit();
-    await _meta.put(_sfxEnabledKey, enabled ? 'true' : 'false');
-  }
-
-  Future<bool?> loadTooltipsEnabled() async {
-    _ensureInit();
-    final raw = _meta.get(_tooltipsEnabledKey);
-    if (raw == null) return null;
-    return raw == 'true';
-  }
-
-  Future<void> saveTooltipsEnabled(bool enabled) async {
-    _ensureInit();
-    await _meta.put(_tooltipsEnabledKey, enabled ? 'true' : 'false');
+    return _preferences.saveBool(key, value);
   }
 
   /// Device-local UI preference kept outside domain snapshots intentionally.
-  Future<bool?> loadReducedMotion() async {
-    if (!_initialized) return _runtimeReducedMotion;
-    final raw = _meta.get(_reducedMotionKey);
-    if (raw == null) return null;
-    return raw == 'true';
+  Future<bool?> loadReducedMotion() {
+    if (!_initialized) return Future<bool?>.value(_runtimeReducedMotion);
+    return _preferences.loadBool(_reducedMotionKey);
   }
 
   Future<void> saveReducedMotion(bool enabled) async {
     _runtimeReducedMotion = enabled;
     if (!_initialized) return;
-    await _meta.put(_reducedMotionKey, enabled ? 'true' : 'false');
+    await _preferences.saveBool(_reducedMotionKey, enabled);
   }
 
-  Future<bool?> loadOnboardingSeen() async {
+  Future<TutorialProgress?> loadTutorialProgress() {
     _ensureInit();
-    final raw = _meta.get(_onboardingSeenKey);
-    if (raw == null) return null;
-    return raw == 'true';
+    return _preferences.loadTutorialProgress(_tutorialProgressKey);
   }
 
-  Future<void> saveOnboardingSeen(bool seen) async {
+  Future<void> saveTutorialProgress(TutorialProgress progress) {
     _ensureInit();
-    await _meta.put(_onboardingSeenKey, seen ? 'true' : 'false');
+    return _preferences.saveTutorialProgress(_tutorialProgressKey, progress);
   }
 
-  Future<TutorialProgress?> loadTutorialProgress() async {
+  Future<int?> loadBestStreak() {
     _ensureInit();
-    final raw = _meta.get(_tutorialProgressKey);
-    if (raw == null) return null;
-    final data = _decodeOrNull(raw, _decodeMap);
-    if (data == null) return const TutorialProgress.empty();
-    return TutorialProgress.fromJson(data);
+    return _preferences.loadInt(_bestStreakKey);
   }
 
-  Future<void> saveTutorialProgress(TutorialProgress progress) async {
+  Future<void> saveBestStreak(int value) {
     _ensureInit();
-    await _meta.put(_tutorialProgressKey, jsonEncode(progress.toJson()));
+    return _preferences.saveInt(_bestStreakKey, value);
+  }
+
+  Future<void> saveSkills(List<Skill> values) {
+    _ensureInit();
+    return _domains.saveSkills(values);
+  }
+
+  Future<List<Skill>> loadSkills() {
+    _ensureInit();
+    return _domains.loadSkills();
+  }
+
+  Future<void> saveTasks(List<Task> values) {
+    _ensureInit();
+    return _domains.saveTasks(values);
+  }
+
+  Future<List<Task>> loadTasks() {
+    _ensureInit();
+    return _domains.loadTasks();
+  }
+
+  Future<void> saveProfile(UserProfile value) {
+    _ensureInit();
+    return _domains.saveProfile(value);
+  }
+
+  Future<UserProfile> loadProfile() {
+    _ensureInit();
+    return _domains.loadProfile();
+  }
+
+  Future<void> saveHistory(List<HistoryEntry> values) {
+    _ensureInit();
+    return _domains.saveHistory(values);
+  }
+
+  Future<List<HistoryEntry>> loadHistory() {
+    _ensureInit();
+    return _domains.loadHistory();
+  }
+
+  Future<void> saveStats(DailyStats value) {
+    _ensureInit();
+    return _domains.saveStats(value);
+  }
+
+  Future<DailyStats?> loadStats() {
+    _ensureInit();
+    return _domains.loadStats();
+  }
+
+  Future<void> saveAchievements(List<Achievement> values) {
+    _ensureInit();
+    return _domains.saveAchievements(values);
+  }
+
+  Future<List<Achievement>> loadAchievements() {
+    _ensureInit();
+    return _domains.loadAchievements();
+  }
+
+  Future<void> saveBosses(List<Boss> values) {
+    _ensureInit();
+    return _domains.saveBosses(values);
+  }
+
+  Future<List<Boss>> loadBosses() {
+    _ensureInit();
+    return _domains.loadBosses();
+  }
+
+  Future<void> saveRewardChests(List<RewardChest> values) {
+    _ensureInit();
+    return _domains.saveRewardChests(values);
+  }
+
+  Future<List<RewardChest>> loadRewardChests() {
+    _ensureInit();
+    return _domains.loadRewardChests();
+  }
+
+  Future<void> saveBuffs(List<Buff> values) {
+    _ensureInit();
+    return _domains.saveBuffs(values);
+  }
+
+  Future<List<Buff>> loadBuffs() {
+    _ensureInit();
+    return _domains.loadBuffs();
+  }
+
+  Future<void> saveWeeklyGoals(List<WeeklyGoal> values) {
+    _ensureInit();
+    return _domains.saveWeeklyGoals(values);
+  }
+
+  Future<List<WeeklyGoal>> loadWeeklyGoals() {
+    _ensureInit();
+    return _domains.loadWeeklyGoals();
   }
 
   @visibleForTesting
-  String debugEncodeTask(Task task) => _encodeTask(task);
-
+  String debugEncodeTask(Task value) => _codec.encodeTask(value);
   @visibleForTesting
-  Task debugDecodeTask(String json) => _decodeTask(json);
-
+  Task debugDecodeTask(String raw) => _codec.decodeTask(raw);
   @visibleForTesting
-  String debugEncodeSkill(Skill skill) => _encodeSkill(skill);
-
+  String debugEncodeSkill(Skill value) => _codec.encodeSkill(value);
   @visibleForTesting
-  Skill debugDecodeSkill(String json) => _decodeSkill(json);
-
+  Skill debugDecodeSkill(String raw) => _codec.decodeSkill(raw);
   @visibleForTesting
-  Achievement debugDecodeAchievement(String json) => _decodeAchievement(json);
-
+  Achievement debugDecodeAchievement(String raw) =>
+      _codec.decodeAchievement(raw);
   @visibleForTesting
-  String debugEncodeProfile(UserProfile profile) => _encodeProfile(profile);
-
+  String debugEncodeProfile(UserProfile value) => _codec.encodeProfile(value);
   @visibleForTesting
-  UserProfile debugDecodeProfile(String json) => _decodeProfile(json);
-
+  UserProfile debugDecodeProfile(String raw) => _codec.decodeProfile(raw);
   @visibleForTesting
-  Map<String, dynamic>? debugDecodeMapOrNull(String json) =>
-      _decodeOrNull(json, _decodeMap);
-
+  Map<String, dynamic>? debugDecodeMapOrNull(String raw) =>
+      _codec.decodeOrNull(raw, _codec.decodeMap);
   @visibleForTesting
   int get debugCurrentSchemaVersion => _migrationPolicy.currentVersion;
-
   @visibleForTesting
   int debugVersionAfterMigration(Object? raw) =>
       _migrationPolicy.versionAfterMigration(raw);
-
   @visibleForTesting
   String? debugMigrateSkillPayloadV1ToV2(String raw) =>
       _migrateSkillPayloadV1ToV2(raw);
-
   @visibleForTesting
-  String debugEncodeSnapshot(StorageSnapshot snapshot) =>
-      _snapshotCodec().encode(snapshot);
-
+  String debugEncodeSnapshot(StorageSnapshot value) =>
+      _snapshotCodec().encode(value);
   @visibleForTesting
   StorageSnapshot debugDecodeSnapshot(String raw) =>
       _snapshotCodec().decode(raw);
-
-  Future<int?> loadBestStreak() async {
-    _ensureInit();
-    return _readNullableIntValue(_meta.get(_bestStreakKey));
-  }
-
-  Future<void> saveBestStreak(int value) async {
-    _ensureInit();
-    await _meta.put(_bestStreakKey, value.toString());
-  }
-
-  Future<void> saveSkills(List<Skill> skills) async {
-    _ensureInit();
-    await _meta.put(_skillsSavedKey, 'true');
-    await _skills.clear();
-    for (final skill in skills) {
-      await _skills.put(skill.id, _encodeSkill(skill));
-    }
-  }
-
-  Future<List<Skill>> loadSkills() async {
-    _ensureInit();
-    final result = <Skill>[];
-    for (final key in _skills.keys) {
-      final json = _skills.get(key);
-      if (json != null) {
-        final decoded = _decodeOrNull(json, _decodeSkill);
-        if (decoded != null) result.add(decoded);
-      }
-    }
-    return result;
-  }
-
-  Future<void> saveTasks(List<Task> tasks) async {
-    _ensureInit();
-    await _meta.put(_tasksSavedKey, 'true');
-    await _tasks.clear();
-    for (final task in tasks) {
-      await _tasks.put(task.id, _encodeTask(task));
-    }
-  }
-
-  Future<List<Task>> loadTasks() async {
-    _ensureInit();
-    final result = <Task>[];
-    for (final key in _tasks.keys) {
-      final json = _tasks.get(key);
-      if (json != null) {
-        final decoded = _decodeOrNull(json, _decodeTask);
-        if (decoded != null) result.add(decoded);
-      }
-    }
-    return result;
-  }
-
-  Future<void> saveProfile(UserProfile profile) async {
-    _ensureInit();
-    await _profile.put('profile', _encodeProfile(profile));
-  }
-
-  String _encodeProfile(UserProfile profile) {
-    final data = {
-      'name': profile.name,
-      'level': profile.level,
-      'xp': profile.xp,
-      'totalXpEarned': profile.totalXpEarned,
-      'age': profile.age,
-      'gender': profile.gender?.name,
-      'avatarBytes': profile.avatarBytes != null
-          ? base64Encode(profile.avatarBytes!)
-          : null,
-      'bannerBytes': profile.bannerBytes != null
-          ? base64Encode(profile.bannerBytes!)
-          : null,
-      'streakProtectionCharges': profile.streakProtectionCharges,
-      'streakProtectionRefilledAt': profile.streakProtectionRefilledAt
-          ?.toIso8601String(),
-      'lastStreakProtectionUsedAt': profile.lastStreakProtectionUsedAt
-          ?.toIso8601String(),
-      'lastStreakProtectionTaskTitle': profile.lastStreakProtectionTaskTitle,
-    };
-    return jsonEncode(data);
-  }
-
-  Future<UserProfile> loadProfile() async {
-    _ensureInit();
-    final raw = _profile.get('profile');
-    if (raw == null) {
-      return UserProfile(name: 'Your Name');
-    }
-
-    return _decodeProfile(raw);
-  }
-
-  UserProfile _decodeProfile(String raw) {
-    final data = _decodeOrNull(raw, _decodeMap);
-    if (data == null) {
-      return UserProfile(name: 'Your Name');
-    }
-    return UserProfile(
-      name: _readString(data, 'name', 'Your Name'),
-      level: _readInt(data, 'level', 1),
-      xp: _readInt(data, 'xp'),
-      totalXpEarned: _readInt(data, 'totalXpEarned'),
-      age: data['age'] == null ? null : _readInt(data, 'age'),
-      gender: data['gender'] == null
-          ? null
-          : _readEnum(Gender.values, data['gender'], Gender.nonBinary),
-      avatarBytes: _readBytes(data, 'avatarBytes'),
-      bannerBytes: _readBytes(data, 'bannerBytes'),
-      streakProtectionCharges: _readInt(data, 'streakProtectionCharges', 1),
-      streakProtectionRefilledAt: _readDate(data, 'streakProtectionRefilledAt'),
-      lastStreakProtectionUsedAt: _readDate(data, 'lastStreakProtectionUsedAt'),
-      lastStreakProtectionTaskTitle: _readNullableString(
-        data,
-        'lastStreakProtectionTaskTitle',
-      ),
-    );
-  }
-
-  Future<void> saveHistory(List<HistoryEntry> entries) async {
-    _ensureInit();
-    await _history.clear();
-    for (int i = 0; i < entries.length; i++) {
-      await _history.put(entries[i].id, _encodeHistoryEntry(entries[i]));
-    }
-  }
-
-  Future<List<HistoryEntry>> loadHistory() async {
-    _ensureInit();
-    final result = <HistoryEntry>[];
-    for (final key in _history.keys) {
-      final json = _history.get(key);
-      if (json != null) {
-        final decoded = _decodeOrNull(json, _decodeHistoryEntry);
-        if (decoded != null) result.add(decoded);
-      }
-    }
-    return result;
-  }
-
-  Future<void> saveStats(DailyStats stats) async {
-    _ensureInit();
-    await _stats.put('daily', jsonEncode(_encodeDailyStats(stats)));
-  }
-
-  Future<DailyStats?> loadStats() async {
-    _ensureInit();
-    final raw = _stats.get('daily');
-    if (raw == null) return null;
-    final decoded = _decodeOrNull(
-      raw,
-      (json) => _decodeDailyStats(_decodeMap(json)),
-    );
-    return decoded;
-  }
-
-  Future<void> saveAchievements(List<Achievement> achievements) async {
-    _ensureInit();
-    await _achievements.clear();
-    for (final a in achievements) {
-      await _achievements.put(a.id, _encodeAchievement(a));
-    }
-  }
-
-  Future<List<Achievement>> loadAchievements() async {
-    _ensureInit();
-    final result = <Achievement>[];
-    for (final key in _achievements.keys) {
-      final json = _achievements.get(key);
-      if (json != null) {
-        final decoded = _decodeOrNull(json, _decodeAchievement);
-        if (decoded != null) result.add(decoded);
-      }
-    }
-    return result;
-  }
-
-  Future<void> saveBosses(List<Boss> bosses) async {
-    _ensureInit();
-    await _bosses.clear();
-    for (final boss in bosses) {
-      await _bosses.put(boss.id, _encodeBoss(boss));
-    }
-  }
-
-  Future<List<Boss>> loadBosses() async {
-    _ensureInit();
-    final result = <Boss>[];
-    for (final key in _bosses.keys) {
-      final json = _bosses.get(key);
-      if (json != null) {
-        final decoded = _decodeOrNull(json, _decodeBoss);
-        if (decoded != null) result.add(decoded);
-      }
-    }
-    return result;
-  }
-
-  Future<void> saveRewardChests(List<RewardChest> rewardChests) async {
-    _ensureInit();
-    await _rewardChests.clear();
-    for (final chest in rewardChests) {
-      await _rewardChests.put(chest.id, _encodeRewardChest(chest));
-    }
-  }
-
-  Future<List<RewardChest>> loadRewardChests() async {
-    _ensureInit();
-    final result = <RewardChest>[];
-    for (final key in _rewardChests.keys) {
-      final json = _rewardChests.get(key);
-      if (json != null) {
-        final decoded = _decodeOrNull(json, _decodeRewardChest);
-        if (decoded != null) result.add(decoded);
-      }
-    }
-    return result;
-  }
-
-  Future<void> saveBuffs(List<Buff> buffs) async {
-    _ensureInit();
-    await _buffs.clear();
-    for (final buff in buffs) {
-      await _buffs.put(buff.id, _encodeBuff(buff));
-    }
-  }
-
-  Future<List<Buff>> loadBuffs() async {
-    _ensureInit();
-    final result = <Buff>[];
-    for (final key in _buffs.keys) {
-      final json = _buffs.get(key);
-      if (json != null) {
-        final decoded = _decodeOrNull(json, _decodeBuff);
-        if (decoded != null) result.add(decoded);
-      }
-    }
-    return result;
-  }
-
-  Future<void> saveWeeklyGoals(List<WeeklyGoal> goals) async {
-    _ensureInit();
-    await _weeklyGoals.clear();
-    for (final goal in goals) {
-      await _weeklyGoals.put(goal.id, _encodeWeeklyGoal(goal));
-    }
-  }
-
-  Future<List<WeeklyGoal>> loadWeeklyGoals() async {
-    _ensureInit();
-    final result = <WeeklyGoal>[];
-    for (final key in _weeklyGoals.keys) {
-      final json = _weeklyGoals.get(key);
-      if (json != null) {
-        final decoded = _decodeOrNull(json, _decodeWeeklyGoal);
-        if (decoded != null) result.add(decoded);
-      }
-    }
-    return result;
-  }
-
-  String _encodeSkill(Skill s) => jsonEncode({
-    'id': s.id,
-    'name': s.name,
-    'goal': s.goal,
-    'goalSpec': _encodeGoalSpec(s.goalSpec),
-    'checklist': s.checklist,
-    'checklistDone': s.checklistDone,
-    'treeNodes': s.treeNodes.map(_encodeSkillTreeNode).toList(),
-    'completedGoals': s.completedGoals.map(_encodeCompletedGoal).toList(),
-    'completedRoadmaps': s.completedRoadmaps
-        .map(_encodeCompletedRoadmap)
-        .toList(),
-    'triggeredGoalMilestones': s.triggeredGoalMilestones,
-    'color': s.color.toARGB32(),
-    'iconName': s.icon.codePoint.toString(),
-    'level': s.level,
-    'xp': s.xp,
-  });
-
-  IconData _getIconFromCodePoint(String codePoint) {
-    final cp = int.tryParse(codePoint);
-    if (cp == null) return Icons.bolt;
-    for (final icon in [...kIconsPrimary, ...kIconsExtra]) {
-      if (icon.codePoint == cp) return icon;
-    }
-    return Icons.bolt;
-  }
-
-  Skill _decodeSkill(String json) {
-    final d = _decodeMap(json);
-    final iconName = _readString(d, 'iconName', _readString(d, 'icon', ''));
-    final legacyGoal = _readString(d, 'goal');
-    final goalSpec = _decodeGoalSpec(d['goalSpec'], legacyGoal);
-    return Skill(
-      id: _readString(d, 'id', uid()),
-      name: _readString(d, 'name', 'Навык'),
-      goal: legacyGoal,
-      goalSpec: goalSpec,
-      checklist: _readStringList(d, 'checklist'),
-      checklistDone: _readBoolList(d, 'checklistDone'),
-      treeNodes:
-          (d['treeNodes'] as List?)
-              ?.whereType<Map>()
-              .map(
-                (raw) => _decodeSkillTreeNode(Map<String, dynamic>.from(raw)),
-              )
-              .toList() ??
-          [],
-      completedGoals:
-          (d['completedGoals'] as List?)
-              ?.whereType<Map>()
-              .map(_decodeCompletedGoal)
-              .whereType<CompletedGoal>()
-              .toList() ??
-          [],
-      completedRoadmaps:
-          ((d['completedRoadmaps'] ?? d['completedRoadMaps']) as List?)
-              ?.whereType<Map>()
-              .map(_decodeCompletedRoadmap)
-              .whereType<CompletedRoadmap>()
-              .toList() ??
-          [],
-      triggeredGoalMilestones: _readIntList(
-        d,
-        'triggeredGoalMilestones',
-      ).where(_isKnownGoalMilestonePercent).toSet().toList(),
-      color: Color(_readInt(d, 'color', const Color(0xFF4A9EFF).toARGB32())),
-      icon: _getIconFromCodePoint(iconName),
-      level: _readInt(d, 'level', 1),
-      xp: _readInt(d, 'xp'),
-    );
-  }
-
-  bool _isKnownGoalMilestonePercent(int percent) {
-    return GoalMilestone.values.any(
-      (milestone) => milestone.percent == percent,
-    );
-  }
-
-  Map<String, dynamic> _encodeGoalSpec(GoalSpec goal) => {
-    'text': goal.text,
-    'deadline': goal.deadline?.toIso8601String(),
-    'metric': goal.metric,
-    'targetValue': goal.targetValue,
-    'currentValue': goal.currentValue,
-    'reviews': goal.reviews.map(_encodeGoalReviewEntry).toList(),
-    'updatedAt': goal.updatedAt.toIso8601String(),
-  };
-
-  GoalSpec _decodeGoalSpec(Object? raw, String legacyGoal) {
-    final data = switch (raw) {
-      final Map map => Map<String, dynamic>.from(map),
-      final String value when value.isNotEmpty => _decodeOrNull(
-        value,
-        _decodeMap,
-      ),
-      _ => null,
-    };
-
-    if (data == null) {
-      return GoalSpec(text: legacyGoal);
-    }
-
-    final rawText = data['text'];
-    final text = rawText is String && rawText.isNotEmpty ? rawText : legacyGoal;
-    final rawReviews = data['reviews'];
-
-    return GoalSpec(
-      text: text,
-      deadline: _readDate(data, 'deadline'),
-      metric: _readNullableString(data, 'metric'),
-      targetValue: _readNullableDouble(data, 'targetValue'),
-      currentValue: _readNullableDouble(data, 'currentValue'),
-      reviews: rawReviews is List
-          ? rawReviews.whereType<Map>().map(_decodeGoalReviewEntry).toList()
-          : [],
-      updatedAt: _readDate(data, 'updatedAt') ?? DateTime.now(),
-    );
-  }
-
-  Map<String, dynamic> _encodeGoalReviewEntry(GoalReviewEntry review) => {
-    'id': review.id,
-    'createdAt': review.createdAt.toIso8601String(),
-    'wins': review.wins,
-    'blockers': review.blockers,
-    'adjustment': review.adjustment,
-    'nextFocus': review.nextFocus,
-    'updatedPlan': review.updatedPlan,
-  };
-
-  GoalReviewEntry _decodeGoalReviewEntry(Map<dynamic, dynamic> raw) {
-    final data = Map<String, dynamic>.from(raw);
-    return GoalReviewEntry(
-      id: _readString(data, 'id', uid()),
-      createdAt: _readDate(data, 'createdAt') ?? DateTime.now(),
-      wins: _readString(data, 'wins'),
-      blockers: _readString(data, 'blockers'),
-      adjustment: _readString(data, 'adjustment'),
-      nextFocus: _readString(data, 'nextFocus'),
-      updatedPlan: _readBool(data, 'updatedPlan'),
-    );
-  }
-
-  Map<String, dynamic> _encodeCompletedGoal(CompletedGoal goal) => {
-    'id': goal.id,
-    'skillId': goal.skillId,
-    'goalText': goal.goalText,
-    'completedAt': goal.completedAt.toIso8601String(),
-    'progressAtCompletion': goal.progressAtCompletion,
-    'completedStages': goal.completedStages,
-    'totalStages': goal.totalStages,
-  };
-
-  CompletedGoal? _decodeCompletedGoal(Map<dynamic, dynamic> raw) {
-    final data = Map<String, dynamic>.from(raw);
-    final id = _readString(data, 'id').trim();
-    final skillId = _readString(data, 'skillId').trim();
-    final goalText = _readString(data, 'goalText').trim();
-    final completedAt = _readDate(data, 'completedAt');
-    if (id.isEmpty ||
-        skillId.isEmpty ||
-        goalText.isEmpty ||
-        completedAt == null) {
-      return null;
-    }
-
-    final totalStages = _readInt(data, 'totalStages').clamp(0, 1 << 30);
-    final completedStages = _readInt(
-      data,
-      'completedStages',
-    ).clamp(0, totalStages);
-    final progress = (_readNullableDouble(data, 'progressAtCompletion') ?? 0.0)
-        .clamp(0.0, 1.0);
-    return CompletedGoal(
-      id: id,
-      skillId: skillId,
-      goalText: goalText,
-      completedAt: completedAt,
-      progressAtCompletion: progress,
-      completedStages: completedStages,
-      totalStages: totalStages,
-    );
-  }
-
-  Map<String, dynamic> _encodeCompletedRoadmap(CompletedRoadmap roadmap) => {
-    'id': roadmap.id,
-    'skillId': roadmap.skillId,
-    'completedGoalId': roadmap.completedGoalId,
-    'goalText': roadmap.goalText,
-    'completedAt': roadmap.completedAt.toIso8601String(),
-    'progressAtCompletion': roadmap.progressAtCompletion,
-    'completedStages': roadmap.completedStages,
-    'totalStages': roadmap.totalStages,
-    'stages': roadmap.stages.map(_encodeRoadmapStageSnapshot).toList(),
-  };
-
-  CompletedRoadmap? _decodeCompletedRoadmap(Map<dynamic, dynamic> raw) {
-    final data = Map<String, dynamic>.from(raw);
-    final id = _readString(data, 'id').trim();
-    final skillId = _readString(data, 'skillId').trim();
-    final goalText = _readString(data, 'goalText').trim();
-    final completedAt = _readDate(data, 'completedAt');
-    if (id.isEmpty ||
-        skillId.isEmpty ||
-        goalText.isEmpty ||
-        completedAt == null) {
-      return null;
-    }
-
-    final stages =
-        (data['stages'] as List?)
-            ?.whereType<Map>()
-            .map(_decodeRoadmapStageSnapshot)
-            .whereType<RoadmapStageSnapshot>()
-            .toList() ??
-        <RoadmapStageSnapshot>[];
-    final totalStages = _readInt(
-      data,
-      'totalStages',
-      stages.length,
-    ).clamp(0, 1 << 30);
-    final completedStages = _readInt(
-      data,
-      'completedStages',
-      stages.where((stage) => stage.isMastered).length,
-    ).clamp(0, totalStages);
-    final progress = (_readNullableDouble(data, 'progressAtCompletion') ?? 0.0)
-        .clamp(0.0, 1.0);
-
-    return CompletedRoadmap(
-      id: id,
-      skillId: skillId,
-      completedGoalId: _readNullableString(data, 'completedGoalId'),
-      goalText: goalText,
-      completedAt: completedAt,
-      progressAtCompletion: progress,
-      completedStages: completedStages,
-      totalStages: totalStages,
-      stages: stages,
-    );
-  }
-
-  Map<String, dynamic> _encodeRoadmapStageSnapshot(
-    RoadmapStageSnapshot stage,
-  ) => {
-    'id': stage.id,
-    'title': stage.title,
-    'description': stage.description,
-    'xpReward': stage.xpReward,
-    'requiredQuestCompletions': stage.requiredQuestCompletions,
-    'prerequisiteIds': stage.prerequisiteIds,
-    'checklist': stage.checklist,
-    'checklistDone': stage.checklistDone,
-    'isMastered': stage.isMastered,
-    'masteredAt': stage.masteredAt?.toIso8601String(),
-  };
-
-  RoadmapStageSnapshot? _decodeRoadmapStageSnapshot(Map<dynamic, dynamic> raw) {
-    final data = Map<String, dynamic>.from(raw);
-    final id = _readString(data, 'id').trim();
-    if (id.isEmpty) return null;
-
-    return RoadmapStageSnapshot(
-      id: id,
-      title: _readString(data, 'title', 'Этап RoadMap'),
-      description: _readString(data, 'description'),
-      xpReward: _readInt(data, 'xpReward', 20),
-      requiredQuestCompletions: _readInt(data, 'requiredQuestCompletions', 3),
-      prerequisiteIds: _readStringList(data, 'prerequisiteIds'),
-      checklist: _readStringList(data, 'checklist'),
-      checklistDone: _readBoolList(data, 'checklistDone'),
-      isMastered: _readBool(data, 'isMastered'),
-      masteredAt: _readDate(data, 'masteredAt'),
-    );
-  }
-
-  Map<String, dynamic> _encodeSkillTreeNode(SkillTreeNode node) => {
-    'id': node.id,
-    'title': node.title,
-    'description': node.description,
-    'xpReward': node.xpReward,
-    'requiredQuestCompletions': node.requiredQuestCompletions,
-    'prerequisiteIds': node.prerequisiteIds,
-    'checklist': node.checklist,
-    'checklistDone': node.checklistDone,
-    'isMastered': node.isMastered,
-    'masteredAt': node.masteredAt?.toIso8601String(),
-  };
-
-  SkillTreeNode _decodeSkillTreeNode(Map<String, dynamic> d) {
-    return SkillTreeNode(
-      id: _readString(d, 'id', uid()),
-      title: _readString(d, 'title', 'Этап навыка'),
-      description: _readString(d, 'description'),
-      xpReward: _readInt(d, 'xpReward', 20),
-      requiredQuestCompletions: _readInt(d, 'requiredQuestCompletions', 3),
-      prerequisiteIds: _readStringList(d, 'prerequisiteIds'),
-      checklist: _readStringList(d, 'checklist'),
-      checklistDone: _readBoolList(d, 'checklistDone'),
-      isMastered: _readBool(d, 'isMastered'),
-      masteredAt: _readDate(d, 'masteredAt'),
-    );
-  }
-
-  String _encodeTask(Task t) => jsonEncode({
-    'id': t.id,
-    'title': t.title,
-    'description': t.description,
-    'skillId': t.skillId,
-    'xpReward': t.xpReward,
-    'type': t.type.name,
-    'isDone': t.isDone,
-    'isArchived': t.isArchived,
-    'streak': t.streak,
-    'earnedXP': t.earnedXP,
-    'repeatFrequency': t.repeatFrequency.name,
-    'repeatCustomDays': t.repeatCustomDays,
-    'nextResetAt': t.nextResetAt?.toIso8601String(),
-    'lastCompletedAt': t.lastCompletedAt?.toIso8601String(),
-    'priority': t.priority.name,
-    'minimumAction': t.minimumAction,
-    'minimumActionDoneAt': t.minimumActionDoneAt?.toIso8601String(),
-    'minimumActionEarnedXP': t.minimumActionEarnedXP,
-    'bonusXpEarned': t.bonusXpEarned,
-    'consumedBuffIds': t.consumedBuffIds,
-    'subtasks': t.subtasks,
-    'subtaskDone': t.subtaskDone,
-    'tags': t.tags,
-    'treeNodeId': t.treeNodeId,
-    'notificationsEnabled': t.notificationsEnabled,
-    'notificationHour': t.notificationHour,
-    'notificationMinute': t.notificationMinute,
-    'createdAt': t.createdAt.toIso8601String(),
-    'updatedAt': t.updatedAt.toIso8601String(),
-  });
-
-  Task _decodeTask(String json) {
-    final d = _decodeMap(json);
-    final skillId = _readTaskSkillId(d);
-    return Task(
-      id: _readString(d, 'id', uid()),
-      title: _readString(d, 'title', 'Квест'),
-      description: _readString(d, 'description'),
-      skillId: skillId,
-      xpReward: _readInt(d, 'xpReward', 20),
-      type: _readEnum(TaskType.values, d['type'], TaskType.shortTerm),
-      isDone: _readBool(d, 'isDone'),
-      isArchived: _readBool(d, 'isArchived'),
-      streak: _readInt(d, 'streak'),
-      earnedXP: _readInt(d, 'earnedXP'),
-      repeatFrequency: _readEnum(
-        RepeatFrequency.values,
-        d['repeatFrequency'],
-        RepeatFrequency.daily,
-      ),
-      repeatCustomDays: _readPositiveInt(d, 'repeatCustomDays'),
-      nextResetAt: _readDate(d, 'nextResetAt'),
-      lastCompletedAt: _readDate(d, 'lastCompletedAt'),
-      priority: _readEnum(Priority.values, d['priority'], Priority.medium),
-      minimumAction: _readString(d, 'minimumAction'),
-      minimumActionDoneAt: _readDate(d, 'minimumActionDoneAt'),
-      minimumActionEarnedXP: _readInt(d, 'minimumActionEarnedXP'),
-      bonusXpEarned: _readInt(d, 'bonusXpEarned'),
-      consumedBuffIds: _readStringList(d, 'consumedBuffIds'),
-      subtasks: _readStringList(d, 'subtasks'),
-      subtaskDone: _readBoolList(d, 'subtaskDone'),
-      tags: _readStringList(d, 'tags'),
-      treeNodeId: _readNullableString(d, 'treeNodeId'),
-      notificationsEnabled: _readBool(d, 'notificationsEnabled'),
-      notificationHour: _readNullableInt(d, 'notificationHour'),
-      notificationMinute: _readNullableInt(d, 'notificationMinute'),
-      createdAt: _readDate(d, 'createdAt'),
-      updatedAt: _readDate(d, 'updatedAt'),
-    );
-  }
-
-  String _readTaskSkillId(Map<String, dynamic> data) {
-    final rawSkillId = _readNullableString(data, 'skillId');
-    final rawScope = data['scope'];
-    if (rawScope == 'inbox' || rawSkillId == null || rawSkillId.isEmpty) {
-      return kInboxSkillId;
-    }
-    return rawSkillId;
-  }
-
-  String _encodeHistoryEntry(HistoryEntry e) => jsonEncode({
-    'id': e.id,
-    'taskTitle': e.taskTitle,
-    'taskId': e.taskId,
-    'skillId': e.skillId,
-    'skillName': e.skillName,
-    'skillColor': e.skillColor.toARGB32(),
-    'skillIconCodePoint': e.skillIcon.codePoint.toString(),
-    'xp': e.xp,
-    'isCompletion': e.isCompletion,
-    'at': e.at.toIso8601String(),
-  });
-
-  HistoryEntry _decodeHistoryEntry(String json) {
-    final d = _decodeMap(json);
-    final iconName = _readString(d, 'skillIconCodePoint');
-    return HistoryEntry(
-      id: _readString(d, 'id', uid()),
-      taskTitle: _readString(d, 'taskTitle', 'Квест'),
-      taskId: _readNullableString(d, 'taskId'),
-      skillId: _readString(d, 'skillId'),
-      skillName: _readString(d, 'skillName', 'Навык'),
-      skillColor: Color(
-        _readInt(d, 'skillColor', const Color(0xFF4A9EFF).toARGB32()),
-      ),
-      skillIcon: _getIconFromCodePoint(iconName),
-      xp: _readInt(d, 'xp'),
-      isCompletion: _readBool(d, 'isCompletion', true),
-      at: _readDate(d, 'at') ?? DateTime.now(),
-    );
-  }
-
-  Map<String, dynamic> _encodeDailyStats(DailyStats s) => {
-    'date': s.date.toIso8601String(),
-    'tasksCompleted': s.tasksCompleted,
-    'xpEarned': s.xpEarned,
-    'skillsImproved': s.skillsImproved,
-  };
-
-  DailyStats _decodeDailyStats(Map<String, dynamic> d) => DailyStats(
-    date: _readDate(d, 'date') ?? DateTime.now(),
-    tasksCompleted: _readInt(d, 'tasksCompleted'),
-    xpEarned: _readInt(d, 'xpEarned'),
-    skillsImproved: _readInt(d, 'skillsImproved'),
-  );
-
-  String _encodeAchievement(Achievement a) =>
-      jsonEncode({'id': a.id, 'unlockedAt': a.unlockedAt?.toIso8601String()});
-
-  Achievement _decodeAchievement(String json) {
-    final d = _decodeMap(json);
-    final id = _readString(d, 'id', uid());
-    final def = achievementDefinitions.where((x) => x.id == id).firstOrNull;
-    return Achievement(id: id, unlockedAt: _readDate(d, 'unlockedAt'))
-      ..def = def;
-  }
-
-  String _encodeBoss(Boss b) => jsonEncode({
-    'id': b.id,
-    'title': b.title,
-    'skillId': b.skillId,
-    'hp': b.hp,
-    'maxHp': b.maxHp,
-    'targetStreak': b.targetStreak,
-    'currentStreak': b.currentStreak,
-    'isDefeated': b.isDefeated,
-    'defeatedAt': b.defeatedAt?.toIso8601String(),
-  });
-
-  Boss _decodeBoss(String json) {
-    final d = _decodeMap(json);
-    return Boss(
-      id: _readString(d, 'id', uid()),
-      title: _readString(d, 'title', 'Сопротивление'),
-      skillId: _readString(d, 'skillId'),
-      hp: _readInt(d, 'hp', 100),
-      maxHp: _readPositiveInt(d, 'maxHp', 100),
-      targetStreak: _readPositiveInt(d, 'targetStreak', 7),
-      currentStreak: _readInt(d, 'currentStreak'),
-      isDefeated: _readBool(d, 'isDefeated'),
-      defeatedAt: _readDate(d, 'defeatedAt'),
-    );
-  }
-
-  String _encodeRewardChest(RewardChest chest) => jsonEncode({
-    'id': chest.id,
-    'title': chest.title,
-    'description': chest.description,
-    'rarity': chest.rarity.name,
-    'sourceKey': chest.sourceKey,
-    'skillId': chest.skillId,
-    'unlockedAt': chest.unlockedAt.toIso8601String(),
-    'openedAt': chest.openedAt?.toIso8601String(),
-  });
-
-  RewardChest _decodeRewardChest(String json) {
-    final d = _decodeMap(json);
-    return RewardChest(
-      id: _readString(d, 'id', uid()),
-      title: _readString(d, 'title', 'Сундук'),
-      description: _readString(d, 'description'),
-      rarity: _readEnum(RewardRarity.values, d['rarity'], RewardRarity.common),
-      sourceKey: _readString(d, 'sourceKey', _readString(d, 'id', uid())),
-      skillId: _readNullableString(d, 'skillId'),
-      unlockedAt: _readDate(d, 'unlockedAt') ?? DateTime.now(),
-      openedAt: _readDate(d, 'openedAt'),
-    );
-  }
-
-  String _encodeBuff(Buff buff) => jsonEncode({
-    'id': buff.id,
-    'type': buff.type.name,
-    'title': buff.title,
-    'description': buff.description,
-    'bonusPercent': buff.bonusPercent,
-    'charges': buff.charges,
-    'skillId': buff.skillId,
-    'sourceChestId': buff.sourceChestId,
-    'sourceKey': buff.sourceKey,
-    'createdAt': buff.createdAt.toIso8601String(),
-    'expiresAt': buff.expiresAt?.toIso8601String(),
-  });
-
-  Buff _decodeBuff(String json) {
-    final d = _decodeMap(json);
-    return Buff(
-      id: _readString(d, 'id', uid()),
-      type: _readEnum(BuffType.values, d['type'], BuffType.nextQuestXpBoost),
-      title: _readString(d, 'title', 'Пассивный эффект'),
-      description: _readString(d, 'description'),
-      bonusPercent: _readInt(d, 'bonusPercent'),
-      charges: _readInt(d, 'charges'),
-      skillId: _readNullableString(d, 'skillId'),
-      sourceChestId: _readNullableString(d, 'sourceChestId'),
-      sourceKey: _readNullableString(d, 'sourceKey'),
-      createdAt: _readDate(d, 'createdAt') ?? DateTime.now(),
-      expiresAt: _readDate(d, 'expiresAt'),
-    );
-  }
-
-  String _encodeWeeklyGoal(WeeklyGoal goal) => jsonEncode({
-    'id': goal.id,
-    'weekStart': goal.weekStart.toIso8601String(),
-    'title': goal.title,
-    'createdAt': goal.createdAt.toIso8601String(),
-    'updatedAt': goal.updatedAt.toIso8601String(),
-    'keyResults': goal.keyResults
-        .map(
-          (result) => {
-            'id': result.id,
-            'title': result.title,
-            'isDone': result.isDone,
-            'completedAt': result.completedAt?.toIso8601String(),
-          },
-        )
-        .toList(),
-  });
-
-  WeeklyGoal _decodeWeeklyGoal(String json) {
-    final d = _decodeMap(json);
-    return WeeklyGoal(
-      id: _readString(d, 'id', uid()),
-      weekStart: _readDate(d, 'weekStart') ?? DateTime.now(),
-      title: _readString(d, 'title', 'Цель недели'),
-      createdAt: _readDate(d, 'createdAt'),
-      updatedAt: _readDate(d, 'updatedAt'),
-      keyResults:
-          (d['keyResults'] as List?)?.whereType<Map>().map((raw) {
-            final item = Map<String, dynamic>.from(raw);
-            return WeeklyKeyResult(
-              id: _readString(item, 'id', uid()),
-              title: _readString(item, 'title', 'Результат'),
-              isDone: _readBool(item, 'isDone'),
-              completedAt: _readDate(item, 'completedAt'),
-            );
-          }).toList() ??
-          [],
-    );
-  }
-}
-
-extension ColorValue on Color {
-  int toARGB32() {
-    int channel(double value) => (value * 255).round().clamp(0, 255).toInt();
-    return (channel(a) << 24) |
-        (channel(r) << 16) |
-        (channel(g) << 8) |
-        channel(b);
-  }
 }

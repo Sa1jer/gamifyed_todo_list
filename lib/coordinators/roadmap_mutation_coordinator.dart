@@ -1,7 +1,8 @@
 import 'dart:math' as math;
 
 import '../engines/roadmap_engine.dart';
-import '../models.dart';
+import '../models/skill_models.dart';
+import '../models/task_models.dart';
 import '../utils.dart';
 
 /// Owns RoadMap graph mutations while AppState retains save/notify orchestration.

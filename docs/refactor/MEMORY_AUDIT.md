@@ -1,6 +1,6 @@
 # Memory and Allocation Audit
 
-Last updated: 2026-07-15
+Last updated: 2026-07-16
 
 Static ownership findings and runtime measurements are deliberately separated.
 No leak claim is made from source inspection alone.
@@ -20,6 +20,8 @@ No leak claim is made from source inspection alone.
   and boolean trailing state; it does not retain snapshot byte buffers.
 - Snapshot codec payload maps/bytes are local variables, not service fields.
 - Form controllers and listeners have one bounded dialog lifecycle.
+- Root overlay `ui.Image` instances are disposed on replacement/unmount;
+  profile banner/avatar decoding is bounded to rendered dimensions.
 
 ## Rebuild Findings
 
@@ -30,16 +32,15 @@ No leak claim is made from source inspection alone.
   mutation. `AppStateProvider` propagates feature updates, while
   `AppStateSelector` rebuilds the persistence/tooltips shell only when its
   selected record changes.
-- `TasksPanel`, Today, RoadMap and parts of the desktop composition still
-  observe the broad AppState facade. Further selector work requires native
-  frame/rebuild evidence to avoid speculative state-management churn.
+- `TasksPanel`, Today and the RoadMap workspace root select a stable
+  `coreWorkspaceRevision`; profile and persistence updates do not rebuild them.
 - Hidden responsive branches are selected conditionally; the touched code does
   not eagerly build both mobile and desktop trees.
 
 ## Retention Risks Still Open
 
-- Large desktop shells and routes can retain sizeable widget trees while
-  visible.
+- Large native routes can retain sizeable widget trees while visible; the
+  extracted desktop/analytics/task sections make those owners inspectable.
 - Flutter engine, native surfaces, fonts/images and Hive buffers are outside
   the Dart object-graph evidence in this audit.
 - Public mutable collections mean external code can retain domain references;
