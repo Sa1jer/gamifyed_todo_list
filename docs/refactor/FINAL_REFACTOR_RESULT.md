@@ -1,6 +1,6 @@
 # Final Refactor Result
 
-Last updated: 2026-07-16
+Last updated: 2026-07-18
 
 This closing batch completes the corrective architecture scope that followed
 commits `acce9a1`, `dcce010`, and `76891a8`. It preserves product rules, the
@@ -24,17 +24,21 @@ approach.
   persistence-status, and weekly-goal notifications retain the cached core
   analytics snapshot; relevant task, skill, RoadMap, history, and completion
   mutations replace it.
-- `coreWorkspaceRevision` gives Tasks, Today, and RoadMap feature roots a narrow
-  domain signal while event callbacks use non-observing AppState reads.
+- `MainPage` now receives its `AppState` explicitly and composes workspace,
+  profile, tutorial, analytics, and settings through immutable narrow
+  projections. Persistence/profile/tutorial notifications no longer rebuild
+  the workspace, and event callbacks use the explicit non-observing state.
 - Low-level analytics, coordinators, engines, and persistence helpers use
   explicit model-module imports rather than the compatibility barrel.
 - Direct Skill/Goal and Review/session coordinator tests and a real-Hive reopen
   test complement the existing completion, reward, snapshot, scheduler, and
   migration coverage.
 - Native decoded profile images are bounded to display size, and the root
-  overlay disposes replaced `ui.Image` objects.
+  overlay disposes replaced `ui.Image` objects, including capture completion
+  after the root has unmounted.
 - The architecture audit now enforces dependency direction, decomposition line
-  budgets, ordinary-module boundaries, and migrated selector roots.
+  budgets, ordinary-module boundaries, migrated selector roots, MainPage's
+  observation boundary, and displayed/pubspec version synchronization.
 
 ## Quantitative Result
 
@@ -69,19 +73,23 @@ approach.
   regression above 1350; further splits need a concrete ownership or profiling
   benefit rather than line-count-only churn.
 - Native interactive heap/rebuild profiling and process-kill/disk-full storage
-  scenarios remain manual/platform work. Static review and tests do not prove
-  them.
+  scenarios remain manual/platform work. Historical RSS samples used different
+  process/window evidence and are not a valid before/after comparison; use
+  `MAINPAGE_MEMORY_PROFILE.md` for the reproducible scenario.
 
 ## Final Validation
 
-- `dart run tool/verify.dart`: passed; 207 files required no formatting,
-  analyzer and architecture audit were clean, all 438 tests passed, and
+- `dart run tool/verify.dart`: passed; 211 files required no formatting,
+  analyzer and architecture audit were clean, all 444 tests passed, and
   `git diff --check` passed.
 - `flutter build macos --release`: passed; 52.5 MB application bundle.
 - `flutter build apk --debug`: passed. Flutter emitted forward-looking Kotlin
   Gradle Plugin and Java 8 compatibility warnings; no build failure occurred.
-- `flutter run -d macos --profile`: launched successfully and exposed the VM
-  service. Idle RSS was `22688 -> 23264 KB`; interactive profiling was blocked
-  because the host could not foreground the app (`open returned 1`).
+- The 2026-07-18 `flutter run -d macos --profile` pass identified and activated
+  one application process (PID `6152`). Its RSS samples were
+  `89648 -> 104272 -> 60688 KB` over approximately nine minutes, with no
+  monotonic idle growth. Accessibility automation and DevTools heap snapshots
+  were unavailable, so interactive route/dialog retention and memory reduction
+  remain unverified.
 
 See `COMPLETION_MATRIX.md` for criterion-level evidence.

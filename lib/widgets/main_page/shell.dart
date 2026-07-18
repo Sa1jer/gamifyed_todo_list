@@ -5,8 +5,22 @@ part of '../main_page.dart';
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class MainPage extends StatefulWidget {
+  final AppState state;
   final VoidCallback onToggleTheme;
-  const MainPage({super.key, required this.onToggleTheme});
+  final VoidCallback? onWorkspaceBuildForTesting;
+  final VoidCallback? onProfileBuildForTesting;
+  final VoidCallback? onTutorialBuildForTesting;
+  final VoidCallback? onEventNotificationForTesting;
+
+  const MainPage({
+    super.key,
+    required this.state,
+    required this.onToggleTheme,
+    this.onWorkspaceBuildForTesting,
+    this.onProfileBuildForTesting,
+    this.onTutorialBuildForTesting,
+    this.onEventNotificationForTesting,
+  });
   @override
   State<MainPage> createState() => _MainPageState();
 }
@@ -42,28 +56,34 @@ class _MainPageState extends State<MainPage> {
   bool _firstRunDialogOpen = false;
   bool _statsTutorialActive = false;
   bool _rewardsTutorialActive = false;
-  bool _tutorialStepPaused = false;
   bool _mobileWorkspaceRouteOpen = false;
-  String? _lastTutorialStepId;
-  String? _pendingTutorialStepId;
-  Timer? _tutorialStepDelayTimer;
   String? _roadmapFocusSkillId;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final state = AppStateProvider.of(context);
-    if (_eventState == state) return;
+  void initState() {
+    super.initState();
+    _bindEventState(widget.state);
+  }
+
+  @override
+  void didUpdateWidget(MainPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.state, widget.state)) {
+      _bindEventState(widget.state);
+    }
+  }
+
+  void _bindEventState(AppState state) {
+    if (identical(_eventState, state)) return;
     _eventState?.removeListener(_handleStateEvents);
     _eventState = state;
-    _eventState?.addListener(_handleStateEvents);
+    state.addListener(_handleStateEvents);
   }
 
   @override
   void dispose() {
     _eventState?.removeListener(_handleStateEvents);
     _debugAdminTapResetTimer?.cancel();
-    _tutorialStepDelayTimer?.cancel();
     super.dispose();
   }
 
@@ -228,6 +248,7 @@ class _MainPageState extends State<MainPage> {
   void _handleStateEvents() {
     final state = _eventState;
     if (state == null || !mounted) return;
+    widget.onEventNotificationForTesting?.call();
     _showGoalMilestoneNotifications(state);
   }
 
@@ -429,11 +450,11 @@ class _MainPageState extends State<MainPage> {
 
     if (moduleId == TutorialModuleIds.core &&
         stepId == TutorialStepIds.coreOpenStats) {
+      final expectedState = state;
       Future<void>.delayed(const Duration(milliseconds: 180), () {
-        if (!mounted) return;
-        final latest = AppStateProvider.of(context);
-        if (latest.activeTutorialModuleId == null) {
-          latest.startTutorialModule(TutorialModuleIds.trophies);
+        if (!mounted || !identical(widget.state, expectedState)) return;
+        if (expectedState.activeTutorialModuleId == null) {
+          expectedState.startTutorialModule(TutorialModuleIds.trophies);
         }
       });
     }
@@ -448,11 +469,11 @@ class _MainPageState extends State<MainPage> {
 
     if (moduleId == TutorialModuleIds.trophies &&
         stepId == TutorialStepIds.trophiesFeedback) {
+      final expectedState = state;
       Future<void>.delayed(const Duration(milliseconds: 180), () {
-        if (!mounted) return;
-        final latest = AppStateProvider.of(context);
-        if (latest.activeTutorialModuleId == null) {
-          latest.startTutorialModule(TutorialModuleIds.profile);
+        if (!mounted || !identical(widget.state, expectedState)) return;
+        if (expectedState.activeTutorialModuleId == null) {
+          expectedState.startTutorialModule(TutorialModuleIds.profile);
         }
       });
     }
@@ -704,7 +725,7 @@ class _MainPageState extends State<MainPage> {
   }
 
   void _onComplete(String taskId, ActionToastOrigin origin) {
-    final s = AppStateProvider.of(context);
+    final s = widget.state;
     final colors = _completionToastColors(s, taskId);
     final msg = s.completeTask(taskId);
     if (msg == null) return;
@@ -714,7 +735,7 @@ class _MainPageState extends State<MainPage> {
   }
 
   void _onMinimumAction(String taskId, ActionToastOrigin origin) {
-    final s = AppStateProvider.of(context);
+    final s = widget.state;
     final colors = _completionToastColors(s, taskId);
     final msg = s.completeMinimumAction(taskId);
     if (msg == null) return;
@@ -737,53 +758,6 @@ class _MainPageState extends State<MainPage> {
   void _setFirstRunDialogOpen(bool value) {
     if (!mounted || _firstRunDialogOpen == value) return;
     setState(() => _firstRunDialogOpen = value);
-  }
-
-  bool _shouldShowTutorialOverlay(String? stepId, {required bool blocked}) {
-    if (stepId == null) {
-      _tutorialStepDelayTimer?.cancel();
-      _tutorialStepDelayTimer = null;
-      _lastTutorialStepId = null;
-      _pendingTutorialStepId = null;
-      _tutorialStepPaused = false;
-      return false;
-    }
-
-    if (_lastTutorialStepId == null) {
-      _lastTutorialStepId = stepId;
-      return !blocked;
-    }
-
-    if (stepId == _lastTutorialStepId) {
-      return !blocked && !_tutorialStepPaused;
-    }
-
-    if (blocked) {
-      _tutorialStepDelayTimer?.cancel();
-      _tutorialStepDelayTimer = null;
-      _pendingTutorialStepId = stepId;
-      _tutorialStepPaused = true;
-      return false;
-    }
-
-    if (_pendingTutorialStepId != stepId ||
-        !_tutorialStepPaused ||
-        _tutorialStepDelayTimer == null) {
-      _pendingTutorialStepId = stepId;
-      _tutorialStepPaused = true;
-      _tutorialStepDelayTimer?.cancel();
-      _tutorialStepDelayTimer = Timer(const Duration(seconds: 2), () {
-        if (!mounted || _pendingTutorialStepId != stepId) return;
-        setState(() {
-          _lastTutorialStepId = stepId;
-          _pendingTutorialStepId = null;
-          _tutorialStepPaused = false;
-          _tutorialStepDelayTimer = null;
-        });
-      });
-    }
-
-    return false;
   }
 
   void _openRoadmapForSkill(AppState state, Skill skill) {
@@ -818,7 +792,7 @@ class _MainPageState extends State<MainPage> {
   }
 
   void _addSkill(BuildContext context, {bool showTutorialHints = false}) {
-    final state = AppStateProvider.of(context);
+    final state = widget.state;
     if (showTutorialHints) {
       _setFirstRunDialogOpen(true);
     }
@@ -933,281 +907,408 @@ class _MainPageState extends State<MainPage> {
 
   @override
   Widget build(BuildContext context) {
-    final s = AppStateProvider.of(context);
-    final isDark = s.isDark;
+    return MainPageWorkspaceBoundary(
+      state: widget.state,
+      onBuildForTesting: widget.onWorkspaceBuildForTesting,
+      builder: (context, workspace) => LayoutBuilder(
+        builder: (context, constraints) {
+          final s = widget.state;
+          final isDark = workspace.isDark;
+          final desktopShell = DesktopResponsiveMetrics.isDesktopWidth(
+            constraints.maxWidth,
+          );
+          final mobileShell = !desktopShell;
+          final desktopMetrics = DesktopResponsiveMetrics.forWidth(
+            constraints.maxWidth,
+          );
+          final displayedMode = _mode;
+          final validRoadmapFocusSkillId =
+              _roadmapFocusSkillId != null &&
+                  s.roadmapSkills.any(
+                    (skill) => skill.id == _roadmapFocusSkillId,
+                  )
+              ? _roadmapFocusSkillId
+              : null;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final desktopShell = DesktopResponsiveMetrics.isDesktopWidth(
-          constraints.maxWidth,
-        );
-        final mobileShell = !desktopShell;
-        final desktopMetrics = DesktopResponsiveMetrics.forWidth(
-          constraints.maxWidth,
-        );
-        final displayedMode = _mode;
-        final validRoadmapFocusSkillId =
-            _roadmapFocusSkillId != null &&
-                s.roadmapSkills.any((skill) => skill.id == _roadmapFocusSkillId)
-            ? _roadmapFocusSkillId
-            : null;
-
-        void changeMode(WorkspaceMode mode) {
-          if (_mode == mode) {
-            if (mode == WorkspaceMode.act || mode == WorkspaceMode.mastery) {
+          void changeMode(WorkspaceMode mode) {
+            if (_mode == mode) {
+              if (mode == WorkspaceMode.act || mode == WorkspaceMode.mastery) {
+                return;
+              }
+              setState(() {
+                _mode = _lastNormalMode;
+                _statsTutorialActive = false;
+              });
               return;
             }
             setState(() {
-              _mode = _lastNormalMode;
-              _statsTutorialActive = false;
+              if (mode == WorkspaceMode.act || mode == WorkspaceMode.mastery) {
+                _lastNormalMode = mode;
+              } else if (_mode == WorkspaceMode.act ||
+                  _mode == WorkspaceMode.mastery) {
+                _lastNormalMode = _mode;
+              }
+              _mode = mode;
+              if (mode == WorkspaceMode.mastery) {
+                final selected = s.selectedSkill;
+                _roadmapFocusSkillId =
+                    selected == null || selected.id == kInboxSkillId
+                    ? null
+                    : selected.id;
+              }
+              if (mode != WorkspaceMode.stats) {
+                _statsTutorialActive = false;
+              }
             });
-            return;
           }
-          setState(() {
-            if (mode == WorkspaceMode.act || mode == WorkspaceMode.mastery) {
-              _lastNormalMode = mode;
-            } else if (_mode == WorkspaceMode.act ||
-                _mode == WorkspaceMode.mastery) {
-              _lastNormalMode = _mode;
-            }
-            _mode = mode;
-            if (mode == WorkspaceMode.mastery) {
-              final selected = s.selectedSkill;
-              _roadmapFocusSkillId =
-                  selected == null || selected.id == kInboxSkillId
-                  ? null
-                  : selected.id;
-            }
-            if (mode != WorkspaceMode.stats) {
-              _statsTutorialActive = false;
-            }
-          });
-        }
 
-        void openStatistics({bool tutorial = false}) {
-          if (mobileShell) {
-            changeMode(WorkspaceMode.stats);
-            if (tutorial && mounted) {
-              setState(() => _statsTutorialActive = true);
+          void openStatistics({bool tutorial = false}) {
+            if (mobileShell) {
+              changeMode(WorkspaceMode.stats);
+              if (tutorial && mounted) {
+                setState(() => _statsTutorialActive = true);
+              }
+            } else if (tutorial) {
+              _openStatisticsTutorial(s);
+            } else {
+              changeMode(WorkspaceMode.stats);
             }
-          } else if (tutorial) {
-            _openStatisticsTutorial(s);
-          } else {
-            changeMode(WorkspaceMode.stats);
           }
-        }
 
-        void openProfile() {
-          final capturedState = s;
-          if (mobileShell) {
-            _openMobileWorkspaceRoute(
-              () => AppStateProvider(
+          void openProfile() {
+            final capturedState = s;
+            if (mobileShell) {
+              _openMobileWorkspaceRoute(
+                () => AppStateProvider(
+                  state: capturedState,
+                  child: const ProfileDialog(fullScreen: true),
+                ),
+              );
+              return;
+            }
+            showDialog<void>(
+              context: context,
+              builder: (_) => AppStateProvider(
                 state: capturedState,
-                child: const ProfileDialog(fullScreen: true),
+                child: const ProfileDialog(),
               ),
             );
-            return;
           }
-          showDialog<void>(
-            context: context,
-            builder: (_) => AppStateProvider(
-              state: capturedState,
-              child: const ProfileDialog(),
-            ),
-          );
-        }
 
-        final tutorialStep = _tutorialStepFor(s, mobileShell, openStatistics);
-        final tutorialVisible = _shouldShowTutorialOverlay(
-          tutorialStep?.id,
-          blocked:
-              _firstRunDialogOpen ||
-              _statsTutorialActive ||
-              _rewardsTutorialActive,
-        );
-
-        return Scaffold(
-          backgroundColor: mobileShell
-              ? _MobileJournalTokens.background(isDark)
-              : isDark
-              ? const Color(0xFF0F0F13)
-              : const Color(0xFFF0F2F8),
-          body: Stack(
-            key: _pageStackKey,
-            children: [
-              if (desktopShell)
-                DesktopWorkspaceShell(
-                  state: s,
-                  mode: displayedMode,
-                  metrics: desktopMetrics,
-                  onModeChanged: changeMode,
-                  onAddSkill: () => _addSkill(context),
-                  onOpenRewards: () => changeMode(WorkspaceMode.rewards),
-                  onOpenStatistics: openStatistics,
-                  onOpenSettings: () => changeMode(WorkspaceMode.settings),
-                  onOpenProfile: openProfile,
-                  onDebugAppTap: !kReleaseMode
-                      ? () => _handleDebugAdminTap(s)
-                      : null,
-                  onOpenRoadmap: (skill) => _openRoadmapForSkill(s, skill),
-                  onComplete: _onComplete,
-                  onMinimumAction: _onMinimumAction,
-                  contextualToastHostKey: _desktopContextualToastHostKey,
-                  rightRailKey: _desktopRightRailKey,
-                  profileKey: _profileBarKey,
-                  rewardsKey: _rewardsButtonKey,
-                  roadmapKey: _roadmapNavKey,
-                  statsKey: _statsButtonKey,
-                  alternateWorkspace: switch (displayedMode) {
-                    WorkspaceMode.mastery => _MasteryWorkspace(
-                      key: const ValueKey('mastery-workspace'),
-                      isDark: isDark,
-                      focusSkillId: validRoadmapFocusSkillId,
-                      canvasTutorialKey: _roadmapCanvasKey,
-                      inspectorTutorialKey: _roadmapInspectorKey,
-                      practiceTutorialKey: _roadmapPracticeKey,
-                      onFocusSkillChanged: (skillId) =>
-                          _syncRoadmapFocusSkill(s, skillId),
-                      onComplete: _onComplete,
-                      onMinimumAction: _onMinimumAction,
-                    ),
-                    WorkspaceMode.rewards => _DesktopRewardsWorkspace(
-                      key: const ValueKey('desktop-rewards-workspace'),
-                      state: s,
-                      tokens: DesktopJournalTokens.resolve(isDark),
-                    ),
-                    WorkspaceMode.stats => _DesktopStatisticsWorkspace(
-                      key: const ValueKey('desktop-statistics-workspace'),
-                      state: s,
-                      tokens: DesktopJournalTokens.resolve(isDark),
-                    ),
-                    WorkspaceMode.settings => _DesktopSettingsWorkspace(
-                      key: const ValueKey('desktop-settings-workspace'),
-                      state: s,
-                      tokens: DesktopJournalTokens.resolve(isDark),
-                      onOpenProfile: openProfile,
-                      onToggleTheme: widget.onToggleTheme,
-                    ),
-                    WorkspaceMode.act => null,
-                  },
-                )
-              else
-                Column(
-                  children: [
-                    ProfileBar(
-                      key: _profileBarKey,
-                      isDark: isDark,
-                      mobile: true,
-                      state: s,
-                      onToggleTheme: widget.onToggleTheme,
-                      onRewardsTap: () => _openRewardsDialog(s),
-                      onStatsTap: openStatistics,
-                      onAppIconTap: !kReleaseMode
-                          ? () => _handleDebugAdminTap(s)
-                          : null,
-                      onProfileTap: openProfile,
-                      rewardsKey: _rewardsButtonKey,
-                      statsKey: _statsButtonKey,
-                    ),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                        child: MotionFadeSlideSwitcher(
-                          child: switch (displayedMode) {
-                            WorkspaceMode.act => _ActWorkspace(
-                              key: const ValueKey('act-workspace'),
-                              onComplete: _onComplete,
-                              onMinimumAction: _onMinimumAction,
-                              onCreateFirstSkill: () => _addSkill(context),
-                              onOpenRoadmap: (skill) =>
-                                  _openRoadmapForSkill(s, skill),
-                              createFirstSkillButtonKey: _firstSkillCtaKey,
-                              createFirstQuestButtonKey: _firstQuestCtaKey,
-                              nextQuestActionKey: _nextQuestActionKey,
-                              mobileJournalKey: _mobileActJournalKey,
-                            ),
-                            WorkspaceMode.mastery => _MasteryWorkspace(
-                              key: const ValueKey('mastery-workspace'),
-                              isDark: isDark,
-                              focusSkillId: validRoadmapFocusSkillId,
-                              canvasTutorialKey: _roadmapCanvasKey,
-                              inspectorTutorialKey: _roadmapInspectorKey,
-                              practiceTutorialKey: _roadmapPracticeKey,
-                              onFocusSkillChanged: (skillId) =>
-                                  _syncRoadmapFocusSkill(s, skillId),
-                              onComplete: _onComplete,
-                              onMinimumAction: _onMinimumAction,
-                            ),
-                            WorkspaceMode.stats => _buildStatisticsWorkspace(
-                              s,
-                              isDark,
-                              showTutorialHint: _statsTutorialActive,
-                            ),
-                            WorkspaceMode.rewards => const SizedBox.shrink(),
-                            WorkspaceMode.settings => const SizedBox.shrink(),
-                          },
+          return Scaffold(
+            backgroundColor: mobileShell
+                ? _MobileJournalTokens.background(isDark)
+                : isDark
+                ? const Color(0xFF0F0F13)
+                : const Color(0xFFF0F2F8),
+            body: Stack(
+              key: _pageStackKey,
+              children: [
+                if (desktopShell)
+                  DesktopWorkspaceShell(
+                    state: s,
+                    mode: displayedMode,
+                    metrics: desktopMetrics,
+                    onModeChanged: changeMode,
+                    onAddSkill: () => _addSkill(context),
+                    onOpenRewards: () => changeMode(WorkspaceMode.rewards),
+                    onOpenStatistics: openStatistics,
+                    onOpenSettings: () => changeMode(WorkspaceMode.settings),
+                    onOpenProfile: openProfile,
+                    onDebugAppTap: !kReleaseMode
+                        ? () => _handleDebugAdminTap(s)
+                        : null,
+                    onOpenRoadmap: (skill) => _openRoadmapForSkill(s, skill),
+                    onComplete: _onComplete,
+                    onMinimumAction: _onMinimumAction,
+                    contextualToastHostKey: _desktopContextualToastHostKey,
+                    rightRailKey: _desktopRightRailKey,
+                    profileKey: _profileBarKey,
+                    rewardsKey: _rewardsButtonKey,
+                    roadmapKey: _roadmapNavKey,
+                    statsKey: _statsButtonKey,
+                    alternateWorkspace: switch (displayedMode) {
+                      WorkspaceMode.mastery => _MasteryWorkspace(
+                        key: const ValueKey('mastery-workspace'),
+                        isDark: isDark,
+                        focusSkillId: validRoadmapFocusSkillId,
+                        canvasTutorialKey: _roadmapCanvasKey,
+                        inspectorTutorialKey: _roadmapInspectorKey,
+                        practiceTutorialKey: _roadmapPracticeKey,
+                        onFocusSkillChanged: (skillId) =>
+                            _syncRoadmapFocusSkill(s, skillId),
+                        onComplete: _onComplete,
+                        onMinimumAction: _onMinimumAction,
+                      ),
+                      WorkspaceMode.rewards => _DesktopRewardsWorkspace(
+                        key: const ValueKey('desktop-rewards-workspace'),
+                        state: s,
+                        tokens: DesktopJournalTokens.resolve(isDark),
+                      ),
+                      WorkspaceMode.stats => MainPageAnalyticsBoundary(
+                        state: s,
+                        builder: (context) => _DesktopStatisticsWorkspace(
+                          key: const ValueKey('desktop-statistics-workspace'),
+                          state: s,
+                          tokens: DesktopJournalTokens.resolve(isDark),
                         ),
                       ),
-                    ),
-                    _MobileWorkspaceNav(
-                      mode: displayedMode,
-                      isDark: isDark,
-                      reducedMotion: s.reducedMotion,
-                      onChanged: changeMode,
-                      onReselectCurrent: displayedMode == WorkspaceMode.act
-                          ? _mobileActJournalKey.currentState?.collapseInbox
-                          : null,
-                      roadmapKey: _roadmapNavKey,
-                    ),
-                  ],
-                ),
-              if (_rewardNoticeQueue.isNotEmpty)
-                _RewardNoticePopover(
-                  notice: _rewardNoticeQueue.first,
+                      WorkspaceMode.settings => MainPageSettingsBoundary(
+                        state: s,
+                        builder: (context) => _DesktopSettingsWorkspace(
+                          key: const ValueKey('desktop-settings-workspace'),
+                          state: s,
+                          tokens: DesktopJournalTokens.resolve(isDark),
+                          onOpenProfile: openProfile,
+                          onToggleTheme: widget.onToggleTheme,
+                        ),
+                      ),
+                      WorkspaceMode.act => null,
+                    },
+                  )
+                else
+                  Column(
+                    children: [
+                      MainPageProfileBoundary(
+                        key: _profileBarKey,
+                        state: s,
+                        onBuildForTesting: widget.onProfileBuildForTesting,
+                        builder: (context) => ProfileBar(
+                          isDark: isDark,
+                          mobile: true,
+                          state: s,
+                          onToggleTheme: widget.onToggleTheme,
+                          onRewardsTap: () => _openRewardsDialog(s),
+                          onStatsTap: openStatistics,
+                          onAppIconTap: !kReleaseMode
+                              ? () => _handleDebugAdminTap(s)
+                              : null,
+                          onProfileTap: openProfile,
+                          rewardsKey: _rewardsButtonKey,
+                          statsKey: _statsButtonKey,
+                        ),
+                      ),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                          child: MotionFadeSlideSwitcher(
+                            child: switch (displayedMode) {
+                              WorkspaceMode.act => _ActWorkspace(
+                                key: const ValueKey('act-workspace'),
+                                onComplete: _onComplete,
+                                onMinimumAction: _onMinimumAction,
+                                onCreateFirstSkill: () => _addSkill(context),
+                                onOpenRoadmap: (skill) =>
+                                    _openRoadmapForSkill(s, skill),
+                                createFirstSkillButtonKey: _firstSkillCtaKey,
+                                createFirstQuestButtonKey: _firstQuestCtaKey,
+                                nextQuestActionKey: _nextQuestActionKey,
+                                mobileJournalKey: _mobileActJournalKey,
+                              ),
+                              WorkspaceMode.mastery => _MasteryWorkspace(
+                                key: const ValueKey('mastery-workspace'),
+                                isDark: isDark,
+                                focusSkillId: validRoadmapFocusSkillId,
+                                canvasTutorialKey: _roadmapCanvasKey,
+                                inspectorTutorialKey: _roadmapInspectorKey,
+                                practiceTutorialKey: _roadmapPracticeKey,
+                                onFocusSkillChanged: (skillId) =>
+                                    _syncRoadmapFocusSkill(s, skillId),
+                                onComplete: _onComplete,
+                                onMinimumAction: _onMinimumAction,
+                              ),
+                              WorkspaceMode.stats => MainPageAnalyticsBoundary(
+                                state: s,
+                                builder: (context) => _buildStatisticsWorkspace(
+                                  s,
+                                  isDark,
+                                  showTutorialHint: _statsTutorialActive,
+                                ),
+                              ),
+                              WorkspaceMode.rewards => const SizedBox.shrink(),
+                              WorkspaceMode.settings => const SizedBox.shrink(),
+                            },
+                          ),
+                        ),
+                      ),
+                      _MobileWorkspaceNav(
+                        mode: displayedMode,
+                        isDark: isDark,
+                        reducedMotion: workspace.reducedMotion,
+                        onChanged: changeMode,
+                        onReselectCurrent: displayedMode == WorkspaceMode.act
+                            ? _mobileActJournalKey.currentState?.collapseInbox
+                            : null,
+                        roadmapKey: _roadmapNavKey,
+                      ),
+                    ],
+                  ),
+                if (_rewardNoticeQueue.isNotEmpty)
+                  _RewardNoticePopover(
+                    notice: _rewardNoticeQueue.first,
+                    isDark: isDark,
+                    desktop: desktopShell,
+                    desktopMetrics: desktopMetrics,
+                    reducedMotion: workspace.reducedMotion,
+                    queuedCount: _rewardNoticeQueue.length,
+                    onShow: () => _openRewardsDialog(s),
+                    onHide: () {
+                      if (!mounted || _rewardNoticeQueue.isEmpty) return;
+                      setState(() => _rewardNoticeQueue.removeAt(0));
+                    },
+                  ),
+                if (_goalMilestoneNotice != null)
+                  GoalMilestoneBanner(
+                    key: ValueKey('goal-milestone-${_goalMilestoneNotice!.id}'),
+                    event: _goalMilestoneNotice!,
+                    isDark: isDark,
+                    onDismiss: () =>
+                        setState(() => _goalMilestoneNotice = null),
+                    onOpenRoadmap:
+                        _goalMilestoneNotice!.milestone ==
+                            GoalMilestone.complete
+                        ? () {
+                            final event = _goalMilestoneNotice;
+                            if (event == null) return;
+                            setState(() => _goalMilestoneNotice = null);
+                            _openMilestoneRoadmap(s, event);
+                          }
+                        : null,
+                  ),
+                _MainPageTutorialBoundary(
+                  state: s,
+                  blocked:
+                      _firstRunDialogOpen ||
+                      _statsTutorialActive ||
+                      _rewardsTutorialActive,
                   isDark: isDark,
-                  desktop: desktopShell,
-                  desktopMetrics: desktopMetrics,
-                  reducedMotion: s.reducedMotion,
-                  queuedCount: _rewardNoticeQueue.length,
-                  onShow: () => _openRewardsDialog(s),
-                  onHide: () {
-                    if (!mounted || _rewardNoticeQueue.isEmpty) return;
-                    setState(() => _rewardNoticeQueue.removeAt(0));
-                  },
+                  resolveStep: () =>
+                      _tutorialStepFor(s, mobileShell, openStatistics),
+                  onBuildForTesting: widget.onTutorialBuildForTesting,
                 ),
-              if (_goalMilestoneNotice != null)
-                GoalMilestoneBanner(
-                  key: ValueKey('goal-milestone-${_goalMilestoneNotice!.id}'),
-                  event: _goalMilestoneNotice!,
-                  isDark: isDark,
-                  onDismiss: () => setState(() => _goalMilestoneNotice = null),
-                  onOpenRoadmap:
-                      _goalMilestoneNotice!.milestone == GoalMilestone.complete
-                      ? () {
-                          final event = _goalMilestoneNotice;
-                          if (event == null) return;
-                          setState(() => _goalMilestoneNotice = null);
-                          _openMilestoneRoadmap(s, event);
-                        }
-                      : null,
-                ),
-              if (tutorialStep != null)
-                _FirstRunTutorialOverlay(
-                  stepId: tutorialStep.id,
-                  visible: tutorialVisible,
-                  targetKey: tutorialStep.targetKey,
-                  isDark: isDark,
-                  title: tutorialStep.title,
-                  body: tutorialStep.body,
-                  primaryLabel: tutorialStep.primaryLabel,
-                  primaryIcon: tutorialStep.primaryIcon,
-                  secondaryLabel: tutorialStep.secondaryLabel,
-                  onDismiss: s.dismissActiveTutorial,
-                  onPrimaryAction: tutorialStep.onPrimaryAction,
-                ),
-              ..._bubbles,
-            ],
-          ),
+                ..._bubbles,
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _MainPageTutorialBoundary extends StatefulWidget {
+  const _MainPageTutorialBoundary({
+    required this.state,
+    required this.blocked,
+    required this.isDark,
+    required this.resolveStep,
+    this.onBuildForTesting,
+  });
+
+  final AppState state;
+  final bool blocked;
+  final bool isDark;
+  final _GuidedTutorialStep? Function() resolveStep;
+  final VoidCallback? onBuildForTesting;
+
+  @override
+  State<_MainPageTutorialBoundary> createState() =>
+      _MainPageTutorialBoundaryState();
+}
+
+class _MainPageTutorialBoundaryState extends State<_MainPageTutorialBoundary> {
+  bool _stepPaused = false;
+  String? _lastStepId;
+  String? _pendingStepId;
+  Timer? _stepDelayTimer;
+
+  @override
+  void didUpdateWidget(_MainPageTutorialBoundary oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.state, widget.state)) {
+      _resetStepDelay();
+    }
+  }
+
+  @override
+  void dispose() {
+    _stepDelayTimer?.cancel();
+    super.dispose();
+  }
+
+  void _resetStepDelay() {
+    _stepDelayTimer?.cancel();
+    _stepDelayTimer = null;
+    _lastStepId = null;
+    _pendingStepId = null;
+    _stepPaused = false;
+  }
+
+  bool _shouldShow(String? stepId) {
+    if (stepId == null) {
+      _resetStepDelay();
+      return false;
+    }
+
+    if (_lastStepId == null) {
+      _lastStepId = stepId;
+      return !widget.blocked;
+    }
+
+    if (stepId == _lastStepId) {
+      return !widget.blocked && !_stepPaused;
+    }
+
+    if (widget.blocked) {
+      _stepDelayTimer?.cancel();
+      _stepDelayTimer = null;
+      _pendingStepId = stepId;
+      _stepPaused = true;
+      return false;
+    }
+
+    if (_pendingStepId != stepId || !_stepPaused || _stepDelayTimer == null) {
+      _pendingStepId = stepId;
+      _stepPaused = true;
+      _stepDelayTimer?.cancel();
+      _stepDelayTimer = Timer(const Duration(seconds: 2), () {
+        if (!mounted || _pendingStepId != stepId) return;
+        setState(() {
+          _lastStepId = stepId;
+          _pendingStepId = null;
+          _stepPaused = false;
+          _stepDelayTimer = null;
+        });
+      });
+    }
+
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AppStateSelector<MainPageTutorialProjection>(
+      state: widget.state,
+      selector: MainPageTutorialProjection.fromState,
+      builder: (context, projection, child) {
+        widget.onBuildForTesting?.call();
+        final step = projection.visible ? widget.resolveStep() : null;
+        if (step == null) {
+          _shouldShow(null);
+          return const SizedBox.shrink();
+        }
+        return _FirstRunTutorialOverlay(
+          stepId: step.id,
+          visible: _shouldShow(step.id),
+          targetKey: step.targetKey,
+          isDark: widget.isDark,
+          title: step.title,
+          body: step.body,
+          primaryLabel: step.primaryLabel,
+          primaryIcon: step.primaryIcon,
+          secondaryLabel: step.secondaryLabel,
+          onDismiss: widget.state.dismissActiveTutorial,
+          onPrimaryAction: step.onPrimaryAction,
         );
       },
     );

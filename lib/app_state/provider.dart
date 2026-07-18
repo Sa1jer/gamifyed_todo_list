@@ -38,11 +38,15 @@ class AppStateProvider extends InheritedNotifier<AppState> {
 class AppStateSelector<T> extends StatefulWidget {
   const AppStateSelector({
     super.key,
+    this.state,
     required this.selector,
     required this.builder,
     this.child,
   });
 
+  /// An explicitly owned state instance. When omitted, the nearest
+  /// [AppStateProvider] is read without creating an inherited dependency.
+  final AppState? state;
   final T Function(AppState state) selector;
   final Widget Function(BuildContext context, T value, Widget? child) builder;
   final Widget? child;
@@ -54,6 +58,8 @@ class AppStateSelector<T> extends StatefulWidget {
 class _AppStateSelectorState<T> extends State<AppStateSelector<T>> {
   AppState? _state;
   late T _value;
+
+  AppState _resolveState() => widget.state ?? AppStateProvider.read(context);
 
   void _bindState(AppState nextState) {
     if (identical(nextState, _state)) {
@@ -68,13 +74,13 @@ class _AppStateSelectorState<T> extends State<AppStateSelector<T>> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _bindState(AppStateProvider.read(context));
+    _bindState(_resolveState());
   }
 
   @override
   void didUpdateWidget(AppStateSelector<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
-    _bindState(AppStateProvider.read(context));
+    _bindState(_resolveState());
   }
 
   void _handleChange() {

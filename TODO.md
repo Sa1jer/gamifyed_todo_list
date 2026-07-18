@@ -1,6 +1,6 @@
 # TODO / Living Backlog
 
-Last updated: 2026-07-15
+Last updated: 2026-07-18
 
 This file tracks the active implementation roadmap and completed project work. Update it after every meaningful code or design change.
 
@@ -33,7 +33,7 @@ This file tracks the active implementation roadmap and completed project work. U
 - [ ] Profile mobile theme switching after the `2x` snapshot cap and add a reduced-motion fallback only if frame timings still show jank.
 - [ ] Add a sustained-mutation storage stress test to characterize repeated save follow-up passes and lifecycle flush completion.
 - [ ] Add native startup-dispose/background-foreground regression checks around slow storage and plugin initialization.
-- [ ] Capture a native macOS profile trace for intermittent UI unresponsiveness. The `1.3.60` static audit found no deterministic rebuild, timer, or RoadMap-layout loop; record the active workspace and CPU timeline before changing lifecycle or animation code.
+- [ ] Capture an interactive macOS DevTools trace for intermittent UI unresponsiveness. The 2026-07-18 visible profile process showed non-monotonic idle RSS without runaway growth, but Accessibility automation and heap snapshots were unavailable; record the active workspace and CPU timeline during an actual stall before changing lifecycle or animation code.
 - [ ] Run native desktop pointer and visual QA for `1.3.64` reward feedback: repeated completion must keep the local halo beside its checkbox, minimum-action button, focus task check, or RoadMap inspector control without crossing into neighbouring rails or the Inbox composer.
 
 ## P1 — Architecture Decomposition
@@ -49,9 +49,10 @@ This file tracks the active implementation roadmap and completed project work. U
 - [x] Replace the 2240-line desktop `part` shell with ordinary sidebar, main-workspace, quest-row, support and composition modules using explicit inputs/callbacks.
 - [x] Decompose Weekly Analytics, Progress Hub, Tasks, skill-tree and reward/boss presentation monoliths at cohesive feature boundaries.
 - [x] Narrow the high-cost Tasks, Today and RoadMap roots with a stable `coreWorkspaceRevision`; mutation-only callbacks use non-listening AppState reads.
+- [x] Replace MainPage's broad inherited subscription with explicit workspace, profile, tutorial, analytics and settings projections; persistence progress no longer rebuilds the workspace.
 - [x] Split the legacy Hive domain/codec/preference responsibilities behind the stable `StorageService` facade and add disposable-directory close/reopen coverage.
 - [ ] Add true process-kill/disk-full fault injection around committed snapshot replacement; same-process real-Hive reopen and current/previous corruption fallback are already covered.
-- [ ] Capture native route/dialog heap snapshots and rebuild traces after repeated Tasks, RoadMap, Statistics, Weekly Analytics, Progress Hub and profile cycles; do not widen selector migration without evidence.
+- [ ] Capture comparable native route/dialog heap snapshots and rebuild traces using the exact PID/window/scenario contract in `docs/refactor/MAINPAGE_MEMORY_PROFILE.md`; historical `846944 KB` and `22688 KB` baselines are not comparable.
 
 ## Reminder — Product Follow-ups After Hardening
 

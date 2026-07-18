@@ -1,6 +1,6 @@
 # AppState Map
 
-Last updated: 2026-07-16
+Last updated: 2026-07-18
 
 `AppState` is the stable runtime facade and final mutation/observation boundary.
 It is 2579 lines, down from roughly 3405 at the start of the decomposition
@@ -11,7 +11,8 @@ independently.
 
 ```text
 widgets
-  -> AppStateProvider / AppStateSelector
+  -> explicit root AppState handoff
+  -> projected AppStateSelector boundaries
   -> AppState facade
        -> analytics and prepared read data
        -> coordinators and pure engines
@@ -34,6 +35,7 @@ widgets
 | Effective completion history | `CompletionHistoryIndex` | History mutation and explicit invalidation. |
 | Analytics | `AnalyticsReadModelCache` / weekly builder | Supplies inputs and mutation-aware invalidation. |
 | Core feature observation | `coreWorkspaceRevision` | Advances after task/skill/RoadMap mutations. |
+| Main shell observation | `MainPage*Projection` boundaries | Separates workspace, profile, tutorial, analytics and settings publications. |
 | Save sequencing | `SaveScheduler` | Decides when domain state is dirty. |
 | Persistence | `StorageService` plus focused stores/codecs | Startup/recovery and legacy compatibility. |
 
@@ -52,6 +54,12 @@ public AppState method
 by default. Characterized profile, preference, persistence, weekly-goal, and
 selection-only paths opt out. Legacy `refresh()` stays conservative because
 callers may mutate public model instances before invoking it.
+
+Persistence status can publish `dirty`, `saving`, and `saved` after the domain
+publication. MainPage's workspace projection deliberately ignores those
+signals; recovery/settings UI observes them separately. The root event listener
+is attached directly to the explicit AppState and does not create a rendering
+dependency.
 
 ## Remaining Facade Work
 

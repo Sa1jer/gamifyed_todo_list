@@ -26,6 +26,7 @@ import 'mobile_journal_tokens.dart';
 import 'main_page/mobile_journal_sections.dart';
 import 'main_page/desktop_statistics_sections.dart';
 import 'main_page/desktop_selected_skill_header.dart';
+import 'main_page/main_page_observation.dart';
 import 'main_page/desktop_workspace.dart';
 import 'main_page/mode.dart';
 import 'desktop_journal_tokens.dart';

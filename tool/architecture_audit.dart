@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'version_sync.dart';
+
 const _largestFileCount = 15;
 const _maxProductionFileLines = 2700;
 const _maxPresentationFileLines = 1350;
@@ -142,6 +144,9 @@ Future<void> main() async {
     }
   }
 
+  _checkMainPageObservation(root, violations);
+  _checkVersionSync(root, violations);
+
   if (violations.isEmpty) {
     stdout.writeln('\nArchitecture boundaries: OK');
     return;
@@ -151,6 +156,48 @@ Future<void> main() async {
     stderr.writeln('- $violation');
   }
   exitCode = 1;
+}
+
+void _checkMainPageObservation(Directory root, List<String> violations) {
+  final shell = File(
+    '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
+    'widgets${Platform.pathSeparator}main_page${Platform.pathSeparator}'
+    'shell.dart',
+  );
+  final source = shell.readAsStringSync();
+  if (source.contains('AppStateProvider.of(context)')) {
+    violations.add(
+      'MainPage must not broadly observe AppState. Use explicit state '
+      'ownership, AppStateProvider.read, or a narrow AppStateSelector '
+      'boundary.',
+    );
+  }
+  if (!source.contains('MainPageWorkspaceBoundary(')) {
+    violations.add(
+      'MainPage must retain its narrow workspace observation boundary.',
+    );
+  }
+
+  final main = File(
+    '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}main.dart',
+  ).readAsStringSync();
+  if (!RegExp(r'MainPage\s*\(\s*state\s*:\s*_state').hasMatch(main)) {
+    violations.add(
+      'The app root must pass its owned AppState explicitly to MainPage.',
+    );
+  }
+}
+
+void _checkVersionSync(Directory root, List<String> violations) {
+  final pubspec = File(
+    '${root.path}${Platform.pathSeparator}pubspec.yaml',
+  ).readAsStringSync();
+  final utils = File(
+    '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}utils.dart',
+  ).readAsStringSync();
+  violations.addAll(
+    versionSyncViolations(pubspecSource: pubspec, versionSource: utils),
+  );
 }
 
 void _forbidPartOf(String path, String source, List<String> violations) {

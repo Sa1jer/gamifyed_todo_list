@@ -6,6 +6,7 @@ import '../../theme/app_typography.dart';
 import '../desktop_journal_tokens.dart';
 import 'desktop_selected_skill_header.dart';
 import 'desktop_workspace_support.dart';
+import 'main_page_observation.dart';
 import 'mode.dart';
 
 class DesktopSidebar extends StatelessWidget {
@@ -67,12 +68,15 @@ class DesktopSidebar extends StatelessWidget {
                 compact: compactHeight,
               ),
               Divider(height: 1, color: tokens.subtleOutline),
-              _DesktopProfileSummary(
+              MainPageProfileBoundary(
                 key: profileKey,
                 state: state,
-                tokens: tokens,
-                onTap: onOpenProfile,
-                compact: compactHeight,
+                builder: (context) => _DesktopProfileSummary(
+                  state: state,
+                  tokens: tokens,
+                  onTap: onOpenProfile,
+                  compact: compactHeight,
+                ),
               ),
               Divider(height: 1, color: tokens.subtleOutline),
               Padding(
@@ -292,7 +296,6 @@ class _DesktopProfileSummary extends StatelessWidget {
   final bool compact;
 
   const _DesktopProfileSummary({
-    super.key,
     required this.state,
     required this.tokens,
     required this.onTap,

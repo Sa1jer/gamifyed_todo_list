@@ -2,7 +2,7 @@ part of '../main_page.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PROFILE BAR
-// Direct AppStateProvider consumer for immediate XP bar updates.
+// Receives an explicitly selected AppState projection from its parent.
 // Avatar, name, and level badge all open the Profile dialog on tap.
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -38,12 +38,11 @@ class ProfileBar extends StatelessWidget {
       callback();
       return;
     }
+    final capturedState = state ?? AppStateProvider.read(context);
     showDialog(
       context: context,
-      builder: (_) => AppStateProvider(
-        state: AppStateProvider.of(context),
-        child: const ProfileDialog(),
-      ),
+      builder: (_) =>
+          AppStateProvider(state: capturedState, child: const ProfileDialog()),
     );
   }
 
@@ -247,7 +246,7 @@ class ProfileBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final appState = state ?? AppStateProvider.of(context);
+    final appState = state ?? AppStateProvider.read(context);
     final profile = appState.profile;
     final sfc = surface(isDark);
     final txt = textColor(isDark);

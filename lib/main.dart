@@ -49,7 +49,9 @@ class _RevealClipper extends CustomClipper<Path> {
 
 class RPGApp extends StatefulWidget {
   final StorageService storage;
-  const RPGApp({super.key, required this.storage});
+  final Future<ui.Image?> Function()? captureFrameForTesting;
+
+  const RPGApp({super.key, required this.storage, this.captureFrameForTesting});
   @override
   State<RPGApp> createState() => _RPGAppState();
 }
@@ -121,23 +123,30 @@ class _RPGAppState extends State<RPGApp>
   Future<void> _handleThemeToggle() async {
     if (_revealing) return;
     _revealing = true;
+    ui.Image? capturedFrame;
 
     try {
-      final frame = await _captureCurrentFrame();
-      if (!mounted) return;
+      capturedFrame = await _captureCurrentFrame();
+      if (!mounted) {
+        capturedFrame?.dispose();
+        capturedFrame = null;
+        return;
+      }
 
       _revealCorner = _resolveRevealCorner();
       _state.toggleTheme();
       setState(() {});
-      _setOverlayImage(frame);
+      final hasFrame = capturedFrame != null;
+      _setOverlayImage(capturedFrame);
+      capturedFrame = null; // Ownership transferred to _overlayImage.
 
-      if (frame != null) {
+      if (hasFrame) {
         _revealCtrl.value = 0;
         await _revealCtrl.forward();
       }
-
-      _setOverlayImage(null);
     } finally {
+      capturedFrame?.dispose();
+      if (mounted) _setOverlayImage(null);
       _revealing = false;
     }
   }
@@ -164,6 +173,8 @@ class _RPGAppState extends State<RPGApp>
   }
 
   Future<ui.Image?> _captureCurrentFrame() async {
+    final captureForTesting = widget.captureFrameForTesting;
+    if (captureForTesting != null) return captureForTesting();
     try {
       final boundary =
           _repaintKey.currentContext?.findRenderObject()
@@ -230,7 +241,10 @@ class _RPGAppState extends State<RPGApp>
             children: [
               RepaintBoundary(
                 key: _repaintKey,
-                child: MainPage(onToggleTheme: _handleThemeToggle),
+                child: MainPage(
+                  state: _state,
+                  onToggleTheme: _handleThemeToggle,
+                ),
               ),
               if (_overlayImage != null) _buildRevealOverlay(),
             ],
@@ -255,6 +269,7 @@ class _AppContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppStateSelector(
+      state: state,
       selector: (state) {
         final status = state.persistenceStatus;
         return (
