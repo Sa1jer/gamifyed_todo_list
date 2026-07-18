@@ -145,6 +145,7 @@ Future<void> main() async {
   }
 
   _checkMainPageObservation(root, violations);
+  _checkReturnContextBoundaries(root, violations);
   _checkVersionSync(root, violations);
 
   if (violations.isEmpty) {
@@ -156,6 +157,91 @@ Future<void> main() async {
     stderr.writeln('- $violation');
   }
   exitCode = 1;
+}
+
+void _checkReturnContextBoundaries(Directory root, List<String> violations) {
+  final resolver = File(
+    '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
+    'engines${Platform.pathSeparator}return_context_resolver.dart',
+  );
+  if (!resolver.existsSync()) return;
+
+  final resolverSource = resolver.readAsStringSync();
+  const resolverPath = 'lib/engines/return_context_resolver.dart';
+  _forbidImport(resolverPath, resolverSource, 'package:flutter/', violations);
+  _forbidImport(resolverPath, resolverSource, 'app_state.dart', violations);
+  _forbidImport(resolverPath, resolverSource, '/models', violations);
+  _forbidLiveModelField(resolverPath, resolverSource, violations);
+  if (resolverSource.contains('DateTime.now(')) {
+    violations.add(
+      '$resolverPath must receive explicit time instead of reading the wall '
+      'clock.',
+    );
+  }
+
+  final detachedSession = File(
+    '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
+    'features${Platform.pathSeparator}return_context${Platform.pathSeparator}'
+    'return_context_session.dart',
+  );
+  if (detachedSession.existsSync()) {
+    final source = detachedSession.readAsStringSync();
+    const path = 'lib/features/return_context/return_context_session.dart';
+    _forbidImport(path, source, 'app_state.dart', violations);
+    _forbidImport(path, source, 'storage_service.dart', violations);
+    _forbidImport(path, source, '/persistence/', violations);
+    _forbidImport(path, source, 'package:hive', violations);
+  }
+
+  final presentationFiles = <File>[
+    ...Directory(
+      '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
+      'features${Platform.pathSeparator}return_context',
+    ).listSync().whereType<File>().where((file) => file.path.endsWith('.dart')),
+    File(
+      '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
+      'widgets${Platform.pathSeparator}return_context_card.dart',
+    ),
+  ];
+  for (final file in presentationFiles.where((file) => file.existsSync())) {
+    final path = _relativePath(root, file);
+    final source = file.readAsStringSync();
+    _forbidImport(path, source, 'storage_service.dart', violations);
+    _forbidImport(path, source, '/persistence/', violations);
+    _forbidImport(path, source, 'package:hive', violations);
+  }
+
+  final persistedSources = <File>[
+    ...Directory(
+      '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}models',
+    ).listSync(recursive: true).whereType<File>(),
+    File(
+      '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
+      'storage_service.dart',
+    ),
+    File(
+      '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
+      'storage_snapshot.dart',
+    ),
+    ...Directory(
+      '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
+      'persistence',
+    ).listSync(recursive: true).whereType<File>(),
+  ];
+  final persistentDeclaration = RegExp(
+    r'^\s*(?:class|enum|mixin)\s+\w*(?:ReturnContext|SavePoint)\w*',
+    multiLine: true,
+  );
+  for (final file in persistedSources.where(
+    (file) => file.existsSync() && file.path.endsWith('.dart'),
+  )) {
+    if (persistentDeclaration.hasMatch(file.readAsStringSync())) {
+      violations.add(
+        '${_relativePath(root, file)} declares persistent Return Context or '
+        'Save Point state; the prototype must remain derived and session-only.',
+      );
+    }
+  }
 }
 
 void _checkMainPageObservation(Directory root, List<String> violations) {
@@ -229,7 +315,7 @@ void _forbidLiveModelField(
   List<String> violations,
 ) {
   final field = RegExp(
-    r'^\s*final\s+(Task|Skill|WeeklyGoal|HistoryEntry)\??\s+\w+\s*;',
+    r'^\s*final\s+(Task|Skill|SkillTreeNode|WeeklyGoal|HistoryEntry)\??\s+\w+\s*;',
     multiLine: true,
   ).firstMatch(source);
   if (field != null) {

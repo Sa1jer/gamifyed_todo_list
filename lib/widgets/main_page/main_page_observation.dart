@@ -12,6 +12,7 @@ class MainPageWorkspaceProjection {
     required this.selectedSkillId,
     required this.isDark,
     required this.reducedMotion,
+    required this.returnContextBlocked,
   });
 
   factory MainPageWorkspaceProjection.fromState(AppState state) =>
@@ -20,12 +21,15 @@ class MainPageWorkspaceProjection {
         selectedSkillId: state.selectedSkillId,
         isDark: state.isDark,
         reducedMotion: state.reducedMotion,
+        returnContextBlocked:
+            !state.hasLoadedSavedData || state.persistenceStatus.blocksSaving,
       );
 
   final int coreWorkspaceRevision;
   final String? selectedSkillId;
   final bool isDark;
   final bool reducedMotion;
+  final bool returnContextBlocked;
 
   @override
   bool operator ==(Object other) =>
@@ -33,7 +37,8 @@ class MainPageWorkspaceProjection {
       other.coreWorkspaceRevision == coreWorkspaceRevision &&
       other.selectedSkillId == selectedSkillId &&
       other.isDark == isDark &&
-      other.reducedMotion == reducedMotion;
+      other.reducedMotion == reducedMotion &&
+      other.returnContextBlocked == returnContextBlocked;
 
   @override
   int get hashCode => Object.hash(
@@ -41,6 +46,7 @@ class MainPageWorkspaceProjection {
     selectedSkillId,
     isDark,
     reducedMotion,
+    returnContextBlocked,
   );
 }
 

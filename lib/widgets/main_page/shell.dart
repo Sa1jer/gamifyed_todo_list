@@ -11,6 +11,7 @@ class MainPage extends StatefulWidget {
   final VoidCallback? onProfileBuildForTesting;
   final VoidCallback? onTutorialBuildForTesting;
   final VoidCallback? onEventNotificationForTesting;
+  final DateTime Function()? nowForTesting;
 
   const MainPage({
     super.key,
@@ -20,6 +21,7 @@ class MainPage extends StatefulWidget {
     this.onProfileBuildForTesting,
     this.onTutorialBuildForTesting,
     this.onEventNotificationForTesting,
+    this.nowForTesting,
   });
   @override
   State<MainPage> createState() => _MainPageState();
@@ -44,6 +46,8 @@ class _MainPageState extends State<MainPage> {
   final GlobalKey _roadmapPracticeKey = GlobalKey();
   final GlobalKey _profileBarKey = GlobalKey();
   final GlobalKey<_MobileActJournalState> _mobileActJournalKey = GlobalKey();
+  final ReturnContextController _returnContextController =
+      ReturnContextController();
   WorkspaceMode _mode = WorkspaceMode.act;
   WorkspaceMode _lastNormalMode = WorkspaceMode.act;
   final List<_RewardNotice> _rewardNoticeQueue = [];
@@ -69,6 +73,7 @@ class _MainPageState extends State<MainPage> {
   void didUpdateWidget(MainPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (!identical(oldWidget.state, widget.state)) {
+      _returnContextController.reset();
       _bindEventState(widget.state);
     }
   }
@@ -922,6 +927,22 @@ class _MainPageState extends State<MainPage> {
             constraints.maxWidth,
           );
           final displayedMode = _mode;
+          final returnContextBinding = _returnContextController.bind(
+            state: s,
+            now: widget.nowForTesting?.call() ?? DateTime.now(),
+            pauseThreshold: defaultReturnContextPauseThreshold,
+            blocked: workspace.returnContextBlocked,
+            onVisibilityChanged: () {
+              if (mounted) setState(() {});
+            },
+            onDesktopSkillSelected: s.selectSkill,
+            onMobileSkillSelected: (skillId) {
+              final journal = _mobileActJournalKey.currentState;
+              if (journal == null) return s.selectSkill(skillId);
+              unawaited(journal.openSkillById(s, skillId));
+            },
+          );
+          final returnContext = returnContextBinding?.candidate;
           final validRoadmapFocusSkillId =
               _roadmapFocusSkillId != null &&
                   s.roadmapSkills.any(
@@ -1021,6 +1042,11 @@ class _MainPageState extends State<MainPage> {
                     onOpenRoadmap: (skill) => _openRoadmapForSkill(s, skill),
                     onComplete: _onComplete,
                     onMinimumAction: _onMinimumAction,
+                    returnContext: returnContext,
+                    onContinueReturnContext:
+                        returnContextBinding?.continueOnDesktop,
+                    onAnotherReturnContext: returnContextBinding?.dismiss,
+                    onDismissReturnContext: returnContextBinding?.dismiss,
                     contextualToastHostKey: _desktopContextualToastHostKey,
                     rightRailKey: _desktopRightRailKey,
                     profileKey: _profileBarKey,
@@ -1104,6 +1130,13 @@ class _MainPageState extends State<MainPage> {
                                 createFirstQuestButtonKey: _firstQuestCtaKey,
                                 nextQuestActionKey: _nextQuestActionKey,
                                 mobileJournalKey: _mobileActJournalKey,
+                                returnContext: returnContext,
+                                onContinueReturnContext:
+                                    returnContextBinding?.continueOnMobile,
+                                onAnotherReturnContext:
+                                    returnContextBinding?.dismiss,
+                                onDismissReturnContext:
+                                    returnContextBinding?.dismiss,
                               ),
                               WorkspaceMode.mastery => _MasteryWorkspace(
                                 key: const ValueKey('mastery-workspace'),

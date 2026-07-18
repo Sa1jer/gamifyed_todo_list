@@ -23,18 +23,18 @@
 | Rollback | Remove Lens/resolver; existing Task and Minimum Action surfaces remain unchanged. |
 | Difference from concept | Boot Entry is temporary and carries no XP. It uses editable context/change/inspection copy but does not persist a Save Point. |
 
-## Epic 2 - Return Context Prototype
+## Epic 2 - Return Context Prototype - implemented derived prototype
 
-| Field | Plan |
+| Field | Delivered prototype |
 | --- | --- |
 | Purpose | Validate lower-cost return after a pause without first changing storage. |
 | User value | Shows latest relevant task/stage/history and one re-entry action. |
 | Dependencies | Completion history, selected context, active task, stage status, existing review focus. |
-| Entities affected | Derived presentation only. |
-| Likely areas | Mobile Act, desktop Act, history selectors, statistics/review links. |
+| Entities affected | Pure detached scalar resolver, session-only dismissal, and presentation only. |
+| Delivered areas | Mobile Act primary return card, compact desktop Act card, Continue/Another/Dismiss actions, stale-ID revalidation, resolver/session/widget/integration tests, and manual validation diary. |
 | Schema impact | None for prototype. |
-| Tests | Empty history, deleted/stale IDs, recurring reset, one-to-seven-day return simulations, no destructive selection write. |
-| UX validation | Return diary and user-reported reconstruction effort. |
+| Tests | Empty/recent/1/3/7-day evidence, Inbox/deleted/stale IDs, recurring reset, Minimum Action, review fallback, deterministic keys, session dismissal, mobile/desktop routing, loading and responsive card behavior. |
+| UX validation | Still required: use the Return Context diary and report reconstruction effort; implementation tests are not product evidence. |
 | Rollback | Remove card; existing history and task flows remain. |
 | Risk / scope | Medium. Do not claim it is a true Save Point. |
 
@@ -108,7 +108,8 @@ Do not introduce global single-focus enforcement without evidence.
 
 1. **Next Action Lens and Boot Entry**: smallest, presentation-first validation
    of the core doctrine.
-2. **Return Context Prototype**: tests the RETURN promise without schema change.
+2. **Return Context Prototype**: implemented to test the RETURN promise without
+   schema change; manual one-/three-/seven-day evidence collection remains.
 
 Only after those two show value should the product decide whether durable Save
 Points or structured Definition of Done deserve model/storage changes.

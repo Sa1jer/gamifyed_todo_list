@@ -2,7 +2,7 @@
 
 ## Evidence boundary
 
-This is a **repository fact** map as of version `1.3.61+1`. It describes the
+This is a **repository fact** map as of version `1.3.64+1`. It describes the
 current application, not the preferred future product. Source areas include
 `models.dart`, `app_state.dart`, `engines/`, mobile Act, planning, RoadMap,
 statistics, and persistence documentation.
@@ -72,7 +72,23 @@ modify Task ordering.
 user-editable three-step entry loop around a valid parent Task. It is not a
 Task, does not write to storage, and has no XP, history, RoadMap, Goal, reward,
 achievement, buff, chest, or statistics effect. Restarting intentionally clears
-both the override and Boot Entry; durable return context remains deferred.
+both the override and Boot Entry. Return Context is derived/session-only, and
+durable user-authored return state remains deferred.
+
+### Return Context derived prototype
+
+**Repository fact (prototype implementation):** after at least one day since
+the latest reliable normal-Skill completion or meaningful Goal review, mobile
+and desktop Act may show one calm derived return thread. A pure detached
+resolver selects existing evidence and then consumes the current
+`NextActionResolver` order for the re-entry action. Inbox, deleted Skills, and
+stale/locked Stage targets are excluded.
+
+The candidate and dismissal are session-only. Rendering does not select a
+Skill; `Продолжить` revalidates current IDs before opening the existing Skill
+focus. The card grants no XP, writes no history, completes no action, and does
+not change Task, Goal, RoadMap, reward, snapshot, or Hive semantics. It is not
+a persistent Save Point.
 
 ### Goal, RoadMap, and stage progress
 
@@ -109,6 +125,11 @@ actions, active stages without practice, and weak goals.
 RoadMap state, rewards, statistics, UI preferences, and recovery snapshots.
 It does not currently persist one explicit Save Point containing the user's
 last context, blocker, completed result, and first return action.
+
+The derived Return Context prototype can reconstruct a limited thread from
+existing evidence, but its dismissal and candidate are intentionally lost on
+restart. Whether this limitation is harmful is part of the validation diary,
+not proof that a persistent model is required.
 
 ## Motivation versus execution support
 

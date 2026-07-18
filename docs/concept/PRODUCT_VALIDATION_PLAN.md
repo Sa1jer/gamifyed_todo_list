@@ -54,6 +54,20 @@ themselves. The relevant evidence is a lower activation cost followed by a
 real-world action, or clear evidence that the intervention should be changed
 or removed.
 
+## Return Context prototype protocol
+
+Use the copyable
+[Return Context validation diary](RETURN_CONTEXT_VALIDATION_DIARY.md) after
+real pauses of approximately one, three, and seven days. For each use, verify
+within ten seconds whether the prior thread is credible, whether any shown
+result is useful rather than misleading, and whether Continue, another step,
+or dismissal led to less backlog reconstruction.
+
+The prototype is derived and its dismissal is intentionally session-only.
+Record whether restart loss is actually harmful before proposing a durable
+Save Point. Do not count card impressions, opens, XP, app time, or checked Boot
+steps as evidence of return value.
+
 ## Ethics and interpretation
 
 - Do not infer diagnosis, health, capacity, or compliance from usage.

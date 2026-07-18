@@ -35,6 +35,10 @@ class _MobileActJournal extends StatefulWidget {
   final Key? createFirstSkillButtonKey;
   final Key? createFirstQuestButtonKey;
   final Key? nextQuestActionKey;
+  final ReturnContextCandidate? returnContext;
+  final VoidCallback? onContinueReturnContext;
+  final VoidCallback? onAnotherReturnContext;
+  final VoidCallback? onDismissReturnContext;
 
   const _MobileActJournal({
     super.key,
@@ -44,7 +48,16 @@ class _MobileActJournal extends StatefulWidget {
     this.createFirstSkillButtonKey,
     this.createFirstQuestButtonKey,
     this.nextQuestActionKey,
-  });
+    this.returnContext,
+    this.onContinueReturnContext,
+    this.onAnotherReturnContext,
+    this.onDismissReturnContext,
+  }) : assert(
+         returnContext == null ||
+             (onContinueReturnContext != null &&
+                 onAnotherReturnContext != null &&
+                 onDismissReturnContext != null),
+       );
 
   @override
   State<_MobileActJournal> createState() => _MobileActJournalState();
@@ -66,6 +79,14 @@ class _MobileActJournalState extends State<_MobileActJournal> {
     if (_inboxExpanded && mounted) {
       setState(() => _inboxExpanded = false);
     }
+  }
+
+  Future<bool> openSkillById(AppState state, String skillId) async {
+    final skills = state.roadmapSkills;
+    final index = skills.indexWhere((skill) => skill.id == skillId);
+    if (index < 0) return false;
+    await _openSkillFocus(state, skills[index], index);
+    return true;
   }
 
   @override
@@ -250,18 +271,32 @@ class _MobileActJournalState extends State<_MobileActJournal> {
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.only(bottom: 12),
-                    child: NextActionLens(
-                      resolution: nextAction,
-                      persistenceStatus: state.persistenceStatus,
-                      isDark: isDark,
-                      onOpenTask: (candidate) =>
-                          _openNextActionSkill(state, candidate.skill),
-                      onChooseTask: (taskId) =>
-                          setState(() => _nextActionOverrideTaskId = taskId),
-                      onOpenEmptySkill: (skill) =>
-                          _openNextActionSkill(state, skill),
-                      onCreateSkill: widget.onCreateSkill,
-                    ),
+                    child: widget.returnContext == null
+                        ? NextActionLens(
+                            resolution: nextAction,
+                            persistenceStatus: state.persistenceStatus,
+                            isDark: isDark,
+                            onOpenTask: (candidate) =>
+                                _openNextActionSkill(state, candidate.skill),
+                            onChooseTask: (taskId) => setState(
+                              () => _nextActionOverrideTaskId = taskId,
+                            ),
+                            onOpenEmptySkill: (skill) =>
+                                _openNextActionSkill(state, skill),
+                            onCreateSkill: widget.onCreateSkill,
+                          )
+                        : ReturnContextCard(
+                            candidate: widget.returnContext!,
+                            isDark: isDark,
+                            desktop: false,
+                            reducedMotion: MobileMotion.reduced(
+                              context,
+                              appReducedMotion: state.reducedMotion,
+                            ),
+                            onContinue: widget.onContinueReturnContext!,
+                            onAnotherAction: widget.onAnotherReturnContext!,
+                            onDismiss: widget.onDismissReturnContext!,
+                          ),
                   ),
                 ),
                 SliverToBoxAdapter(

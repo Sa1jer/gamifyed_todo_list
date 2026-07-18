@@ -8,12 +8,14 @@ import 'package:todo_list_app/main.dart';
 import 'package:todo_list_app/models.dart';
 import 'package:todo_list_app/storage_service.dart';
 import 'package:todo_list_app/theme/app_typography.dart';
+import 'package:todo_list_app/utils.dart';
 import 'package:todo_list_app/widgets/main_page.dart';
 
 class _MemoryStorage extends StorageService {
   final bool onboardingSeen = true;
   List<Skill> skills = [];
   List<Task> tasks = [];
+  List<HistoryEntry> history = [];
   UserProfile profile = UserProfile(name: 'Your Name');
 
   @override
@@ -82,10 +84,12 @@ class _MemoryStorage extends StorageService {
   }
 
   @override
-  Future<List<HistoryEntry>> loadHistory() async => [];
+  Future<List<HistoryEntry>> loadHistory() async => List.of(history);
 
   @override
-  Future<void> saveHistory(List<HistoryEntry> values) async {}
+  Future<void> saveHistory(List<HistoryEntry> values) async {
+    history = List.of(values);
+  }
 
   @override
   Future<List<Achievement>> loadAchievements() async => [];
@@ -152,6 +156,7 @@ Widget _mainPageHarness({
   VoidCallback? onProfileBuild,
   VoidCallback? onTutorialBuild,
   VoidCallback? onEventNotification,
+  DateTime Function()? nowForTesting,
 }) {
   return MaterialApp(
     theme: _testTheme(),
@@ -165,9 +170,49 @@ Widget _mainPageHarness({
         onProfileBuildForTesting: onProfileBuild,
         onTutorialBuildForTesting: onTutorialBuild,
         onEventNotificationForTesting: onEventNotification,
+        nowForTesting: nowForTesting,
       ),
     ),
   );
+}
+
+_MemoryStorage _returnContextStorage(DateTime now) {
+  const skillId = 'return-skill';
+  const taskId = 'return-task';
+  final skill = Skill(
+    id: skillId,
+    name: 'Разработка приложения',
+    goal: 'Вернуть рабочий контекст без нового доменного состояния',
+    color: const Color(0xFF4A9EFF),
+    icon: Icons.code_rounded,
+  );
+  return _MemoryStorage()
+    ..skills = [skill]
+    ..tasks = [
+      Task(
+        id: taskId,
+        title: 'Проверить редактирование задачи',
+        description: 'Проверить существующий сценарий после паузы',
+        skillId: skillId,
+        xpReward: 20,
+        type: TaskType.shortTerm,
+        minimumAction: 'Открыть существующую задачу',
+      ),
+    ]
+    ..history = [
+      HistoryEntry(
+        id: 'return-history',
+        taskTitle: 'Исправлена валидация',
+        taskId: taskId,
+        skillId: skillId,
+        skillName: skill.name,
+        skillColor: skill.color,
+        skillIcon: skill.icon,
+        xp: 20,
+        isCompletion: true,
+        at: now.subtract(const Duration(days: 3)),
+      ),
+    ];
 }
 
 Future<AppState> _loadedState(_MemoryStorage storage) async {
@@ -177,7 +222,176 @@ Future<AppState> _loadedState(_MemoryStorage storage) async {
   return state;
 }
 
+Future<void> _disposeTestState(WidgetTester tester, AppState state) async {
+  await tester.pumpWidget(const SizedBox.shrink());
+  state.dispose();
+  await tester.pump();
+}
+
 void main() {
+  group('Return Context integration', () {
+    final now = DateTime.utc(2026, 7, 18, 12);
+
+    testWidgets(
+      'mobile card is primary, dismiss is session-only across resize',
+      (tester) async {
+        tester.view.physicalSize = const Size(390, 844);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final state = await _loadedState(_returnContextStorage(now));
+        await tester.pumpWidget(
+          _mainPageHarness(state: state, nowForTesting: () => now),
+        );
+        await tester.pump();
+
+        expect(
+          find.byKey(const ValueKey('return-context-card')),
+          findsOneWidget,
+        );
+        expect(find.byKey(const ValueKey('next-action-lens')), findsNothing);
+        expect(state.selectedSkillId, isNull);
+
+        await tester.tap(find.byKey(const ValueKey('return-context-another')));
+        await tester.pump();
+        expect(find.byKey(const ValueKey('return-context-card')), findsNothing);
+        expect(find.byKey(const ValueKey('next-action-lens')), findsOneWidget);
+        expect(state.selectedSkillId, isNull);
+
+        tester.view.physicalSize = const Size(1280, 800);
+        await tester.pump();
+        expect(
+          find.byKey(const ValueKey('return-context-card')),
+          findsNothing,
+          reason: 'dismissal belongs to MainPage session, not one layout',
+        );
+        await _disposeTestState(tester, state);
+      },
+    );
+
+    testWidgets('mobile continue revalidates and opens existing Skill focus', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final state = await _loadedState(_returnContextStorage(now));
+      await tester.pumpWidget(
+        _mainPageHarness(state: state, nowForTesting: () => now),
+      );
+      await tester.pump();
+
+      await tester.tap(find.byKey(const ValueKey('return-context-continue')));
+      await tester.pumpAndSettle();
+
+      expect(state.selectedSkillId, 'return-skill');
+      expect(
+        find.byKey(const ValueKey('mobile-skill-focus-return-skill')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey('return-context-card')), findsNothing);
+      await _disposeTestState(tester, state);
+    });
+
+    testWidgets(
+      'continue handles a Task deleted after render without crashing',
+      (tester) async {
+        tester.view.physicalSize = const Size(390, 844);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final state = await _loadedState(_returnContextStorage(now));
+        await tester.pumpWidget(
+          _mainPageHarness(state: state, nowForTesting: () => now),
+        );
+        await tester.pump();
+        expect(
+          find.byKey(const ValueKey('return-context-card')),
+          findsOneWidget,
+        );
+
+        // Simulates the candidate becoming stale between paint and the action.
+        // No notification is emitted so the rendered candidate stays on screen.
+        state.tasks.removeWhere((task) => task.id == 'return-task');
+        await tester.tap(find.byKey(const ValueKey('return-context-continue')));
+        await tester.pump(const Duration(milliseconds: 600));
+
+        expect(tester.takeException(), isNull);
+        expect(state.selectedSkillId, 'return-skill');
+        expect(
+          find.byKey(const ValueKey('mobile-skill-focus-return-skill')),
+          findsOneWidget,
+        );
+        await _disposeTestState(tester, state);
+      },
+    );
+
+    testWidgets(
+      'desktop card is compact, detached from profile notifications, and routes',
+      (tester) async {
+        tester.view.physicalSize = const Size(1280, 800);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final state = await _loadedState(_returnContextStorage(now));
+        var workspaceBuilds = 0;
+        await tester.pumpWidget(
+          _mainPageHarness(
+            state: state,
+            nowForTesting: () => now,
+            onWorkspaceBuild: () => workspaceBuilds++,
+          ),
+        );
+        await tester.pump();
+        expect(
+          find.byKey(const ValueKey('return-context-card')),
+          findsOneWidget,
+        );
+        workspaceBuilds = 0;
+
+        state.updateProfileName('Профиль не меняет контекст');
+        await tester.pump();
+        expect(workspaceBuilds, 0);
+        expect(
+          find.byKey(const ValueKey('return-context-card')),
+          findsOneWidget,
+        );
+        await tester.pump(const Duration(seconds: 1));
+
+        await tester.tap(find.byKey(const ValueKey('return-context-continue')));
+        await tester.pump();
+        expect(state.selectedSkillId, 'return-skill');
+        expect(find.byKey(const ValueKey('return-context-card')), findsNothing);
+        await _disposeTestState(tester, state);
+      },
+    );
+
+    testWidgets('loading state never exposes Return Context', (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final state = AppState(
+        storage: _returnContextStorage(now),
+        seedDefaults: false,
+      );
+      await tester.pumpWidget(
+        _mainPageHarness(state: state, nowForTesting: () => now),
+      );
+      await tester.pump();
+
+      expect(state.hasLoadedSavedData, isFalse);
+      expect(find.byKey(const ValueKey('return-context-card')), findsNothing);
+      await _disposeTestState(tester, state);
+    });
+  });
+
   testWidgets(
     'profile and persistence notifications do not rebuild MainPage workspace',
     (tester) async {

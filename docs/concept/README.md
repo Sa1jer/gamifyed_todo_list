@@ -40,13 +40,20 @@ and non-punitive return.
     without vanity metrics or analytics work.
 11. [Next Action + Boot Entry implementation](NEXT_ACTION_BOOT_ENTRY_IMPLEMENTATION.md)
     - current MVP decision, domain boundary, persistence policy, and rollback.
+12. [Return Context implementation](RETURN_CONTEXT_IMPLEMENTATION.md) - derived
+    prototype semantics, evidence policy, session ownership, and Save Point
+    boundary.
+13. [Return Context validation diary](RETURN_CONTEXT_VALIDATION_DIARY.md) -
+    manual one-, three-, and seven-day product-validation template.
 
 ## Current implementation status
 
-The first conceptual slice, Next Action Lens + Boot Entry, is implemented as a
-mobile presentation experiment. It uses a pure resolver and session-only plan;
-it does not change Task storage, XP, Goal, RoadMap, or reward behavior. Return
-Context remains the next concept candidate and requires separate validation.
+Next Action Lens is an implemented mobile MVP, and Boot Entry is its
+session-only entry loop. Return Context is now an implemented derived prototype
+on mobile and desktop Act: it uses completion/review evidence and the existing
+Next Action ranking, with session-only dismissal. None of these features adds
+Task storage, XP, Goal, RoadMap, or reward behavior. Durable Save Point, Main
+Quest, Quest Chain, and Definition of Done remain unimplemented or deferred.
 
 ## Non-negotiable boundary
 

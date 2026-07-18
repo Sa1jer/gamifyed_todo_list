@@ -37,6 +37,9 @@ import 'reward_animations.dart';
 import 'weekly_analytics_dialog.dart';
 import '../engines/course_nudge_engine.dart';
 import '../engines/next_action_resolver.dart';
+import '../engines/return_context_resolver.dart';
+import '../features/return_context/return_context_controller.dart';
+import 'return_context_card.dart';
 
 part 'main_page/profile_bar.dart';
 part 'main_page/mobile_workspace_nav.dart';

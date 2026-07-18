@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app_state.dart';
+import '../../engines/return_context_resolver.dart';
 import '../../models.dart';
 import '../desktop_journal_tokens.dart';
 import '../shared.dart';
@@ -34,6 +35,10 @@ class DesktopWorkspaceShell extends StatelessWidget {
   final GlobalKey? statsKey;
   final GlobalKey? contextualToastHostKey;
   final GlobalKey? rightRailKey;
+  final ReturnContextCandidate? returnContext;
+  final VoidCallback? onContinueReturnContext;
+  final VoidCallback? onAnotherReturnContext;
+  final VoidCallback? onDismissReturnContext;
 
   const DesktopWorkspaceShell({
     super.key,
@@ -57,7 +62,16 @@ class DesktopWorkspaceShell extends StatelessWidget {
     this.statsKey,
     this.contextualToastHostKey,
     this.rightRailKey,
-  });
+    this.returnContext,
+    this.onContinueReturnContext,
+    this.onAnotherReturnContext,
+    this.onDismissReturnContext,
+  }) : assert(
+         returnContext == null ||
+             (onContinueReturnContext != null &&
+                 onAnotherReturnContext != null &&
+                 onDismissReturnContext != null),
+       );
 
   @override
   Widget build(BuildContext context) {
@@ -122,6 +136,10 @@ class DesktopWorkspaceShell extends StatelessWidget {
                             showDesktopEditTask(context, state, skill, task),
                         onComplete: onComplete,
                         onMinimumAction: onMinimumAction,
+                        returnContext: returnContext,
+                        onContinueReturnContext: onContinueReturnContext,
+                        onAnotherReturnContext: onAnotherReturnContext,
+                        onDismissReturnContext: onDismissReturnContext,
                       )
                     : Padding(
                         padding: EdgeInsets.all(metrics.mainPadding),

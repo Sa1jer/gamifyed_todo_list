@@ -9,6 +9,10 @@ class _ActWorkspace extends StatelessWidget {
   final Key? createFirstQuestButtonKey;
   final Key? nextQuestActionKey;
   final GlobalKey<_MobileActJournalState>? mobileJournalKey;
+  final ReturnContextCandidate? returnContext;
+  final VoidCallback? onContinueReturnContext;
+  final VoidCallback? onAnotherReturnContext;
+  final VoidCallback? onDismissReturnContext;
 
   const _ActWorkspace({
     super.key,
@@ -20,6 +24,10 @@ class _ActWorkspace extends StatelessWidget {
     this.createFirstQuestButtonKey,
     this.nextQuestActionKey,
     this.mobileJournalKey,
+    this.returnContext,
+    this.onContinueReturnContext,
+    this.onAnotherReturnContext,
+    this.onDismissReturnContext,
   });
 
   @override
@@ -35,6 +43,10 @@ class _ActWorkspace extends StatelessWidget {
             createFirstSkillButtonKey: createFirstSkillButtonKey,
             createFirstQuestButtonKey: createFirstQuestButtonKey,
             nextQuestActionKey: nextQuestActionKey,
+            returnContext: returnContext,
+            onContinueReturnContext: onContinueReturnContext,
+            onAnotherReturnContext: onAnotherReturnContext,
+            onDismissReturnContext: onDismissReturnContext,
           );
         }
 

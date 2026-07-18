@@ -3,11 +3,13 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../app_state.dart';
+import '../../engines/return_context_resolver.dart';
 import '../../models.dart';
 import '../../theme/app_typography.dart';
 import '../../utils.dart';
 import '../desktop_journal_tokens.dart';
 import '../inbox_panel.dart';
+import '../return_context_card.dart';
 import '../shared.dart';
 import 'desktop_quest_row.dart';
 import 'desktop_selected_skill_header.dart';
@@ -23,6 +25,10 @@ class DesktopMainWorkspace extends StatelessWidget {
   final void Function(Skill skill, Task task) onEditTask;
   final void Function(String taskId, ActionToastOrigin origin) onComplete;
   final void Function(String taskId, ActionToastOrigin origin) onMinimumAction;
+  final ReturnContextCandidate? returnContext;
+  final VoidCallback? onContinueReturnContext;
+  final VoidCallback? onAnotherReturnContext;
+  final VoidCallback? onDismissReturnContext;
 
   const DesktopMainWorkspace({
     super.key,
@@ -35,7 +41,16 @@ class DesktopMainWorkspace extends StatelessWidget {
     required this.onEditTask,
     required this.onComplete,
     required this.onMinimumAction,
-  });
+    this.returnContext,
+    this.onContinueReturnContext,
+    this.onAnotherReturnContext,
+    this.onDismissReturnContext,
+  }) : assert(
+         returnContext == null ||
+             (onContinueReturnContext != null &&
+                 onAnotherReturnContext != null &&
+                 onDismissReturnContext != null),
+       );
 
   @override
   Widget build(BuildContext context) {
@@ -181,6 +196,10 @@ class DesktopMainWorkspace extends StatelessWidget {
                 padding: padding,
                 children: [
                   buildTodaySummary(),
+                  if (returnContext != null) ...[
+                    SizedBox(height: metrics.sectionGap + 10),
+                    _buildReturnContext(reduceMotion),
+                  ],
                   SizedBox(height: metrics.sectionGap + 10),
                   header,
                   const SizedBox(height: 24),
@@ -194,6 +213,10 @@ class DesktopMainWorkspace extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   buildTodaySummary(),
+                  if (returnContext != null) ...[
+                    SizedBox(height: metrics.sectionGap + 10),
+                    _buildReturnContext(reduceMotion),
+                  ],
                   SizedBox(height: metrics.sectionGap + 10),
                   header,
                   const SizedBox(height: 18),
@@ -233,6 +256,10 @@ class DesktopMainWorkspace extends StatelessWidget {
           ),
           children: [
             buildTodaySummary(),
+            if (returnContext != null) ...[
+              SizedBox(height: metrics.sectionGap + 10),
+              _buildReturnContext(reduceMotion),
+            ],
             SizedBox(height: metrics.sectionGap + 10),
             AnimatedSwitcher(
               duration: reduceMotion
@@ -338,6 +365,18 @@ class DesktopMainWorkspace extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildReturnContext(bool reduceMotion) {
+    return ReturnContextCard(
+      candidate: returnContext!,
+      isDark: state.isDark,
+      desktop: true,
+      reducedMotion: reduceMotion || state.reducedMotion,
+      onContinue: onContinueReturnContext!,
+      onAnotherAction: onAnotherReturnContext!,
+      onDismiss: onDismissReturnContext!,
     );
   }
 }

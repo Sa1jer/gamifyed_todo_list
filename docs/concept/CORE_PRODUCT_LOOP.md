@@ -8,8 +8,10 @@
 Skill -> Goal -> RoadMap / Stage -> Task -> Minimum Action -> XP -> Review / Nudge
 ```
 
-It already supports small entry actions and later reflection. It does not yet
-make one explicit return context or observable outcome the primary experience.
+It already supports small entry actions and later reflection. The derived
+Return Context prototype now makes one evidence-backed thread primary after a
+pause, but there is still no user-authored durable Save Point or structured
+observable outcome.
 
 ## Option A - Quest-first
 
@@ -90,7 +92,7 @@ a pause with less reconstruction, and report more clarity without increasing
 planning burden. It fails if users feel compelled to classify every task or
 perform extra reflection before working.
 
-## MVP boundary - START only
+## Implemented boundary - START plus derived RETURN prototype
 
 The implemented first slice covers only the `Next Action -> Boot sequence`
 portion of the hybrid. On mobile Act, one derived action is visible before the
@@ -101,3 +103,10 @@ Boot completion acknowledges entry without pretending the parent Quest is done:
 it grants no XP and does not update Minimum Action, Task completion, RoadMap,
 Goal, history, rewards, or statistics. `Proof of Progress` and `Save Point`
 remain deliberately outside this slice.
+
+Return Context adds the reversible RETURN experiment. After a meaningful pause,
+it derives one prior normal-Skill thread from completion/review evidence and
+reuses Next Action for the current valid move. Its dismissal is session-only,
+it performs no mutation while rendering, and Continue only opens existing
+focus after revalidation. This is not a Save Point and does not prove durable
+state is valuable.

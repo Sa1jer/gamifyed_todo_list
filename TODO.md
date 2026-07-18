@@ -80,9 +80,14 @@ before it enters an implementation brief.
   stage and priority data. No models, schema, XP rules, RoadMap rules or second
   ranking engine were added; see
   `docs/concept/NEXT_ACTION_BOOT_ENTRY_IMPLEMENTATION.md`.
-- [ ] **Recommended epic 2:** validate a derived `Return Context` card after a
-  pause using existing task, stage, history, and review data. Do not call it a
-  persistent Save Point or add storage until user validation proves the need.
+- [x] **Recommended epic 2:** implemented a derived `Return Context` prototype
+  on mobile and desktop Act using detached completion/review evidence and the
+  existing Next Action ranking. Dismissal is session-only; no Save Point,
+  model, schema, XP, completion, Goal, RoadMap, or reward behavior was added.
+- [ ] Run the voluntary Return Context diary after approximately 1/3/7-day
+  pauses. Record reconstruction effort, thread/result accuracy, action choice,
+  pressure, real-world change, and whether restart loss is harmful before any
+  durable Save Point decision.
 - [ ] Run a voluntary Next Action / Boot Entry diary pass before making its
   override or entry state durable: record clarity, override/dismiss reason,
   real-world change, and whether restart loss is harmful.
