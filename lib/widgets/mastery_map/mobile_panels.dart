@@ -643,6 +643,17 @@ class _MobileNodeMasteryPanel extends StatelessWidget {
             color: const Color(0xFFFFCC00),
           ),
         ),
+        if (node.description.trim().isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Text(
+            node.description,
+            style: TextStyle(
+              color: subtext(isDark),
+              fontSize: 12.5,
+              height: 1.35,
+            ),
+          ),
+        ],
         const SizedBox(height: 12),
         _MetricCard(
           isDark: isDark,
@@ -652,12 +663,7 @@ class _MobileNodeMasteryPanel extends StatelessWidget {
           progress: (completed / target).clamp(0.0, 1.0),
           helperText:
               'Практика — закрытый квест этого этапа. Наберите нужное количество, чтобы освоить этап.',
-          onEdit: () => _showStagePracticeTargetDialog(
-            context,
-            state: state,
-            skill: skill,
-            node: node,
-          ),
+          onEdit: onRename,
         ),
         const SizedBox(height: 12),
         KeyedSubtree(

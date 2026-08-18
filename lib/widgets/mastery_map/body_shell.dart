@@ -416,7 +416,6 @@ class _MasteryMapBody extends StatelessWidget {
           onSelectSkill: (skill) =>
               onSelectionChanged(_MasterySelection.skill(skill.id)),
           onAddRoot: onAddRoot,
-          onExtendPath: onExtendPath,
           onRenameNode: onRenameNode,
           onAddQuest: onAddQuest,
           onToggleQuest: onToggleQuest,

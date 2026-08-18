@@ -625,6 +625,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
 
     Skill skill(String id, String name, Color color) => Skill(
       id: id,
@@ -726,6 +727,47 @@ void main() {
         2,
       );
     }
+
+    final counterLabel = find.byKey(
+      const ValueKey('roadmap-counter-label-Этапов в дороге'),
+    );
+    final counterControls = find.byKey(
+      const ValueKey('roadmap-counter-controls-Этапов в дороге'),
+    );
+    expect(
+      tester.getRect(counterControls).left - tester.getRect(counterLabel).right,
+      greaterThanOrEqualTo(10),
+    );
+
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    await tester.pumpAndSettle();
+    expect(
+      tester.getRect(counterLabel).bottom,
+      lessThan(tester.getRect(counterControls).top),
+    );
+    expect(tester.takeException(), isNull);
+
+    tester.platformDispatcher.textScaleFactorTestValue = 1;
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('roadmap-template-choice-custom')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('roadmap-counter-increase-Этапов в дороге')),
+    );
+    await tester.tap(find.byKey(const ValueKey('roadmap-template-apply')));
+    await tester.pumpAndSettle();
+    expect(
+      storage.skills
+          .firstWhere((skill) => skill.id == 'road-shell-a')
+          .treeNodes,
+      hasLength(4),
+    );
+    expect(
+      find.byKey(const ValueKey('desktop-roadmap-template-surface')),
+      findsNothing,
+    );
 
     await tester.tap(find.byKey(const ValueKey('desktop-skill-road-shell-b')));
     await tester.pumpAndSettle();
@@ -3649,9 +3691,24 @@ void main() {
     expect(find.text('Переименовать'), findsNothing);
     await tester.tap(find.byTooltip('Переименовать этап'));
     await tester.pumpAndSettle();
-    expect(find.text('Переименовать этап'), findsOneWidget);
+    expect(find.text('Редактировать этап'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('roadmap-stage-description-field')),
+      findsOneWidget,
+    );
+    expect(find.text('Продлить путь'), findsNothing);
 
-    await tester.enterText(find.byType(TextField).last, 'База');
+    await tester.enterText(
+      find.byKey(const ValueKey('roadmap-stage-title-field')),
+      'База',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('roadmap-stage-description-field')),
+      'Фундамент навыка',
+    );
+    await tester.tap(
+      find.byKey(const ValueKey('roadmap-stage-target-increment')),
+    );
     await tester.tap(find.text('Сохранить'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 120));
@@ -3659,6 +3716,13 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('База'), findsWidgets);
+    expect(find.text('Фундамент навыка'), findsOneWidget);
+    final savedStage = storage.skills
+        .firstWhere((skill) => skill.id == 'skill-1')
+        .treeNodes
+        .firstWhere((node) => node.id == 'stage-1');
+    expect(savedStage.description, 'Фундамент навыка');
+    expect(savedStage.questTarget, 4);
 
     await tester.tap(find.text('Открыть редактор'));
     await tester.pumpAndSettle();
@@ -3932,6 +3996,77 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
   });
+
+  testWidgets(
+    'desktop RoadMap establishes the selected path camera before its first visible frame',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1366, 820);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final storage = InMemoryStorageService()
+        .._onboardingSeen = true
+        ..skills = [
+          Skill(
+            id: 'initial-camera-skill',
+            name: 'Стабильный путь',
+            goal: 'Не прыгать после открытия',
+            color: const Color(0xFF4A9EFF),
+            icon: Icons.route_rounded,
+            treeNodes: [
+              SkillTreeNode(id: 'initial-root', title: 'Основа'),
+              SkillTreeNode(
+                id: 'initial-next',
+                title: 'Практика',
+                prerequisiteIds: const ['initial-root'],
+              ),
+            ],
+          ),
+        ];
+      await storage.init();
+      await tester.pumpWidget(RPGApp(storage: storage));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      await tester.tap(
+        find.byKey(const ValueKey('desktop-skill-initial-camera-skill')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('desktop-nav-map')));
+      await tester.pump();
+
+      final viewer = tester.widget<InteractiveViewer>(
+        find.descendant(
+          of: find.byKey(const ValueKey('roadmap-canvas-horizontal')),
+          matching: find.byType(InteractiveViewer),
+        ),
+      );
+      final firstPaintMatrix = List<double>.from(
+        viewer.transformationController!.value.storage,
+      );
+      expect(
+        viewer.transformationController!.value.getMaxScaleOnAxis(),
+        isNot(1),
+      );
+
+      await tester.pump();
+      final nextFrameMatrix = tester
+          .widget<InteractiveViewer>(
+            find.descendant(
+              of: find.byKey(const ValueKey('roadmap-canvas-horizontal')),
+              matching: find.byType(InteractiveViewer),
+            ),
+          )
+          .transformationController!
+          .value
+          .storage;
+      for (var index = 0; index < firstPaintMatrix.length; index++) {
+        expect(nextFrameMatrix[index], closeTo(firstPaintMatrix[index], 0.001));
+      }
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('desktop RoadMap orientation uses the selected skill accent', (
     WidgetTester tester,

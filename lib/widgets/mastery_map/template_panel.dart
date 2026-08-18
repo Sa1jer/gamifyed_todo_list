@@ -145,15 +145,17 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
     RoadmapTemplate.custom => _customPathCount,
   };
 
+  RoadmapTemplateConfig get _currentConfig => RoadmapTemplateConfig(
+    template: _template,
+    customPathCount: _customPathCount,
+    stagesPerPath: _stagesPerPath,
+  );
+
   @override
   Widget build(BuildContext context) {
     final isDark = widget.isDark;
     final color = widget.skill.color;
-    final config = RoadmapTemplateConfig(
-      template: _template,
-      customPathCount: _customPathCount,
-      stagesPerPath: _stagesPerPath,
-    );
+    final config = _currentConfig;
     final content = Padding(
       padding: EdgeInsets.all(widget.sheetMode ? 18 : 16),
       child: Column(
@@ -204,7 +206,7 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
               final twoColumns = constraints.maxWidth >= 320 && textScale < 1.8;
               final extent = twoColumns
                   ? (112 + (textScale - 1) * 28).clamp(112, 136).toDouble()
-                  : (76 + (textScale - 1) * 34).clamp(76, 112).toDouble();
+                  : (76 + (textScale - 1) * 78).clamp(76, 154).toDouble();
               final choices = [
                 _RoadmapTemplateChoice(
                   key: const ValueKey('roadmap-template-choice-simple'),
@@ -322,8 +324,9 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
             children: [
               Expanded(
                 child: PressFeedback(
+                  key: const ValueKey('roadmap-template-apply'),
                   scale: 0.96,
-                  onTap: () => widget.onApply(config),
+                  onTap: () => widget.onApply(_currentConfig),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 11,
@@ -362,6 +365,7 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
               ),
               const SizedBox(width: 8),
               PressFeedback(
+                key: const ValueKey('roadmap-template-hide'),
                 scale: 0.94,
                 onTap: widget.onHide,
                 child: Padding(
@@ -543,11 +547,15 @@ class _RoadmapCounterControl extends StatelessWidget {
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
+          final textScale = MediaQuery.textScalerOf(context).scale(1);
           final controls = Row(
+            key: ValueKey('roadmap-counter-controls-$label'),
             mainAxisSize: MainAxisSize.min,
             children: [
               _RoadmapCounterButton(
+                key: ValueKey('roadmap-counter-decrease-$label'),
                 icon: Icons.remove,
+                semanticLabel: 'Уменьшить: $label',
                 isDark: isDark,
                 color: color,
                 onTap: onDecrease,
@@ -565,7 +573,9 @@ class _RoadmapCounterControl extends StatelessWidget {
                 ),
               ),
               _RoadmapCounterButton(
+                key: ValueKey('roadmap-counter-increase-$label'),
                 icon: Icons.add,
+                semanticLabel: 'Увеличить: $label',
                 isDark: isDark,
                 color: color,
                 onTap: onIncrease,
@@ -574,6 +584,7 @@ class _RoadmapCounterControl extends StatelessWidget {
           );
           final labelWidget = Text(
             label,
+            key: ValueKey('roadmap-counter-label-$label'),
             maxLines: constraints.maxWidth < 260 ? 2 : 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
@@ -582,7 +593,10 @@ class _RoadmapCounterControl extends StatelessWidget {
               fontWeight: FontWeight.w800,
             ),
           );
-          if (constraints.maxWidth < 220) {
+          final stackControls =
+              constraints.maxWidth < 150 ||
+              (textScale >= 1.8 && constraints.maxWidth < 360);
+          if (stackControls) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [labelWidget, const SizedBox(height: 6), controls],
@@ -591,6 +605,7 @@ class _RoadmapCounterControl extends StatelessWidget {
           return Row(
             children: [
               Expanded(child: labelWidget),
+              const SizedBox(width: 12),
               controls,
             ],
           );
@@ -602,12 +617,15 @@ class _RoadmapCounterControl extends StatelessWidget {
 
 class _RoadmapCounterButton extends StatelessWidget {
   final IconData icon;
+  final String semanticLabel;
   final bool isDark;
   final Color color;
   final VoidCallback? onTap;
 
   const _RoadmapCounterButton({
+    super.key,
     required this.icon,
+    required this.semanticLabel,
     required this.isDark,
     required this.color,
     this.onTap,
@@ -632,8 +650,14 @@ class _RoadmapCounterButton extends StatelessWidget {
         size: 15,
       ),
     );
-    if (!active) return button;
-    return PressFeedback(scale: 0.9, onTap: onTap!, child: button);
+    return Semantics(
+      button: true,
+      enabled: active,
+      label: semanticLabel,
+      child: active
+          ? PressFeedback(scale: 0.9, onTap: onTap!, child: button)
+          : button,
+    );
   }
 }
 

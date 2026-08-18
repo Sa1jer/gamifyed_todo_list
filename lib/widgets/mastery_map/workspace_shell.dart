@@ -368,21 +368,25 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
     showDialog<void>(
       context: context,
       useRootNavigator: true,
-      builder: (dialogContext) => _RenameRoadmapStageDialog(
+      builder: (dialogContext) => _RoadmapStageEditorDialog(
         isDark: state.isDark,
+        color: skill.color,
         initialTitle: node.title,
-        onCancel: () => Navigator.of(dialogContext, rootNavigator: true).pop(),
-        onSave: (nextTitle) {
-          Navigator.of(dialogContext, rootNavigator: true).pop();
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted) return;
-            state.renameSkillTreeNode(skill.id, node.id, nextTitle);
-            final nextSelection = _MasterySelection.node(skill.id, node.id);
-            if (mounted) {
-              _setSelection(nextSelection);
-            }
-            onSaved?.call(nextSelection);
-          });
+        initialDescription: node.description,
+        initialRequiredQuestCompletions: node.questTarget,
+        initialXpReward: node.xpReward,
+        onSave: (title, description, target, xpReward) {
+          state.updateSkillTreeNode(
+            skill.id,
+            node.id,
+            title: title,
+            description: description,
+            requiredQuestCompletions: target,
+            xpReward: xpReward,
+          );
+          final nextSelection = _MasterySelection.node(skill.id, node.id);
+          if (mounted) _setSelection(nextSelection);
+          onSaved?.call(nextSelection);
         },
       ),
     );
@@ -808,43 +812,103 @@ class _AdaptiveRoadmapEmptyState extends StatelessWidget {
   }
 }
 
-class _RenameRoadmapStageDialog extends StatefulWidget {
+class _RoadmapStageEditorDialog extends StatefulWidget {
   final bool isDark;
+  final Color color;
   final String initialTitle;
-  final VoidCallback onCancel;
-  final ValueChanged<String> onSave;
+  final String initialDescription;
+  final int initialRequiredQuestCompletions;
+  final int initialXpReward;
+  final void Function(
+    String title,
+    String description,
+    int requiredQuestCompletions,
+    int xpReward,
+  )
+  onSave;
 
-  const _RenameRoadmapStageDialog({
+  const _RoadmapStageEditorDialog({
     required this.isDark,
+    required this.color,
     required this.initialTitle,
-    required this.onCancel,
+    required this.initialDescription,
+    required this.initialRequiredQuestCompletions,
+    required this.initialXpReward,
     required this.onSave,
   });
 
   @override
-  State<_RenameRoadmapStageDialog> createState() =>
-      _RenameRoadmapStageDialogState();
+  State<_RoadmapStageEditorDialog> createState() =>
+      _RoadmapStageEditorDialogState();
 }
 
-class _RenameRoadmapStageDialogState extends State<_RenameRoadmapStageDialog> {
+class _RoadmapStageEditorDialogState extends State<_RoadmapStageEditorDialog> {
   late final TextEditingController _titleCtrl;
+  late final TextEditingController _descriptionCtrl;
+  late int _requiredQuestCompletions;
+  late int _xpReward;
+  var _allowPop = false;
+  var _discardDialogOpen = false;
 
   @override
   void initState() {
     super.initState();
     _titleCtrl = TextEditingController(text: widget.initialTitle);
+    _descriptionCtrl = TextEditingController(text: widget.initialDescription);
+    _requiredQuestCompletions = widget.initialRequiredQuestCompletions
+        .clamp(1, 30)
+        .toInt();
+    _xpReward = widget.initialXpReward.clamp(10, 200).toInt();
   }
 
   @override
   void dispose() {
     _titleCtrl.dispose();
+    _descriptionCtrl.dispose();
     super.dispose();
+  }
+
+  bool get _isDirty =>
+      _titleCtrl.text != widget.initialTitle ||
+      _descriptionCtrl.text != widget.initialDescription ||
+      _requiredQuestCompletions !=
+          widget.initialRequiredQuestCompletions.clamp(1, 30).toInt() ||
+      _xpReward != widget.initialXpReward.clamp(10, 200).toInt();
+
+  Future<void> _requestClose() async {
+    if (!mounted) return;
+    if (_allowPop || !_isDirty) {
+      Navigator.pop(context);
+      return;
+    }
+    if (_discardDialogOpen) return;
+    _discardDialogOpen = true;
+    final discard = await showDiscardMobileFormDialog(
+      context,
+      isDark: widget.isDark,
+    );
+    _discardDialogOpen = false;
+    if (!mounted || !discard) return;
+    setState(() => _allowPop = true);
+    await WidgetsBinding.instance.endOfFrame;
+    if (mounted) Navigator.pop(context);
   }
 
   void _save() {
     final nextTitle = _titleCtrl.text.trim();
     if (nextTitle.isEmpty) return;
-    widget.onSave(nextTitle);
+    widget.onSave(
+      nextTitle,
+      _descriptionCtrl.text,
+      _requiredQuestCompletions,
+      _xpReward,
+    );
+    setState(() => _allowPop = true);
+    Navigator.pop(context);
+  }
+
+  void _setTarget(int value) {
+    setState(() => _requiredQuestCompletions = value.clamp(1, 30).toInt());
   }
 
   @override
@@ -856,30 +920,150 @@ class _RenameRoadmapStageDialogState extends State<_RenameRoadmapStageDialog> {
     final sub = subtext(isDark);
     final bdr = borderColor(isDark);
 
-    return Dialog(
-      backgroundColor: bg,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: SizedBox(
-        width: 410,
-        child: Padding(
-          padding: const EdgeInsets.all(22),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              DlgHeader(title: 'Переименовать этап', txtColor: txt),
-              const SizedBox(height: 14),
-              DlgField(
-                label: 'Название этапа',
-                ctrl: _titleCtrl,
-                fBg: fBg,
-                txt: txt,
-                sub: sub,
-                bdr: bdr,
-              ),
-              const SizedBox(height: 18),
-              DlgActions(onCancel: widget.onCancel, onSave: _save),
-            ],
+    return PopScope(
+      canPop: _allowPop || !_isDirty,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) unawaited(_requestClose());
+      },
+      child: Dialog(
+        key: const ValueKey('roadmap-stage-editor-dialog'),
+        backgroundColor: bg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 460, maxHeight: 720),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(22),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                DlgHeader(title: 'Редактировать этап', txtColor: txt),
+                const SizedBox(height: 14),
+                DlgField(
+                  label: 'Название этапа',
+                  fieldKey: const ValueKey('roadmap-stage-title-field'),
+                  ctrl: _titleCtrl,
+                  fBg: fBg,
+                  txt: txt,
+                  sub: sub,
+                  bdr: bdr,
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: 12),
+                DlgField(
+                  label: 'Описание (необязательно)',
+                  hintText: 'Что означает этот этап и к чему он ведёт?',
+                  fieldKey: const ValueKey('roadmap-stage-description-field'),
+                  ctrl: _descriptionCtrl,
+                  fBg: fBg,
+                  txt: txt,
+                  sub: sub,
+                  bdr: bdr,
+                  min: 2,
+                  max: 5,
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: widget.color.withAlpha(isDark ? 18 : 12),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: widget.color.withAlpha(42)),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Практик для освоения',
+                          style: TextStyle(
+                            color: txt,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      _PracticeTargetStepButton(
+                        key: const ValueKey('roadmap-stage-target-decrement'),
+                        isDark: isDark,
+                        color: widget.color,
+                        icon: Icons.remove,
+                        enabled: _requiredQuestCompletions > 1,
+                        onTap: () => _setTarget(_requiredQuestCompletions - 1),
+                      ),
+                      SizedBox(
+                        width: 48,
+                        child: Text(
+                          '$_requiredQuestCompletions',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: widget.color,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      _PracticeTargetStepButton(
+                        key: const ValueKey('roadmap-stage-target-increment'),
+                        isDark: isDark,
+                        color: widget.color,
+                        icon: Icons.add,
+                        enabled: _requiredQuestCompletions < 30,
+                        onTap: () => _setTarget(_requiredQuestCompletions + 1),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    SubLbl('XP за освоение', sub),
+                    const Spacer(),
+                    PressFeedback(
+                      scale: 0.96,
+                      tooltip: 'Ввести XP числом',
+                      onTap: () async {
+                        final value = await showIntegerEditDialog(
+                          context,
+                          title: 'XP за освоение',
+                          initialValue: _xpReward,
+                          min: 10,
+                          max: 200,
+                          color: widget.color,
+                          isDark: isDark,
+                          suffix: 'XP',
+                        );
+                        if (value != null && mounted) {
+                          setState(() => _xpReward = value);
+                        }
+                      },
+                      child: TaskBadge(
+                        icon: Icons.auto_awesome,
+                        label: '+$_xpReward XP',
+                        color: const Color(0xFFFFCC00),
+                      ),
+                    ),
+                  ],
+                ),
+                Slider(
+                  key: const ValueKey('roadmap-stage-xp-slider'),
+                  value: _xpReward.toDouble(),
+                  min: 10,
+                  max: 200,
+                  divisions: 19,
+                  activeColor: widget.color,
+                  inactiveColor: widget.color.withAlpha(42),
+                  onChanged: (value) =>
+                      setState(() => _xpReward = value.round()),
+                ),
+                const SizedBox(height: 18),
+                DlgActions(
+                  onCancel: () => unawaited(_requestClose()),
+                  onSave: _save,
+                  saveColor: widget.color,
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -384,6 +384,13 @@ void main() {
         ),
         color: const Color(0xFF4A9EFF),
         icon: Icons.code,
+        treeNodes: [
+          SkillTreeNode(
+            id: 'active-stage-1',
+            title: 'Текущий этап',
+            description: 'Описание текущего этапа',
+          ),
+        ],
         completedGoals: [
           CompletedGoal(
             id: 'goal-history-1',
@@ -444,6 +451,7 @@ void main() {
       expect(decoded.goalSpec.metric, 'этапы');
       expect(decoded.goalSpec.reviews.single.nextFocus, 'Auth');
       expect(decoded.triggeredGoalMilestones, [25, 50]);
+      expect(decoded.treeNodes.single.description, 'Описание текущего этапа');
       expect(decoded.completedGoals, hasLength(1));
       expect(decoded.completedGoals.single.id, 'goal-history-1');
       expect(decoded.completedGoals.single.skillId, 'roundtrip-skill');
@@ -462,9 +470,21 @@ void main() {
       expect(archivedRoadmap.goalText, 'Собрать первый backend');
       expect(archivedRoadmap.stages, hasLength(2));
       expect(archivedRoadmap.stages.first.id, 'archive-stage-1');
+      expect(archivedRoadmap.stages.first.description, 'Собрать endpoint');
       expect(archivedRoadmap.stages.first.checklist, ['Контракт']);
       expect(archivedRoadmap.stages.first.checklistDone, [true]);
       expect(archivedRoadmap.stages.last.prerequisiteIds, ['archive-stage-1']);
+
+      final legacyPayload = Map<String, dynamic>.from(encoded)
+        ..['treeNodes'] = [
+          {
+            'id': 'legacy-stage',
+            'title': 'Старый этап',
+            'requiredQuestCompletions': 3,
+          },
+        ];
+      final decodedLegacy = storage.debugDecodeSkill(jsonEncode(legacyPayload));
+      expect(decodedLegacy.treeNodes.single.description, isEmpty);
     });
 
     test('roadmap roads and linked task survive skill storage roundtrip', () {

@@ -1,216 +1,5 @@
 part of '../mastery_map_workspace.dart';
 
-void _showStagePracticeTargetDialog(
-  BuildContext context, {
-  required AppState state,
-  required Skill skill,
-  required SkillTreeNode node,
-}) {
-  var target = node.questTarget;
-  var xpReward = node.xpReward;
-  final isDark = state.isDark;
-  final bg = surface(isDark);
-  final txt = textColor(isDark);
-  final sub = subtext(isDark);
-  final color = skill.color;
-
-  showDialog<void>(
-    context: context,
-    builder: (dialogContext) {
-      return StatefulBuilder(
-        builder: (context, setDialogState) {
-          void setTarget(int value) {
-            setDialogState(() => target = value.clamp(1, 30).toInt());
-          }
-
-          Widget chip(String label, int value) {
-            final selected = target == value;
-            return PressFeedback(
-              scale: 0.96,
-              onTap: () => setTarget(value),
-              child: AnimatedContainer(
-                duration: kMotionStandard,
-                curve: kMotionCurve,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: selected ? color.withAlpha(34) : surface(isDark),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(
-                    color: selected ? color : borderColor(isDark),
-                    width: selected ? 1.3 : 1,
-                  ),
-                ),
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    color: selected ? color : sub,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-            );
-          }
-
-          return Dialog(
-            backgroundColor: bg,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: SizedBox(
-              width: 390,
-              child: Padding(
-                padding: const EdgeInsets.all(22),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    DlgHeader(title: 'Практики и XP', txtColor: txt),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Практика — это закрытый квест, привязанный к этапу. Когда набирается нужное количество практик, этап можно освоить.',
-                      style: TextStyle(
-                        color: sub,
-                        fontSize: 12.5,
-                        height: 1.35,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: color.withAlpha(isDark ? 18 : 12),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: color.withAlpha(42)),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              'Нужно практик',
-                              style: TextStyle(
-                                color: txt,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                          ),
-                          _PracticeTargetStepButton(
-                            isDark: isDark,
-                            color: color,
-                            icon: Icons.remove,
-                            enabled: target > 1,
-                            onTap: () => setTarget(target - 1),
-                          ),
-                          SizedBox(
-                            width: 48,
-                            child: Text(
-                              '$target',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: color,
-                                fontSize: 20,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                          ),
-                          _PracticeTargetStepButton(
-                            isDark: isDark,
-                            color: color,
-                            icon: Icons.add,
-                            enabled: target < 30,
-                            onTap: () => setTarget(target + 1),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        chip('Лёгкий · 1', 1),
-                        chip('Обычный · 3', 3),
-                        chip('Глубокий · 5', 5),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'XP за освоение',
-                            style: TextStyle(
-                              color: txt,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                        ),
-                        PressFeedback(
-                          scale: 0.96,
-                          tooltip: 'Ввести XP числом',
-                          onTap: () async {
-                            final value = await showIntegerEditDialog(
-                              context,
-                              title: 'XP за освоение',
-                              initialValue: xpReward,
-                              min: 10,
-                              max: 200,
-                              color: color,
-                              isDark: isDark,
-                              suffix: 'XP',
-                            );
-                            if (value != null && dialogContext.mounted) {
-                              setDialogState(() => xpReward = value);
-                            }
-                          },
-                          child: TaskBadge(
-                            icon: Icons.auto_awesome,
-                            label: '+$xpReward XP',
-                            color: const Color(0xFFFFCC00),
-                          ),
-                        ),
-                      ],
-                    ),
-                    Slider(
-                      value: xpReward.toDouble(),
-                      min: 10,
-                      max: 200,
-                      divisions: 19,
-                      activeColor: color,
-                      inactiveColor: color.withAlpha(42),
-                      onChanged: (value) =>
-                          setDialogState(() => xpReward = value.round()),
-                    ),
-                    const SizedBox(height: 18),
-                    DlgActions(
-                      onCancel: () => Navigator.pop(dialogContext),
-                      onSave: () {
-                        state.updateSkillTreeNodePracticeTarget(
-                          skill.id,
-                          node.id,
-                          target,
-                          xpReward: xpReward,
-                        );
-                        Navigator.pop(dialogContext);
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      );
-    },
-  );
-}
-
 class _PracticeTargetStepButton extends StatelessWidget {
   final bool isDark;
   final Color color;
@@ -219,6 +8,7 @@ class _PracticeTargetStepButton extends StatelessWidget {
   final VoidCallback onTap;
 
   const _PracticeTargetStepButton({
+    super.key,
     required this.isDark,
     required this.color,
     required this.icon,
@@ -258,7 +48,6 @@ class _MasteryMapInspector extends StatelessWidget {
   final GlobalKey? practiceTutorialKey;
   final ValueChanged<Skill> onSelectSkill;
   final ValueChanged<Skill> onAddRoot;
-  final void Function(Skill skill, SkillTreeNode node) onExtendPath;
   final void Function(Skill skill, SkillTreeNode node) onRenameNode;
   final void Function(Skill skill, SkillTreeNode? node) onAddQuest;
   final void Function(Task task, ActionToastOrigin origin) onToggleQuest;
@@ -275,7 +64,6 @@ class _MasteryMapInspector extends StatelessWidget {
     this.practiceTutorialKey,
     required this.onSelectSkill,
     required this.onAddRoot,
-    required this.onExtendPath,
     required this.onRenameNode,
     required this.onAddQuest,
     required this.onToggleQuest,
@@ -353,7 +141,6 @@ class _MasteryMapInspector extends StatelessWidget {
             node: node,
             practiceTutorialKey: practiceTutorialKey,
             onRename: () => onRenameNode(skill, node),
-            onExtendPath: () => onExtendPath(skill, node),
             onAddQuest: () => onAddQuest(skill, node),
             onToggleQuest: onToggleQuest,
             onMinimumAction: onMinimumAction,
@@ -763,7 +550,6 @@ class _NodeInspector extends StatelessWidget {
   final SkillTreeNode node;
   final GlobalKey? practiceTutorialKey;
   final VoidCallback onRename;
-  final VoidCallback onExtendPath;
   final VoidCallback onAddQuest;
   final void Function(Task task, ActionToastOrigin origin) onToggleQuest;
   final void Function(Task task, ActionToastOrigin origin) onMinimumAction;
@@ -779,7 +565,6 @@ class _NodeInspector extends StatelessWidget {
     required this.node,
     this.practiceTutorialKey,
     required this.onRename,
-    required this.onExtendPath,
     required this.onAddQuest,
     required this.onToggleQuest,
     required this.onMinimumAction,
@@ -841,12 +626,7 @@ class _NodeInspector extends StatelessWidget {
           progress: (completed / target).clamp(0.0, 1.0),
           helperText:
               'Практика — закрытый квест этого этапа. Наберите нужное количество, чтобы освоить этап.',
-          onEdit: () => _showStagePracticeTargetDialog(
-            context,
-            state: state,
-            skill: skill,
-            node: node,
-          ),
+          onEdit: onRename,
         ),
         const SizedBox(height: 14),
         Expanded(
@@ -875,12 +655,6 @@ class _NodeInspector extends StatelessWidget {
               icon: Icons.add_task,
               color: skill.color,
               onTap: onAddQuest,
-            ),
-            SmallBtn(
-              label: 'Продлить путь',
-              icon: Icons.add_road,
-              color: const Color(0xFF4A9EFF),
-              onTap: onExtendPath,
             ),
           ],
         ),

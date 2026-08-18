@@ -1924,6 +1924,30 @@ class AppState extends ChangeNotifier {
     _commitMutation();
   }
 
+  void updateSkillTreeNode(
+    String skillId,
+    String nodeId, {
+    required String title,
+    required String description,
+    required int requiredQuestCompletions,
+    required int xpReward,
+  }) {
+    final skill = _skillById(skillId);
+    if (skill == null ||
+        !_roadmapMutations.updateStage(
+          skill,
+          nodeId,
+          title: title,
+          description: description,
+          requiredQuestCompletions: requiredQuestCompletions,
+          xpReward: xpReward,
+        )) {
+      return;
+    }
+    _syncBossesForSkill(skillId);
+    _commitMutation();
+  }
+
   void removeSkillTreeNode(String skillId, String nodeId) {
     final skill = _skillById(skillId);
     if (skill == null ||

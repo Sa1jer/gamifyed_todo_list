@@ -5,6 +5,14 @@ import '../models/skill_models.dart';
 import '../models/task_models.dart';
 import '../utils.dart';
 
+class RoadmapGraphValidation {
+  const RoadmapGraphValidation({required this.errors});
+
+  final List<String> errors;
+
+  bool get isValid => errors.isEmpty;
+}
+
 /// Owns RoadMap graph mutations while AppState retains save/notify orchestration.
 class RoadmapMutationCoordinator {
   const RoadmapMutationCoordinator({this.engine = const RoadmapEngine()});
@@ -228,6 +236,36 @@ class RoadmapMutationCoordinator {
     return true;
   }
 
+  bool updateStage(
+    Skill skill,
+    String nodeId, {
+    required String title,
+    required String description,
+    required int requiredQuestCompletions,
+    required int xpReward,
+  }) {
+    final node = _nodeById(skill, nodeId);
+    final safeTitle = title.trim();
+    if (node == null || safeTitle.isEmpty) return false;
+    final safeDescription = description.trim();
+    final safeTarget = math.max(1, requiredQuestCompletions);
+    final safeXp = math.max(0, xpReward);
+    if (node.title == safeTitle &&
+        node.description == safeDescription &&
+        node.requiredQuestCompletions == safeTarget &&
+        node.xpReward == safeXp) {
+      return false;
+    }
+    node
+      ..title = safeTitle
+      ..description = safeDescription
+      ..requiredQuestCompletions = safeTarget
+      ..xpReward = safeXp
+      ..syncChecklistDone();
+    skill.syncTreeNodes();
+    return true;
+  }
+
   bool renameStage(Skill skill, String nodeId, String title) {
     final node = _nodeById(skill, nodeId);
     final safeTitle = title.trim();
@@ -245,23 +283,107 @@ class RoadmapMutationCoordinator {
     String nodeId, {
     required DateTime now,
   }) {
-    final hadNode = skill.treeNodes.any((node) => node.id == nodeId);
-    if (!hadNode) return false;
+    final removedNode = _nodeById(skill, nodeId);
+    if (removedNode == null) return false;
+
+    final remainingNodeIds = skill.treeNodes
+        .where((node) => node.id != nodeId)
+        .map((node) => node.id)
+        .toSet();
+    final inheritedPrerequisites = removedNode.prerequisiteIds
+        .where(remainingNodeIds.contains)
+        .toSet();
+    final nextPrerequisites = <String, List<String>>{};
+    for (final node in skill.treeNodes.where((node) => node.id != nodeId)) {
+      final next = <String>{};
+      for (final prerequisiteId in node.prerequisiteIds) {
+        if (prerequisiteId == nodeId) {
+          next.addAll(inheritedPrerequisites);
+        } else if (remainingNodeIds.contains(prerequisiteId)) {
+          next.add(prerequisiteId);
+        }
+      }
+      next.remove(node.id);
+      nextPrerequisites[node.id] = next.toList(growable: true);
+    }
+
+    final validation = _validateGraphData(
+      nodeIds: remainingNodeIds,
+      prerequisitesByNodeId: nextPrerequisites,
+    );
+    if (!validation.isValid) return false;
+
     skill.treeNodes.removeWhere((node) => node.id == nodeId);
     for (final node in skill.treeNodes) {
-      node.prerequisiteIds.remove(nodeId);
+      node.prerequisiteIds = nextPrerequisites[node.id] ?? <String>[];
     }
     for (final task in tasks.where(
       (task) =>
           task.isSkillTask &&
           task.skillId == skill.id &&
-          task.treeNodeId == nodeId,
+          task.treeNodeId != null &&
+          !remainingNodeIds.contains(task.treeNodeId),
     )) {
       task.treeNodeId = null;
       task.updatedAt = now;
     }
     skill.syncTreeNodes();
     return true;
+  }
+
+  RoadmapGraphValidation validateGraph(Skill skill) {
+    final nodeIds = skill.treeNodes.map((node) => node.id).toList();
+    final errors = <String>[];
+    if (nodeIds.toSet().length != nodeIds.length) {
+      errors.add('duplicate-node-id');
+    }
+    final dataValidation = _validateGraphData(
+      nodeIds: nodeIds.toSet(),
+      prerequisitesByNodeId: {
+        for (final node in skill.treeNodes)
+          node.id: List<String>.from(node.prerequisiteIds),
+      },
+    );
+    return RoadmapGraphValidation(
+      errors: List.unmodifiable([...errors, ...dataValidation.errors]),
+    );
+  }
+
+  RoadmapGraphValidation _validateGraphData({
+    required Set<String> nodeIds,
+    required Map<String, List<String>> prerequisitesByNodeId,
+  }) {
+    final errors = <String>[];
+    for (final entry in prerequisitesByNodeId.entries) {
+      final prerequisites = entry.value;
+      if (prerequisites.length != prerequisites.toSet().length) {
+        errors.add('duplicate-prerequisite:${entry.key}');
+      }
+      for (final prerequisiteId in prerequisites) {
+        if (prerequisiteId == entry.key) {
+          errors.add('self-prerequisite:${entry.key}');
+        } else if (!nodeIds.contains(prerequisiteId)) {
+          errors.add('dangling-prerequisite:${entry.key}:$prerequisiteId');
+        }
+      }
+    }
+
+    final visiting = <String>{};
+    final visited = <String>{};
+    bool visit(String nodeId) {
+      if (visiting.contains(nodeId)) return true;
+      if (!visited.add(nodeId)) return false;
+      visiting.add(nodeId);
+      for (final prerequisiteId
+          in prerequisitesByNodeId[nodeId] ?? const <String>[]) {
+        if (visit(prerequisiteId)) return true;
+      }
+      visiting.remove(nodeId);
+      return false;
+    }
+
+    if (nodeIds.any(visit)) errors.add('cycle');
+    return RoadmapGraphValidation(errors: List.unmodifiable(errors));
   }
 
   bool toggleChecklist(Skill skill, String nodeId, int index) {

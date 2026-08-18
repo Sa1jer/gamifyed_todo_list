@@ -69,6 +69,11 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
     setState(() => _templatePanelHidden = false);
   }
 
+  void _applyDesktopTemplate(Skill skill, RoadmapTemplateConfig config) {
+    setState(() => _templatePanelHidden = true);
+    widget.onApplyRoadmapTemplate(skill, config);
+  }
+
   @override
   void dispose() {
     _roadmapCameraAnimationController
@@ -706,10 +711,8 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
                             isDark: isDark,
                             onHide: () =>
                                 setState(() => _templatePanelHidden = true),
-                            onApply: (config) => widget.onApplyRoadmapTemplate(
-                              selectedSkill,
-                              config,
-                            ),
+                            onApply: (config) =>
+                                _applyDesktopTemplate(selectedSkill, config),
                           ),
                   ),
                 ),
