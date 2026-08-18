@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'storage_service.dart';
 import 'notification_service.dart';
+import 'performance/frame_pacing_monitor.dart';
 import 'app_state.dart';
 import 'theme/app_typography.dart';
 import 'utils.dart';
@@ -18,6 +19,7 @@ final _notifications = NotificationService();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  framePacingMonitor.install();
   await _notifications.init();
   runApp(RPGApp(storage: _storage));
 }

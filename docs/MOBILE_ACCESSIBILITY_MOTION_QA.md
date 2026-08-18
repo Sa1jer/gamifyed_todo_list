@@ -1,6 +1,6 @@
 # Mobile Accessibility, Motion, And Usability QA
 
-Updated: 2026-07-03
+Updated: 2026-08-18
 
 ## Automated Coverage
 
@@ -18,6 +18,32 @@ Updated: 2026-07-03
   motion, and skip interpolation when reduced motion is active. Completion
   confetti is local to the feedback surface rather than a global particle
   layer.
+- At `360 x 800` and `2.0x` text scale, Profile, Trophies, Statistics, Daily
+  victories, Weekly analytics, and Chronicle render as full-page SafeArea
+  routes. Nested Statistics routes unwind back to Statistics and then Act.
+- The Overview Inbox is geometry-tested as a dock above navigation; expansion
+  is height-bounded and Android Back collapses it before leaving Act.
+
+## Opt-in Frame Timing
+
+The app does not assume or hardcode a refresh rate. For a bounded profile-mode
+sample, run:
+
+```bash
+flutter run --profile --dart-define=RPG_FRAME_TIMINGS=true
+```
+
+After exactly 120 rendered frames, the `rpg.frame_pacing` diagnostic reports
+Flutter's actual display refresh rate, frame count, sample duration, average and
+p90/p95/p99 build, raster, and total durations, plus frames over the
+refresh-rate frame budget. The monitor listens to existing timings only: it
+does not schedule frames, run a timer, or remain active after the sample.
+
+Record Android device/model and display mode or the macOS display/window setup
+with the output. A successful build or a nominal 120/144/165 Hz display is not
+evidence that the app met that budget; only the measured sample is. Reduced
+motion remains the fallback for non-essential transitions, not a substitute for
+profiling.
 
 ## Physical Android Gate — Pending
 
@@ -37,6 +63,9 @@ refresh rate, and whether any interaction exceeds the frame budget.
 - [ ] In `flutter run --profile`, inspect Overview scrolling, Focus open/close,
   completion/undo, Inbox expansion, keyboard open/close, RoadMap scrolling, and
   dark/light switching in DevTools Performance.
+- [ ] Repeat the scripted interactions with
+  `--dart-define=RPG_FRAME_TIMINGS=true` on 60 Hz and available high-refresh
+  modes; save the reported build/raster percentiles and over-budget count.
 - [ ] Review Light Journal outdoors/at high brightness and dark mode at low
   brightness.
 - [ ] Verify Profile, Trophies, Statistics, Daily victories, Weekly analytics,

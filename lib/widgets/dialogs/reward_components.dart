@@ -206,7 +206,6 @@ class RewardChestCard extends StatelessWidget {
             size: 42,
             iconSize: 20,
             sparkle: chest.rarity != RewardRarity.common,
-            loop: chest.rarity == RewardRarity.epic,
           ),
           const SizedBox(width: 12),
           Expanded(

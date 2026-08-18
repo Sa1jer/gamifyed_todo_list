@@ -1,5 +1,29 @@
 # Mobile UX/UI Product Audit
 
+## Stabilization Update — 2026-08-18
+
+This pass kept the established Overview/Focus and RoadMap product model while
+closing navigation, scrolling, and frame-pacing gaps:
+
+- the `Навыки` heading remains a normal, non-collapsing part of the Overview
+  scroll and the skill list no longer carries a synthetic bottom spacer;
+- Inbox is a sibling dock immediately above mobile navigation, expands upward
+  within the available height, and collapses before route navigation on Android
+  Back;
+- Profile, Trophies, Statistics, Daily victories, Weekly analytics, and
+  Chronicle share one SafeArea full-page shell. Statistics can open its detail
+  pages as nested routes and returns to Act one route at a time;
+- compact Profile, Daily victories, and Statistics layouts now reflow their
+  dense rows at `200%` text scale instead of clipping fixed footer content;
+- mobile transitions no longer wait for an arbitrary `16ms` frame. Stable
+  RoadMap paint layers have repaint boundaries, unopened epic chests no longer
+  run a permanent animation loop, and frame timings are available through an
+  explicit profile-only diagnostic flag.
+
+No model, storage, XP, Goal, RoadMap topology, completion, or reward behavior
+changed in this stabilization pass. Physical high-refresh and TalkBack checks
+remain manual gates in `docs/MOBILE_ACCESSIBILITY_MOTION_QA.md`.
+
 ## Polish Update — 2026-07-03
 
 The current batch kept the Overview/Focus product structure and audited it as a

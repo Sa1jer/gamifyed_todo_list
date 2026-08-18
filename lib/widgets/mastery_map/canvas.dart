@@ -431,15 +431,17 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
           return Stack(
             children: [
               Positioned.fill(
-                child: CustomPaint(
-                  key: ValueKey(
-                    calmMobile
-                        ? 'roadmap-mobile-calm-background'
-                        : 'roadmap-desktop-vector-grid',
-                  ),
-                  painter: _MasteryVectorGridPainter(
-                    isDark: isDark,
-                    calmMobile: calmMobile,
+                child: RepaintBoundary(
+                  child: CustomPaint(
+                    key: ValueKey(
+                      calmMobile
+                          ? 'roadmap-mobile-calm-background'
+                          : 'roadmap-desktop-vector-grid',
+                    ),
+                    painter: _MasteryVectorGridPainter(
+                      isDark: isDark,
+                      calmMobile: calmMobile,
+                    ),
                   ),
                 ),
               ),
@@ -457,10 +459,12 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
                       clipBehavior: Clip.none,
                       children: [
                         Positioned.fill(
-                          child: CustomPaint(
-                            painter: _OrbMasteryMapPainter(
-                              layout: layout,
-                              isDark: isDark,
+                          child: RepaintBoundary(
+                            child: CustomPaint(
+                              painter: _OrbMasteryMapPainter(
+                                layout: layout,
+                                isDark: isDark,
+                              ),
                             ),
                           ),
                         ),
