@@ -185,9 +185,10 @@ class _RewardsDialogState extends State<RewardsDialog> {
     );
 
     if (widget.fullScreen) {
-      return Scaffold(
+      return MobileSecondaryPage(
+        routeName: 'Трофеи',
         backgroundColor: bg,
-        body: SafeArea(child: SizedBox.expand(child: content)),
+        child: content,
       );
     }
 

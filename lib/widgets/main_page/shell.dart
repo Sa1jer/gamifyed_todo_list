@@ -60,7 +60,8 @@ class _MainPageState extends State<MainPage> {
   bool _firstRunDialogOpen = false;
   bool _statsTutorialActive = false;
   bool _rewardsTutorialActive = false;
-  bool _mobileWorkspaceRouteOpen = false;
+  final MobileSecondaryNavigator _mobileSecondaryNavigator =
+      MobileSecondaryNavigator();
   String? _roadmapFocusSkillId;
 
   @override
@@ -270,22 +271,20 @@ class _MainPageState extends State<MainPage> {
   bool get _usesMobileWorkspaceRoutes =>
       MobileResponsiveMetrics.isMobileWidth(MediaQuery.sizeOf(context).width);
 
-  Future<void> _openMobileWorkspaceRoute(Widget Function() pageBuilder) async {
-    if (!mounted || _mobileWorkspaceRouteOpen) return;
-    setState(() => _mobileWorkspaceRouteOpen = true);
-    try {
-      await Navigator.of(context, rootNavigator: true).push<void>(
-        MaterialPageRoute<void>(
-          fullscreenDialog: true,
-          builder: (_) => pageBuilder(),
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => _mobileWorkspaceRouteOpen = false);
-    }
-  }
+  Future<void> _openMobileWorkspaceRoute(
+    WidgetBuilder pageBuilder, {
+    bool allowNested = false,
+  }) => _mobileSecondaryNavigator.push(
+    context,
+    pageBuilder,
+    allowNested: allowNested,
+  );
 
-  void _openRewardsDialog(AppState state, {bool showTutorialHint = false}) {
+  void _openRewardsDialog(
+    AppState state, {
+    bool showTutorialHint = false,
+    bool nestedMobileRoute = false,
+  }) {
     AppFeedback.selection();
     setState(() {
       _rewardNoticeQueue.clear();
@@ -293,20 +292,21 @@ class _MainPageState extends State<MainPage> {
     });
     if (_usesMobileWorkspaceRoutes) {
       _openMobileWorkspaceRoute(
-        () => RewardsDialog(
+        (routeContext) => RewardsDialog(
           state: state,
           fullScreen: true,
           showTutorialHint: showTutorialHint,
           onTutorialComplete: showTutorialHint
               ? () {
                   _completeRewardsTutorial(state);
-                  Navigator.of(context, rootNavigator: true).maybePop();
+                  Navigator.of(routeContext).maybePop();
                   if (mounted) {
                     setState(() => _rewardsTutorialActive = false);
                   }
                 }
               : null,
         ),
+        allowNested: nestedMobileRoute,
       ).whenComplete(() {
         if (showTutorialHint && mounted) {
           setState(() => _rewardsTutorialActive = false);
@@ -334,10 +334,14 @@ class _MainPageState extends State<MainPage> {
     });
   }
 
-  void _openDailyVictoriesDialog(AppState state) {
+  void _openDailyVictoriesDialog(
+    AppState state, {
+    bool nestedMobileRoute = false,
+  }) {
     if (_usesMobileWorkspaceRoutes) {
       _openMobileWorkspaceRoute(
-        () => DailyVictoriesDialog(state: state, fullScreen: true),
+        (_) => DailyVictoriesDialog(state: state, fullScreen: true),
+        allowNested: nestedMobileRoute,
       );
       return;
     }
@@ -347,10 +351,14 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
-  void _openCharacterTimelineDialog(AppState state) {
+  void _openCharacterTimelineDialog(
+    AppState state, {
+    bool nestedMobileRoute = false,
+  }) {
     if (_usesMobileWorkspaceRoutes) {
       _openMobileWorkspaceRoute(
-        () => CharacterTimelineDialog(state: state, fullScreen: true),
+        (_) => CharacterTimelineDialog(state: state, fullScreen: true),
+        allowNested: nestedMobileRoute,
       );
       return;
     }
@@ -360,10 +368,11 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
-  void _openWeeklyDialog(AppState state) {
+  void _openWeeklyDialog(AppState state, {bool nestedMobileRoute = false}) {
     if (_usesMobileWorkspaceRoutes) {
       _openMobileWorkspaceRoute(
-        () => WeeklyAnalyticsDialog(state: state, fullScreen: true),
+        (_) => WeeklyAnalyticsDialog(state: state, fullScreen: true),
+        allowNested: nestedMobileRoute,
       );
       return;
     }
@@ -485,7 +494,7 @@ class _MainPageState extends State<MainPage> {
     bool isDark, {
     bool showTutorialHint = false,
   }) {
-    return _ProgressWorkspace(
+    return ProgressWorkspace(
       key: const ValueKey('stats-workspace'),
       state: state,
       isDark: isDark,
@@ -502,15 +511,48 @@ class _MainPageState extends State<MainPage> {
               setState(() => _statsTutorialActive = false);
             }
           : null,
-      onOpenDailyVictories: () => _openDailyVictoriesDialog(state),
-      onOpenCharacterTimeline: () => _openCharacterTimelineDialog(state),
-      onOpenWeekly: () => _openWeeklyDialog(state),
+      destinations: _progressDestinations(state),
+    );
+  }
+
+  ProgressWorkspaceDestinations _progressDestinations(
+    AppState state, {
+    bool nestedMobileRoutes = false,
+  }) {
+    return ProgressWorkspaceDestinations(
+      onOpenDailyVictories: () => _openDailyVictoriesDialog(
+        state,
+        nestedMobileRoute: nestedMobileRoutes,
+      ),
+      onOpenCharacterTimeline: () => _openCharacterTimelineDialog(
+        state,
+        nestedMobileRoute: nestedMobileRoutes,
+      ),
+      onOpenWeekly: () =>
+          _openWeeklyDialog(state, nestedMobileRoute: nestedMobileRoutes),
       onOpenStats: () => _openGrowthSliceDialog(state),
       onOpenCalendar: () => _openCalendarDialog(state),
       onOpenBosses: () => _openBossesDialog(state),
       onOpenAchievements: () => _openAchievementsDialog(state),
       onOpenHistory: () => _openHistoryDialog(state),
-      onOpenRewards: () => _openRewardsDialog(state),
+      onOpenRewards: () =>
+          _openRewardsDialog(state, nestedMobileRoute: nestedMobileRoutes),
+    );
+  }
+
+  Widget _buildMobileStatisticsPage(
+    AppState state,
+    bool isDark, {
+    bool showTutorialHint = false,
+  }) {
+    return MobileStatisticsPage(
+      state: state,
+      isDark: isDark,
+      showTutorialHint: showTutorialHint,
+      onTutorialComplete: showTutorialHint
+          ? () => _completeStatisticsTutorial(state)
+          : null,
+      destinations: _progressDestinations(state, nestedMobileRoutes: true),
     );
   }
 
@@ -981,10 +1023,21 @@ class _MainPageState extends State<MainPage> {
 
           void openStatistics({bool tutorial = false}) {
             if (mobileShell) {
-              changeMode(WorkspaceMode.stats);
+              final capturedState = s;
               if (tutorial && mounted) {
                 setState(() => _statsTutorialActive = true);
               }
+              _openMobileWorkspaceRoute(
+                (_) => _buildMobileStatisticsPage(
+                  capturedState,
+                  isDark,
+                  showTutorialHint: tutorial,
+                ),
+              ).whenComplete(() {
+                if (tutorial && mounted) {
+                  setState(() => _statsTutorialActive = false);
+                }
+              });
             } else if (tutorial) {
               _openStatisticsTutorial(s);
             } else {
@@ -996,7 +1049,7 @@ class _MainPageState extends State<MainPage> {
             final capturedState = s;
             if (mobileShell) {
               _openMobileWorkspaceRoute(
-                () => AppStateProvider(
+                (_) => AppStateProvider(
                   state: capturedState,
                   child: const ProfileDialog(fullScreen: true),
                 ),
@@ -1223,125 +1276,6 @@ class _MainPageState extends State<MainPage> {
           );
         },
       ),
-    );
-  }
-}
-
-class _MainPageTutorialBoundary extends StatefulWidget {
-  const _MainPageTutorialBoundary({
-    required this.state,
-    required this.blocked,
-    required this.isDark,
-    required this.resolveStep,
-    this.onBuildForTesting,
-  });
-
-  final AppState state;
-  final bool blocked;
-  final bool isDark;
-  final _GuidedTutorialStep? Function() resolveStep;
-  final VoidCallback? onBuildForTesting;
-
-  @override
-  State<_MainPageTutorialBoundary> createState() =>
-      _MainPageTutorialBoundaryState();
-}
-
-class _MainPageTutorialBoundaryState extends State<_MainPageTutorialBoundary> {
-  bool _stepPaused = false;
-  String? _lastStepId;
-  String? _pendingStepId;
-  Timer? _stepDelayTimer;
-
-  @override
-  void didUpdateWidget(_MainPageTutorialBoundary oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (!identical(oldWidget.state, widget.state)) {
-      _resetStepDelay();
-    }
-  }
-
-  @override
-  void dispose() {
-    _stepDelayTimer?.cancel();
-    super.dispose();
-  }
-
-  void _resetStepDelay() {
-    _stepDelayTimer?.cancel();
-    _stepDelayTimer = null;
-    _lastStepId = null;
-    _pendingStepId = null;
-    _stepPaused = false;
-  }
-
-  bool _shouldShow(String? stepId) {
-    if (stepId == null) {
-      _resetStepDelay();
-      return false;
-    }
-
-    if (_lastStepId == null) {
-      _lastStepId = stepId;
-      return !widget.blocked;
-    }
-
-    if (stepId == _lastStepId) {
-      return !widget.blocked && !_stepPaused;
-    }
-
-    if (widget.blocked) {
-      _stepDelayTimer?.cancel();
-      _stepDelayTimer = null;
-      _pendingStepId = stepId;
-      _stepPaused = true;
-      return false;
-    }
-
-    if (_pendingStepId != stepId || !_stepPaused || _stepDelayTimer == null) {
-      _pendingStepId = stepId;
-      _stepPaused = true;
-      _stepDelayTimer?.cancel();
-      _stepDelayTimer = Timer(const Duration(seconds: 2), () {
-        if (!mounted || _pendingStepId != stepId) return;
-        setState(() {
-          _lastStepId = stepId;
-          _pendingStepId = null;
-          _stepPaused = false;
-          _stepDelayTimer = null;
-        });
-      });
-    }
-
-    return false;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AppStateSelector<MainPageTutorialProjection>(
-      state: widget.state,
-      selector: MainPageTutorialProjection.fromState,
-      builder: (context, projection, child) {
-        widget.onBuildForTesting?.call();
-        final step = projection.visible ? widget.resolveStep() : null;
-        if (step == null) {
-          _shouldShow(null);
-          return const SizedBox.shrink();
-        }
-        return _FirstRunTutorialOverlay(
-          stepId: step.id,
-          visible: _shouldShow(step.id),
-          targetKey: step.targetKey,
-          isDark: widget.isDark,
-          title: step.title,
-          body: step.body,
-          primaryLabel: step.primaryLabel,
-          primaryIcon: step.primaryIcon,
-          secondaryLabel: step.secondaryLabel,
-          onDismiss: widget.state.dismissActiveTutorial,
-          onPrimaryAction: step.onPrimaryAction,
-        );
-      },
     );
   }
 }

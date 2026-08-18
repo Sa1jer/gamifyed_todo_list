@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../models.dart';
 import '../utils.dart';
+import 'mobile_secondary_page.dart';
 import 'shared.dart';
 
 class CharacterTimelineDialog extends StatelessWidget {
@@ -123,9 +124,10 @@ class CharacterTimelineDialog extends StatelessWidget {
     );
 
     if (fullScreen) {
-      return Scaffold(
+      return MobileSecondaryPage(
+        routeName: 'Летопись',
         backgroundColor: bg,
-        body: SafeArea(child: SizedBox.expand(child: content)),
+        child: content,
       );
     }
 

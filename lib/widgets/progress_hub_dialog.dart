@@ -140,6 +140,7 @@ class ProgressHubContent extends StatelessWidget {
     final txt = textColor(isDark);
     final sub = subtext(isDark);
     final bdr = borderColor(isDark);
+    final compactLayout = MediaQuery.sizeOf(context).width < 520;
     final story = ProgressStorySnapshot.fromState(state);
     final goalProgress = const ProgressEngine().buildSnapshot(
       state.skills,
@@ -160,6 +161,31 @@ class ProgressHubContent extends StatelessWidget {
         : 'спокойно';
     final courseNudge = visiblePrimaryCourseNudge(state);
     final tutorialTargetKey = GlobalKey();
+    final guidance = Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF4A9EFF).withAlpha(14),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF4A9EFF).withAlpha(36)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.lightbulb_outline,
+            color: Color(0xFF4A9EFF),
+            size: 18,
+          ),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Text(
+              'Статистика здесь рассказывает историю роста. Если хочешь не анализировать, а двигаться дальше, вернись в режим “Действовать”.',
+              style: TextStyle(color: sub, fontSize: 12, height: 1.3),
+            ),
+          ),
+        ],
+      ),
+    );
 
     return Stack(
       children: [
@@ -179,7 +205,7 @@ class ProgressHubContent extends StatelessWidget {
             ],
           ),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisSize: MainAxisSize.max,
             children: [
               KeyedSubtree(
                 key: tutorialTargetKey,
@@ -412,44 +438,19 @@ class ProgressHubContent extends StatelessWidget {
                           ),
                         ],
                       ),
+                      if (compactLayout) ...[
+                        const SizedBox(height: 14),
+                        guidance,
+                      ],
                     ],
                   ),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF4A9EFF).withAlpha(14),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: const Color(0xFF4A9EFF).withAlpha(36),
-                    ),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(
-                        Icons.lightbulb_outline,
-                        color: Color(0xFF4A9EFF),
-                        size: 18,
-                      ),
-                      const SizedBox(width: 9),
-                      Expanded(
-                        child: Text(
-                          'Статистика здесь рассказывает историю роста. Если хочешь не анализировать, а двигаться дальше, вернись в режим “Действовать”.',
-                          style: TextStyle(
-                            color: sub,
-                            fontSize: 12,
-                            height: 1.3,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+              if (!compactLayout)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: guidance,
                 ),
-              ),
             ],
           ),
         ),

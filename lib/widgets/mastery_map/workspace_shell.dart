@@ -171,7 +171,12 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
       },
       onToggleQuest: _toggleQuestFromMap,
       onMinimumAction: _minimumActionFromMap,
-      onEditQuest: (skill, task) => _editQuest(context, skill, task),
+      onEditQuest: (skill, task) => _editQuest(
+        context,
+        skill,
+        task,
+        navigation: _QuestEditNavigation.fromSelection(selection, skill),
+      ),
       onDeleteQuest: (task) {
         final skillId = task.skillId;
         state.removeTask(task.id);
@@ -202,7 +207,12 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
         },
         onToggleQuest: _toggleQuestFromMap,
         onMinimumAction: _minimumActionFromMap,
-        onEditQuest: (skill, task) => _editQuest(context, skill, task),
+        onEditQuest: (skill, task) => _editQuest(
+          context,
+          skill,
+          task,
+          navigation: _QuestEditNavigation.fromSelection(selection, skill),
+        ),
         onDeleteQuest: (task) {
           final skillId = task.skillId;
           state.removeTask(task.id);
@@ -492,6 +502,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
     BuildContext context,
     Skill skill,
     Task task, {
+    required _QuestEditNavigation navigation,
     ValueChanged<_MasterySelection?>? onSaved,
   }) {
     final state = AppStateProvider.read(context);
@@ -536,9 +547,11 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
                 notificationMinute: notificationMinute,
                 treeNodeId: treeNodeId,
               );
-              final nextSelection = treeNodeId == null
-                  ? _MasterySelection.skill(skill.id)
-                  : _MasterySelection.quest(skill.id, treeNodeId, task.id);
+              final nextSelection = navigation.savedSelection(
+                skill: skill,
+                task: task,
+                savedStageId: treeNodeId,
+              );
               _setSelection(nextSelection);
               onSaved?.call(nextSelection);
             },
@@ -677,6 +690,10 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
                                 dialogContext,
                                 skill,
                                 task,
+                                navigation: _QuestEditNavigation.fromSelection(
+                                  fullscreenSelection,
+                                  skill,
+                                ),
                                 onSaved: updateSelection,
                               ),
                               onDeleteQuest: (task) {

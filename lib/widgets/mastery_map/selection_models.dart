@@ -139,6 +139,48 @@ class _MasterySelection {
     : type = _MasterySelectionType.quest;
 }
 
+enum _QuestEditOrigin { standard, stageInspector }
+
+class _QuestEditNavigation {
+  final _QuestEditOrigin origin;
+  final String? stageId;
+
+  const _QuestEditNavigation.standard()
+    : origin = _QuestEditOrigin.standard,
+      stageId = null;
+
+  const _QuestEditNavigation.stageInspector(this.stageId)
+    : origin = _QuestEditOrigin.stageInspector;
+
+  factory _QuestEditNavigation.fromSelection(
+    _MasterySelection? selection,
+    Skill skill,
+  ) {
+    if (selection?.type == _MasterySelectionType.node &&
+        selection?.skillId == skill.id &&
+        selection?.nodeId != null) {
+      return _QuestEditNavigation.stageInspector(selection!.nodeId);
+    }
+    return const _QuestEditNavigation.standard();
+  }
+
+  _MasterySelection savedSelection({
+    required Skill skill,
+    required Task task,
+    required String? savedStageId,
+  }) {
+    final originalStageId = stageId;
+    if (origin == _QuestEditOrigin.stageInspector &&
+        originalStageId != null &&
+        skill.treeNodes.any((node) => node.id == originalStageId)) {
+      return _MasterySelection.node(skill.id, originalStageId);
+    }
+    return savedStageId == null
+        ? _MasterySelection.skill(skill.id)
+        : _MasterySelection.quest(skill.id, savedStageId, task.id);
+  }
+}
+
 List<Task> _sortedActiveQuests(Iterable<Task> tasks) {
   final list = tasks.toList();
   list.sort((a, b) {

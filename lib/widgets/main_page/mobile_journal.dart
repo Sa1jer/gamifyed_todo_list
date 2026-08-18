@@ -168,20 +168,39 @@ class _MobileActJournalState extends State<_MobileActJournal> {
     final inboxCount = state.inboxTasks.where((task) => !task.isDone).length;
     return KeyedSubtree(
       key: const ValueKey('mobile-skill-overview-with-inbox-dock'),
-      child: Column(
-        children: [
-          Expanded(child: _buildOverview(context, state)),
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: _MobileInboxAccordion(
-              expanded: _inboxExpanded,
-              taskCount: inboxCount,
-              isDark: state.isDark,
-              onToggle: () => setState(() => _inboxExpanded = !_inboxExpanded),
-              onComplete: widget.onComplete,
-            ),
-          ),
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // Keep enough room for the overview when the keyboard shortens the
+          // workspace. The Inbox owns only its local, upward-growing region.
+          final maxInboxContentHeight = math.max(
+            120.0,
+            math.min(430.0, constraints.maxHeight - 216.0),
+          );
+          return Column(
+            children: [
+              Expanded(child: _buildOverview(context, state)),
+              Container(
+                key: const ValueKey('mobile-inbox-dock-divider'),
+                height: 1,
+                color: _MobileJournalTokens.outline(
+                  state.isDark,
+                ).withAlpha(state.isDark ? 110 : 90),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: _MobileInboxAccordion(
+                  expanded: _inboxExpanded,
+                  taskCount: inboxCount,
+                  maxContentHeight: maxInboxContentHeight,
+                  isDark: state.isDark,
+                  onToggle: () =>
+                      setState(() => _inboxExpanded = !_inboxExpanded),
+                  onComplete: widget.onComplete,
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -237,7 +256,7 @@ class _MobileActJournalState extends State<_MobileActJournal> {
     setState(() => _skillTransition = _MobileSkillTransitionPhase.restoring);
     state.selectSkill(skill.id);
     if (!reducedMotion) {
-      await Future<void>.delayed(const Duration(milliseconds: 16));
+      await WidgetsBinding.instance.endOfFrame;
     }
     if (!mounted || generation != _transitionGeneration) return;
     setState(() => _skillTransition = _MobileSkillTransitionPhase.idle);
@@ -336,6 +355,7 @@ class _MobileActJournalState extends State<_MobileActJournal> {
                       children: [
                         Expanded(
                           child: Text(
+                            key: const ValueKey('mobile-skills-heading'),
                             'Навыки',
                             style: TextStyle(
                               color: _MobileJournalTokens.text(isDark),
@@ -475,8 +495,6 @@ class _MobileActJournalState extends State<_MobileActJournal> {
                       },
                     ),
                   ),
-                // Keeps the final skill card reachable above the docked Inbox.
-                const SliverToBoxAdapter(child: SizedBox(height: 96)),
               ],
             ),
           ),
@@ -667,6 +685,7 @@ class _MobileActJournalState extends State<_MobileActJournal> {
 class _MobileInboxAccordion extends StatelessWidget {
   final bool expanded;
   final int taskCount;
+  final double maxContentHeight;
   final bool isDark;
   final VoidCallback onToggle;
   final void Function(String taskId, ActionToastOrigin origin) onComplete;
@@ -674,6 +693,7 @@ class _MobileInboxAccordion extends StatelessWidget {
   const _MobileInboxAccordion({
     required this.expanded,
     required this.taskCount,
+    required this.maxContentHeight,
     required this.isDark,
     required this.onToggle,
     required this.onComplete,
@@ -682,7 +702,8 @@ class _MobileInboxAccordion extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final duration = _motionDuration(context);
-    final taskHeight = (170.0 + taskCount * 52).clamp(230.0, 430.0);
+    final desiredTaskHeight = (170.0 + taskCount * 52).clamp(230.0, 430.0);
+    final taskHeight = math.min(desiredTaskHeight, maxContentHeight);
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(_MobileJournalTokens.radiusLarge),

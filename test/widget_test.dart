@@ -1775,8 +1775,10 @@ void main() {
   ) async {
     tester.view.physicalSize = const Size(360, 800);
     tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
 
     final storage = InMemoryStorageService().._onboardingSeen = true;
     await storage.init();
@@ -1793,6 +1795,10 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('mobile-menu-profile')));
     await tester.pumpAndSettle();
     expect(find.byType(ProfileDialog), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('mobile-secondary-page-Профиль')),
+      findsOneWidget,
+    );
     expect(find.byType(Dialog), findsNothing);
     expect(tester.takeException(), isNull);
     await tester.binding.handlePopRoute();
@@ -1803,6 +1809,10 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('mobile-menu-rewards')));
     await tester.pumpAndSettle();
     expect(find.byType(RewardsDialog), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('mobile-secondary-page-Трофеи')),
+      findsOneWidget,
+    );
     expect(find.byType(Dialog), findsNothing);
     expect(tester.takeException(), isNull);
     await tester.binding.handlePopRoute();
@@ -1813,6 +1823,10 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('mobile-menu-stats')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('stats-workspace')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('mobile-secondary-page-Статистика')),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
 
     final statsScroll = find.descendant(
@@ -1830,6 +1844,10 @@ void main() {
     await tapStoryCard(0);
     await tester.pumpAndSettle();
     expect(find.byType(DailyVictoriesDialog), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('mobile-secondary-page-Победы дня')),
+      findsOneWidget,
+    );
     expect(find.byType(Dialog), findsNothing);
     expect(tester.takeException(), isNull);
     await tester.binding.handlePopRoute();
@@ -1838,6 +1856,10 @@ void main() {
     await tapStoryCard(1);
     await tester.pumpAndSettle();
     expect(find.byType(WeeklyAnalyticsDialog), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('mobile-secondary-page-Неделя')),
+      findsOneWidget,
+    );
     expect(find.byType(Dialog), findsNothing);
     expect(tester.takeException(), isNull);
     await tester.binding.handlePopRoute();
@@ -1846,11 +1868,19 @@ void main() {
     await tapStoryCard(2);
     await tester.pumpAndSettle();
     expect(find.byType(CharacterTimelineDialog), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('mobile-secondary-page-Летопись')),
+      findsOneWidget,
+    );
     expect(find.byType(Dialog), findsNothing);
     expect(tester.takeException(), isNull);
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('stats-workspace')), findsOneWidget);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('stats-workspace')), findsNothing);
+    expect(find.byKey(const ValueKey('act-workspace')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -3950,6 +3980,21 @@ void main() {
     expect(find.text('Написать модуль'), findsOneWidget);
     expect(find.text('Минимум'), findsOneWidget);
     expect(find.text('Минимальный шаг: Открыть файл на 5 минут'), findsNothing);
+
+    await tester.tap(find.byTooltip('Редактировать').first);
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('desktop-add-task-dialog')),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Сохранить изменения'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('desktop-add-task-dialog')), findsNothing);
+    expect(find.text('Открыть редактор'), findsOneWidget);
+    expect(find.text('Написать модуль'), findsOneWidget);
+    expect(find.text('Практика для освоения'), findsOneWidget);
+    expect(find.text('практика этапа: Основа'), findsNothing);
 
     expect(find.text('Переименовать'), findsNothing);
     await tester.tap(find.byTooltip('Переименовать этап'));

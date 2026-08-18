@@ -122,67 +122,6 @@ class _MasteryWorkspace extends StatelessWidget {
   }
 }
 
-class _ProgressWorkspace extends StatelessWidget {
-  final AppState state;
-  final bool isDark;
-  final bool showTutorialHint;
-  final VoidCallback onClose;
-  final VoidCallback? onTutorialComplete;
-  final VoidCallback onOpenDailyVictories;
-  final VoidCallback onOpenCharacterTimeline;
-  final VoidCallback onOpenWeekly;
-  final VoidCallback onOpenStats;
-  final VoidCallback onOpenCalendar;
-  final VoidCallback onOpenBosses;
-  final VoidCallback onOpenAchievements;
-  final VoidCallback onOpenHistory;
-  final VoidCallback onOpenRewards;
-
-  const _ProgressWorkspace({
-    super.key,
-    required this.state,
-    required this.isDark,
-    this.showTutorialHint = false,
-    required this.onClose,
-    this.onTutorialComplete,
-    required this.onOpenDailyVictories,
-    required this.onOpenCharacterTimeline,
-    required this.onOpenWeekly,
-    required this.onOpenStats,
-    required this.onOpenCalendar,
-    required this.onOpenBosses,
-    required this.onOpenAchievements,
-    required this.onOpenHistory,
-    required this.onOpenRewards,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) => SizedBox.expand(
-        child: ProgressHubContent(
-          state: state,
-          isDark: isDark,
-          showTutorialHint: showTutorialHint,
-          showCloseButton: constraints.maxWidth < 761,
-          onClose: onClose,
-          onTutorialComplete: onTutorialComplete,
-          subtitle: 'Что получилось, какой навык вырос и что продолжить.',
-          onOpenDailyVictories: onOpenDailyVictories,
-          onOpenCharacterTimeline: onOpenCharacterTimeline,
-          onOpenWeekly: onOpenWeekly,
-          onOpenStats: onOpenStats,
-          onOpenCalendar: onOpenCalendar,
-          onOpenBosses: onOpenBosses,
-          onOpenAchievements: onOpenAchievements,
-          onOpenHistory: onOpenHistory,
-          onOpenRewards: onOpenRewards,
-        ),
-      ),
-    );
-  }
-}
-
 class _SkillTaskWorkspace extends StatelessWidget {
   final void Function(String taskId, ActionToastOrigin origin) onComplete;
   final void Function(String taskId, ActionToastOrigin origin) onMinimumAction;

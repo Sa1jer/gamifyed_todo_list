@@ -11,6 +11,7 @@ import '../models.dart';
 import '../utils.dart';
 import 'shared.dart';
 import 'mobile_journal_tokens.dart';
+import 'mobile_secondary_page.dart';
 import 'dialogs/task_form_controller.dart';
 import 'dialogs/task_form_sections.dart';
 import 'dialogs/add_skill_tree_node_dialog.dart';

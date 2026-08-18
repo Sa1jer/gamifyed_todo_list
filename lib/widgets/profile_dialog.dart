@@ -9,6 +9,7 @@ import '../models.dart';
 import '../app_state.dart';
 import '../utils.dart';
 import 'character_timeline_dialog.dart';
+import 'mobile_secondary_page.dart';
 import 'shared.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -258,9 +259,9 @@ class _ProfileDialogState extends State<ProfileDialog> {
                         const SizedBox(height: 18),
                         Container(height: 1, color: bdr),
                         const SizedBox(height: 14),
-                        _buildXPSection(p, sub),
+                        _buildXPSection(context, p, sub),
                         const SizedBox(height: 6),
-                        _buildTotalXP(p, txt, sub),
+                        _buildTotalXP(context, p, txt, sub),
                         const SizedBox(height: 4),
                         Text(
                           'Изучаю ${s.activeSkillCount} ${_skillWord(s.activeSkillCount)}',
@@ -312,9 +313,10 @@ class _ProfileDialogState extends State<ProfileDialog> {
     );
 
     if (widget.fullScreen) {
-      return Scaffold(
+      return MobileSecondaryPage(
+        routeName: 'Профиль',
         backgroundColor: bg,
-        body: SafeArea(child: SizedBox.expand(child: content)),
+        child: content,
       );
     }
 
@@ -561,28 +563,50 @@ class _ProfileDialogState extends State<ProfileDialog> {
 
   // ── XP section ────────────────────────────────────────────────────────────
 
-  Widget _buildXPSection(UserProfile p, Color sub) {
+  Widget _buildXPSection(BuildContext context, UserProfile p, Color sub) {
+    final stacked =
+        widget.fullScreen && MediaQuery.textScalerOf(context).scale(1) >= 1.5;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Text('Опыт', style: TextStyle(color: sub, fontSize: 13)),
-            const SizedBox(width: 16),
-            Expanded(
-              child: XPBar(
-                progress: p.progress,
-                color: const Color(0xFF4A9EFF),
-                height: 8,
+        if (stacked) ...[
+          Row(
+            children: [
+              Expanded(
+                child: Text('Опыт', style: TextStyle(color: sub, fontSize: 13)),
               ),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              '${p.xp} / ${p.xpNeeded}',
-              style: TextStyle(color: sub, fontSize: 12),
-            ),
-          ],
-        ),
+              const SizedBox(width: 8),
+              Text(
+                '${p.xp} / ${p.xpNeeded}',
+                style: TextStyle(color: sub, fontSize: 12),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          XPBar(
+            progress: p.progress,
+            color: const Color(0xFF4A9EFF),
+            height: 8,
+          ),
+        ] else
+          Row(
+            children: [
+              Text('Опыт', style: TextStyle(color: sub, fontSize: 13)),
+              const SizedBox(width: 16),
+              Expanded(
+                child: XPBar(
+                  progress: p.progress,
+                  color: const Color(0xFF4A9EFF),
+                  height: 8,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                '${p.xp} / ${p.xpNeeded}',
+                style: TextStyle(color: sub, fontSize: 12),
+              ),
+            ],
+          ),
         const SizedBox(height: 8),
         Text(
           'До уровня ${p.level + 1}: ${p.xpNeeded - p.xp} XP.',
@@ -592,7 +616,31 @@ class _ProfileDialogState extends State<ProfileDialog> {
     );
   }
 
-  Widget _buildTotalXP(UserProfile p, Color txt, Color sub) {
+  Widget _buildTotalXP(
+    BuildContext context,
+    UserProfile p,
+    Color txt,
+    Color sub,
+  ) {
+    final stacked =
+        widget.fullScreen && MediaQuery.textScalerOf(context).scale(1) >= 1.5;
+    if (stacked) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Всего опыта', style: TextStyle(color: sub, fontSize: 13)),
+          const SizedBox(height: 2),
+          Text(
+            '${p.totalXpEarned}',
+            style: TextStyle(
+              color: txt,
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      );
+    }
     return Row(
       children: [
         Text('Всего опыта', style: TextStyle(color: sub, fontSize: 13)),
@@ -900,23 +948,32 @@ class _ProfileDialogState extends State<ProfileDialog> {
       children: [
         SubLbl('Навыки', sub),
         const SizedBox(height: 10),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: s.skills
-              .map(
-                (sk) => Tooltip(
-                  message: 'Перейти к навыку “${sk.name}”',
-                  child: GestureDetector(
-                    onTap: () {
-                      s.selectSkill(sk.id);
-                      Navigator.pop(context);
-                    },
-                    child: _SkillChip(skill: sk, isDark: isDark),
+        LayoutBuilder(
+          builder: (context, constraints) => Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: s.skills
+                .map(
+                  (sk) => SizedBox(
+                    width: widget.fullScreen ? constraints.maxWidth : null,
+                    child: Tooltip(
+                      message: 'Перейти к навыку “${sk.name}”',
+                      child: GestureDetector(
+                        onTap: () {
+                          s.selectSkill(sk.id);
+                          Navigator.pop(context);
+                        },
+                        child: _SkillChip(
+                          skill: sk,
+                          isDark: isDark,
+                          expanded: widget.fullScreen,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              )
-              .toList(),
+                )
+                .toList(),
+          ),
         ),
       ],
     );
@@ -1112,7 +1169,13 @@ class _TutorialModuleTile extends StatelessWidget {
 class _SkillChip extends StatefulWidget {
   final Skill skill;
   final bool isDark;
-  const _SkillChip({required this.skill, required this.isDark});
+  final bool expanded;
+
+  const _SkillChip({
+    required this.skill,
+    required this.isDark,
+    this.expanded = false,
+  });
   @override
   State<_SkillChip> createState() => _SkillChipState();
 }
@@ -1141,18 +1204,32 @@ class _SkillChipState extends State<_SkillChip> {
             border: Border.all(color: sk.color.withAlpha(80)),
           ),
           child: Row(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisSize: widget.expanded ? MainAxisSize.max : MainAxisSize.min,
             children: [
               Icon(sk.icon, color: sk.color, size: 14),
               const SizedBox(width: 6),
-              Text(
-                sk.name,
-                style: TextStyle(
-                  color: sk.color,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
+              if (widget.expanded)
+                Expanded(
+                  child: Text(
+                    sk.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: sk.color,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                )
+              else
+                Text(
+                  sk.name,
+                  style: TextStyle(
+                    color: sk.color,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
               const SizedBox(width: 8),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

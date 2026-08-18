@@ -1,5 +1,124 @@
 part of '../main_page.dart';
 
+class _MainPageTutorialBoundary extends StatefulWidget {
+  const _MainPageTutorialBoundary({
+    required this.state,
+    required this.blocked,
+    required this.isDark,
+    required this.resolveStep,
+    this.onBuildForTesting,
+  });
+
+  final AppState state;
+  final bool blocked;
+  final bool isDark;
+  final _GuidedTutorialStep? Function() resolveStep;
+  final VoidCallback? onBuildForTesting;
+
+  @override
+  State<_MainPageTutorialBoundary> createState() =>
+      _MainPageTutorialBoundaryState();
+}
+
+class _MainPageTutorialBoundaryState extends State<_MainPageTutorialBoundary> {
+  bool _stepPaused = false;
+  String? _lastStepId;
+  String? _pendingStepId;
+  Timer? _stepDelayTimer;
+
+  @override
+  void didUpdateWidget(_MainPageTutorialBoundary oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.state, widget.state)) {
+      _resetStepDelay();
+    }
+  }
+
+  @override
+  void dispose() {
+    _stepDelayTimer?.cancel();
+    super.dispose();
+  }
+
+  void _resetStepDelay() {
+    _stepDelayTimer?.cancel();
+    _stepDelayTimer = null;
+    _lastStepId = null;
+    _pendingStepId = null;
+    _stepPaused = false;
+  }
+
+  bool _shouldShow(String? stepId) {
+    if (stepId == null) {
+      _resetStepDelay();
+      return false;
+    }
+
+    if (_lastStepId == null) {
+      _lastStepId = stepId;
+      return !widget.blocked;
+    }
+
+    if (stepId == _lastStepId) {
+      return !widget.blocked && !_stepPaused;
+    }
+
+    if (widget.blocked) {
+      _stepDelayTimer?.cancel();
+      _stepDelayTimer = null;
+      _pendingStepId = stepId;
+      _stepPaused = true;
+      return false;
+    }
+
+    if (_pendingStepId != stepId || !_stepPaused || _stepDelayTimer == null) {
+      _pendingStepId = stepId;
+      _stepPaused = true;
+      _stepDelayTimer?.cancel();
+      _stepDelayTimer = Timer(const Duration(seconds: 2), () {
+        if (!mounted || _pendingStepId != stepId) return;
+        setState(() {
+          _lastStepId = stepId;
+          _pendingStepId = null;
+          _stepPaused = false;
+          _stepDelayTimer = null;
+        });
+      });
+    }
+
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AppStateSelector<MainPageTutorialProjection>(
+      state: widget.state,
+      selector: MainPageTutorialProjection.fromState,
+      builder: (context, projection, child) {
+        widget.onBuildForTesting?.call();
+        final step = projection.visible ? widget.resolveStep() : null;
+        if (step == null) {
+          _shouldShow(null);
+          return const SizedBox.shrink();
+        }
+        return _FirstRunTutorialOverlay(
+          stepId: step.id,
+          visible: _shouldShow(step.id),
+          targetKey: step.targetKey,
+          isDark: widget.isDark,
+          title: step.title,
+          body: step.body,
+          primaryLabel: step.primaryLabel,
+          primaryIcon: step.primaryIcon,
+          secondaryLabel: step.secondaryLabel,
+          onDismiss: widget.state.dismissActiveTutorial,
+          onPrimaryAction: step.onPrimaryAction,
+        );
+      },
+    );
+  }
+}
+
 class _GuidedTutorialStep {
   final String id;
   final GlobalKey targetKey;

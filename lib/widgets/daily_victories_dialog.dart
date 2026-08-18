@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../models.dart';
 import '../utils.dart';
+import 'mobile_secondary_page.dart';
 import 'shared.dart';
 
 class DailyVictoriesDialog extends StatelessWidget {
@@ -128,9 +129,10 @@ class DailyVictoriesDialog extends StatelessWidget {
     );
 
     if (fullScreen) {
-      return Scaffold(
+      return MobileSecondaryPage(
+        routeName: 'Победы дня',
         backgroundColor: bg,
-        body: SafeArea(child: SizedBox.expand(child: content)),
+        child: content,
       );
     }
 
@@ -366,10 +368,11 @@ class _VictoryHero extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
+                if (MediaQuery.textScalerOf(context).scale(1) >= 1.5)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
                         summary.hasWins
                             ? 'Сегодня ты стал сильнее'
                             : 'Первая победа ещё впереди',
@@ -379,14 +382,36 @@ class _VictoryHero extends StatelessWidget {
                           fontWeight: FontWeight.w900,
                         ),
                       ),
-                    ),
-                    _TonePill(
-                      label: summary.dayToneLabel,
-                      color: summary.dayToneColor,
-                      isDark: isDark,
-                    ),
-                  ],
-                ),
+                      const SizedBox(height: 8),
+                      _TonePill(
+                        label: summary.dayToneLabel,
+                        color: summary.dayToneColor,
+                        isDark: isDark,
+                      ),
+                    ],
+                  )
+                else
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          summary.hasWins
+                              ? 'Сегодня ты стал сильнее'
+                              : 'Первая победа ещё впереди',
+                          style: TextStyle(
+                            color: txt,
+                            fontSize: 21,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      _TonePill(
+                        label: summary.dayToneLabel,
+                        color: summary.dayToneColor,
+                        isDark: isDark,
+                      ),
+                    ],
+                  ),
                 const SizedBox(height: 8),
                 Text(
                   bestWin == null

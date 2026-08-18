@@ -3,6 +3,7 @@ import '../analytics/weekly_analytics_read_model.dart';
 import '../app_state.dart';
 import '../feedback_service.dart';
 import '../utils.dart';
+import 'mobile_secondary_page.dart';
 import 'shared.dart';
 import 'weekly_analytics/weekly_goal_section.dart';
 import 'weekly_analytics/weekly_charts.dart';
@@ -261,9 +262,10 @@ class _WeeklyAnalyticsDialogState extends State<WeeklyAnalyticsDialog> {
     );
 
     if (widget.fullScreen) {
-      return Scaffold(
+      return MobileSecondaryPage(
+        routeName: 'Неделя',
         backgroundColor: bg,
-        body: SafeArea(child: SizedBox.expand(child: content)),
+        child: content,
       );
     }
 
