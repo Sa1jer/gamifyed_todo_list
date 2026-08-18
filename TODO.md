@@ -31,7 +31,7 @@ This file tracks the active implementation roadmap and completed project work. U
 - [x] Bound profile avatar/banner decoding to rendered dimensions and dispose replaced native overlay images; physical-device image-memory profiling remains part of the native pass.
 - [ ] Validate native Windows/macOS pointer tracking after skill-card hit-region alignment; capture a platform repro if compositor hover still differs.
 - [ ] Profile mobile theme switching after the `2x` snapshot cap and add a reduced-motion fallback only if frame timings still show jank.
-- [ ] Run `flutter run --profile --dart-define=RPG_FRAME_TIMINGS=true` on physical 120/144/165 Hz Android hardware and macOS; record the reported display refresh rate, frame count, build/raster p90/p95/p99, and over-budget frames before claiming high-refresh performance.
+- [ ] Run the labelled Debug Admin frame-timing presets with `flutter run --profile --dart-define=RPG_FRAME_TIMINGS=true` on physical 120/144/165 Hz Android hardware and macOS; record refresh rate, frame count, build/raster p90/p95/p99, over-budget frames, and the reported bottleneck before claiming high-refresh performance.
 - [ ] Add a sustained-mutation storage stress test to characterize repeated save follow-up passes and lifecycle flush completion.
 - [ ] Add native startup-dispose/background-foreground regression checks around slow storage and plugin initialization.
 - [ ] Capture an interactive macOS DevTools trace for intermittent UI unresponsiveness. The 2026-07-18 visible profile process showed non-monotonic idle RSS without runaway growth, but Accessibility automation and heap snapshots were unavailable; record the active workspace and CPU timeline during an actual stall before changing lifecycle or animation code.
@@ -114,6 +114,7 @@ before it enters an implementation brief.
 - [x] Split mobile `Сейчас` into Overview and Skill Focus with reorderable full-width level-XP progress cards, explicit `Обзор`, and one focus surface.
 - [x] Move Inbox out of the mobile skill selector into a separate animated accordion while preserving its system ID and desktop presentation.
 - [x] Rebuild the mobile RoadMap as one vertical ascent: the skill root stays at the top, the foundation begins at the bottom, prerequisite-aware connectors rise toward the skill, stage cards alternate around nodes, and details/templates remain contextual without a mobile free-map canvas.
+- [x] Synchronize RoadMap node and connector animation through one interpolated geometry source, including rapid orientation reversal, resize retargeting, and immediate reduced-motion transitions.
 - [x] Move mobile Profile, Trophies, Statistics, Daily victories, Weekly analytics, and Chronicle to one safe full-page route shell; nested Statistics details unwind one route at a time while desktop dialogs remain unchanged.
 - [x] Complete the mobile visual composition of Profile, Trophies, Week, Daily victories, and Chronicle with a shared page header, responsive Profile hero, one-column analytics/reward sections, and lazy Chronicle history while preserving desktop presentations.
 - [x] Dock the Overview Inbox above mobile navigation so it does not compete with the skill/focus scroll region; tab reselect and Android Back collapse it before changing the screen.

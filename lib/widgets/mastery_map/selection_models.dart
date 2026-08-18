@@ -10,7 +10,9 @@ const _roadmapSkillLabelGap = 9.0;
 const _roadmapSkillLabelHeight = 46.0;
 const _roadmapNodeItemWidth = 154.0;
 const _roadmapNodeItemHeight = 151.0;
-const _roadmapNodeItemTopOffset = 50.0;
+// Centers the orb itself on the layout/painter endpoint. The remaining item
+// height is reserved for the label below the orb.
+const _roadmapNodeItemTopOffset = 54.0;
 const _roadmapNodeLabelGap = 13.0;
 const _roadmapNodeLabelWidth = 108.0;
 const _roadmapNodeLabelHeight = 30.0;

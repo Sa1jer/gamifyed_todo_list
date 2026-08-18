@@ -30,3 +30,16 @@ part 'mastery_map/mobile_panels.dart';
 part 'mastery_map/mobile_path_view.dart';
 part 'mastery_map/inspector.dart';
 part 'mastery_map/structure_editor.dart';
+
+@visibleForTesting
+Map<String, Offset> debugRoadmapConnectorNodePositions(CustomPainter? painter) {
+  if (painter is! _OrbMasteryMapPainter) return const {};
+  return Map.unmodifiable(painter.layout.nodePositions);
+}
+
+@visibleForTesting
+Offset? debugRoadmapConnectorSkillPosition(CustomPainter? painter) {
+  if (painter is! _OrbMasteryMapPainter) return null;
+  final skill = painter.layout.selectedSkill;
+  return skill == null ? null : painter.layout.skillPositions[skill];
+}

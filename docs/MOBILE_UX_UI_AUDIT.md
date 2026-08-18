@@ -818,6 +818,21 @@ branches remain unchanged. Automated coverage exercises Profile at `360`,
 long Chronicle history. Native TalkBack, font/display-size, and profile-mode
 frame measurements remain part of the physical-device gate.
 
+## RoadMap Geometry Transition Synchronization
+
+RoadMap orientation and responsive layout changes now use one interpolated
+geometry authority for both orb widgets and the connector painter. A rapid
+orientation reversal starts from the currently visible intermediate geometry
+instead of restarting from a stale endpoint, and a resize retargets the same
+transition without allowing connectors to jump ahead of nodes. Reduced motion
+applies the final layout immediately.
+
+Widget coverage samples the shared geometry at `0/25/50/75/100%`, exercises a
+mid-transition reversal and resize, and verifies the immediate reduced-motion
+path. The graph model, stage ordering, progress, storage, and camera persistence
+are unchanged. Native profile-mode visual confirmation remains part of the
+physical-device/desktop gate.
+
 ## Reference Checklist
 
 - Flutter adaptive layout: <https://docs.flutter.dev/ui/adaptive-responsive/general>

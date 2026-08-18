@@ -115,7 +115,7 @@ class _OrbMasteryMapPainter extends CustomPainter {
       SkillTreeNodeStatus.active => 2.4,
       SkillTreeNodeStatus.mastered => 2.05,
     };
-    final path = _roadConnectionPath(start, end, layout.layoutAxis);
+    final path = _roadConnectionPath(start, end, layout.verticalAxisProgress);
     final glowPaint = Paint()
       ..color = color.withAlpha(
         layout.compactVisuals
@@ -142,19 +142,19 @@ class _OrbMasteryMapPainter extends CustomPainter {
   Path _roadConnectionPath(
     Offset start,
     Offset end,
-    _RoadmapLayoutAxis layoutAxis,
+    double verticalAxisProgress,
   ) {
     final delta = end - start;
     final distance = delta.distance;
     if (distance == 0) {
       return Path()..moveTo(start.dx, start.dy);
     }
-    final c1 = layoutAxis == _RoadmapLayoutAxis.vertical
-        ? Offset(start.dx, start.dy + delta.dy * 0.38)
-        : Offset(start.dx + distance * 0.38, start.dy);
-    final c2 = layoutAxis == _RoadmapLayoutAxis.vertical
-        ? Offset(end.dx, end.dy - delta.dy * 0.38)
-        : Offset(end.dx - distance * 0.38, end.dy);
+    final horizontalC1 = Offset(start.dx + distance * 0.38, start.dy);
+    final horizontalC2 = Offset(end.dx - distance * 0.38, end.dy);
+    final verticalC1 = Offset(start.dx, start.dy + delta.dy * 0.38);
+    final verticalC2 = Offset(end.dx, end.dy - delta.dy * 0.38);
+    final c1 = Offset.lerp(horizontalC1, verticalC1, verticalAxisProgress)!;
+    final c2 = Offset.lerp(horizontalC2, verticalC2, verticalAxisProgress)!;
     return Path()
       ..moveTo(start.dx, start.dy)
       ..cubicTo(c1.dx, c1.dy, c2.dx, c2.dy, end.dx, end.dy);

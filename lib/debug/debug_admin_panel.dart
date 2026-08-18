@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../app_state.dart';
 import '../models.dart';
+import '../performance/frame_pacing_monitor.dart';
 import '../utils.dart';
 import '../widgets/shared.dart';
 import 'debug_admin_controller.dart';
@@ -15,16 +16,19 @@ DebugService? debugServiceOverride;
 Future<void> showDebugAdminPanel(
   BuildContext context, {
   required AppState state,
-}) {
+}) async {
   if (kReleaseMode) {
     throw StateError('Debug Admin must not be used in release mode.');
   }
   assert(!kReleaseMode, 'Debug Admin must not be used in release mode');
   final debugService = debugServiceOverride ?? DebugService();
-  return showDialog<void>(
+  final frameCaptureLabel = await showDialog<String>(
     context: context,
     builder: (_) => _DebugAdminPanel(state: state, debugService: debugService),
   );
+  if (frameCaptureLabel != null) {
+    framePacingMonitor.startCapture(label: frameCaptureLabel);
+  }
 }
 
 class _DebugAdminPanel extends StatefulWidget {
@@ -49,6 +53,10 @@ class _DebugAdminPanelState extends State<_DebugAdminPanel> {
   Future<DebugAdminDraftState> _loadDraft() async {
     await widget.debugService.init();
     return widget.debugService.loadDraftState();
+  }
+
+  void _startFrameCapture(String label) {
+    Navigator.pop(context, label);
   }
 
   Future<void> _confirmClearDebugState() async {
@@ -322,6 +330,11 @@ class _DebugAdminPanelState extends State<_DebugAdminPanel> {
                 child: ListView(
                   shrinkWrap: true,
                   children: [
+                    if (framePacingMonitor.isAvailable)
+                      _FramePacingDiagnosticsSection(
+                        isDark: isDark,
+                        onStartCapture: _startFrameCapture,
+                      ),
                     _DebugScenariosSection(
                       isDark: isDark,
                       scenarios: debugScenarios,
@@ -376,6 +389,91 @@ class _DebugAdminPanelState extends State<_DebugAdminPanel> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _FramePacingDiagnosticsSection extends StatelessWidget {
+  static const _presets = <(String, String)>[
+    ('RoadMap: поворот', 'roadmap-orientation'),
+    ('RoadMap: открытие', 'roadmap-open'),
+    ('Сейчас: прокрутка', 'act-scroll'),
+    ('Задачник', 'inbox'),
+    ('Профиль / страница', 'profile-secondary-page'),
+    ('Ручной сценарий', 'manual'),
+  ];
+
+  final bool isDark;
+  final ValueChanged<String> onStartCapture;
+
+  const _FramePacingDiagnosticsSection({
+    required this.isDark,
+    required this.onStartCapture,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final txt = textColor(isDark);
+    final sub = subtext(isDark);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF15151D) : const Color(0xFFF4F5FA),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: borderColor(isDark)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.speed_rounded, color: sub, size: 18),
+              const SizedBox(width: 9),
+              Expanded(
+                child: Text(
+                  'Frame timing',
+                  style: TextStyle(
+                    color: txt,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              Text(
+                '120 кадров',
+                style: TextStyle(
+                  color: sub,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Выбери сценарий, затем сразу выполни действие. Результат появится в rpg.frame_pacing.',
+            style: TextStyle(
+              color: sub,
+              fontSize: 11.2,
+              height: 1.3,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 7,
+            runSpacing: 7,
+            children: [
+              for (final preset in _presets)
+                OutlinedButton(
+                  onPressed: () => onStartCapture(preset.$2),
+                  child: Text(preset.$1),
+                ),
+            ],
+          ),
+        ],
       ),
     );
   }

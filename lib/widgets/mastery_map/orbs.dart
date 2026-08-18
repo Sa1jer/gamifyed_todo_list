@@ -8,6 +8,7 @@ class _SkillOrbButton extends StatefulWidget {
   final bool hiddenInFocus;
   final bool dimmed;
   final bool compactVisuals;
+  final double? geometryOrbDiameter;
   final VoidCallback onTap;
 
   const _SkillOrbButton({
@@ -18,6 +19,7 @@ class _SkillOrbButton extends StatefulWidget {
     this.hiddenInFocus = false,
     required this.dimmed,
     this.compactVisuals = false,
+    this.geometryOrbDiameter,
     required this.onTap,
   });
 
@@ -33,17 +35,19 @@ class _SkillOrbButtonState extends State<_SkillOrbButton> {
     final goalProgress = const GoalProgressEngine().snapshotForSkill(
       widget.skill,
     );
-    final orbSize = widget.roadFocus
-        ? widget.compactVisuals
-              ? _roadmapMobileFocusedSkillOrbDiameter
-              : _roadmapFocusedSkillOrbDiameter
-        : widget.selected
-        ? widget.compactVisuals
-              ? 86.0
-              : 98.0
-        : widget.compactVisuals
-        ? 78.0
-        : 89.0;
+    final orbSize =
+        widget.geometryOrbDiameter ??
+        (widget.roadFocus
+            ? widget.compactVisuals
+                  ? _roadmapMobileFocusedSkillOrbDiameter
+                  : _roadmapFocusedSkillOrbDiameter
+            : widget.selected
+            ? widget.compactVisuals
+                  ? 86.0
+                  : 98.0
+            : widget.compactVisuals
+            ? 78.0
+            : 89.0);
     final iconSize = widget.roadFocus
         ? widget.compactVisuals
               ? 40.0
@@ -131,7 +135,9 @@ class _SkillOrbButtonState extends State<_SkillOrbButton> {
                       },
                       child: AnimatedContainer(
                         key: ValueKey('map-skill-surface-${widget.skill.id}'),
-                        duration: kMotionSlow,
+                        duration: widget.geometryOrbDiameter == null
+                            ? kMotionSlow
+                            : Duration.zero,
                         curve: kMotionCurve,
                         width: orbSize,
                         height: orbSize,

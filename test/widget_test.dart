@@ -16,6 +16,7 @@ import 'package:todo_list_app/widgets/skills_panel.dart';
 import 'package:todo_list_app/widgets/mobile_journal_tokens.dart';
 import 'package:todo_list_app/widgets/desktop_journal_tokens.dart';
 import 'package:todo_list_app/widgets/main_page/reward_notice.dart';
+import 'package:todo_list_app/widgets/mastery_map_workspace.dart';
 import 'package:todo_list_app/widgets/profile_dialog.dart';
 import 'package:todo_list_app/widgets/shared.dart';
 import 'package:todo_list_app/widgets/tasks_panel.dart';
@@ -29,6 +30,52 @@ Rect _roadmapVisibleInsertRect(WidgetTester tester, Finder finder) {
     width: hitRect.width * visibleToHitRatio,
     height: hitRect.height * visibleToHitRatio,
   );
+}
+
+Offset _roadmapScenePointToGlobal(WidgetTester tester, Offset scenePoint) {
+  final viewerFinder = find.byType(InteractiveViewer).last;
+  final viewer = tester.widget<InteractiveViewer>(viewerFinder);
+  final transform = viewer.transformationController!.value;
+  return tester.getTopLeft(viewerFinder) +
+      MatrixUtils.transformPoint(transform, scenePoint);
+}
+
+void _expectRoadmapConnectorsAttached(
+  WidgetTester tester, {
+  required String skillId,
+  required Iterable<String> nodeIds,
+  double tolerance = 1.5,
+}) {
+  final customPaint = tester.widget<CustomPaint>(
+    find.byKey(const ValueKey('roadmap-connector-painter')),
+  );
+  final nodePositions = debugRoadmapConnectorNodePositions(customPaint.painter);
+  for (final nodeId in nodeIds) {
+    expect(nodePositions, contains(nodeId));
+    final paintedCenter = _roadmapScenePointToGlobal(
+      tester,
+      nodePositions[nodeId]!,
+    );
+    final renderedCenter = tester.getCenter(
+      find.byKey(ValueKey('map-node-surface-$skillId-$nodeId')),
+    );
+    expect(renderedCenter.dx, closeTo(paintedCenter.dx, tolerance));
+    expect(renderedCenter.dy, closeTo(paintedCenter.dy, tolerance));
+  }
+
+  final paintedSkillCenter = debugRoadmapConnectorSkillPosition(
+    customPaint.painter,
+  );
+  expect(paintedSkillCenter, isNotNull);
+  final renderedSkillCenter = tester.getCenter(
+    find.byKey(ValueKey('map-skill-surface-$skillId')),
+  );
+  final paintedSkillGlobal = _roadmapScenePointToGlobal(
+    tester,
+    paintedSkillCenter!,
+  );
+  expect(renderedSkillCenter.dx, closeTo(paintedSkillGlobal.dx, tolerance));
+  expect(renderedSkillCenter.dy, closeTo(paintedSkillGlobal.dy, tolerance));
 }
 
 class InMemoryStorageService extends StorageService {
@@ -4346,6 +4393,80 @@ void main() {
   });
 
   testWidgets(
+    'desktop RoadMap keeps connector endpoints attached during orientation transitions',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1400, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final root = SkillTreeNode(id: 'sync-root', title: 'Старт');
+      final middle = SkillTreeNode(
+        id: 'sync-middle',
+        title: 'Практика',
+        prerequisiteIds: [root.id],
+      );
+      final terminal = SkillTreeNode(
+        id: 'sync-terminal',
+        title: 'Результат',
+        prerequisiteIds: [middle.id],
+      );
+      final storage = InMemoryStorageService()
+        .._onboardingSeen = true
+        ..skills = [
+          Skill(
+            id: 'sync-skill',
+            name: 'Синхронный путь',
+            goal: 'Линии следуют за этапами',
+            color: const Color(0xFF4A9EFF),
+            icon: Icons.route_rounded,
+            treeNodes: [root, middle, terminal],
+          ),
+        ];
+      await storage.init();
+      await tester.pumpWidget(RPGApp(storage: storage));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      await tester.tap(find.byKey(const ValueKey('desktop-nav-map')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('map-skill-orb-sync-skill')));
+      await tester.pumpAndSettle();
+
+      final nodeIds = [root.id, middle.id, terminal.id];
+      void expectAttached() => _expectRoadmapConnectorsAttached(
+        tester,
+        skillId: 'sync-skill',
+        nodeIds: nodeIds,
+      );
+
+      expectAttached();
+      await tester.tap(find.byKey(const ValueKey('roadmap-layout-vertical')));
+      await tester.pump();
+      expectAttached();
+      for (var sample = 0; sample < 4; sample++) {
+        await tester.pump(const Duration(milliseconds: 60));
+        expectAttached();
+      }
+
+      await tester.tap(find.byKey(const ValueKey('roadmap-layout-horizontal')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 60));
+      expectAttached();
+      await tester.tap(find.byKey(const ValueKey('roadmap-layout-vertical')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 60));
+      expectAttached();
+
+      tester.view.physicalSize = const Size(1180, 780);
+      await tester.pump(const Duration(milliseconds: 60));
+      expectAttached();
+      await tester.pumpAndSettle();
+      expectAttached();
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'desktop RoadMap establishes the selected path camera before its first visible frame',
     (WidgetTester tester) async {
       tester.view.physicalSize = const Size(1366, 820);
@@ -4528,23 +4649,15 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(
-        tester
-            .widget<AnimatedPositioned>(
-              find.byKey(
-                const ValueKey('map-node-reduced-roadmap-reduced-root'),
-              ),
-            )
-            .duration,
-        Duration.zero,
+      final horizontalRoot = tester.getCenter(
+        find.byKey(
+          const ValueKey('map-node-surface-reduced-roadmap-reduced-root'),
+        ),
       );
-      expect(
-        tester
-            .widget<AnimatedPositioned>(
-              find.byKey(const ValueKey('map-skill-orb-reduced-roadmap')),
-            )
-            .duration,
-        Duration.zero,
+      _expectRoadmapConnectorsAttached(
+        tester,
+        skillId: 'reduced-roadmap',
+        nodeIds: [root.id, child.id],
       );
 
       await tester.tap(find.byKey(const ValueKey('roadmap-layout-vertical')));
@@ -4552,6 +4665,17 @@ void main() {
       expect(
         find.byKey(const ValueKey('roadmap-canvas-vertical')),
         findsOneWidget,
+      );
+      final verticalRoot = tester.getCenter(
+        find.byKey(
+          const ValueKey('map-node-surface-reduced-roadmap-reduced-root'),
+        ),
+      );
+      expect(verticalRoot, isNot(horizontalRoot));
+      _expectRoadmapConnectorsAttached(
+        tester,
+        skillId: 'reduced-roadmap',
+        nodeIds: [root.id, child.id],
       );
       expect(tester.takeException(), isNull);
     },
