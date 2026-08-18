@@ -1884,6 +1884,46 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  for (final width in <double>[360, 393, 430]) {
+    testWidgets('mobile profile is responsive at ${width.toInt()}dp', (
+      WidgetTester tester,
+    ) async {
+      tester.view.physicalSize = Size(width, 820);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final storage = InMemoryStorageService().._onboardingSeen = true;
+      await storage.init();
+      await tester.pumpWidget(RPGApp(storage: storage));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      await tester.tap(find.byKey(const ValueKey('mobile-header-menu')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('mobile-menu-profile')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('mobile-secondary-page-Профиль')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('mobile-secondary-back-Профиль')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey('mobile-profile-hero')), findsOneWidget);
+      expect(find.byType(Dialog), findsNothing);
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(
+        find.byKey(const ValueKey('mobile-secondary-back-Профиль')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(ProfileDialog), findsNothing);
+    });
+  }
+
   testWidgets('mobile journal stays readable across target widths', (
     WidgetTester tester,
   ) async {

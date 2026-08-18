@@ -25,24 +25,28 @@ class CharacterTimelineDialog extends StatelessWidget {
     final bg = surface(isDark);
     final summary = _CharacterTimelineSummary.fromState(state);
 
+    if (fullScreen) {
+      return _buildMobileTimelinePage(
+        background: bg,
+        isDark: isDark,
+        summary: summary,
+      );
+    }
+
     final content = Container(
-      width: fullScreen ? double.infinity : 900,
-      constraints: fullScreen
-          ? const BoxConstraints()
-          : const BoxConstraints(maxHeight: 730),
+      width: 900,
+      constraints: const BoxConstraints(maxHeight: 730),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(fullScreen ? 0 : 24),
-        border: fullScreen ? null : Border.all(color: bdr),
-        boxShadow: fullScreen
-            ? null
-            : [
-                BoxShadow(
-                  color: Colors.black.withAlpha(isDark ? 92 : 30),
-                  blurRadius: 28,
-                  offset: const Offset(0, 16),
-                ),
-              ],
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: bdr),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(isDark ? 92 : 30),
+            blurRadius: 28,
+            offset: const Offset(0, 16),
+          ),
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -123,18 +127,107 @@ class CharacterTimelineDialog extends StatelessWidget {
       ),
     );
 
-    if (fullScreen) {
-      return MobileSecondaryPage(
-        routeName: 'Летопись',
-        backgroundColor: bg,
-        child: content,
-      );
-    }
-
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       child: content,
+    );
+  }
+
+  Widget _buildMobileTimelinePage({
+    required Color background,
+    required bool isDark,
+    required _CharacterTimelineSummary summary,
+  }) {
+    final text = textColor(isDark);
+    final secondary = subtext(isDark);
+    final events = summary.visibleEvents;
+
+    return MobileSecondaryPage(
+      routeName: 'Летопись',
+      backgroundColor: background,
+      header: const MobileSecondaryHeader(
+        title: 'Летопись роста',
+        subtitle: 'Рубежи, которые меняли персонажа',
+        icon: Icons.auto_stories_rounded,
+        accentColor: Color(0xFFAF52DE),
+      ),
+      child: CustomScrollView(
+        key: const ValueKey('mobile-timeline-scroll'),
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
+            sliver: SliverList.list(
+              children: [
+                _TimelineHero(summary: summary, isDark: isDark),
+                const SizedBox(height: 12),
+                _TimelineMetrics(summary: summary, isDark: isDark),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.timeline_rounded,
+                      color: Color(0xFFAF52DE),
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Рубежи роста',
+                        style: TextStyle(
+                          color: text,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Обычные квесты остаются в журнале XP. Здесь только важные события пути.',
+                  style: TextStyle(
+                    color: secondary,
+                    fontSize: 12,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 14),
+              ],
+            ),
+          ),
+          if (events.isEmpty)
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
+              sliver: SliverToBoxAdapter(child: _TimelineEmpty(isDark: isDark)),
+            )
+          else
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              sliver: SliverList.builder(
+                itemCount: events.length,
+                itemBuilder: (context, index) => _TimelineEventTile(
+                  key: ValueKey('mobile-timeline-event-$index'),
+                  event: events[index],
+                  isDark: isDark,
+                  isLast: index == events.length - 1,
+                ),
+              ),
+            ),
+          if (summary.hiddenEventsCount > 0)
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+              sliver: SliverToBoxAdapter(
+                child: _TimelineOlderNote(
+                  hiddenEventsCount: summary.hiddenEventsCount,
+                  isDark: isDark,
+                ),
+              ),
+            )
+          else
+            const SliverToBoxAdapter(child: SizedBox(height: 28)),
+        ],
+      ),
     );
   }
 }
@@ -770,6 +863,7 @@ class _TimelineEventTile extends StatelessWidget {
   final bool isLast;
 
   const _TimelineEventTile({
+    super.key,
     required this.event,
     required this.isDark,
     required this.isLast,

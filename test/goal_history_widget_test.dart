@@ -130,4 +130,69 @@ void main() {
     state.dispose();
     await tester.pump();
   });
+
+  testWidgets('mobile chronicle lazily builds a long history', (tester) async {
+    tester.view.physicalSize = const Size(360, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final state = AppState(storage: _NoopStorageService(), seedDefaults: false);
+    state.skills.add(
+      Skill(
+        id: 'long-history-skill',
+        name: 'Длинный путь',
+        goal: 'Проверить ленивую летопись',
+        color: Colors.purple,
+        icon: Icons.auto_stories,
+        completedGoals: List<CompletedGoal>.generate(
+          48,
+          (index) => CompletedGoal(
+            id: 'goal-$index',
+            skillId: 'long-history-skill',
+            goalText: 'Рубеж $index',
+            completedAt: DateTime(2026, 1, 1).add(Duration(days: index)),
+            progressAtCompletion: 1,
+            completedStages: 3,
+            totalStages: 3,
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CharacterTimelineDialog(state: state, fullScreen: true),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('mobile-secondary-page-Летопись')),
+      findsOneWidget,
+    );
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('mobile-timeline-event-0')),
+      220,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const ValueKey('mobile-timeline-scroll')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    expect(
+      find.byKey(const ValueKey('mobile-timeline-event-0')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('mobile-timeline-event-35')),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    state.dispose();
+    await tester.pump();
+  });
 }

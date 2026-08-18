@@ -223,6 +223,10 @@ class _ProfileDialogState extends State<ProfileDialog> {
     final sub = subtext(isDark);
     final bdr = borderColor(isDark);
 
+    if (widget.fullScreen) {
+      return _buildMobileProfilePage(context, s, p, isDark, bg, txt, sub, bdr);
+    }
+
     final content = ClipRRect(
       borderRadius: BorderRadius.circular(widget.fullScreen ? 0 : 20),
       child: Container(
@@ -312,14 +316,6 @@ class _ProfileDialogState extends State<ProfileDialog> {
       ),
     );
 
-    if (widget.fullScreen) {
-      return MobileSecondaryPage(
-        routeName: 'Профиль',
-        backgroundColor: bg,
-        child: content,
-      );
-    }
-
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 60, vertical: 40),
@@ -327,63 +323,149 @@ class _ProfileDialogState extends State<ProfileDialog> {
     );
   }
 
+  Widget _buildMobileProfilePage(
+    BuildContext context,
+    AppState state,
+    UserProfile profile,
+    bool isDark,
+    Color background,
+    Color text,
+    Color secondary,
+    Color border,
+  ) {
+    return MobileSecondaryPage(
+      routeName: 'Профиль',
+      backgroundColor: background,
+      header: const MobileSecondaryHeader(
+        title: 'Профиль',
+        subtitle: 'Персонаж, прогресс и настройки',
+        icon: Icons.person_rounded,
+        accentColor: Color(0xFF7562FF),
+      ),
+      child: ListView(
+        key: const ValueKey('mobile-profile-scroll'),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+        children: [
+          _buildMobileProfileHero(
+            context,
+            state,
+            profile,
+            isDark,
+            text,
+            secondary,
+            border,
+          ),
+          const SizedBox(height: 18),
+          SubLbl('Прогресс', secondary),
+          const SizedBox(height: 10),
+          _buildTotalXP(context, profile, text, secondary),
+          const SizedBox(height: 5),
+          Text(
+            'Изучаю ${state.activeSkillCount} ${_skillWord(state.activeSkillCount)}',
+            style: TextStyle(color: secondary, fontSize: 13),
+          ),
+          const SizedBox(height: 12),
+          _ProfileTimelineButton(
+            state: state,
+            isDark: isDark,
+            txt: text,
+            sub: secondary,
+            fullScreen: true,
+          ),
+          const SizedBox(height: 18),
+          Container(height: 1, color: border),
+          const SizedBox(height: 16),
+          _buildPersonalInfo(
+            context,
+            state,
+            profile,
+            isDark,
+            text,
+            secondary,
+            border,
+          ),
+          const SizedBox(height: 18),
+          Container(height: 1, color: border),
+          const SizedBox(height: 16),
+          _buildInterfaceSettings(state, isDark, text, secondary, border),
+          const SizedBox(height: 18),
+          Container(height: 1, color: border),
+          const SizedBox(height: 16),
+          _buildSkillsSection(context, state, isDark, text, secondary),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileProfileHero(
+    BuildContext context,
+    AppState state,
+    UserProfile profile,
+    bool isDark,
+    Color text,
+    Color secondary,
+    Color border,
+  ) {
+    return Container(
+      key: const ValueKey('mobile-profile-hero'),
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF171925) : const Color(0xFFF7F8FC),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Stack(
+            alignment: Alignment.bottomLeft,
+            children: [
+              Column(
+                children: [
+                  _buildBannerArtwork(context, state, profile, height: 132),
+                  const SizedBox(height: 42),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.only(left: 18),
+                child: _buildAvatar(context, state, profile, isDark),
+              ),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 10, 18, 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildNameRow(
+                  context,
+                  state,
+                  profile,
+                  text,
+                  secondary,
+                  offsetForAvatar: false,
+                ),
+                const SizedBox(height: 8),
+                LvlBadge(level: profile.level, color: const Color(0xFF4A9EFF)),
+                const SizedBox(height: 14),
+                _buildXPSection(context, profile, secondary),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ── Banner + Avatar ────────────────────────────────────────────────────────
 
   Widget _buildBannerSection(BuildContext context, AppState s, UserProfile p) {
-    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
     return SizedBox(
       height: 160,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // Banner
-          Tooltip(
-            message: 'Изменить баннер профиля',
-            child: GestureDetector(
-              onTap: () async {
-                final bytes = await _pickImage();
-                if (bytes != null && context.mounted) {
-                  s.updateProfileBanner(bytes);
-                }
-              },
-              child: Stack(
-                children: [
-                  SizedBox(
-                    width: double.infinity,
-                    height: 160,
-                    child: p.bannerBytes != null
-                        ? Image.memory(
-                            p.bannerBytes!,
-                            fit: BoxFit.cover,
-                            cacheHeight: (160 * pixelRatio).round(),
-                          )
-                        : Container(
-                            decoration: const BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [Color(0xFF4A9EFF), Color(0xFF8B5CF6)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                            ),
-                          ),
-                  ),
-                  // Dim overlay + hint
-                  Positioned.fill(
-                    child: Container(
-                      color: Colors.black.withAlpha(40),
-                      child: Center(
-                        child: Icon(
-                          Icons.add_a_photo_outlined,
-                          color: Colors.white.withAlpha(120),
-                          size: 28,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          _buildBannerArtwork(context, s, p, height: 160),
           // Close button
           Positioned(
             top: 12,
@@ -405,6 +487,61 @@ class _ProfileDialogState extends State<ProfileDialog> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildBannerArtwork(
+    BuildContext context,
+    AppState state,
+    UserProfile profile, {
+    required double height,
+  }) {
+    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
+    return Tooltip(
+      message: 'Изменить баннер профиля',
+      child: GestureDetector(
+        onTap: () async {
+          final bytes = await _pickImage();
+          if (bytes != null && context.mounted) {
+            state.updateProfileBanner(bytes);
+          }
+        },
+        child: Stack(
+          children: [
+            SizedBox(
+              width: double.infinity,
+              height: height,
+              child: profile.bannerBytes != null
+                  ? Image.memory(
+                      profile.bannerBytes!,
+                      fit: BoxFit.cover,
+                      cacheHeight: (height * pixelRatio).round(),
+                    )
+                  : Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Color(0xFF4A9EFF), Color(0xFF8B5CF6)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                      ),
+                    ),
+            ),
+            Positioned.fill(
+              child: ColoredBox(
+                color: Colors.black.withAlpha(40),
+                child: Center(
+                  child: Icon(
+                    Icons.add_a_photo_outlined,
+                    color: Colors.white.withAlpha(120),
+                    size: 28,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -491,10 +628,11 @@ class _ProfileDialogState extends State<ProfileDialog> {
     AppState s,
     UserProfile p,
     Color txt,
-    Color sub,
-  ) {
+    Color sub, {
+    bool offsetForAvatar = true,
+  }) {
     return Padding(
-      padding: const EdgeInsets.only(top: 50), // offset for avatar overlap
+      padding: EdgeInsets.only(top: offsetForAvatar ? 50 : 0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -669,105 +807,142 @@ class _ProfileDialogState extends State<ProfileDialog> {
     Color bdr,
   ) {
     final fBg = isDark ? const Color(0xFF13131A) : const Color(0xFFF5F5F7);
+    final ageField = _buildAgeField(s, txt, sub, bdr, fBg);
+    final genderField = _buildGenderField(
+      context,
+      s,
+      p,
+      isDark,
+      txt,
+      sub,
+      bdr,
+      fBg,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SubLbl('Личные данные', sub),
         const SizedBox(height: 10),
-        Row(
-          children: [
-            // Age field
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: fBg,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: bdr),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.cake_outlined,
-                      size: 16,
-                      color: Color(0xFF8E8E93),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: TextField(
-                        controller: _ageCtrl,
-                        keyboardType: TextInputType.number,
-                        style: TextStyle(color: txt, fontSize: 13),
-                        decoration: InputDecoration(
-                          hintText: 'Возраст',
-                          hintStyle: TextStyle(color: sub, fontSize: 13),
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                        onChanged: (v) {
-                          final age = int.tryParse(v.trim());
-                          s.updateProfileAge(age);
-                        },
-                        onSubmitted: (v) {
-                          final age = int.tryParse(v.trim());
-                          s.updateProfileAge(age);
-                        },
-                      ),
-                    ),
-                  ],
-                ),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final textScale = MediaQuery.textScalerOf(context).scale(1);
+            final stacked = constraints.maxWidth < 360 || textScale >= 1.5;
+            if (stacked) {
+              return Column(
+                children: [ageField, const SizedBox(height: 10), genderField],
+              );
+            }
+            return Row(
+              children: [
+                Expanded(child: ageField),
+                const SizedBox(width: 8),
+                Expanded(child: genderField),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAgeField(
+    AppState state,
+    Color text,
+    Color secondary,
+    Color border,
+    Color background,
+  ) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 48),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: border),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.cake_outlined, size: 18, color: Color(0xFF8E8E93)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              controller: _ageCtrl,
+              keyboardType: TextInputType.number,
+              style: TextStyle(color: text, fontSize: 13),
+              decoration: InputDecoration(
+                hintText: 'Возраст',
+                hintStyle: TextStyle(color: secondary, fontSize: 13),
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
               ),
+              onChanged: (value) {
+                state.updateProfileAge(int.tryParse(value.trim()));
+              },
+              onSubmitted: (value) {
+                state.updateProfileAge(int.tryParse(value.trim()));
+              },
             ),
-            const SizedBox(width: 8),
-            // Gender picker
-            Expanded(
-              child: Tooltip(
-                message: 'Выбрать пол',
-                child: GestureDetector(
-                  onTap: () => _showGenderPicker(context, s, p, isDark, sub),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 11,
-                    ),
-                    decoration: BoxDecoration(
-                      color: fBg,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: bdr),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.person_outline,
-                          size: 16,
-                          color: Color(0xFF8E8E93),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            p.gender != null ? genderLabel[p.gender]! : 'Пол',
-                            style: TextStyle(
-                              color: p.gender != null ? txt : sub,
-                              fontSize: 13,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        Icon(Icons.arrow_drop_down, color: sub, size: 18),
-                      ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGenderField(
+    BuildContext context,
+    AppState state,
+    UserProfile profile,
+    bool isDark,
+    Color text,
+    Color secondary,
+    Color border,
+    Color background,
+  ) {
+    final label = profile.gender != null ? genderLabel[profile.gender]! : 'Пол';
+    return Semantics(
+      button: true,
+      label: 'Пол: $label',
+      child: Tooltip(
+        message: 'Выбрать пол',
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: () =>
+              _showGenderPicker(context, state, profile, isDark, secondary),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 48),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+            decoration: BoxDecoration(
+              color: background,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: border),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.person_outline,
+                  size: 18,
+                  color: Color(0xFF8E8E93),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: profile.gender != null ? text : secondary,
+                      fontSize: 13,
                     ),
                   ),
                 ),
-              ),
+                Icon(Icons.arrow_drop_down, color: secondary, size: 20),
+              ],
             ),
-          ],
+          ),
         ),
-      ],
+      ),
     );
   }
 

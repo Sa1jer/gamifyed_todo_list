@@ -21,6 +21,10 @@ Updated: 2026-08-18
 - At `360 x 800` and `2.0x` text scale, Profile, Trophies, Statistics, Daily
   victories, Weekly analytics, and Chronicle render as full-page SafeArea
   routes. Nested Statistics routes unwind back to Statistics and then Act.
+- Profile additionally has responsive coverage at `360`, `393`, and `430dp`;
+  its banner/avatar hero stays in scroll flow instead of relying on a
+  page-level absolute offset. Chronicle has a long-history test that verifies
+  the mobile sliver list does not eagerly build distant events.
 - The Overview Inbox is geometry-tested as a dock above navigation; expansion
   is height-bounded and Android Back collapses it before leaving Act.
 

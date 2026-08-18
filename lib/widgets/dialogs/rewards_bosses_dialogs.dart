@@ -19,6 +19,7 @@ class RewardsDialog extends StatefulWidget {
 
 class _RewardsDialogState extends State<RewardsDialog> {
   RewardReveal? _lastReveal;
+  final GlobalKey _tutorialTargetKey = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +30,18 @@ class _RewardsDialogState extends State<RewardsDialog> {
     final bdr = borderColor(isDark);
     final unopened = widget.state.unopenedRewardChests;
     final buffs = widget.state.activeBuffs;
-    final tutorialTargetKey = GlobalKey();
+    if (widget.fullScreen) {
+      return _buildMobileRewardsPage(
+        context: context,
+        isDark: isDark,
+        background: bg,
+        text: txt,
+        secondary: sub,
+        unopened: unopened,
+        buffs: buffs,
+      );
+    }
+
     final size = MediaQuery.sizeOf(context);
     final availableWidth = size.width - 36;
     final availableHeight = size.height - 40;
@@ -89,82 +101,13 @@ class _RewardsDialogState extends State<RewardsDialog> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      KeyedSubtree(
-                        key: tutorialTargetKey,
-                        child: _buildEffectsSection(
-                          isDark: isDark,
-                          txt: txt,
-                          sub: sub,
-                          buffs: buffs,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Трофеи появляются после заметных действий: сильного дня, рубежа серии или победы над сопротивлением.',
-                        style: TextStyle(
-                          color: sub,
-                          fontSize: 12,
-                          height: 1.35,
-                        ),
-                      ),
-                      MotionExpandable(
-                        expanded: _lastReveal != null,
-                        collapsedChild: const SizedBox(height: 18),
-                        expandedChild: _lastReveal == null
-                            ? const SizedBox.shrink()
-                            : Padding(
-                                padding: const EdgeInsets.only(top: 12),
-                                child: RewardRevealNotice(
-                                  key: ValueKey(_lastReveal!.id),
-                                  reveal: _lastReveal!,
-                                  isDark: isDark,
-                                ),
-                              ),
-                      ),
-                      Text(
-                        'Новые сундуки',
-                        style: TextStyle(
-                          color: txt,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      MotionFadeSlideSwitcher(
-                        child: unopened.isEmpty
-                            ? RewardsEmptyState(
-                                key: const ValueKey('empty-chests'),
-                                icon: Icons.inventory_2_outlined,
-                                title: 'Пока нет сундуков',
-                                subtitle:
-                                    'Закрой сильный день, удержи серию или пройди событие сопротивления, чтобы получить трофей.',
-                                isDark: isDark,
-                              )
-                            : Column(
-                                key: const ValueKey('chest-list'),
-                                children: unopened.asMap().entries.map((entry) {
-                                  final chest = entry.value;
-                                  return MotionListItem(
-                                    key: ValueKey('chest-${chest.id}'),
-                                    index: entry.key,
-                                    slide: 5,
-                                    child: RewardChestCard(
-                                      chest: chest,
-                                      skill: chest.skillId == null
-                                          ? null
-                                          : widget.state.skills
-                                                .where(
-                                                  (skill) =>
-                                                      skill.id == chest.skillId,
-                                                )
-                                                .firstOrNull,
-                                      isDark: isDark,
-                                      onOpen: () =>
-                                          _openChest(context, chest.id),
-                                    ),
-                                  );
-                                }).toList(),
-                              ),
+                      ..._buildRewardSections(
+                        context: context,
+                        isDark: isDark,
+                        text: txt,
+                        secondary: sub,
+                        unopened: unopened,
+                        buffs: buffs,
                       ),
                     ],
                   ),
@@ -175,7 +118,7 @@ class _RewardsDialogState extends State<RewardsDialog> {
           if (widget.showTutorialHint && widget.onTutorialComplete != null)
             Positioned.fill(
               child: RewardsTutorialSpotlight(
-                targetKey: tutorialTargetKey,
+                targetKey: _tutorialTargetKey,
                 isDark: isDark,
                 onComplete: widget.onTutorialComplete!,
               ),
@@ -184,20 +127,138 @@ class _RewardsDialogState extends State<RewardsDialog> {
       ),
     );
 
-    if (widget.fullScreen) {
-      return MobileSecondaryPage(
-        routeName: 'Трофеи',
-        backgroundColor: bg,
-        child: content,
-      );
-    }
-
     return Dialog(
       backgroundColor: bg,
       insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: content,
     );
+  }
+
+  Widget _buildMobileRewardsPage({
+    required BuildContext context,
+    required bool isDark,
+    required Color background,
+    required Color text,
+    required Color secondary,
+    required List<RewardChest> unopened,
+    required List<Buff> buffs,
+  }) {
+    return MobileSecondaryPage(
+      routeName: 'Трофеи',
+      backgroundColor: background,
+      header: const MobileSecondaryHeader(
+        title: 'Трофеи',
+        subtitle: 'Эффекты и награды после заметных действий',
+        icon: Icons.redeem_rounded,
+        accentColor: Color(0xFFFFCC00),
+      ),
+      child: Stack(
+        children: [
+          ListView(
+            key: const ValueKey('mobile-rewards-scroll'),
+            padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
+            children: _buildRewardSections(
+              context: context,
+              isDark: isDark,
+              text: text,
+              secondary: secondary,
+              unopened: unopened,
+              buffs: buffs,
+            ),
+          ),
+          if (widget.showTutorialHint && widget.onTutorialComplete != null)
+            Positioned.fill(
+              child: RewardsTutorialSpotlight(
+                targetKey: _tutorialTargetKey,
+                isDark: isDark,
+                onComplete: widget.onTutorialComplete!,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildRewardSections({
+    required BuildContext context,
+    required bool isDark,
+    required Color text,
+    required Color secondary,
+    required List<RewardChest> unopened,
+    required List<Buff> buffs,
+  }) {
+    return [
+      KeyedSubtree(
+        key: _tutorialTargetKey,
+        child: _buildEffectsSection(
+          isDark: isDark,
+          txt: text,
+          sub: secondary,
+          buffs: buffs,
+        ),
+      ),
+      const SizedBox(height: 16),
+      Text(
+        'Трофеи появляются после заметных действий: сильного дня, рубежа серии или победы над сопротивлением.',
+        style: TextStyle(color: secondary, fontSize: 12, height: 1.35),
+      ),
+      MotionExpandable(
+        expanded: _lastReveal != null,
+        collapsedChild: const SizedBox(height: 18),
+        expandedChild: _lastReveal == null
+            ? const SizedBox.shrink()
+            : Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: RewardRevealNotice(
+                  key: ValueKey(_lastReveal!.id),
+                  reveal: _lastReveal!,
+                  isDark: isDark,
+                ),
+              ),
+      ),
+      Text(
+        'Новые сундуки',
+        style: TextStyle(
+          color: text,
+          fontSize: 16,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+      const SizedBox(height: 10),
+      MotionFadeSlideSwitcher(
+        child: unopened.isEmpty
+            ? RewardsEmptyState(
+                key: const ValueKey('empty-chests'),
+                icon: Icons.inventory_2_outlined,
+                title: 'Пока нет сундуков',
+                subtitle:
+                    'Закрой сильный день, удержи серию или пройди событие сопротивления, чтобы получить трофей.',
+                isDark: isDark,
+              )
+            : Column(
+                key: const ValueKey('chest-list'),
+                children: unopened.asMap().entries.map((entry) {
+                  final chest = entry.value;
+                  return MotionListItem(
+                    key: ValueKey('chest-${chest.id}'),
+                    index: entry.key,
+                    slide: 5,
+                    child: RewardChestCard(
+                      chest: chest,
+                      skill: chest.skillId == null
+                          ? null
+                          : widget.state.skills
+                                .where((skill) => skill.id == chest.skillId)
+                                .firstOrNull,
+                      isDark: isDark,
+                      onOpen: () => _openChest(context, chest.id),
+                    ),
+                  );
+                }).toList(),
+              ),
+      ),
+    ];
   }
 
   Widget _buildEffectsSection({

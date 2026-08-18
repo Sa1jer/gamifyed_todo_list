@@ -85,6 +85,17 @@ class _WeeklyAnalyticsDialogState extends State<WeeklyAnalyticsDialog> {
       );
     }
     final canGoNext = _weekStart.isBefore(startOfWeek(DateTime.now()));
+    if (widget.fullScreen) {
+      return _buildMobileWeekPage(
+        context: context,
+        background: bg,
+        isDark: isDark,
+        summary: summary,
+        skillVisuals: skillVisuals,
+        canGoNext: canGoNext,
+      );
+    }
+
     final size = MediaQuery.sizeOf(context);
     final availableWidth = size.width - 36;
     final availableHeight = size.height - 40;
@@ -261,18 +272,158 @@ class _WeeklyAnalyticsDialogState extends State<WeeklyAnalyticsDialog> {
       ),
     );
 
-    if (widget.fullScreen) {
-      return MobileSecondaryPage(
-        routeName: 'Неделя',
-        backgroundColor: bg,
-        child: content,
-      );
-    }
-
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
       child: content,
+    );
+  }
+
+  Widget _buildMobileWeekPage({
+    required BuildContext context,
+    required Color background,
+    required bool isDark,
+    required WeeklySummary summary,
+    required Map<String, WeeklySkillVisual> skillVisuals,
+    required bool canGoNext,
+  }) {
+    final secondary = subtext(isDark);
+    final border = borderColor(isDark);
+    return MobileSecondaryPage(
+      routeName: 'Неделя',
+      backgroundColor: background,
+      header: const MobileSecondaryHeader(
+        title: 'Неделя',
+        subtitle: 'Рост, ритм и следующий мягкий ориентир',
+        icon: Icons.calendar_view_week_rounded,
+        accentColor: Color(0xFF34C759),
+      ),
+      child: CustomScrollView(
+        key: const ValueKey('mobile-week-scroll'),
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+            sliver: SliverToBoxAdapter(
+              child: Semantics(
+                label:
+                    'Неделя ${formatWeeklyDayMonth(_weekStart)} — ${formatWeeklyDayMonth(_weekStart.add(const Duration(days: 6)))}',
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF34C759).withAlpha(14),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: border),
+                  ),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        tooltip: 'Предыдущая неделя',
+                        constraints: const BoxConstraints.tightFor(
+                          width: 48,
+                          height: 48,
+                        ),
+                        onPressed: () => setState(
+                          () => _weekStart = _weekStart.subtract(
+                            const Duration(days: 7),
+                          ),
+                        ),
+                        icon: const Icon(Icons.chevron_left_rounded),
+                      ),
+                      Expanded(
+                        child: Text(
+                          '${formatWeeklyDayMonth(_weekStart)} — ${formatWeeklyDayMonth(_weekStart.add(const Duration(days: 6)))}',
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          style: TextStyle(
+                            color: secondary,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: canGoNext
+                            ? 'Следующая неделя'
+                            : 'Это текущая неделя',
+                        constraints: const BoxConstraints.tightFor(
+                          width: 48,
+                          height: 48,
+                        ),
+                        onPressed: canGoNext
+                            ? () => setState(
+                                () => _weekStart = _weekStart.add(
+                                  const Duration(days: 7),
+                                ),
+                              )
+                            : null,
+                        icon: const Icon(Icons.chevron_right_rounded),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 28),
+            sliver: SliverList.list(
+              children: [
+                WeeklyOverview(summary: summary, isDark: isDark),
+                const SizedBox(height: 14),
+                WeeklyProcrastinationInsightsCard(
+                  summary: summary,
+                  skillVisuals: skillVisuals,
+                  isDark: isDark,
+                  onStartMinimum: (taskId) {
+                    final message = widget.state.completeMinimumAction(taskId);
+                    if (message != null) {
+                      AppFeedback.questResult(message, isMinimum: true);
+                      ScaffoldMessenger.maybeOf(
+                        context,
+                      )?.showSnackBar(SnackBar(content: Text(message)));
+                    }
+                    setState(() {});
+                  },
+                ),
+                const SizedBox(height: 14),
+                WeeklySkillBreakdown(
+                  summary: summary,
+                  isDark: isDark,
+                  skillVisuals: skillVisuals,
+                ),
+                const SizedBox(height: 14),
+                WeeklyXpChart(summary: summary, isDark: isDark),
+                const SizedBox(height: 14),
+                WeeklyTaskList(
+                  summary: summary,
+                  isDark: isDark,
+                  skillVisuals: skillVisuals,
+                ),
+                const SizedBox(height: 14),
+                WeeklyStreakRisks(
+                  summary: summary,
+                  isDark: isDark,
+                  skillVisuals: skillVisuals,
+                ),
+                const SizedBox(height: 14),
+                WeeklyGoalCard(
+                  summary: summary,
+                  isDark: isDark,
+                  onEdit: () => _openGoalEditor(summary),
+                  onToggleKeyResult: (keyResultId) {
+                    final goal = summary.weeklyGoal;
+                    if (goal == null) return;
+                    widget.state.toggleWeeklyKeyResult(goal.id, keyResultId);
+                    setState(() {});
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

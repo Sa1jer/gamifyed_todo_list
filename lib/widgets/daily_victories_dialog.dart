@@ -25,24 +25,28 @@ class DailyVictoriesDialog extends StatelessWidget {
     final bg = surface(isDark);
     final summary = _DailyVictorySummary.fromState(state);
 
+    if (fullScreen) {
+      return _buildMobileDailyPage(
+        background: bg,
+        isDark: isDark,
+        summary: summary,
+      );
+    }
+
     final content = Container(
-      width: fullScreen ? double.infinity : 860,
-      constraints: fullScreen
-          ? const BoxConstraints()
-          : const BoxConstraints(maxHeight: 720),
+      width: 860,
+      constraints: const BoxConstraints(maxHeight: 720),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(fullScreen ? 0 : 24),
-        border: fullScreen ? null : Border.all(color: bdr),
-        boxShadow: fullScreen
-            ? null
-            : [
-                BoxShadow(
-                  color: Colors.black.withAlpha(isDark ? 92 : 30),
-                  blurRadius: 28,
-                  offset: const Offset(0, 16),
-                ),
-              ],
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: bdr),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(isDark ? 92 : 30),
+            blurRadius: 28,
+            offset: const Offset(0, 16),
+          ),
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -128,18 +132,40 @@ class DailyVictoriesDialog extends StatelessWidget {
       ),
     );
 
-    if (fullScreen) {
-      return MobileSecondaryPage(
-        routeName: 'Победы дня',
-        backgroundColor: bg,
-        child: content,
-      );
-    }
-
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       child: content,
+    );
+  }
+
+  Widget _buildMobileDailyPage({
+    required Color background,
+    required bool isDark,
+    required _DailyVictorySummary summary,
+  }) {
+    return MobileSecondaryPage(
+      routeName: 'Победы дня',
+      backgroundColor: background,
+      header: MobileSecondaryHeader(
+        title: 'Победы дня',
+        subtitle: '${formatShortDate(summary.today)} • итог сегодняшнего рывка',
+        icon: Icons.celebration_rounded,
+        accentColor: const Color(0xFFFFCC00),
+      ),
+      child: ListView(
+        key: const ValueKey('mobile-daily-victories-scroll'),
+        padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
+        children: [
+          _VictoryHero(summary: summary, isDark: isDark),
+          const SizedBox(height: 12),
+          _VictoryMetrics(summary: summary, isDark: isDark),
+          const SizedBox(height: 12),
+          _VictoryOverview(summary: summary, isDark: isDark),
+          const SizedBox(height: 12),
+          _VictoryTimeline(entries: summary.entries, isDark: isDark),
+        ],
+      ),
     );
   }
 }

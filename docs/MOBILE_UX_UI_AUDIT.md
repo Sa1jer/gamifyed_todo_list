@@ -801,6 +801,23 @@ are presentation changes only: Inbox identity, quick-task rewards, storage,
 and task rules are unchanged. Physical-device, `2.0x` text-scale, and profile
 frame-timing QA remain pending.
 
+## Secondary Page Visual Completion
+
+The full-screen route boundary is now also reflected in the mobile visual
+composition rather than wrapping desktop dialog bodies. Profile owns a
+responsive banner/avatar hero in normal scroll flow, while Trophies, Daily
+victories, Weekly analytics, and Chronicle use the shared mobile secondary
+header, journal page padding, and one-column narrative sections. Weekly
+analytics continues to consume its existing read model; no calculations were
+duplicated in the mobile page.
+
+Chronicle renders its bounded visible history with a lazy sliver list, so a
+long history no longer eagerly builds every event. Desktop dialog/workspace
+branches remain unchanged. Automated coverage exercises Profile at `360`,
+`393`, and `430dp`, all secondary routes at `360dp` with `2.0x` text, and a
+long Chronicle history. Native TalkBack, font/display-size, and profile-mode
+frame measurements remain part of the physical-device gate.
+
 ## Reference Checklist
 
 - Flutter adaptive layout: <https://docs.flutter.dev/ui/adaptive-responsive/general>
