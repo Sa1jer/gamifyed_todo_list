@@ -4562,7 +4562,10 @@ void main() {
           )
           .first,
     );
-    await tester.tap(mobileSkillChip);
+    await tester.ensureVisible(mobileSkillChip);
+    await tester.pumpAndSettle();
+    expect(mobileSkillChip.hitTestable(), findsOneWidget);
+    await tester.tap(mobileSkillChip.hitTestable());
     await tester.pumpAndSettle();
 
     expect(find.textContaining(taskTitle), findsWidgets);

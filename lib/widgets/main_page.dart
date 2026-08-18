@@ -37,8 +37,11 @@ import 'reward_animations.dart';
 import 'weekly_analytics_dialog.dart';
 import '../engines/course_nudge_engine.dart';
 import '../engines/next_action_resolver.dart';
+import '../engines/momentum_resolver.dart';
 import '../engines/return_context_resolver.dart';
+import '../features/momentum/momentum_view_data.dart';
 import '../features/return_context/return_context_controller.dart';
+import 'momentum_evidence_card.dart';
 import 'return_context_card.dart';
 
 part 'main_page/profile_bar.dart';

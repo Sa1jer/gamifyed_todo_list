@@ -4,12 +4,14 @@ import 'package:flutter/material.dart';
 
 import '../../app_state.dart';
 import '../../engines/return_context_resolver.dart';
+import '../../engines/momentum_resolver.dart';
 import '../../models.dart';
 import '../../theme/app_typography.dart';
 import '../../utils.dart';
 import '../desktop_journal_tokens.dart';
 import '../inbox_panel.dart';
 import '../return_context_card.dart';
+import '../momentum_evidence_card.dart';
 import '../shared.dart';
 import 'desktop_quest_row.dart';
 import 'desktop_selected_skill_header.dart';
@@ -26,6 +28,7 @@ class DesktopMainWorkspace extends StatelessWidget {
   final void Function(String taskId, ActionToastOrigin origin) onComplete;
   final void Function(String taskId, ActionToastOrigin origin) onMinimumAction;
   final ReturnContextCandidate? returnContext;
+  final MomentumSnapshot? momentum;
   final VoidCallback? onContinueReturnContext;
   final VoidCallback? onAnotherReturnContext;
   final VoidCallback? onDismissReturnContext;
@@ -42,6 +45,7 @@ class DesktopMainWorkspace extends StatelessWidget {
     required this.onComplete,
     required this.onMinimumAction,
     this.returnContext,
+    this.momentum,
     this.onContinueReturnContext,
     this.onAnotherReturnContext,
     this.onDismissReturnContext,
@@ -199,6 +203,9 @@ class DesktopMainWorkspace extends StatelessWidget {
                   if (returnContext != null) ...[
                     SizedBox(height: metrics.sectionGap + 10),
                     _buildReturnContext(reduceMotion),
+                  ] else if (momentum != null) ...[
+                    SizedBox(height: metrics.sectionGap),
+                    _buildMomentum(reduceMotion),
                   ],
                   SizedBox(height: metrics.sectionGap + 10),
                   header,
@@ -216,6 +223,9 @@ class DesktopMainWorkspace extends StatelessWidget {
                   if (returnContext != null) ...[
                     SizedBox(height: metrics.sectionGap + 10),
                     _buildReturnContext(reduceMotion),
+                  ] else if (momentum != null) ...[
+                    SizedBox(height: metrics.sectionGap),
+                    _buildMomentum(reduceMotion),
                   ],
                   SizedBox(height: metrics.sectionGap + 10),
                   header,
@@ -259,6 +269,9 @@ class DesktopMainWorkspace extends StatelessWidget {
             if (returnContext != null) ...[
               SizedBox(height: metrics.sectionGap + 10),
               _buildReturnContext(reduceMotion),
+            ] else if (momentum != null) ...[
+              SizedBox(height: metrics.sectionGap),
+              _buildMomentum(reduceMotion),
             ],
             SizedBox(height: metrics.sectionGap + 10),
             AnimatedSwitcher(
@@ -371,12 +384,22 @@ class DesktopMainWorkspace extends StatelessWidget {
   Widget _buildReturnContext(bool reduceMotion) {
     return ReturnContextCard(
       candidate: returnContext!,
+      momentum: momentum,
       isDark: state.isDark,
       desktop: true,
       reducedMotion: reduceMotion || state.reducedMotion,
       onContinue: onContinueReturnContext!,
       onAnotherAction: onAnotherReturnContext!,
       onDismiss: onDismissReturnContext!,
+    );
+  }
+
+  Widget _buildMomentum(bool reduceMotion) {
+    return MomentumEvidenceCard(
+      snapshot: momentum!,
+      isDark: state.isDark,
+      desktop: true,
+      reducedMotion: reduceMotion || state.reducedMotion,
     );
   }
 }

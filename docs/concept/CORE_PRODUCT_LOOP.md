@@ -10,8 +10,9 @@ Skill -> Goal -> RoadMap / Stage -> Task -> Minimum Action -> XP -> Review / Nud
 
 It already supports small entry actions and later reflection. The derived
 Return Context prototype now makes one evidence-backed thread primary after a
-pause, but there is still no user-authored durable Save Point or structured
-observable outcome.
+pause. The derived Momentum prototype can add one truthful reason that the
+thread has useful movement before the existing Next Action. There is still no
+user-authored durable Save Point or structured observable outcome.
 
 ## Option A - Quest-first
 
@@ -110,3 +111,16 @@ reuses Next Action for the current valid move. Its dismissal is session-only,
 it performs no mutation while rendering, and Continue only opens existing
 focus after revalidation. This is not a Save Point and does not prove durable
 state is valuable.
+
+Momentum adds passive evidence between context and action:
+
+```text
+Return Context (when present)
+-> truthful Momentum evidence
+-> existing Next Action
+-> optional Boot Entry
+```
+
+It is not a new loop step, task ranker, reward, or CTA. It reuses existing Goal,
+RoadMap, completion, and Next Action authorities and may correctly render
+nothing. Its value remains a manual-validation hypothesis.

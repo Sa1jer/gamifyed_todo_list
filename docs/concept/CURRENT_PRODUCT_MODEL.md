@@ -90,6 +90,25 @@ focus. The card grants no XP, writes no history, completes no action, and does
 not change Task, Goal, RoadMap, reward, snapshot, or Hive semantics. It is not
 a persistent Save Point.
 
+### Momentum derived evidence prototype
+
+**Repository fact (prototype implementation):** mobile and desktop Act may
+show one passive evidence statement for an existing normal-Skill thread. A
+pure detached resolver can use a known near-finish Stage boundary, a recently
+completed Stage with valid continuation, existing Goal progress, recent normal-
+Skill completion, or an unfinished Minimum Action. It returns no result when
+the evidence is weak.
+
+The narrow adapter reuses `NextActionResolver`, `GoalProgressEngine`, and
+`RoadmapEngine`; it does not create another action order or progress formula.
+When Return Context is visible, Momentum is a supporting line inside that card.
+Otherwise it is a compact passive block before Next Action. It has no CTA,
+state, persistence, XP, history, notification, completion, selection, Goal,
+RoadMap, reward, or Return Context side effect.
+
+This implementation is a product prototype, not evidence that the wording is
+helpful in real use. The separate validation diary remains empty.
+
 ### Goal, RoadMap, and stage progress
 
 **Repository fact:** goal progress is stage mastery divided by the number of

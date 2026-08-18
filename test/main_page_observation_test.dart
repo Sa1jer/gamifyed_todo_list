@@ -215,6 +215,41 @@ _MemoryStorage _returnContextStorage(DateTime now) {
     ];
 }
 
+_MemoryStorage _momentumStorage() {
+  const skillId = 'momentum-skill';
+  const stageId = 'momentum-stage';
+  final skill = Skill(
+    id: skillId,
+    name: 'Разработка приложения',
+    goal: 'Завершить проверяемый этап',
+    color: const Color(0xFF4A9EFF),
+    icon: Icons.code_rounded,
+    treeNodes: [
+      SkillTreeNode(
+        id: stageId,
+        title: 'Практика',
+        requiredQuestCompletions: 3,
+      ),
+    ],
+  );
+  Task quest(String id, {required bool done}) => Task(
+    id: id,
+    title: 'Квест $id',
+    skillId: skillId,
+    xpReward: 20,
+    type: TaskType.shortTerm,
+    treeNodeId: stageId,
+    isDone: done,
+  );
+  return _MemoryStorage()
+    ..skills = [skill]
+    ..tasks = [
+      quest('done-a', done: true),
+      quest('done-b', done: true),
+      quest('active', done: false),
+    ];
+}
+
 Future<AppState> _loadedState(_MemoryStorage storage) async {
   await storage.init();
   final state = AppState(storage: storage, seedDefaults: false);
@@ -229,6 +264,133 @@ Future<void> _disposeTestState(WidgetTester tester, AppState state) async {
 }
 
 void main() {
+  group('Momentum integration', () {
+    final now = DateTime.utc(2026, 8, 18, 12);
+
+    testWidgets('mobile evidence precedes Next Action without competing CTA', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final state = await _loadedState(_momentumStorage());
+      await tester.pumpWidget(
+        _mainPageHarness(state: state, nowForTesting: () => now),
+      );
+      await tester.pump();
+
+      final momentum = find.byKey(const ValueKey('momentum-evidence-card'));
+      final nextAction = find.byKey(const ValueKey('next-action-lens'));
+      expect(momentum, findsOneWidget);
+      expect(nextAction, findsOneWidget);
+      expect(
+        tester.getTopLeft(momentum).dy,
+        lessThan(tester.getTopLeft(nextAction).dy),
+      );
+      expect(
+        find.descendant(of: momentum, matching: find.byType(ButtonStyleButton)),
+        findsNothing,
+      );
+      await _disposeTestState(tester, state);
+    });
+
+    testWidgets(
+      'Return Context owns one recommendation surface with Momentum',
+      (tester) async {
+        tester.view.physicalSize = const Size(390, 844);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final state = await _loadedState(_returnContextStorage(now));
+        await tester.pumpWidget(
+          _mainPageHarness(state: state, nowForTesting: () => now),
+        );
+        await tester.pump();
+
+        expect(
+          find.byKey(const ValueKey('return-context-card')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey('momentum-evidence-line')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey('momentum-evidence-card')),
+          findsNothing,
+        );
+        expect(find.byKey(const ValueKey('next-action-lens')), findsNothing);
+        await _disposeTestState(tester, state);
+      },
+    );
+
+    testWidgets(
+      'desktop evidence is restrained and ignores profile-only changes',
+      (tester) async {
+        tester.view.physicalSize = const Size(1366, 850);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final state = await _loadedState(_momentumStorage());
+        var workspaceBuilds = 0;
+        await tester.pumpWidget(
+          _mainPageHarness(
+            state: state,
+            nowForTesting: () => now,
+            onWorkspaceBuild: () => workspaceBuilds++,
+          ),
+        );
+        await tester.pump();
+        expect(
+          find.byKey(const ValueKey('momentum-evidence-card')),
+          findsOneWidget,
+        );
+        workspaceBuilds = 0;
+
+        state.updateProfileName('Momentum не зависит от профиля');
+        await tester.pump();
+        expect(workspaceBuilds, 0);
+        expect(
+          find.byKey(const ValueKey('momentum-evidence-card')),
+          findsOneWidget,
+        );
+        await _disposeTestState(tester, state);
+      },
+    );
+
+    testWidgets(
+      'relevant completion invalidates evidence through core revision',
+      (tester) async {
+        tester.view.physicalSize = const Size(390, 844);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final state = await _loadedState(_momentumStorage());
+        await tester.pumpWidget(
+          _mainPageHarness(state: state, nowForTesting: () => now),
+        );
+        await tester.pump();
+        expect(
+          find.byKey(const ValueKey('momentum-evidence-card')),
+          findsOneWidget,
+        );
+
+        state.completeTask('active');
+        await tester.pump();
+        expect(
+          find.byKey(const ValueKey('momentum-evidence-card')),
+          findsNothing,
+        );
+        await _disposeTestState(tester, state);
+      },
+    );
+  });
+
   group('Return Context integration', () {
     final now = DateTime.utc(2026, 7, 18, 12);
 

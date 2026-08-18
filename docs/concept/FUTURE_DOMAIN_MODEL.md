@@ -22,6 +22,7 @@ compatibility, rollback, and AppState mutation boundaries.
 | Resistance | Does not exist. | Voluntary signal that asks for a different entry strategy. | Keep non-diagnostic. | Ephemeral intervention mode. | Persistent task state; separate Quest. | None first; persistent state requires careful semantics. |
 | Next Action | Exists only as derived task/nudge/focus. | One explicit physical action for the current context. | Make core presentation concept. | Derived selector from active task, minimum action, stage, review focus. | User-pinned field. | None first; explicit persistence later may be worthwhile. |
 | Return Context | Implemented derived prototype. | Calm reconstruction of one prior work thread after a meaningful pause. | Keep distinct from Save Point. | Completion/review scalar evidence + existing Next Action order; session-only dismissal. | Durable user-authored Save Point. | None for prototype; validate restart loss before any schema proposal. |
+| Momentum | Implemented derived evidence prototype. | One calm, truthful explanation of useful movement or a nearby known boundary. | Keep distinct from Return Context and Next Action. | Detached scalar evidence composed from existing Next Action, Goal, RoadMap, and history authorities. | Persistent score/entity. | None; persistence and opaque scoring are explicitly rejected for the prototype. |
 | Minimum Step | Task string with separate completion/XP data. | Existing low-friction action, optionally used by Boot mode. | Keep behavior unchanged. | Existing fields. | Replace with Boot Quest. | Do not alter completion semantics. |
 | Quest Chain | Does not exist. | Visible sequence of local work outcomes. | Add as derived view first. | Existing ordered tasks + stage links. | Persistent ordered chain entity. | None first; medium if user-managed chains prove valuable. |
 | Definition of Done | Does not exist. | Explicit enough boundary for finishing. | Introduce only after copy/usability research. | Optional structured section of description. | Dedicated Task field. | None first; medium for durable structured semantics. |
@@ -39,12 +40,12 @@ compatibility, rollback, and AppState mutation boundaries.
 
 **Recommendation - product hypothesis:** retain the existing persistence model
 for the first validation cycle. Keep `Next Action`, Boot mode, Return Context,
-Resistance, Quest Chain, and Journey presentation/derived concepts. Do not make
-Main Quest, Save Point, Proof of Progress, or Definition of Done persistent
-until users demonstrate that the lightweight versions help rather than add
-form burden.
+Momentum, Resistance, Quest Chain, and Journey presentation/derived concepts.
+Do not make Main Quest, Save Point, Proof of Progress, or Definition of Done
+persistent until users demonstrate that the lightweight versions help rather
+than add form burden.
 
-## MVP/prototype status - Next Action, Boot Entry, and Return Context
+## MVP/prototype status - Next Action, Boot Entry, Return Context, and Momentum
 
 The first implementation follows this boundary without a schema change:
 
@@ -59,6 +60,9 @@ The first implementation follows this boundary without a schema change:
 - `Return Context` is a detached derived candidate over completion/review
   evidence and the existing Next Action order. Dismissal is session-only;
   Continue revalidates and opens existing Skill focus without completing work.
+- `Momentum` is a detached immutable evidence result. It reuses the same action
+  order plus existing Goal/RoadMap progress authorities and retains no live
+  models. It has no CTA, session mutation, or persistence.
 
 This preserves the decision rule: no durable focus/return model until manual
 Return Context validation shows that restart persistence is worth its storage

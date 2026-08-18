@@ -38,7 +38,21 @@
 | Rollback | Remove card; existing history and task flows remain. |
 | Risk / scope | Medium. Do not claim it is a true Save Point. |
 
-## Epic 3 - Voluntary Resistance Intervention
+## Epic 3 - Momentum Evidence Prototype - implemented derived prototype
+
+| Field | Delivered prototype |
+| --- | --- |
+| Purpose | Make existing real movement or a nearby known boundary easier to perceive without choosing another action. |
+| User value | One calm factual reason that the current thread is credible to continue. |
+| Dependencies | Existing Next Action order, GoalProgressEngine, RoadmapEngine, Minimum Action, and detached completion history. |
+| Entities affected | Pure detached resolver, narrow adapter, and passive presentation only. |
+| Delivered areas | Momentum resolver, mobile/desktop Act integration, Return Context evidence line, responsive/accessibility tests, architecture guards, and validation diary. |
+| Schema impact | None. No Momentum model, storage key, Hive type, or snapshot field. |
+| UX validation | Still required: real one-/three-/seven-day diary entries for factual accuracy, clarity, pressure, and competition with Next Action. |
+| Rollback | Remove the passive evidence surfaces and resolver/adapter; no stored data cleanup. |
+| Risk / scope | Low-medium. A true message may still be decorative or pressuring, so automated tests are not product evidence. |
+
+## Epic 4 - Voluntary Resistance Intervention
 
 Purpose: offer a non-diagnostic action menu around an existing task. No task
 type or permanent state initially. Validate whether users choose a smaller
@@ -52,7 +66,7 @@ action, blocker note, or stop point without feeling pressured.
 | Tests / validation | Dismissal, action selection, minimum-action route, unchanged XP/undo, pressure/shame interview prompts. |
 | Rollback / risk / scope | Remove the presentation path; low-medium risk, small-medium scope. |
 
-## Epic 4 - Definition of Done and Proof Prototype
+## Epic 5 - Definition of Done and Proof Prototype
 
 Purpose: test optional outcome/finish prompts using existing description and
 completion UI before adding structured persistent fields. Do not make prompts
@@ -66,7 +80,7 @@ mandatory for task completion or XP.
 | Tests / validation | One-tap completion remains possible; prompts skip safely; finish and result diary study. |
 | Rollback / risk / scope | Remove prompts without data cleanup; medium UX risk, medium scope. |
 
-## Epic 5 - Save Point Decision and Durable Design
+## Epic 6 - Save Point Decision and Durable Design
 
 Only begin after prototypes show repeated return value. This is a medium/large
 domain batch: define ownership, edit/delete/undo behavior, snapshot migration,
@@ -80,7 +94,7 @@ legacy compatibility, fault injection, lifecycle behavior, and privacy.
 | Tests / validation | Fault injection, startup/dispose, deletion/undo, stale IDs, migration and manual return flows. |
 | Rollback / risk / scope | Feature flag or additive model; high architecture risk, large scope. |
 
-## Epic 6 - Quest Chain and Focus Boundary
+## Epic 7 - Quest Chain and Focus Boundary
 
 Add a user-visible chain only if derived views fail to express real sequence.
 Decide whether Main/Side Quest is a tag, a focus preference, or a relationship.
@@ -110,6 +124,10 @@ Do not introduce global single-focus enforcement without evidence.
    of the core doctrine.
 2. **Return Context Prototype**: implemented to test the RETURN promise without
    schema change; manual one-/three-/seven-day evidence collection remains.
+3. **Momentum Evidence Prototype**: implemented as passive derived evidence;
+   manual validation must determine whether it clarifies real movement or only
+   adds decoration/pressure.
 
-Only after those two show value should the product decide whether durable Save
-Points or structured Definition of Done deserve model/storage changes.
+Only after these prototypes show value should the product decide whether
+durable Save Points or structured Definition of Done deserve model/storage
+changes.

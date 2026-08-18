@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 
 import '../engines/return_context_resolver.dart';
+import '../engines/momentum_resolver.dart';
 import '../theme/app_typography.dart';
 import 'desktop_journal_tokens.dart';
 import 'mobile_journal_tokens.dart';
+import 'momentum_evidence_card.dart';
 
 class ReturnContextCard extends StatelessWidget {
   const ReturnContextCard({
     super.key,
     required this.candidate,
+    this.momentum,
     required this.isDark,
     required this.desktop,
     required this.reducedMotion,
@@ -18,6 +21,7 @@ class ReturnContextCard extends StatelessWidget {
   });
 
   final ReturnContextCandidate candidate;
+  final MomentumSnapshot? momentum;
   final bool isDark;
   final bool desktop;
   final bool reducedMotion;
@@ -39,6 +43,7 @@ class ReturnContextCard extends StatelessWidget {
       if (candidate.stageTitle != null) 'Текущий этап: ${candidate.stageTitle}',
       if (candidate.lastResult != null)
         'Последний результат: ${candidate.lastResult}',
+      if (momentum != null) momentum!.supportingText,
       'Следующий шаг: ${candidate.reentryAction}',
     ].join('. ');
 
@@ -63,6 +68,7 @@ class ReturnContextCard extends StatelessWidget {
                 !desktop || constraints.maxWidth < 760 || textScale >= 1.6;
             final content = _ReturnContextContent(
               candidate: candidate,
+              momentum: momentum,
               colors: colors,
               dense: dense,
             );
@@ -102,11 +108,13 @@ class ReturnContextCard extends StatelessWidget {
 class _ReturnContextContent extends StatelessWidget {
   const _ReturnContextContent({
     required this.candidate,
+    required this.momentum,
     required this.colors,
     required this.dense,
   });
 
   final ReturnContextCandidate candidate;
+  final MomentumSnapshot? momentum;
   final _ReturnContextColors colors;
   final bool dense;
 
@@ -176,6 +184,15 @@ class _ReturnContextContent extends StatelessWidget {
             colors: colors,
           ),
           SizedBox(height: dense ? 7 : 9),
+        ],
+        if (momentum != null) ...[
+          MomentumEvidenceLine(
+            snapshot: momentum!,
+            isDark: colors.isDark,
+            desktop: colors.desktop,
+            compact: dense,
+          ),
+          SizedBox(height: dense ? 9 : 11),
         ],
         _ReturnContextRow(
           key: const ValueKey('return-context-next-action'),
@@ -303,6 +320,8 @@ class _ReturnContextColors {
     required this.muted,
     required this.accent,
     required this.onAccent,
+    required this.isDark,
+    required this.desktop,
   });
 
   final Color surface;
@@ -311,6 +330,8 @@ class _ReturnContextColors {
   final Color muted;
   final Color accent;
   final Color onAccent;
+  final bool isDark;
+  final bool desktop;
 
   factory _ReturnContextColors.resolve({
     required bool isDark,
@@ -325,6 +346,8 @@ class _ReturnContextColors {
         muted: tokens.mutedText,
         accent: tokens.profilePurple,
         onAccent: Colors.white,
+        isDark: isDark,
+        desktop: desktop,
       );
     }
     return _ReturnContextColors(
@@ -336,6 +359,8 @@ class _ReturnContextColors {
       muted: MobileJournalTokens.muted(isDark),
       accent: MobileJournalTokens.violet,
       onAccent: Colors.white,
+      isDark: isDark,
+      desktop: desktop,
     );
   }
 }

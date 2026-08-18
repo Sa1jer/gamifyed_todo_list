@@ -9,6 +9,7 @@ task count, XP gained, or app opens alone as proof of value.
 | --- | --- | --- | --- |
 | Does Next Action help START? | Timed self-test, action diary, short clarity prompt. | Shorter open-to-meaningful-action time and reported clarity. | Users ignore, dispute, or feel constrained by it. |
 | Does Return Context help RETURN? | Return after 1, 3, and 7 days in diary studies. | User resumes without rereading long backlog. | Summary is stale, guilt-inducing, or creates extra work. |
+| Does Momentum clarify useful movement? | Record the exact message, factual reason, pressure, and competition with Next Action in real-use diaries. | Evidence is correct, reduces reconstruction, and leaves the real action clear. | The message is decorative, overstates progress, creates pressure, or obscures the action. |
 | Does Boot Entry help? | Voluntary use and immediate outcome note. | A concrete entry action follows more often than a dismissal. | It becomes a ritual with no real result. |
 | Does Definition of Done help FINISH? | Completion stories and parked-improvement rate. | Users finish more intentionally without feeling rushed. | Users feel boxed in or add unnecessary setup. |
 | Does Side-Quest framing help focus? | User interview and focus-change rationale. | Users can distinguish support work without shame. | Labels devalue legitimate exploration. |
@@ -67,6 +68,20 @@ The prototype is derived and its dismissal is intentionally session-only.
 Record whether restart loss is actually harmful before proposing a durable
 Save Point. Do not count card impressions, opens, XP, app time, or checked Boot
 steps as evidence of return value.
+
+## Momentum evidence prototype protocol
+
+Use [Momentum validation diary](MOMENTUM_VALIDATION_DIARY.md) during ordinary
+real work. Record the exact message and its underlying Stage/Goal/history/
+Minimum Action fact, then check whether the fact was correct, the wording added
+clarity, and Next Action remained obvious. Include cases where no Momentum was
+shown and where that restraint was preferable.
+
+Do not infer value from card impressions, app opens, task count, XP, time in
+app, or automated test coverage. The prototype should be kept only if truthful
+movement becomes easier to perceive without creating pressure or another
+planning burden. This protocol does not validate Return Context, Next Action,
+Boot Entry, or persistence.
 
 ## Ethics and interpretation
 

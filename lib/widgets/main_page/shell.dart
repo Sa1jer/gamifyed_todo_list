@@ -927,9 +927,10 @@ class _MainPageState extends State<MainPage> {
             constraints.maxWidth,
           );
           final displayedMode = _mode;
+          final now = widget.nowForTesting?.call() ?? DateTime.now();
           final returnContextBinding = _returnContextController.bind(
             state: s,
-            now: widget.nowForTesting?.call() ?? DateTime.now(),
+            now: now,
             pauseThreshold: defaultReturnContextPauseThreshold,
             blocked: workspace.returnContextBlocked,
             onVisibilityChanged: () {
@@ -943,13 +944,10 @@ class _MainPageState extends State<MainPage> {
             },
           );
           final returnContext = returnContextBinding?.candidate;
-          final validRoadmapFocusSkillId =
-              _roadmapFocusSkillId != null &&
-                  s.roadmapSkills.any(
-                    (skill) => skill.id == _roadmapFocusSkillId,
-                  )
-              ? _roadmapFocusSkillId
+          final momentum = displayedMode == WorkspaceMode.act
+              ? buildMomentumViewData(s, now, returnContext)
               : null;
+          final roadmapFocusId = _validRoadmapSkillId(s, _roadmapFocusSkillId);
 
           void changeMode(WorkspaceMode mode) {
             if (_mode == mode) {
@@ -1043,6 +1041,7 @@ class _MainPageState extends State<MainPage> {
                     onComplete: _onComplete,
                     onMinimumAction: _onMinimumAction,
                     returnContext: returnContext,
+                    momentum: momentum,
                     onContinueReturnContext:
                         returnContextBinding?.continueOnDesktop,
                     onAnotherReturnContext: returnContextBinding?.dismiss,
@@ -1057,7 +1056,7 @@ class _MainPageState extends State<MainPage> {
                       WorkspaceMode.mastery => _MasteryWorkspace(
                         key: const ValueKey('mastery-workspace'),
                         isDark: isDark,
-                        focusSkillId: validRoadmapFocusSkillId,
+                        focusSkillId: roadmapFocusId,
                         canvasTutorialKey: _roadmapCanvasKey,
                         inspectorTutorialKey: _roadmapInspectorKey,
                         practiceTutorialKey: _roadmapPracticeKey,
@@ -1131,6 +1130,7 @@ class _MainPageState extends State<MainPage> {
                                 nextQuestActionKey: _nextQuestActionKey,
                                 mobileJournalKey: _mobileActJournalKey,
                                 returnContext: returnContext,
+                                momentum: momentum,
                                 onContinueReturnContext:
                                     returnContextBinding?.continueOnMobile,
                                 onAnotherReturnContext:
@@ -1141,7 +1141,7 @@ class _MainPageState extends State<MainPage> {
                               WorkspaceMode.mastery => _MasteryWorkspace(
                                 key: const ValueKey('mastery-workspace'),
                                 isDark: isDark,
-                                focusSkillId: validRoadmapFocusSkillId,
+                                focusSkillId: roadmapFocusId,
                                 canvasTutorialKey: _roadmapCanvasKey,
                                 inspectorTutorialKey: _roadmapInspectorKey,
                                 practiceTutorialKey: _roadmapPracticeKey,

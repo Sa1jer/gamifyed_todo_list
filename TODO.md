@@ -84,6 +84,11 @@ before it enters an implementation brief.
   on mobile and desktop Act using detached completion/review evidence and the
   existing Next Action ranking. Dismissal is session-only; no Save Point,
   model, schema, XP, completion, Goal, RoadMap, or reward behavior was added.
+- [x] **Recommended epic 3:** implemented a passive derived `Momentum`
+  prototype using detached evidence and the existing Next Action, Goal-progress,
+  and RoadMap authorities. It adds no CTA, persistent state, schema, XP,
+  completion, ranking, Goal, RoadMap, reward, or notification behavior; see
+  `docs/concept/MOMENTUM_ENGINE.md`.
 - [ ] Run the voluntary Return Context diary after approximately 1/3/7-day
   pauses. Record reconstruction effort, thread/result accuracy, action choice,
   pressure, real-world change, and whether restart loss is harmful before any
@@ -91,6 +96,9 @@ before it enters an implementation brief.
 - [ ] Run a voluntary Next Action / Boot Entry diary pass before making its
   override or entry state durable: record clarity, override/dismiss reason,
   real-world change, and whether restart loss is harmful.
+- [ ] Run the voluntary Momentum diary across one-/three-/seven-day ordinary
+  use. Verify factual accuracy, clarity versus decoration, pressure, and
+  competition with Next Action before expanding or persisting the concept.
 - [ ] **Deferred experiments:** Resistance intervention, Definition of Done,
   Proof of Progress, Quest Chain, Side-Quest parking, capacity modes, AI
   decomposition, body doubling, and ambient focus remain in

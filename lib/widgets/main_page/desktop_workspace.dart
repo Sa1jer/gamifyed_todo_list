@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../app_state.dart';
 import '../../engines/return_context_resolver.dart';
+import '../../engines/momentum_resolver.dart';
 import '../../models.dart';
 import '../desktop_journal_tokens.dart';
 import '../shared.dart';
@@ -36,6 +37,7 @@ class DesktopWorkspaceShell extends StatelessWidget {
   final GlobalKey? contextualToastHostKey;
   final GlobalKey? rightRailKey;
   final ReturnContextCandidate? returnContext;
+  final MomentumSnapshot? momentum;
   final VoidCallback? onContinueReturnContext;
   final VoidCallback? onAnotherReturnContext;
   final VoidCallback? onDismissReturnContext;
@@ -63,6 +65,7 @@ class DesktopWorkspaceShell extends StatelessWidget {
     this.contextualToastHostKey,
     this.rightRailKey,
     this.returnContext,
+    this.momentum,
     this.onContinueReturnContext,
     this.onAnotherReturnContext,
     this.onDismissReturnContext,
@@ -137,6 +140,7 @@ class DesktopWorkspaceShell extends StatelessWidget {
                         onComplete: onComplete,
                         onMinimumAction: onMinimumAction,
                         returnContext: returnContext,
+                        momentum: momentum,
                         onContinueReturnContext: onContinueReturnContext,
                         onAnotherReturnContext: onAnotherReturnContext,
                         onDismissReturnContext: onDismissReturnContext,

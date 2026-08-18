@@ -45,15 +45,22 @@ and non-punitive return.
     boundary.
 13. [Return Context validation diary](RETURN_CONTEXT_VALIDATION_DIARY.md) -
     manual one-, three-, and seven-day product-validation template.
+14. [Momentum Engine](MOMENTUM_ENGINE.md) - pure derived evidence semantics,
+    signal policy, architecture boundary, and rollback.
+15. [Momentum validation diary](MOMENTUM_VALIDATION_DIARY.md) - manual factual,
+    clarity, pressure, and Next Action competition checks.
 
 ## Current implementation status
 
 Next Action Lens is an implemented mobile MVP, and Boot Entry is its
 session-only entry loop. Return Context is now an implemented derived prototype
 on mobile and desktop Act: it uses completion/review evidence and the existing
-Next Action ranking, with session-only dismissal. None of these features adds
-Task storage, XP, Goal, RoadMap, or reward behavior. Durable Save Point, Main
-Quest, Quest Chain, and Definition of Done remain unimplemented or deferred.
+Next Action ranking, with session-only dismissal. Momentum is an implemented
+derived evidence prototype: it composes existing Next Action, Goal-progress,
+RoadMap, and history facts without becoming another action ranking. None of
+these features adds Task storage, XP, Goal, RoadMap, or reward behavior.
+Durable Save Point, Main Quest, Quest Chain, and Definition of Done remain
+unimplemented or deferred. Real-use validation remains open for all prototypes.
 
 ## Non-negotiable boundary
 

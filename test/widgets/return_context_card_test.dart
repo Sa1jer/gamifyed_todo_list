@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:todo_list_app/engines/momentum_resolver.dart';
 import 'package:todo_list_app/engines/return_context_resolver.dart';
 import 'package:todo_list_app/theme/app_typography.dart';
 import 'package:todo_list_app/widgets/return_context_card.dart';
@@ -40,6 +41,7 @@ void main() {
 
   Widget harness({
     required ReturnContextCandidate data,
+    MomentumSnapshot? momentum,
     bool desktop = false,
     bool dark = true,
     bool reducedMotion = false,
@@ -64,6 +66,7 @@ void main() {
                 width: width,
                 child: ReturnContextCard(
                   candidate: data,
+                  momentum: momentum,
                   isDark: dark,
                   desktop: desktop,
                   reducedMotion: reducedMotion,
@@ -157,5 +160,33 @@ void main() {
     expect(semantics.label, contains('Продолжить путь'));
     expect(semantics.label, contains('Навык: Разработка приложения'));
     expect(semantics.label, contains('Следующий шаг:'));
+  });
+
+  testWidgets('Momentum is evidence inside Return Context, not a second card', (
+    tester,
+  ) async {
+    const momentum = MomentumSnapshot(
+      key: 'momentum-return-thread',
+      reason: MomentumReason.recentRealProgress,
+      headline: 'Движение уже есть',
+      supportingText: 'Недавний завершённый квест подтверждает движение.',
+      skillId: 'skill-a',
+      skillName: 'Разработка приложения',
+      taskId: 'task-a',
+      actionLabel: 'Проверить редактирование',
+    );
+    await tester.pumpWidget(harness(data: candidate(), momentum: momentum));
+
+    expect(find.byKey(const ValueKey('return-context-card')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('momentum-evidence-line')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('momentum-evidence-card')), findsNothing);
+    expect(find.textContaining('Недавний завершённый квест'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('return-context-next-action')),
+      findsOneWidget,
+    );
   });
 }

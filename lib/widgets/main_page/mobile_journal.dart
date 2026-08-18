@@ -36,6 +36,7 @@ class _MobileActJournal extends StatefulWidget {
   final Key? createFirstQuestButtonKey;
   final Key? nextQuestActionKey;
   final ReturnContextCandidate? returnContext;
+  final MomentumSnapshot? momentum;
   final VoidCallback? onContinueReturnContext;
   final VoidCallback? onAnotherReturnContext;
   final VoidCallback? onDismissReturnContext;
@@ -49,6 +50,7 @@ class _MobileActJournal extends StatefulWidget {
     this.createFirstQuestButtonKey,
     this.nextQuestActionKey,
     this.returnContext,
+    this.momentum,
     this.onContinueReturnContext,
     this.onAnotherReturnContext,
     this.onDismissReturnContext,
@@ -272,21 +274,41 @@ class _MobileActJournalState extends State<_MobileActJournal> {
                   child: Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: widget.returnContext == null
-                        ? NextActionLens(
-                            resolution: nextAction,
-                            persistenceStatus: state.persistenceStatus,
-                            isDark: isDark,
-                            onOpenTask: (candidate) =>
-                                _openNextActionSkill(state, candidate.skill),
-                            onChooseTask: (taskId) => setState(
-                              () => _nextActionOverrideTaskId = taskId,
-                            ),
-                            onOpenEmptySkill: (skill) =>
-                                _openNextActionSkill(state, skill),
-                            onCreateSkill: widget.onCreateSkill,
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              if (widget.momentum != null) ...[
+                                MomentumEvidenceCard(
+                                  snapshot: widget.momentum!,
+                                  isDark: isDark,
+                                  desktop: false,
+                                  reducedMotion: MobileMotion.reduced(
+                                    context,
+                                    appReducedMotion: state.reducedMotion,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                              ],
+                              NextActionLens(
+                                resolution: nextAction,
+                                persistenceStatus: state.persistenceStatus,
+                                isDark: isDark,
+                                onOpenTask: (candidate) => _openNextActionSkill(
+                                  state,
+                                  candidate.skill,
+                                ),
+                                onChooseTask: (taskId) => setState(
+                                  () => _nextActionOverrideTaskId = taskId,
+                                ),
+                                onOpenEmptySkill: (skill) =>
+                                    _openNextActionSkill(state, skill),
+                                onCreateSkill: widget.onCreateSkill,
+                              ),
+                            ],
                           )
                         : ReturnContextCard(
                             candidate: widget.returnContext!,
+                            momentum: widget.momentum,
                             isDark: isDark,
                             desktop: false,
                             reducedMotion: MobileMotion.reduced(

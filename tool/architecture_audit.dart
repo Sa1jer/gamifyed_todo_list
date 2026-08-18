@@ -146,6 +146,7 @@ Future<void> main() async {
 
   _checkMainPageObservation(root, violations);
   _checkReturnContextBoundaries(root, violations);
+  _checkMomentumBoundaries(root, violations);
   _checkVersionSync(root, violations);
 
   if (violations.isEmpty) {
@@ -157,6 +158,118 @@ Future<void> main() async {
     stderr.writeln('- $violation');
   }
   exitCode = 1;
+}
+
+void _checkMomentumBoundaries(Directory root, List<String> violations) {
+  final resolver = File(
+    '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
+    'engines${Platform.pathSeparator}momentum_resolver.dart',
+  );
+  if (!resolver.existsSync()) return;
+
+  const resolverPath = 'lib/engines/momentum_resolver.dart';
+  final resolverSource = resolver.readAsStringSync();
+  for (final dependency in const [
+    'package:flutter/',
+    'app_state.dart',
+    '/models',
+    'storage_service.dart',
+    '/persistence/',
+    'package:hive',
+    '/widgets/',
+  ]) {
+    _forbidImport(resolverPath, resolverSource, dependency, violations);
+  }
+  _forbidLiveModelField(resolverPath, resolverSource, violations);
+  if (resolverSource.contains('DateTime.now(')) {
+    violations.add(
+      '$resolverPath must receive explicit time instead of reading the wall '
+      'clock.',
+    );
+  }
+
+  final adapter = File(
+    '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
+    'features${Platform.pathSeparator}momentum${Platform.pathSeparator}'
+    'momentum_view_data.dart',
+  );
+  if (!adapter.existsSync()) {
+    violations.add(
+      'Momentum requires a detached adapter at '
+      'lib/features/momentum/momentum_view_data.dart.',
+    );
+  } else {
+    const adapterPath = 'lib/features/momentum/momentum_view_data.dart';
+    final source = adapter.readAsStringSync();
+    for (final dependency in const [
+      'storage_service.dart',
+      '/persistence/',
+      'package:hive',
+      '/widgets/',
+    ]) {
+      _forbidImport(adapterPath, source, dependency, violations);
+    }
+    for (final authority in const [
+      'NextActionResolver',
+      'GoalProgressEngine',
+      'RoadmapEngine',
+    ]) {
+      if (!source.contains(authority)) {
+        violations.add(
+          '$adapterPath must project Momentum through the existing '
+          '$authority authority.',
+        );
+      }
+    }
+  }
+
+  final shell = File(
+    '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
+    'widgets${Platform.pathSeparator}main_page${Platform.pathSeparator}'
+    'shell.dart',
+  );
+  if (shell.existsSync()) {
+    const shellPath = 'lib/widgets/main_page/shell.dart';
+    final source = shell.readAsStringSync();
+    if (!source.contains('displayedMode == WorkspaceMode.act') ||
+        !source.contains('buildMomentumViewData(s, now, returnContext)')) {
+      violations.add(
+        '$shellPath must resolve Momentum lazily only for the Act workspace.',
+      );
+    }
+  }
+
+  final persistedSources = <File>[
+    ...Directory(
+      '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}models',
+    ).listSync(recursive: true).whereType<File>(),
+    File(
+      '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
+      'storage_service.dart',
+    ),
+    File(
+      '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
+      'storage_snapshot.dart',
+    ),
+    ...Directory(
+      '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
+      'persistence',
+    ).listSync(recursive: true).whereType<File>(),
+  ];
+  final persistentDeclaration = RegExp(
+    r'^\s*(?:class|enum|mixin)\s+\w*Momentum\w*',
+    multiLine: true,
+  );
+  for (final file in persistedSources.where(
+    (file) => file.existsSync() && file.path.endsWith('.dart'),
+  )) {
+    if (persistentDeclaration.hasMatch(file.readAsStringSync())) {
+      violations.add(
+        '${_relativePath(root, file)} declares persistent Momentum state; '
+        'Momentum must remain derived and recomputable.',
+      );
+    }
+  }
 }
 
 void _checkReturnContextBoundaries(Directory root, List<String> violations) {

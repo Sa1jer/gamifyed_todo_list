@@ -1,5 +1,12 @@
 part of '../main_page.dart';
 
+String? _validRoadmapSkillId(AppState state, String? requestedId) {
+  if (requestedId == null) return null;
+  return state.roadmapSkills.any((skill) => skill.id == requestedId)
+      ? requestedId
+      : null;
+}
+
 class _ActWorkspace extends StatelessWidget {
   final void Function(String taskId, ActionToastOrigin origin) onComplete;
   final void Function(String taskId, ActionToastOrigin origin) onMinimumAction;
@@ -10,6 +17,7 @@ class _ActWorkspace extends StatelessWidget {
   final Key? nextQuestActionKey;
   final GlobalKey<_MobileActJournalState>? mobileJournalKey;
   final ReturnContextCandidate? returnContext;
+  final MomentumSnapshot? momentum;
   final VoidCallback? onContinueReturnContext;
   final VoidCallback? onAnotherReturnContext;
   final VoidCallback? onDismissReturnContext;
@@ -25,6 +33,7 @@ class _ActWorkspace extends StatelessWidget {
     this.nextQuestActionKey,
     this.mobileJournalKey,
     this.returnContext,
+    this.momentum,
     this.onContinueReturnContext,
     this.onAnotherReturnContext,
     this.onDismissReturnContext,
@@ -44,6 +53,7 @@ class _ActWorkspace extends StatelessWidget {
             createFirstQuestButtonKey: createFirstQuestButtonKey,
             nextQuestActionKey: nextQuestActionKey,
             returnContext: returnContext,
+            momentum: momentum,
             onContinueReturnContext: onContinueReturnContext,
             onAnotherReturnContext: onAnotherReturnContext,
             onDismissReturnContext: onDismissReturnContext,
