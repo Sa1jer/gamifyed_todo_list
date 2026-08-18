@@ -14,6 +14,8 @@ import 'package:todo_list_app/widgets/daily_victories_dialog.dart';
 import 'package:todo_list_app/widgets/character_timeline_dialog.dart';
 import 'package:todo_list_app/widgets/skills_panel.dart';
 import 'package:todo_list_app/widgets/mobile_journal_tokens.dart';
+import 'package:todo_list_app/widgets/desktop_journal_tokens.dart';
+import 'package:todo_list_app/widgets/main_page/reward_notice.dart';
 import 'package:todo_list_app/widgets/profile_dialog.dart';
 import 'package:todo_list_app/widgets/shared.dart';
 import 'package:todo_list_app/widgets/tasks_panel.dart';
@@ -992,10 +994,8 @@ void main() {
       final initialRect = tester.getRect(row);
       expect(tester.widget<AnimatedOpacity>(overflow).opacity, 0);
       expect(tester.widget<AnimatedOpacity>(roadmap).opacity, 0);
-      expect(
-        (tester.widget<AnimatedPadding>(content).padding as EdgeInsets).right,
-        0,
-      );
+      expect((tester.widget<Padding>(content).padding as EdgeInsets).right, 76);
+      final initialContentRect = tester.getRect(content);
       expect(
         find.descendant(
           of: row,
@@ -1008,20 +1008,25 @@ void main() {
       await mouse.addPointer(location: const Offset(1, 1));
       addTearDown(mouse.removePointer);
       await mouse.moveTo(initialRect.center);
-      await tester.pump(const Duration(milliseconds: 140));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 220));
       expect(tester.getRect(row), initialRect);
       expect(tester.widget<AnimatedOpacity>(overflow).opacity, 1);
       expect(tester.widget<AnimatedOpacity>(roadmap).opacity, 1);
+      expect((tester.widget<Padding>(content).padding as EdgeInsets).right, 76);
+      expect(tester.getRect(content), initialContentRect);
+      expect(tester.getRect(overflow).width, 38);
+      expect(tester.getRect(roadmap).width, 38);
       expect(
-        (tester.widget<AnimatedPadding>(content).padding as EdgeInsets).right,
-        58,
+        tester.getRect(overflow).right,
+        lessThanOrEqualTo(tester.getRect(row).right),
       );
 
       await tester.pumpAndSettle();
       await tester.tap(overflow);
       await tester.pumpAndSettle();
       await mouse.moveTo(const Offset(1000, 700));
-      await tester.pump(const Duration(milliseconds: 140));
+      await tester.pump(const Duration(milliseconds: 220));
       expect(tester.widget<AnimatedOpacity>(overflow).opacity, 1);
       expect(find.text('Редактировать навык'), findsOneWidget);
       await tester.tapAt(const Offset(1000, 700));
@@ -1074,6 +1079,12 @@ void main() {
 
       tester.platformDispatcher.textScaleFactorTestValue = 2;
       await tester.pumpAndSettle();
+      final freshRow = find.byKey(
+        const ValueKey('desktop-skill-fresh-empty-skill'),
+      );
+      await mouse.moveTo(tester.getRect(freshRow).center);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 220));
       expect(
         tester
             .getSize(
@@ -1084,9 +1095,261 @@ void main() {
             .height,
         greaterThanOrEqualTo(62),
       );
+      expect(
+        tester
+            .getRect(
+              find.byKey(
+                const ValueKey('desktop-skill-overflow-fresh-empty-skill'),
+              ),
+            )
+            .right,
+        lessThanOrEqualTo(tester.getRect(freshRow).right),
+      );
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets(
+    'desktop quest actions preserve reward geometry and name archive semantics',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1440, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final skill = Skill(
+        id: 'quest-actions-skill',
+        name: 'Квесты',
+        goal: '',
+        color: const Color(0xFFFF4A4A),
+        icon: Icons.task_alt_rounded,
+      );
+      final storage = InMemoryStorageService()
+        .._onboardingSeen = true
+        ..skills = [skill]
+        ..tasks = [
+          Task(
+            id: 'quest-active',
+            title: 'Активный квест',
+            skillId: skill.id,
+            xpReward: 80,
+            type: TaskType.shortTerm,
+          ),
+          Task(
+            id: 'quest-completed',
+            title: 'Завершённый квест',
+            skillId: skill.id,
+            xpReward: 100,
+            earnedXP: 100,
+            isDone: true,
+            type: TaskType.shortTerm,
+          ),
+        ];
+      await storage.init();
+      await tester.pumpWidget(RPGApp(storage: storage));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      final activeRow = find.byKey(
+        const ValueKey('desktop-active-task-quest-active'),
+      );
+      final activeOverflow = find.byKey(
+        const ValueKey('desktop-task-overflow-quest-active'),
+      );
+      final reward = find.descendant(
+        of: activeRow,
+        matching: find.text('+80 XP'),
+      );
+      final rowRect = tester.getRect(activeRow);
+      final rewardRect = tester.getRect(reward);
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: const Offset(1, 1));
+      addTearDown(mouse.removePointer);
+      await mouse.moveTo(rowRect.center);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 140));
+
+      expect(tester.getRect(activeRow), rowRect);
+      expect(tester.getRect(reward), rewardRect);
+      expect(tester.widget<AnimatedOpacity>(activeOverflow).opacity, 1);
+
+      final completedRow = find.byKey(
+        const ValueKey('desktop-completed-task-quest-completed'),
+      );
+      await mouse.moveTo(tester.getRect(completedRow).center);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 140));
+      final completedOverflow = find.byKey(
+        const ValueKey('desktop-task-overflow-quest-completed'),
+      );
+      await tester.tap(completedOverflow);
+      await tester.pumpAndSettle();
+      expect(find.text('Архивировать'), findsOneWidget);
+      expect(find.text('Убрать в выполнено'), findsNothing);
+      expect(find.text('Вернуть из выполненных'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'reward notice close works while hovered and advances queued notices',
+    (WidgetTester tester) async {
+      const metrics = DesktopResponsiveMetrics(
+        sidebarWidth: 248,
+        railWidth: 260,
+        mainPadding: 22,
+        sectionGap: 18,
+        showRightRail: true,
+      );
+      final notices = <RewardNoticeData>[
+        const RewardNoticeData(
+          id: 10,
+          chestTitles: [],
+          buffTitles: ['Фокус'],
+          achievementTitles: [],
+        ),
+        const RewardNoticeData(
+          id: 11,
+          chestTitles: ['Сундук дисциплины'],
+          buffTitles: [],
+          achievementTitles: [],
+        ),
+      ];
+
+      Widget buildHarness(StateSetter setState) => MaterialApp(
+        home: Scaffold(
+          body: Stack(
+            children: [
+              if (notices.isNotEmpty)
+                RewardNoticePopover(
+                  notice: notices.first,
+                  isDark: true,
+                  desktop: true,
+                  desktopMetrics: metrics,
+                  reducedMotion: false,
+                  queuedCount: notices.length,
+                  autoHideDuration: const Duration(seconds: 30),
+                  onShow: () {},
+                  onHide: () => setState(() => notices.removeAt(0)),
+                ),
+            ],
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(
+        StatefulBuilder(builder: (context, setState) => buildHarness(setState)),
+      );
+      await tester.pump(const Duration(milliseconds: 220));
+
+      final firstNotice = find.byKey(const ValueKey('reward-notice-10'));
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: const Offset(1, 1));
+      addTearDown(mouse.removePointer);
+      await mouse.moveTo(tester.getRect(firstNotice).center);
+      await tester.pump();
+
+      await tester.tap(find.byKey(const ValueKey('reward-notice-close')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 220));
+      await tester.pump();
+      expect(firstNotice, findsNothing);
+      expect(find.byKey(const ValueKey('reward-notice-11')), findsOneWidget);
+      expect(find.text('Получен сундук'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('reward notice auto-hide is safe with reduced motion', (
+    WidgetTester tester,
+  ) async {
+    const notice = RewardNoticeData(
+      id: 20,
+      chestTitles: [],
+      buffTitles: [],
+      achievementTitles: ['Первый шаг'],
+    );
+    var hidden = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Stack(
+            children: [
+              RewardNoticePopover(
+                notice: notice,
+                isDark: true,
+                desktop: false,
+                desktopMetrics: DesktopResponsiveMetrics.forWidth(390),
+                reducedMotion: true,
+                queuedCount: 1,
+                autoHideDuration: const Duration(milliseconds: 50),
+                onShow: () {},
+                onHide: () => hidden = true,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 60));
+    expect(hidden, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('reward notice disposes safely during its closing animation', (
+    WidgetTester tester,
+  ) async {
+    const notice = RewardNoticeData(
+      id: 21,
+      chestTitles: [],
+      buffTitles: ['Поток'],
+      achievementTitles: [],
+    );
+    var hidden = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Stack(
+            children: [
+              RewardNoticePopover(
+                notice: notice,
+                isDark: true,
+                desktop: false,
+                desktopMetrics: DesktopResponsiveMetrics.forWidth(390),
+                reducedMotion: false,
+                queuedCount: 1,
+                onShow: () {},
+                onHide: () => hidden = true,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 220));
+    await tester.tap(find.byKey(const ValueKey('reward-notice-close')));
+    await tester.pump();
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 220));
+    expect(hidden, isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
+  test('reward notice signature deduplicates recovered batches', () {
+    const first = RewardNoticeData(
+      id: 1,
+      chestTitles: ['Сундук'],
+      buffTitles: ['Фокус'],
+      achievementTitles: [],
+    );
+    const recovered = RewardNoticeData(
+      id: 2,
+      chestTitles: ['Сундук'],
+      buffTitles: ['Фокус'],
+      achievementTitles: [],
+    );
+    expect(first.signature, recovered.signature);
+  });
 
   testWidgets(
     'desktop selected-skill header shows real goal and excludes Inbox quests',

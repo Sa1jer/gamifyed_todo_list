@@ -50,7 +50,7 @@ class _MainPageState extends State<MainPage> {
       ReturnContextController();
   WorkspaceMode _mode = WorkspaceMode.act;
   WorkspaceMode _lastNormalMode = WorkspaceMode.act;
-  final List<_RewardNotice> _rewardNoticeQueue = [];
+  final List<RewardNoticeData> _rewardNoticeQueue = [];
   GoalMilestoneEvent? _goalMilestoneNotice;
   AppState? _eventState;
   int _nextRewardNoticeId = 0;
@@ -229,7 +229,7 @@ class _MainPageState extends State<MainPage> {
       AppFeedback.reward();
     }
 
-    final notice = _RewardNotice(
+    final notice = RewardNoticeData(
       id: _nextRewardNoticeId++,
       chestTitles: chests.map((chest) => chest.title).toList(),
       buffTitles: buffs.map((buff) => buff.title).toList(),
@@ -237,17 +237,13 @@ class _MainPageState extends State<MainPage> {
           .map((achievement) => achievement.def?.name ?? 'Достижение')
           .toList(),
     );
-    // Notification sources may be consumed by consecutive completion events.
-    // Keep distinct rewards, but avoid showing the same recovered batch twice.
+    // Avoid replaying the same recovered reward batch.
     if (_rewardNoticeQueue.any(
       (queued) => queued.signature == notice.signature,
     )) {
       return;
     }
-    setState(() {
-      if (_rewardNoticeQueue.length == 3) _rewardNoticeQueue.removeLast();
-      _rewardNoticeQueue.add(notice);
-    });
+    setState(() => _rewardNoticeQueue.add(notice));
   }
 
   void _handleStateEvents() {
@@ -955,12 +951,14 @@ class _MainPageState extends State<MainPage> {
                 return;
               }
               setState(() {
+                _rewardNoticeQueue.clear();
                 _mode = _lastNormalMode;
                 _statsTutorialActive = false;
               });
               return;
             }
             setState(() {
+              _rewardNoticeQueue.clear();
               if (mode == WorkspaceMode.act || mode == WorkspaceMode.mastery) {
                 _lastNormalMode = mode;
               } else if (_mode == WorkspaceMode.act ||
@@ -1177,7 +1175,7 @@ class _MainPageState extends State<MainPage> {
                     ],
                   ),
                 if (_rewardNoticeQueue.isNotEmpty)
-                  _RewardNoticePopover(
+                  RewardNoticePopover(
                     notice: _rewardNoticeQueue.first,
                     isDark: isDark,
                     desktop: desktopShell,

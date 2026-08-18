@@ -586,7 +586,7 @@ class _DesktopSkillRowState extends State<_DesktopSkillRow> {
     final roles = context.appTextRoles;
     final textScale = MediaQuery.textScalerOf(context).scale(1);
     final allowSecondTitleLine = textScale >= 1.6;
-    const actionTrayWidth = 58.0;
+    const actionTrayWidth = 76.0;
     return Semantics(
       key: ValueKey('desktop-skill-semantics-${skill.id}'),
       button: true,
@@ -632,13 +632,9 @@ class _DesktopSkillRowState extends State<_DesktopSkillRow> {
                 child: Stack(
                   alignment: Alignment.centerRight,
                   children: [
-                    AnimatedPadding(
+                    Padding(
                       key: ValueKey('desktop-skill-content-${skill.id}'),
-                      duration: DesktopJournalTokens.fastMotion,
-                      curve: DesktopJournalTokens.motionCurve,
-                      padding: EdgeInsets.only(
-                        right: actionsVisible ? actionTrayWidth : 0,
-                      ),
+                      padding: const EdgeInsets.only(right: actionTrayWidth),
                       child: Row(
                         children: [
                           Container(
@@ -715,13 +711,13 @@ class _DesktopSkillRowState extends State<_DesktopSkillRow> {
                               duration: DesktopJournalTokens.fastMotion,
                               opacity: actionsVisible ? 1 : 0,
                               child: SizedBox(
-                                width: 28,
+                                width: 38,
                                 child: IconButton(
                                   tooltip: 'Открыть путь навыка в RoadMap',
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints.tightFor(
-                                    width: 28,
-                                    height: 40,
+                                    width: 38,
+                                    height: 44,
                                   ),
                                   onPressed: widget.onRoadmap,
                                   icon: Icon(
@@ -739,13 +735,13 @@ class _DesktopSkillRowState extends State<_DesktopSkillRow> {
                               duration: DesktopJournalTokens.fastMotion,
                               opacity: actionsVisible ? 1 : 0,
                               child: SizedBox(
-                                width: 28,
+                                width: 38,
                                 child: PopupMenuButton<String>(
                                   tooltip: 'Действия с навыком ${skill.name}',
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints.tightFor(
-                                    width: 28,
-                                    height: 40,
+                                    width: 38,
+                                    height: 44,
                                   ),
                                   icon: Icon(
                                     Icons.more_vert_rounded,

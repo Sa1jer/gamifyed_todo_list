@@ -159,6 +159,7 @@ class _DesktopQuestRowState extends State<DesktopQuestRow> {
                 ),
                 const SizedBox(width: 10),
                 _DesktopRewardPill(value: reward, tokens: tokens),
+                const SizedBox(width: 4),
                 AnimatedOpacity(
                   key: ValueKey('desktop-task-overflow-${task.id}'),
                   duration: DesktopJournalTokens.fastMotion,
@@ -203,7 +204,7 @@ class _DesktopQuestRowState extends State<DesktopQuestRow> {
                             PopupMenuItem(
                               value: _DesktopTaskMenuAction.archive,
                               child: Text(
-                                'Убрать в выполнено',
+                                'Архивировать',
                                 style: TextStyle(color: tokens.text),
                               ),
                             ),
@@ -211,7 +212,7 @@ class _DesktopQuestRowState extends State<DesktopQuestRow> {
                             PopupMenuItem(
                               value: _DesktopTaskMenuAction.restore,
                               child: Text(
-                                'Вернуть из выполненных',
+                                'Вернуть из архива',
                                 style: TextStyle(color: tokens.text),
                               ),
                             ),

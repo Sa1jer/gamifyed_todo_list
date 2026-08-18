@@ -1,12 +1,19 @@
-part of '../main_page.dart';
+import 'dart:async';
 
-class _RewardNotice {
+import 'package:flutter/material.dart';
+
+import '../../utils.dart';
+import '../desktop_journal_tokens.dart';
+import '../shared/motion_controls.dart';
+
+@immutable
+class RewardNoticeData {
   final int id;
   final List<String> chestTitles;
   final List<String> buffTitles;
   final List<String> achievementTitles;
 
-  const _RewardNotice({
+  const RewardNoticeData({
     required this.id,
     required this.chestTitles,
     required this.buffTitles,
@@ -75,8 +82,8 @@ class _RewardNotice {
       : Icons.bolt;
 }
 
-class _RewardNoticePopover extends StatefulWidget {
-  final _RewardNotice notice;
+class RewardNoticePopover extends StatefulWidget {
+  final RewardNoticeData notice;
   final bool isDark;
   final bool desktop;
   final DesktopResponsiveMetrics desktopMetrics;
@@ -84,8 +91,10 @@ class _RewardNoticePopover extends StatefulWidget {
   final int queuedCount;
   final VoidCallback onShow;
   final VoidCallback onHide;
+  final Duration autoHideDuration;
 
-  const _RewardNoticePopover({
+  const RewardNoticePopover({
+    super.key,
     required this.notice,
     required this.isDark,
     required this.desktop,
@@ -94,13 +103,14 @@ class _RewardNoticePopover extends StatefulWidget {
     required this.queuedCount,
     required this.onShow,
     required this.onHide,
+    this.autoHideDuration = const Duration(seconds: 5),
   });
 
   @override
-  State<_RewardNoticePopover> createState() => _RewardNoticePopoverState();
+  State<RewardNoticePopover> createState() => _RewardNoticePopoverState();
 }
 
-class _RewardNoticePopoverState extends State<_RewardNoticePopover>
+class _RewardNoticePopoverState extends State<RewardNoticePopover>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   Timer? _autoHideTimer;
@@ -118,8 +128,13 @@ class _RewardNoticePopoverState extends State<_RewardNoticePopover>
   }
 
   @override
-  void didUpdateWidget(covariant _RewardNoticePopover oldWidget) {
+  void didUpdateWidget(covariant RewardNoticePopover oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.reducedMotion != widget.reducedMotion) {
+      _controller.duration = widget.reducedMotion
+          ? Duration.zero
+          : kMotionStandard;
+    }
     if (oldWidget.notice.id != widget.notice.id) {
       _closing = false;
       _controller.forward(from: 0);
@@ -137,11 +152,12 @@ class _RewardNoticePopoverState extends State<_RewardNoticePopover>
   void _scheduleAutoHide() {
     _autoHideTimer?.cancel();
     if (_hovered || _closing) return;
-    _autoHideTimer = Timer(const Duration(seconds: 5), _dismiss);
+    _autoHideTimer = Timer(widget.autoHideDuration, _dismiss);
   }
 
-  void _dismiss() {
-    if (!mounted || _hovered || _closing) return;
+  void _dismiss({bool force = false}) {
+    if (!mounted || (!force && _hovered) || _closing) return;
+    _autoHideTimer?.cancel();
     _closing = true;
     _controller.reverse().then((_) {
       if (mounted) widget.onHide();
@@ -164,6 +180,7 @@ class _RewardNoticePopoverState extends State<_RewardNoticePopover>
     final sub = subtext(widget.isDark);
 
     return Positioned(
+      key: ValueKey('reward-notice-${widget.notice.id}'),
       top: top,
       right: right,
       width: cardWidth,
@@ -279,8 +296,9 @@ class _RewardNoticePopoverState extends State<_RewardNoticePopover>
                         ),
                       ],
                       IconButton(
+                        key: const ValueKey('reward-notice-close'),
                         tooltip: 'Скрыть уведомление',
-                        onPressed: _dismiss,
+                        onPressed: () => _dismiss(force: true),
                         icon: Icon(Icons.close, color: sub, size: 18),
                       ),
                     ],
