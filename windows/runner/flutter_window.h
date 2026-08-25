@@ -6,6 +6,7 @@
 
 #include <memory>
 
+#include "desktop_window_state.h"
 #include "win32_window.h"
 
 // A window that does nothing but host a Flutter view.
@@ -25,6 +26,12 @@ class FlutterWindow : public Win32Window {
  private:
   // The project to run.
   flutter::DartProject project_;
+
+  DesktopWindowStartupPlacement startup_placement_{};
+  RECT last_normal_bounds_{};
+  UINT last_normal_dpi_ = 96;
+  bool has_normal_bounds_ = false;
+  bool placement_saved_ = false;
 
   // The Flutter instance hosted by this window.
   std::unique_ptr<flutter::FlutterViewController> flutter_controller_;

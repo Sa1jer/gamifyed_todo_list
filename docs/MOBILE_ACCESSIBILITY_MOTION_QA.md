@@ -103,3 +103,11 @@ refresh rate, and whether any interaction exceeds the frame budget.
   snapshot transition.
 - Revisit RoadMap branch disclosure and long labels only from physical-device
   evidence; do not rewrite `RoadmapEngine` or graph semantics in a polish batch.
+
+## Desktop Runtime Boundary
+
+Window size, placement, and maximized state are intentionally native-only and
+do not notify mobile or desktop Flutter domain state. The restoration policy
+and physical macOS/Windows checklist are documented in
+`docs/DESKTOP_WINDOW_STATE.md`. Native multi-monitor and Windows DPI validation
+remain manual platform gates.

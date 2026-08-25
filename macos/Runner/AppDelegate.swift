@@ -3,6 +3,12 @@ import FlutterMacOS
 
 @main
 class AppDelegate: FlutterAppDelegate {
+  override func applicationWillTerminate(_ notification: Notification) {
+    (mainFlutterWindow as? MainFlutterWindow)?
+      .persistPlacementForApplicationTermination()
+    super.applicationWillTerminate(notification)
+  }
+
   override func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
     return true
   }

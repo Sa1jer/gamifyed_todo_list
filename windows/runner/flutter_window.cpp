@@ -14,6 +14,16 @@ bool FlutterWindow::OnCreate() {
     return false;
   }
 
+  startup_placement_ =
+      DesktopWindowStateStore::ResolveStartupPlacement(GetHandle());
+  last_normal_bounds_ = startup_placement_.normal_bounds;
+  has_normal_bounds_ = true;
+  const RECT& bounds = startup_placement_.normal_bounds;
+  SetWindowPos(GetHandle(), nullptr, bounds.left, bounds.top,
+               bounds.right - bounds.left, bounds.bottom - bounds.top,
+               SWP_NOACTIVATE | SWP_NOZORDER);
+  last_normal_dpi_ = GetDpiForWindow(GetHandle());
+
   RECT frame = GetClientArea();
 
   // The size here must match the window dimensions to avoid unnecessary surface
@@ -27,8 +37,9 @@ bool FlutterWindow::OnCreate() {
   RegisterPlugins(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
-  flutter_controller_->engine()->SetNextFrameCallback([&]() {
-    this->Show();
+  flutter_controller_->engine()->SetNextFrameCallback([this]() {
+    Show(startup_placement_.should_maximize ? SW_SHOWMAXIMIZED
+                                           : SW_SHOWNORMAL);
   });
 
   // Flutter can complete the first frame before the "show window" callback is
@@ -51,6 +62,22 @@ LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
+  if ((message == WM_MOVE || message == WM_SIZE) && !IsIconic(hwnd) &&
+      !IsZoomed(hwnd)) {
+    RECT bounds{};
+    if (GetWindowRect(hwnd, &bounds)) {
+      last_normal_bounds_ = bounds;
+      last_normal_dpi_ = GetDpiForWindow(hwnd);
+      has_normal_bounds_ = true;
+    }
+  }
+
+  if (message == WM_CLOSE && !placement_saved_ && has_normal_bounds_) {
+    DesktopWindowStateStore::Save(last_normal_bounds_, IsZoomed(hwnd),
+                                  last_normal_dpi_);
+    placement_saved_ = true;
+  }
+
   // Give Flutter, including plugins, an opportunity to handle window messages.
   if (flutter_controller_) {
     std::optional<LRESULT> result =

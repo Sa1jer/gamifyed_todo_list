@@ -13,9 +13,9 @@
 class Win32Window {
  public:
   struct Point {
-    unsigned int x;
-    unsigned int y;
-    Point(unsigned int x, unsigned int y) : x(x), y(y) {}
+    int x;
+    int y;
+    Point(int x, int y) : x(x), y(y) {}
   };
 
   struct Size {
@@ -37,7 +37,7 @@ class Win32Window {
   bool Create(const std::wstring& title, const Point& origin, const Size& size);
 
   // Show the current window. Returns true if the window was successfully shown.
-  bool Show();
+  bool Show(int show_command = SW_SHOWNORMAL);
 
   // Release OS resources associated with window.
   void Destroy();

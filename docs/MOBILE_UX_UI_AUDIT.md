@@ -458,6 +458,11 @@ Confirmed gaps:
   behavior are good foundations. Test small-height landscape and large text.
 - **Safe areas:** bottom navigation and recovery surfaces account for insets;
   overlay banners and milestone placement still need device-cutout testing.
+
+Desktop window restoration is deliberately outside this mobile presentation
+layer. Native runners now own first-launch maximization and valid normal-frame
+restoration without AppState/Hive coupling; see
+`docs/DESKTOP_WINDOW_STATE.md` for policy and pending physical checks.
 - **Orientation:** no portrait lock was found. The product has portrait-focused
   coverage but no explicit narrow-landscape acceptance test.
 - **Performance:** theme switching captures a frame at up to 2x DPR; this is a
