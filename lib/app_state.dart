@@ -23,6 +23,8 @@ import 'coordinators/skill_goal_mutation_coordinator.dart';
 import 'coordinators/task_mutation_coordinator.dart';
 import 'coordinators/task_completion_coordinator.dart';
 import 'persistence/save_scheduler.dart';
+import 'tutorial/tutorial_catalog.dart';
+import 'tutorial/tutorial_coordinator.dart';
 
 export 'coordinators/skill_goal_mutation_coordinator.dart'
     show NextGoalUpdateResult, StartNewRoadmapResult;
@@ -57,6 +59,7 @@ class AppState extends ChangeNotifier {
   bool _sfxEnabled = true;
   bool _tooltipsEnabled = true;
   bool _reducedMotion = false;
+  bool _welcomeSeen = false;
   bool _onboardingSeen = false;
   bool _onboardingReplayRequested = false;
   TutorialProgress _tutorialProgress = const TutorialProgress.empty();
@@ -86,6 +89,7 @@ class AppState extends ChangeNotifier {
       const TaskMutationCoordinator();
   final TaskCompletionCoordinator _taskCompletions =
       const TaskCompletionCoordinator();
+  final TutorialCoordinator _tutorialCoordinator = const TutorialCoordinator();
   Timer? _resetTimer;
   late final SaveScheduler _saveScheduler;
 
@@ -93,6 +97,8 @@ class AppState extends ChangeNotifier {
   bool get sfxEnabled => _sfxEnabled;
   bool get tooltipsEnabled => _tooltipsEnabled;
   bool get reducedMotion => _reducedMotion;
+  bool get welcomeSeen => _welcomeSeen;
+  bool get shouldShowWelcome => _hasLoadedSavedData && !_welcomeSeen;
   bool get onboardingSeen => _onboardingSeen;
   TutorialProgress get tutorialProgress => _tutorialProgress;
   String? get activeTutorialModuleId => _effectiveTutorialModuleId;
@@ -102,13 +108,14 @@ class AppState extends ChangeNotifier {
   bool get hasPersistenceError => _persistenceStatus.hasError;
   bool get shouldShowFirstRunTutorial =>
       _hasLoadedSavedData &&
+      _welcomeSeen &&
       (_effectiveTutorialModuleId != null || _shouldAutoShowCoreTutorial);
 
   bool get _coreTutorialCompleted =>
       _tutorialProgress.isModuleCompleted(TutorialModuleIds.core);
 
   bool get _shouldAutoShowCoreTutorial =>
-      !_coreTutorialCompleted && !_onboardingSeen && tasks.isEmpty;
+      _welcomeSeen && !_coreTutorialCompleted && !_onboardingSeen;
 
   String? get _effectiveTutorialModuleId {
     if (_tutorialProgress.activeModuleId != null) {
@@ -126,7 +133,11 @@ class AppState extends ChangeNotifier {
     if (module == null) return null;
     final step = activeStep ?? _defaultTutorialStepForModule(module);
     if (module == TutorialModuleIds.core) {
-      return _normalizedCoreTutorialStep(step);
+      return _tutorialCoordinator.normalizedCoreStep(
+        step,
+        hasSkill: roadmapSkills.isNotEmpty,
+        hasActiveQuest: _hasActiveTutorialQuest,
+      );
     }
     return step;
   }
@@ -567,10 +578,12 @@ class AppState extends ChangeNotifier {
     late bool? savedSfxEnabled;
     late bool? savedTooltipsEnabled;
     late bool? savedReducedMotion;
+    late bool? savedWelcomeSeen;
     late bool? savedOnboardingSeen;
     late TutorialProgress? savedTutorialProgress;
 
     savedReducedMotion = await _storage.loadReducedMotion();
+    savedWelcomeSeen = await _storage.loadWelcomeSeen();
     if (snapshot != null) {
       loadedSkills = snapshot.skills;
       loadedTasks = snapshot.tasks;
@@ -683,6 +696,31 @@ class AppState extends ChangeNotifier {
     bosses.clear();
     bosses.addAll(loadedBosses);
 
+    final existingInstallEvidence =
+        hasSavedSkills ||
+        hasSavedTasks ||
+        _onboardingSeen ||
+        savedTutorialProgress != null ||
+        skills.any((skill) => skill.id != kInboxSkillId) ||
+        tasks.isNotEmpty ||
+        history.isNotEmpty ||
+        profile.xp > 0 ||
+        profile.totalXpEarned > 0 ||
+        rewardChests.isNotEmpty ||
+        buffs.isNotEmpty ||
+        weeklyGoals.isNotEmpty;
+    final inferredWelcomeSeen =
+        savedWelcomeSeen == null && existingInstallEvidence;
+    _welcomeSeen = savedWelcomeSeen ?? existingInstallEvidence;
+
+    final tutorialNormalization = _tutorialCoordinator.normalize(
+      progress: _tutorialProgress,
+      onboardingSeen: _onboardingSeen || inferredWelcomeSeen,
+      hasSkill: roadmapSkills.isNotEmpty,
+      hasActiveQuest: _hasActiveTutorialQuest,
+    );
+    _tutorialProgress = tutorialNormalization.progress;
+
     if (selectedSkillId != null && _skillById(selectedSkillId!) == null) {
       selectedSkillId = null;
     }
@@ -696,6 +734,8 @@ class AppState extends ChangeNotifier {
     return changed ||
         protectionChanged ||
         inboxSkillChanged ||
+        inferredWelcomeSeen ||
+        tutorialNormalization.changed ||
         (usedLegacyStorage && _storage.supportsSnapshots);
   }
 
@@ -739,6 +779,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> _writeAllUnlocked() async {
     await _storage.saveReducedMotion(_reducedMotion);
+    await _storage.saveWelcomeSeen(_welcomeSeen);
     if (_storage.supportsSnapshots) {
       await _storage.saveSnapshot(_createStorageSnapshot());
       return;
@@ -846,7 +887,11 @@ class AppState extends ChangeNotifier {
     resetTutorialProgress();
   }
 
-  void _completeOnboardingAfterFirstTask() {
+  void _advanceCoreAfterFirstQuest() {
+    if (activeTutorialModuleId != TutorialModuleIds.core ||
+        activeTutorialStepId != TutorialStepIds.coreCreateQuest) {
+      return;
+    }
     completeTutorialStep(TutorialStepIds.coreCreateQuest);
   }
 
@@ -854,8 +899,29 @@ class AppState extends ChangeNotifier {
     startTutorialModule(TutorialModuleIds.core);
   }
 
+  /// Leaves the first-run Welcome immediately and starts the real Core flow.
+  /// Persistence is scheduled without blocking navigation on disk IO.
+  void beginWelcome() {
+    if (_welcomeSeen) return;
+    _welcomeSeen = true;
+    final dismissed = Set<String>.from(_tutorialProgress.dismissedModuleIds)
+      ..remove(TutorialModuleIds.core);
+    _onboardingReplayRequested = false;
+    _tutorialProgress = _tutorialProgress.copyWith(
+      dismissedModuleIds: dismissed,
+      activeModuleId: TutorialModuleIds.core,
+      activeStepId: _tutorialCoordinator.defaultCoreStep(
+        hasSkill: roadmapSkills.isNotEmpty,
+        hasActiveQuest: _hasActiveTutorialQuest,
+      ),
+      updatedAt: DateTime.now(),
+    );
+    _notifyViewStateChanged();
+    _requestObservedImmediateSave();
+  }
+
   void startTutorialModule(String id) {
-    final safeId = TutorialModuleIds.all.contains(id)
+    final safeId = TutorialCatalog.module(id) != null
         ? id
         : TutorialModuleIds.core;
     final dismissed = Set<String>.from(_tutorialProgress.dismissedModuleIds)
@@ -872,17 +938,24 @@ class AppState extends ChangeNotifier {
   }
 
   void completeTutorialStep(String stepId) {
-    final moduleId = _moduleForTutorialStep(stepId);
+    final moduleId = _tutorialCoordinator.moduleForStep(stepId);
     if (moduleId == null) return;
+
+    final activeModule = _effectiveTutorialModuleId;
+    final activeStep = _effectiveTutorialStepId;
+    final isActiveStep = activeModule == moduleId && activeStep == stepId;
+    if (_tutorialProgress.completedStepIds.contains(stepId) && !isActiveStep) {
+      return;
+    }
 
     final completedSteps = Set<String>.from(_tutorialProgress.completedStepIds)
       ..add(stepId);
-    final activeModule = _effectiveTutorialModuleId;
-    final activeStep = _effectiveTutorialStepId;
     final shouldAdvance =
         activeModule == moduleId &&
         (activeStep == null || activeStep == stepId);
-    final nextStep = shouldAdvance ? _nextTutorialStep(stepId) : activeStep;
+    final nextStep = shouldAdvance
+        ? _tutorialCoordinator.nextStep(stepId)
+        : activeStep;
 
     _tutorialProgress = _tutorialProgress.copyWith(
       completedStepIds: completedSteps,
@@ -906,7 +979,7 @@ class AppState extends ChangeNotifier {
       _tutorialProgress.completedModuleIds,
     )..add(id);
     final completedSteps = Set<String>.from(_tutorialProgress.completedStepIds)
-      ..addAll(_tutorialStepsForModule(id));
+      ..addAll(TutorialCatalog.stepIdsForModule(id));
     final clearActive = _effectiveTutorialModuleId == id;
 
     if (id == TutorialModuleIds.core && !_onboardingSeen) {
@@ -966,88 +1039,37 @@ class AppState extends ChangeNotifier {
     if (!onboardingSeen) return const TutorialProgress.empty();
     return TutorialProgress(
       completedModuleIds: const {TutorialModuleIds.core},
-      completedStepIds: _tutorialStepsForModule(TutorialModuleIds.core).toSet(),
+      completedStepIds: TutorialCatalog.stepIdsForModule(
+        TutorialModuleIds.core,
+      ).toSet(),
       updatedAt: DateTime.now(),
     );
   }
 
   String _defaultTutorialStepForModule(String moduleId) {
     if (moduleId == TutorialModuleIds.core) {
-      return _defaultCoreTutorialStep();
+      return _tutorialCoordinator.defaultCoreStep(
+        hasSkill: roadmapSkills.isNotEmpty,
+        hasActiveQuest: _hasActiveTutorialQuest,
+      );
     }
-    final steps = _tutorialStepsForModule(moduleId);
-    for (final step in steps) {
-      if (!_tutorialProgress.isStepCompleted(step)) return step;
-    }
-    return steps.firstOrNull ?? TutorialStepIds.coreCreateSkill;
+    final steps = TutorialCatalog.stepIdsForModule(moduleId);
+    return _tutorialCoordinator.firstIncompleteStep(
+          moduleId,
+          _tutorialProgress.completedStepIds,
+        ) ??
+        steps.firstOrNull ??
+        TutorialStepIds.coreCreateSkill;
   }
 
   bool get _hasActiveTutorialQuest =>
       tasks.any((task) => task.isSkillTask && !task.isDone);
 
-  String _defaultCoreTutorialStep() {
-    if (roadmapSkills.isEmpty) return TutorialStepIds.coreCreateSkill;
-    if (_hasActiveTutorialQuest) return TutorialStepIds.coreCompleteQuest;
-    return TutorialStepIds.coreCreateQuest;
-  }
-
-  String _normalizedCoreTutorialStep(String stepId) {
-    if (stepId == TutorialStepIds.coreCreateSkill && roadmapSkills.isNotEmpty) {
-      return _defaultCoreTutorialStep();
-    }
-    if (stepId == TutorialStepIds.coreCreateQuest && _hasActiveTutorialQuest) {
-      return TutorialStepIds.coreCompleteQuest;
-    }
-    return stepId;
-  }
-
-  List<String> _tutorialStepsForModule(String moduleId) {
-    return switch (moduleId) {
-      TutorialModuleIds.core => const [
-        TutorialStepIds.coreCreateSkill,
-        TutorialStepIds.coreCreateQuest,
-        TutorialStepIds.coreCompleteQuest,
-        TutorialStepIds.coreXpFeedback,
-        TutorialStepIds.coreOpenRoadmap,
-        TutorialStepIds.coreRoadmapDetails,
-        TutorialStepIds.coreOpenStats,
-      ],
-      TutorialModuleIds.act => const [
-        TutorialStepIds.actNextQuest,
-        TutorialStepIds.actMinimum,
-      ],
-      TutorialModuleIds.roadmap => const [
-        TutorialStepIds.roadmapPath,
-        TutorialStepIds.roadmapPractice,
-      ],
-      TutorialModuleIds.stats => const [TutorialStepIds.statsGrowth],
-      TutorialModuleIds.trophies => const [TutorialStepIds.trophiesFeedback],
-      TutorialModuleIds.profile => const [TutorialStepIds.profileReplay],
-      _ => const [],
-    };
-  }
-
-  String? _moduleForTutorialStep(String stepId) {
-    for (final moduleId in TutorialModuleIds.all) {
-      if (_tutorialStepsForModule(moduleId).contains(stepId)) return moduleId;
-    }
-    return null;
-  }
-
-  String? _nextTutorialStep(String stepId) {
-    final moduleId = _moduleForTutorialStep(stepId);
-    if (moduleId == null) return null;
-    final steps = _tutorialStepsForModule(moduleId);
-    final index = steps.indexOf(stepId);
-    if (index == -1 || index >= steps.length - 1) return null;
-    return steps[index + 1];
-  }
-
   void _completeCoreTutorialAfterFirstAction() {
     final activeCoreAction =
         activeTutorialModuleId == TutorialModuleIds.core &&
         activeTutorialStepId == TutorialStepIds.coreCompleteQuest;
-    if (!activeCoreAction && (_onboardingSeen || tasks.isEmpty)) return;
+    if (!activeCoreAction) return;
     completeTutorialStep(TutorialStepIds.coreCompleteQuest);
   }
 
@@ -2087,7 +2109,7 @@ class AppState extends ChangeNotifier {
       task: t,
       now: DateTime.now(),
     );
-    if (t.isSkillTask) _completeOnboardingAfterFirstTask();
+    if (t.isSkillTask) _advanceCoreAfterFirstQuest();
     _syncTaskNotification(t);
     _commitMutation();
   }

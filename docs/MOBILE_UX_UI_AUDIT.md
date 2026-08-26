@@ -200,8 +200,9 @@ less predictable.
 
 ### First Run
 
-Current path: empty Act -> guided skill creation -> guided quest creation ->
-completion/minimum step -> RoadMap -> statistics -> trophies/profile modules.
+Current path: successful fresh startup -> Welcome -> guided skill creation ->
+guided quest creation -> acknowledgement of the first useful action. Act,
+RoadMap, Growth, Trophies, and Profile are separate optional modules.
 
 What works:
 
@@ -210,14 +211,19 @@ What works:
   desktop dialogs.
 - Validation keeps the user in context and names the missing title.
 - RoadMap is not required to save the first useful quest.
+- Welcome is shown only after a successful fresh load; recovery remains the
+  higher-priority startup state and existing users are not forced through it.
+- Core acknowledgement does not complete the quest or grant XP.
 
-Friction:
+Remaining validation:
 
-- The tutorial continues into advanced product areas before the core habit has
-  repeated, increasing adoption cost.
-- Several tutorial overlays compete with the underlying dense shell.
-- Success is defined partly as feature exposure rather than first meaningful
-  completion and confident return.
+- Physical-device research must confirm that the shorter Core still gives
+  enough context without becoming another mandatory wizard.
+- Optional overlays still need TalkBack/VoiceOver and `2.0x` text-scale review
+  against their real responsive targets.
+- First useful action is intentionally acknowledged rather than completed; the
+  product still needs usage evidence for whether that is the right adoption
+  success signal.
 
 ### Daily Act
 
@@ -548,8 +554,8 @@ Remaining quick wins:
    and scheduling failure; offer inexact timing when product requirements allow.
 5. Restore a last-active skill as device-local presentation state, with a clear
    way to return to the skill chooser.
-6. Stop the mandatory core tutorial after first useful completion; present
-   RoadMap, statistics, trophies, and profile as optional learn-more modules.
+6. Validate the new Welcome and short Core funnel on physical devices; keep
+   RoadMap, Growth, Trophies, Profile, and Act as optional learn-more modules.
 7. Create final launcher/splash artwork and replace placeholder metadata before
    release.
 8. Design a real streak model and stats contract before adding richer streak

@@ -32,6 +32,8 @@ widgets
 | Skill and goal lifecycle | `SkillGoalMutationCoordinator` | Metadata, cleanup side effects, final commit. |
 | RoadMap mutations | `RoadmapMutationCoordinator` | Achievements/bosses and final commit. |
 | Review/session decisions | `ReviewSessionCoordinator` | Durable review save and publication. |
+| Welcome visibility | device-local `StorageService` preference | Existing-install inference, startup gate projection, and public begin command. |
+| Tutorial catalog/progression | `TutorialCatalog` / `TutorialCoordinator` | Navigation targets, public commands, persistence scheduling, and publication. |
 | Effective completion history | `CompletionHistoryIndex` | History mutation and explicit invalidation. |
 | Analytics | `AnalyticsReadModelCache` / weekly builder | Supplies inputs and mutation-aware invalidation. |
 | Core feature observation | `coreWorkspaceRevision` | Advances after task/skill/RoadMap mutations. |
@@ -60,6 +62,14 @@ publication. MainPage's workspace projection deliberately ignores those
 signals; recovery/settings UI observes them separately. The root event listener
 is attached directly to the explicit AppState and does not create a rendering
 dependency.
+
+Welcome is deliberately outside the domain snapshot. After successful startup,
+AppState combines the device-local marker with existing-install evidence so an
+upgrade cannot force Welcome onto an established account. `beginWelcome()`
+saves that marker separately, activates only the relevant Core tutorial step,
+and performs no Skill, Task, XP, history, RoadMap, or reward mutation. Existing
+`TutorialProgress` IDs remain persisted and are normalized by the pure
+coordinator for compatibility.
 
 ## Remaining Facade Work
 

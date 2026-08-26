@@ -51,6 +51,7 @@ class StorageService {
   static const String _sfxEnabledKey = 'sfxEnabled';
   static const String _tooltipsEnabledKey = 'tooltipsEnabled';
   static const String _reducedMotionKey = 'reducedMotion';
+  static const String _welcomeSeenKey = 'welcomeSeen';
   static const String _onboardingSeenKey = 'onboardingSeen';
   static const String _tutorialProgressKey = 'tutorialProgress';
   static const String _bestStreakKey = 'bestStreak';
@@ -69,6 +70,7 @@ class StorageService {
 
   bool _initialized = false;
   bool? _runtimeReducedMotion;
+  bool? _runtimeWelcomeSeen;
 
   StorageService({SnapshotBackend? snapshotBackend, String? hivePath})
     : _snapshotBackend = snapshotBackend,
@@ -244,6 +246,19 @@ class StorageService {
     _runtimeReducedMotion = enabled;
     if (!_initialized) return;
     await _preferences.saveBool(_reducedMotionKey, enabled);
+  }
+
+  /// Device-local first-run presentation state. This intentionally lives
+  /// outside the domain snapshot and future multi-device synchronization.
+  Future<bool?> loadWelcomeSeen() {
+    if (!_initialized) return Future<bool?>.value(_runtimeWelcomeSeen);
+    return _preferences.loadBool(_welcomeSeenKey);
+  }
+
+  Future<void> saveWelcomeSeen(bool seen) async {
+    _runtimeWelcomeSeen = seen;
+    if (!_initialized) return;
+    await _preferences.saveBool(_welcomeSeenKey, seen);
   }
 
   Future<TutorialProgress?> loadTutorialProgress() {

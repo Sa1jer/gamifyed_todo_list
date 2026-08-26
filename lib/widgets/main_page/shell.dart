@@ -449,43 +449,14 @@ class _MainPageState extends State<MainPage> {
   }
 
   void _completeStatisticsTutorial(AppState state) {
-    final moduleId = state.activeTutorialModuleId;
-    final stepId =
-        state.activeTutorialStepId ??
-        (moduleId == TutorialModuleIds.stats
-            ? TutorialStepIds.statsGrowth
-            : TutorialStepIds.coreOpenStats);
-
-    state.completeTutorialStep(stepId);
-
-    if (moduleId == TutorialModuleIds.core &&
-        stepId == TutorialStepIds.coreOpenStats) {
-      final expectedState = state;
-      Future<void>.delayed(const Duration(milliseconds: 180), () {
-        if (!mounted || !identical(widget.state, expectedState)) return;
-        if (expectedState.activeTutorialModuleId == null) {
-          expectedState.startTutorialModule(TutorialModuleIds.trophies);
-        }
-      });
+    if (state.activeTutorialModuleId == TutorialModuleIds.stats) {
+      state.completeTutorialStep(TutorialStepIds.statsGrowth);
     }
   }
 
   void _completeRewardsTutorial(AppState state) {
-    final moduleId = state.activeTutorialModuleId;
-    final stepId =
-        state.activeTutorialStepId ?? TutorialStepIds.trophiesFeedback;
-
-    state.completeTutorialStep(stepId);
-
-    if (moduleId == TutorialModuleIds.trophies &&
-        stepId == TutorialStepIds.trophiesFeedback) {
-      final expectedState = state;
-      Future<void>.delayed(const Duration(milliseconds: 180), () {
-        if (!mounted || !identical(widget.state, expectedState)) return;
-        if (expectedState.activeTutorialModuleId == null) {
-          expectedState.startTutorialModule(TutorialModuleIds.profile);
-        }
-      });
+    if (state.activeTutorialModuleId == TutorialModuleIds.trophies) {
+      state.completeTutorialStep(TutorialStepIds.trophiesFeedback);
     }
   }
 
@@ -580,16 +551,31 @@ class _MainPageState extends State<MainPage> {
     if (!state.shouldShowFirstRunTutorial) return null;
     final stepId =
         state.activeTutorialStepId ?? TutorialStepIds.coreCreateSkill;
+    final definition = TutorialCatalog.step(stepId);
+    if (definition == null) return null;
+
+    _GuidedTutorialStep buildStep({
+      required GlobalKey targetKey,
+      required VoidCallback onPrimaryAction,
+      IconData primaryIcon = Icons.arrow_forward_rounded,
+      String? primaryLabel,
+    }) {
+      return _GuidedTutorialStep(
+        id: stepId,
+        targetKey: targetKey,
+        title: definition.title,
+        body: definition.body,
+        primaryLabel: primaryLabel ?? definition.primaryLabel,
+        primaryIcon: primaryIcon,
+        secondaryLabel: definition.secondaryLabel,
+        onPrimaryAction: onPrimaryAction,
+      );
+    }
 
     switch (stepId) {
       case TutorialStepIds.coreCreateSkill:
-        return _GuidedTutorialStep(
-          id: stepId,
+        return buildStep(
           targetKey: _firstSkillCtaKey,
-          title: 'Первый запуск',
-          body:
-              'Начни с одного навыка. В форме достаточно названия и цели; этап можно добавить сразу или позже.',
-          primaryLabel: 'Создать навык',
           primaryIcon: Icons.add,
           onPrimaryAction: () {
             state.startTutorialModule(TutorialModuleIds.core);
@@ -597,115 +583,39 @@ class _MainPageState extends State<MainPage> {
           },
         );
       case TutorialStepIds.coreCreateQuest:
-        return _GuidedTutorialStep(
-          id: stepId,
+        return buildStep(
           targetKey: _firstQuestCtaKey,
-          title: 'Первый квест',
-          body:
-              'Навык готов. Теперь добавь один маленький квест-практику. Минимальный шаг можно включить, если нужен лёгкий старт.',
-          primaryLabel: 'Создать квест',
           primaryIcon: Icons.add_task_rounded,
           onPrimaryAction: () =>
               _openFirstQuestDialog(context, state, showTutorialHints: true),
         );
       case TutorialStepIds.coreCompleteQuest:
-        return _GuidedTutorialStep(
-          id: stepId,
+        return buildStep(
           targetKey: _nextQuestActionKey,
-          title: 'Действовать сегодня!',
-          body:
-              'Здесь выполняется следующий квест или минимальный шаг. Не обязательно делать его прямо сейчас. Задача этой панели — помочь не забыть о квесте и мотивировать действовать, когда будет готово настроение и время.',
-          primaryLabel: 'Понял!',
           primaryIcon: Icons.check_rounded,
-          secondaryLabel: null,
           onPrimaryAction: () =>
               state.completeTutorialStep(TutorialStepIds.coreCompleteQuest),
         );
-      case TutorialStepIds.coreXpFeedback:
-        return _GuidedTutorialStep(
-          id: stepId,
-          targetKey: mobileShell ? _pageStackKey : _roadmapNavKey,
-          title: 'Дорожная карта',
-          body:
-              'Это более продвинутый раздел для поэтапного развития навыков. Если цель серьёзная, стоит планировать её с помощью дорожной карты.',
-          primaryLabel: 'Открыть Карту',
-          primaryIcon: Icons.account_tree_rounded,
-          onPrimaryAction: () {
-            state.completeTutorialStep(TutorialStepIds.coreXpFeedback);
-            _openRoadmapTutorialTarget(state);
-          },
-        );
-      case TutorialStepIds.coreOpenRoadmap:
-        return _GuidedTutorialStep(
-          id: stepId,
-          targetKey: _roadmapCanvasKey,
-          title: 'Карта',
-          body:
-              'Большой пузырь — сам навык и финальная цель пути. Когда ты создашь этапы (пузыри поменьше), они выстроятся как дорога к этому навыку.',
-          primaryLabel: 'Круто!',
-          primaryIcon: Icons.arrow_forward_rounded,
-          onPrimaryAction: () {
-            state.completeTutorialStep(TutorialStepIds.coreOpenRoadmap);
-          },
-        );
-      case TutorialStepIds.coreRoadmapDetails:
-        return _GuidedTutorialStep(
-          id: stepId,
-          targetKey: _roadmapInspectorKey,
-          title: 'Детали пути',
-          body:
-              'Справа видно выбранный навык или этап: цель пути, прогресс и практика. Квесты можно создавать здесь, а выполнять — в “Действовать”.',
-          primaryLabel: 'Дальше: Статистика',
-          primaryIcon: Icons.arrow_forward_rounded,
-          onPrimaryAction: () {
-            state.completeTutorialStep(TutorialStepIds.coreRoadmapDetails);
-          },
-        );
-      case TutorialStepIds.coreOpenStats:
-        return _GuidedTutorialStep(
-          id: stepId,
-          targetKey: _statsButtonKey,
-          title: 'Статистика',
-          body:
-              'Статистика — вторичный экран истории роста: что получилось, какой навык двигался и что продолжить.',
-          primaryLabel: 'Открыть статистику',
-          primaryIcon: Icons.query_stats_rounded,
-          onPrimaryAction: () => openStatistics(tutorial: true),
-        );
       case TutorialStepIds.actNextQuest:
-        return _GuidedTutorialStep(
-          id: stepId,
+        return buildStep(
           targetKey: _nextQuestActionKey,
-          title: 'Сейчас',
-          body:
-              'Главный экран отвечает на один вопрос: какой квест сделать следующим. Если есть минимум, начинай с него.',
-          primaryLabel: 'Понял',
           primaryIcon: Icons.check_rounded,
           onPrimaryAction: () =>
               state.completeTutorialStep(TutorialStepIds.actNextQuest),
         );
       case TutorialStepIds.actMinimum:
-        return _GuidedTutorialStep(
-          id: stepId,
+        return buildStep(
           targetKey: _nextQuestActionKey,
-          title: 'Минимальный шаг',
-          body:
-              'Минимум — безопасный вход в действие. Он даёт часть XP и помогает не ждать идеального момента.',
-          primaryLabel: 'Понял, круто!',
           primaryIcon: Icons.check_rounded,
           onPrimaryAction: () =>
               state.completeTutorialStep(TutorialStepIds.actMinimum),
         );
       case TutorialStepIds.roadmapPath:
-        return _GuidedTutorialStep(
-          id: stepId,
+        return buildStep(
           targetKey: _roadmapCanvasKey,
-          title: 'Дорожная карта навыка',
-          body:
-              'Большой пузырь — навык, маленькие пузыри — этапы дороги. В дорожной карте можно детально планировать развитие навыка',
           primaryLabel: _mode == WorkspaceMode.mastery
-              ? 'Понял'
-              : 'Открыть дорожную карту',
+              ? 'Понятно'
+              : definition.primaryLabel,
           primaryIcon: _mode == WorkspaceMode.mastery
               ? Icons.check_rounded
               : Icons.account_tree_rounded,
@@ -717,52 +627,37 @@ class _MainPageState extends State<MainPage> {
           },
         );
       case TutorialStepIds.roadmapPractice:
-        return _GuidedTutorialStep(
-          id: stepId,
+        return buildStep(
           targetKey: _roadmapPracticeKey,
-          title: 'Практика этапа',
-          body:
-              'Практика — это квесты, которые доказывают освоение этапа. Закрывать их удобнее в “Сейчас”.',
-          primaryLabel: 'Завершить тему',
           primaryIcon: Icons.check_rounded,
           onPrimaryAction: () =>
               state.completeTutorialStep(TutorialStepIds.roadmapPractice),
         );
       case TutorialStepIds.statsGrowth:
-        return _GuidedTutorialStep(
-          id: stepId,
+        return buildStep(
           targetKey: _statsButtonKey,
-          title: 'История роста',
-          body:
-              'Здесь видно, что получилось за день и неделю. Review помогает сделать одну следующую корректировку.',
-          primaryLabel: 'Открыть статистику',
           primaryIcon: Icons.query_stats_rounded,
           onPrimaryAction: () => openStatistics(tutorial: true),
         );
       case TutorialStepIds.trophiesFeedback:
-        return _GuidedTutorialStep(
-          id: stepId,
+        return buildStep(
           targetKey: _rewardsButtonKey,
-          title: 'Трофеи и эффекты',
-          body:
-              'Трофеи, эффекты и сопротивление — это отклик после действий. Их не нужно обслуживать каждый день.',
-          primaryLabel: 'Открыть трофеи',
           primaryIcon: Icons.redeem_rounded,
           onPrimaryAction: () =>
               _openRewardsDialog(state, showTutorialHint: true),
         );
       case TutorialStepIds.profileReplay:
-        return _GuidedTutorialStep(
-          id: stepId,
+        return buildStep(
           targetKey: _profileBarKey,
-          title: 'Профиль и подсказки',
-          body:
-              'В профиле можно повторить обучение, выключить hover-подсказки, звук и настроить внешний вид.',
-          primaryLabel: 'Завершить обучение',
           primaryIcon: Icons.check_rounded,
           onPrimaryAction: () =>
               state.completeTutorialStep(TutorialStepIds.profileReplay),
         );
+      case TutorialStepIds.coreXpFeedback:
+      case TutorialStepIds.coreOpenRoadmap:
+      case TutorialStepIds.coreRoadmapDetails:
+      case TutorialStepIds.coreOpenStats:
+        return null;
     }
     return null;
   }
@@ -935,10 +830,6 @@ class _MainPageState extends State<MainPage> {
                   notificationMinute: notificationMinute,
                 ),
               );
-              if (showTutorialHints ||
-                  state.activeTutorialModuleId == TutorialModuleIds.core) {
-                state.completeTutorialStep(TutorialStepIds.coreCreateQuest);
-              }
             },
       ),
     ).whenComplete(() {

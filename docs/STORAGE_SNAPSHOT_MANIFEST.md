@@ -25,7 +25,9 @@ The snapshot format is versioned independently with
 - Tasks and their skill/stage links.
 - Profile, history, achievements, daily stats, bosses, reward chests, buffs,
   weekly goals, and best streak.
-- Theme, sound, tooltip, onboarding, and tutorial settings.
+- Theme, sound, tooltip, onboarding, and tutorial settings. The separate
+  device-local `welcomeSeen` preference is intentionally not part of the
+  domain snapshot.
 - Per-list domain counts used during validation.
 
 Persistence status and debug-only storage are not included.
@@ -129,7 +131,9 @@ mechanics:
 - `LegacyStorageCodec` owns legacy entity encoding/decoding and guarded JSON
   primitives.
 - `HivePreferenceStore` owns theme, sound, tooltip, onboarding, tutorial,
-  profile image and other preference keys.
+  device-local Welcome, profile image and other preference keys. Welcome is
+  loaded/saved independently so it cannot participate in snapshot conflict or
+  recovery semantics.
 - `SaveScheduler` remains the AppState-facing debounce/in-flight coordinator.
 
 `test/storage_service_reopen_test.dart` uses a disposable real Hive directory,

@@ -1,6 +1,6 @@
 # DESIGN / Product And UI Notes
 
-Last updated: 2026-06-23
+Last updated: 2026-08-26
 
 This file records design direction, product guardrails, and UI decisions. Update it after every meaningful product/UI change so implementation stays aligned with the app's intended mental model.
 
@@ -201,26 +201,24 @@ Current first-run state:
 
 Tutorial system:
 
-- Animated spotlight over the real `Создать первый навык` CTA.
-- If the first path is replayed with existing data, it starts from the first useful missing step: skill, quest, or first action.
-- Continues to the `Первый квест` CTA after the first skill is created.
-- Continues after first quest creation to `Первое действие`, but the tutorial card does not perform the quest for the user.
-- `Первое действие` uses a single `Понятно` button to continue; real quest/minimum actions still advance the flow when the user chooses to act.
-- After each completed step, the next spotlight waits about 2 seconds and then fades/scales in.
-- `XP и рост` points toward `Карта`, then RoadMap explains the skill bubble, the road canvas and the right-side details panel.
-- Statistics opens with the same orange spotlight-style tutorial and `Завершить обучение` action instead of completing invisibly before the user sees the screen.
-- Finishing the core Statistics step continues to `Трофеи и эффекты`; replaying the standalone Statistics module still ends after that module.
-- `Трофеи и эффекты` teaches from inside the rewards dialog with the same orange spotlight language, then continues into the profile/help topic.
-- The secondary tutorial dismiss action is named `Пропустить обучение`; buttons like `Понятно` are reserved for advancing a specific lesson step.
-- Finishing the trophies topic continues to the profile/help topic so the replay path has a clear ending.
-- Primary tutorial actions temporarily hide the overlay while the real creation dialog is open.
-- Creation dialogs use inline hints for onboarding guidance instead of nested spotlights or wizard steps.
-- Saves per-module tutorial progress in meta storage; legacy `onboardingSeen` remains as fallback for the first module.
-- Can be replayed from profile/settings through `Пройти обучение заново`.
-- Modules: `Первый путь`, `Сейчас`, `RoadMap`, `Статистика`, `Трофеи и эффекты`, `Профиль`.
-- Skippable and non-blocking.
-- Teaches by highlighting real controls when possible and using centered fallback cards when the target is not present.
-- Does not rely on fake/demo content in production builds.
+- A fresh install first shows one full-screen Welcome after successful storage
+  load. Recovery and load-error UI always take precedence.
+- Welcome is device-local and independent from tutorial progress. Existing
+  installs are inferred as seen and are not forced through it.
+- Core contains only three real steps: create a Skill, create a Quest, and
+  understand the first useful action. It never completes the Quest or grants XP
+  on the user's behalf.
+- The final Core acknowledgement is a small session-only completion message;
+  it does not auto-start another module.
+- `Действовать`, `Дорожная карта`, `Рост`, `Трофеи`, and `Профиль` are optional,
+  independently startable topics in the profile learning center.
+- Target readiness follows mounted/layout frames with a bounded fallback, not
+  a fixed wall-clock delay. Reduced motion makes transitions immediate.
+- Creation dialogs keep their existing inline guidance; onboarding does not
+  introduce nested spotlights, fake data, cloud/auth, or another persistence
+  model.
+- Legacy step/module IDs remain readable and normalize safely. See
+  `docs/ONBOARDING_ARCHITECTURE.md` for ownership and compatibility details.
 
 Future tutorial polish:
 

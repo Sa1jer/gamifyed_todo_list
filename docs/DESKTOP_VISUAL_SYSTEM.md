@@ -20,6 +20,11 @@ Native platform window chrome is preserved. The project has no safe custom
 window-management integration, so the UI does not draw fake macOS controls or
 replace Windows controls.
 
+Welcome is a pre-shell, full-window startup surface shared with narrow layouts;
+it appears only after successful fresh storage load. Once begun, desktop enters
+this existing adaptive shell. Tutorial replay remains a compact Profile action
+and does not create another desktop navigation family.
+
 ## Responsive Boundary
 
 `DesktopResponsiveMetrics` centralizes four tiers:

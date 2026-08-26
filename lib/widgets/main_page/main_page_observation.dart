@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import '../../analytics/analytics_read_model.dart';
 import '../../app_state.dart';
 import '../../persistence_status.dart';
+import '../../models/tutorial_progress.dart';
 
 @immutable
 class MainPageWorkspaceProjection {
@@ -166,6 +167,7 @@ class MainPageTutorialProjection {
     required this.visible,
     required this.moduleId,
     required this.stepId,
+    required this.coreCompleted,
   });
 
   factory MainPageTutorialProjection.fromState(AppState state) =>
@@ -173,21 +175,26 @@ class MainPageTutorialProjection {
         visible: state.shouldShowFirstRunTutorial,
         moduleId: state.activeTutorialModuleId,
         stepId: state.activeTutorialStepId,
+        coreCompleted: state.tutorialProgress.isModuleCompleted(
+          TutorialModuleIds.core,
+        ),
       );
 
   final bool visible;
   final String? moduleId;
   final String? stepId;
+  final bool coreCompleted;
 
   @override
   bool operator ==(Object other) =>
       other is MainPageTutorialProjection &&
       other.visible == visible &&
       other.moduleId == moduleId &&
-      other.stepId == stepId;
+      other.stepId == stepId &&
+      other.coreCompleted == coreCompleted;
 
   @override
-  int get hashCode => Object.hash(visible, moduleId, stepId);
+  int get hashCode => Object.hash(visible, moduleId, stepId, coreCompleted);
 }
 
 @immutable

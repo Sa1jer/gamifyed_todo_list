@@ -125,7 +125,7 @@ before it enters an implementation brief.
 - [ ] Extend automated accessibility gates beyond the journal: minimum tap targets, focus order, screen-reader traversal, and `200%` text scaling across dialogs/statistics/rewards at `360/393/430dp`.
 - [ ] Add a device-local last-active skill/resumption context with an obvious return to the skill chooser; do not mix it into cloud-conflict domain state.
 - [ ] Add a discoverability hint for mobile task swipe actions and retire it after first successful use.
-- [ ] Shorten the mandatory first-run tunnel to first skill, first quest, and first useful completion; move RoadMap, statistics, trophies, and profile into optional tutorial modules.
+- [x] Shorten the mandatory first-run tunnel to first skill, first quest, and first useful action; move Act, RoadMap, Growth, Trophies, and Profile into independently replayable optional tutorial modules.
 - [x] Replace the local-save failure cloud icon with storage-neutral, device-specific copy while preserving dirty state and retry.
 - [ ] Add delayed explanatory copy for unusually long startup loading without flashing it during normal fast startup.
 - [x] Add a TextTheme-based mobile typography foundation and shared responsive constants for `360`, `393`, `430`, and `760` widths.
@@ -427,11 +427,10 @@ Manual desktop/QHD checklist:
 - Post-`1.3.42` onboarding correction: primary tutorial actions temporarily hide the overlay while creation dialogs are open, then continue to the next onboarding step.
 - Post-`1.3.42` tutorial v2.1: core tutorial replay now starts from the first relevant missing step instead of always showing `Первый запуск`.
 - Post-`1.3.42` tutorial v2.1: `Первое действие` no longer completes a quest from the tutorial card; `Понятно` advances the lesson while real quest/minimum actions still advance naturally.
-- Post-`1.3.42` tutorial v2.1: step transitions now wait 2 seconds before the next spotlight fades in.
-- Post-`1.3.42` tutorial v2.1: `XP и рост` points to `Карта`, RoadMap now explains the skill bubble, canvas and right-side details, and Statistics uses the same orange spotlight style as the rest of onboarding.
-- Post-`1.3.42` tutorial v2.1: completing the core Statistics step now continues into `Трофеи и эффекты` instead of ending silently.
+- Historical tutorial v2.1 (superseded): step transitions waited 2 seconds before the next spotlight faded in.
+- Historical tutorial v2.1 (superseded): Core continued through XP, RoadMap, Statistics, Trophies, and Profile exposure.
 - Post-`1.3.42` tutorial v2.1: the secondary tutorial dismiss button is now `Пропустить обучение`, while primary step buttons still advance the lesson.
-- Post-`1.3.42` tutorial v2.1: completing the trophies tutorial now continues into the profile/help topic.
+- Historical tutorial v2.1 (superseded): Trophies continued automatically into the Profile/help topic.
 - Post-`1.3.42` UI polish: desktop `Статистика` opens as a wider centered 16:10 dialog.
 - Post-`1.3.42` UI polish: app version is visible above the app title in the top-left header.
 - Post-`1.3.42` safety polish: deleting a skill now requires confirmation and warns that skill XP/level, RoadMap stages and linked quests will be deleted.
@@ -439,6 +438,10 @@ Manual desktop/QHD checklist:
 - Post-`1.3.42` RoadMap polish: selected skills now show unlinked skill quests in the RoadMap inspector, with complete/minimum/edit/delete actions.
 - Post-`1.3.42` RoadMap polish: RoadMap skill/stage bubbles are 20% larger; selected skill details show the path goal as subtitle, then unlinked quests first and thin collapsible stage groups below; selected stage details show only that stage's quests without an extra group header.
 - Post-`1.3.43` tutorial polish: `Трофеи` now has its own orange spotlight inside the rewards dialog and closes into the profile/help tutorial step.
+- Welcome/Tutorial v2.2: successful fresh startup now shows one full-screen Welcome before the shell; established installs are not interrupted, and startup recovery always has priority.
+- Welcome/Tutorial v2.2: Core stops after Skill, Quest, and acknowledgement of the first useful action without completing a quest or granting XP.
+- Welcome/Tutorial v2.2: Act, RoadMap, Growth, Trophies, and Profile are independent optional modules available from the compact Profile learning center.
+- Welcome/Tutorial v2.2: target transitions use mounted/layout readiness with bounded frame retries instead of a fixed delay; legacy tutorial IDs remain load-compatible.
 - Post-`1.3.43` quest polish: quests now support an optional saved description in creation/edit flows; main quest widgets show it as quiet gray inline context, while RoadMap rows stay compact.
 - Post-`1.3.44` architecture audit: added `docs/APPSTATE_MAP.md` with AppState responsibility map, mutation boundaries, future sync notes and extraction risk order.
 - `1.3.45`: extracted pure `AchievementEngine` evaluation from `AppState` while keeping unlock mutation, pending notifications and storage behavior in `AppState`.

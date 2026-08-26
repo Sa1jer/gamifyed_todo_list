@@ -12,6 +12,7 @@ import 'theme/app_typography.dart';
 import 'utils.dart';
 import 'widgets/main_page.dart';
 import 'widgets/persistence_recovery.dart';
+import 'widgets/welcome_page.dart';
 
 final _storage = StorageService();
 final _notifications = NotificationService();
@@ -274,6 +275,9 @@ class _AppContent extends StatelessWidget {
         final status = state.persistenceStatus;
         return (
           loaded: state.hasLoadedSavedData,
+          showWelcome: state.shouldShowWelcome,
+          isDark: state.isDark,
+          reducedMotion: state.reducedMotion,
           tooltips: state.tooltipsEnabled,
           phase: status.phase,
           message: status.message,
@@ -284,11 +288,20 @@ class _AppContent extends StatelessWidget {
         );
       },
       child: child,
-      builder: (context, selection, child) => PersistenceGate(
-        state: state,
-        onRetryLoad: onRetryLoad,
-        child: TooltipVisibility(visible: selection.tooltips, child: child!),
-      ),
+      builder: (context, selection, child) {
+        final content = selection.showWelcome
+            ? WelcomePage(
+                isDark: selection.isDark,
+                reducedMotion: selection.reducedMotion,
+                onBegin: state.beginWelcome,
+              )
+            : TooltipVisibility(visible: selection.tooltips, child: child!);
+        return PersistenceGate(
+          state: state,
+          onRetryLoad: onRetryLoad,
+          child: content,
+        );
+      },
     );
   }
 }

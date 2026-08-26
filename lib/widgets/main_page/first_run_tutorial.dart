@@ -21,73 +21,8 @@ class _MainPageTutorialBoundary extends StatefulWidget {
 }
 
 class _MainPageTutorialBoundaryState extends State<_MainPageTutorialBoundary> {
-  bool _stepPaused = false;
-  String? _lastStepId;
-  String? _pendingStepId;
-  Timer? _stepDelayTimer;
-
-  @override
-  void didUpdateWidget(_MainPageTutorialBoundary oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (!identical(oldWidget.state, widget.state)) {
-      _resetStepDelay();
-    }
-  }
-
-  @override
-  void dispose() {
-    _stepDelayTimer?.cancel();
-    super.dispose();
-  }
-
-  void _resetStepDelay() {
-    _stepDelayTimer?.cancel();
-    _stepDelayTimer = null;
-    _lastStepId = null;
-    _pendingStepId = null;
-    _stepPaused = false;
-  }
-
-  bool _shouldShow(String? stepId) {
-    if (stepId == null) {
-      _resetStepDelay();
-      return false;
-    }
-
-    if (_lastStepId == null) {
-      _lastStepId = stepId;
-      return !widget.blocked;
-    }
-
-    if (stepId == _lastStepId) {
-      return !widget.blocked && !_stepPaused;
-    }
-
-    if (widget.blocked) {
-      _stepDelayTimer?.cancel();
-      _stepDelayTimer = null;
-      _pendingStepId = stepId;
-      _stepPaused = true;
-      return false;
-    }
-
-    if (_pendingStepId != stepId || !_stepPaused || _stepDelayTimer == null) {
-      _pendingStepId = stepId;
-      _stepPaused = true;
-      _stepDelayTimer?.cancel();
-      _stepDelayTimer = Timer(const Duration(seconds: 2), () {
-        if (!mounted || _pendingStepId != stepId) return;
-        setState(() {
-          _lastStepId = stepId;
-          _pendingStepId = null;
-          _stepPaused = false;
-          _stepDelayTimer = null;
-        });
-      });
-    }
-
-    return false;
-  }
+  bool _sawCoreActionStep = false;
+  bool _showCoreCompletion = false;
 
   @override
   Widget build(BuildContext context) {
@@ -96,23 +31,52 @@ class _MainPageTutorialBoundaryState extends State<_MainPageTutorialBoundary> {
       selector: MainPageTutorialProjection.fromState,
       builder: (context, projection, child) {
         widget.onBuildForTesting?.call();
+        final isCoreActionStep =
+            projection.visible &&
+            projection.moduleId == TutorialModuleIds.core &&
+            projection.stepId == TutorialStepIds.coreCompleteQuest;
+        if (isCoreActionStep) {
+          _sawCoreActionStep = true;
+        } else if (_sawCoreActionStep && projection.coreCompleted) {
+          _sawCoreActionStep = false;
+          _showCoreCompletion = true;
+        }
+
         final step = projection.visible ? widget.resolveStep() : null;
         if (step == null) {
-          _shouldShow(null);
-          return const SizedBox.shrink();
+          if (!_showCoreCompletion) return const SizedBox.shrink();
+          return TutorialCompletionCard(
+            isDark: widget.isDark,
+            reducedMotion: widget.state.reducedMotion,
+            onContinue: () => setState(() => _showCoreCompletion = false),
+          );
         }
-        return _FirstRunTutorialOverlay(
+        _showCoreCompletion = false;
+        return TutorialTargetReadiness(
+          key: ValueKey('tutorial-target-readiness-${step.id}'),
           stepId: step.id,
-          visible: _shouldShow(step.id),
           targetKey: step.targetKey,
-          isDark: widget.isDark,
-          title: step.title,
-          body: step.body,
-          primaryLabel: step.primaryLabel,
-          primaryIcon: step.primaryIcon,
-          secondaryLabel: step.secondaryLabel,
-          onDismiss: widget.state.dismissActiveTutorial,
-          onPrimaryAction: step.onPrimaryAction,
+          enabled: !widget.blocked,
+          builder: (context, status) {
+            if (widget.blocked || status == TutorialTargetStatus.waiting) {
+              return const SizedBox.shrink();
+            }
+            return _FirstRunTutorialOverlay(
+              stepId: step.id,
+              visible: true,
+              useFallback: status == TutorialTargetStatus.fallback,
+              targetKey: step.targetKey,
+              isDark: widget.isDark,
+              reducedMotion: widget.state.reducedMotion,
+              title: step.title,
+              body: step.body,
+              primaryLabel: step.primaryLabel,
+              primaryIcon: step.primaryIcon,
+              secondaryLabel: step.secondaryLabel,
+              onDismiss: widget.state.dismissActiveTutorial,
+              onPrimaryAction: step.onPrimaryAction,
+            );
+          },
         );
       },
     );
@@ -146,6 +110,8 @@ class _FirstRunTutorialOverlay extends StatefulWidget {
   final GlobalKey targetKey;
   final bool isDark;
   final bool visible;
+  final bool useFallback;
+  final bool reducedMotion;
   final String title;
   final String body;
   final String primaryLabel;
@@ -159,6 +125,8 @@ class _FirstRunTutorialOverlay extends StatefulWidget {
     required this.targetKey,
     required this.isDark,
     required this.visible,
+    required this.useFallback,
+    required this.reducedMotion,
     required this.title,
     required this.body,
     required this.primaryLabel,
@@ -190,6 +158,10 @@ class _FirstRunTutorialOverlayState extends State<_FirstRunTutorialOverlay> {
 
   void _syncTargetRect() {
     if (!mounted) return;
+    if (widget.useFallback) {
+      if (_targetRect != null) setState(() => _targetRect = null);
+      return;
+    }
     final overlayBox = context.findRenderObject();
     final targetBox = widget.targetKey.currentContext?.findRenderObject();
     if (overlayBox is! RenderBox || targetBox is! RenderBox) {
@@ -205,6 +177,10 @@ class _FirstRunTutorialOverlayState extends State<_FirstRunTutorialOverlay> {
 
   @override
   Widget build(BuildContext context) {
+    final animationDuration =
+        widget.reducedMotion || MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : kMotionSlow;
     final txt = textColor(widget.isDark);
     final sub = subtext(widget.isDark);
     final panelColor = widget.isDark
@@ -219,7 +195,7 @@ class _FirstRunTutorialOverlayState extends State<_FirstRunTutorialOverlay> {
         color: Colors.transparent,
         child: TweenAnimationBuilder<double>(
           tween: Tween(begin: 0, end: widget.visible ? 1 : 0),
-          duration: kMotionSlow,
+          duration: animationDuration,
           curve: kMotionCurve,
           builder: (context, t, child) => IgnorePointer(
             ignoring: !widget.visible || t < 0.05,
@@ -259,7 +235,7 @@ class _FirstRunTutorialOverlayState extends State<_FirstRunTutorialOverlay> {
                   ),
                   if (target != null)
                     AnimatedPositioned(
-                      duration: kMotionSlow,
+                      duration: animationDuration,
                       curve: kMotionCurve,
                       left: target.left - 8,
                       top: target.top - 8,
@@ -285,7 +261,7 @@ class _FirstRunTutorialOverlayState extends State<_FirstRunTutorialOverlay> {
                       ),
                     ),
                   AnimatedPositioned(
-                    duration: kMotionSlow,
+                    duration: animationDuration,
                     curve: kMotionCurve,
                     left: panelLeft,
                     top: panelTop,

@@ -22,6 +22,12 @@ The current visible core loop is action-first, but its conceptual load is high:
 Skill, Goal, RoadMap, Stage, Quest, Minimum Step, XP, review, rewards,
 effects, and statistics can all appear around one action.
 
+The first-run presentation deliberately exposes less than the full model:
+Welcome states the promise, Core teaches only Skill -> Quest -> first useful
+action, and Act/RoadMap/Growth/Trophies/Profile are independent optional
+modules. This changes guidance, not the persisted product entities or their
+domain behavior.
+
 ## Current entities and responsibilities
 
 | Entity or system | Repository fact | Current execution value | Current friction risk |

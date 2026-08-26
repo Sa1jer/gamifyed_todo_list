@@ -27,6 +27,15 @@ Updated: 2026-08-18
   the mobile sliver list does not eagerly build distant events.
 - The Overview Inbox is geometry-tested as a dock above navigation; expansion
   is height-bounded and Android Back collapses it before leaving Act.
+- Welcome is covered at `360`, `393`, `430`, `700`, and desktop widths in dark
+  and light themes, including `1.3x`/`2.0x` text scale and reduced motion. Its
+  route/CTA semantics remain explicit and decorative path art is excluded.
+- Core tutorial regression coverage verifies Skill -> Quest -> first useful
+  action without automatic Task completion or XP. Optional modules are started,
+  skipped, and replayed independently.
+- Tutorial spotlight readiness is frame/layout based, bounded, and falls back
+  to a dismissible card when a target is unavailable; there is no fixed
+  two-second transition timer.
 
 ## Opt-in Frame Timing
 
@@ -84,7 +93,8 @@ refresh rate, and whether any interaction exceeds the frame budget.
 ## Five-Scenario Usability Script — Pending Physical Run
 
 1. **First task:** fresh state -> create skill -> create quest -> complete it;
-   verify XP and `Закрыто сегодня`.
+   verify Welcome/Core finish before the real completion, then verify XP and
+   `Закрыто сегодня` only after the user completes the quest.
 2. **Returning user:** open existing state -> choose skill -> inspect/complete a
    quest -> return to Overview; selection and Back remain predictable.
 3. **Missing minimum step:** open a quest without a minimum action; verify the
@@ -103,6 +113,9 @@ refresh rate, and whether any interaction exceeds the frame budget.
   snapshot transition.
 - Revisit RoadMap branch disclosure and long labels only from physical-device
   evidence; do not rewrite `RoadmapEngine` or graph semantics in a polish batch.
+- Run Welcome plus every optional tutorial module with TalkBack/VoiceOver at
+  `1.0x`, `1.3x`, and `2.0x`; automated semantics do not prove comfortable
+  spoken order on a physical device.
 
 ## Desktop Runtime Boundary
 

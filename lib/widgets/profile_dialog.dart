@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../models.dart';
 import '../app_state.dart';
+import '../tutorial/tutorial_catalog.dart';
 import '../utils.dart';
 import 'character_timeline_dialog.dart';
 import 'mobile_secondary_page.dart';
@@ -46,135 +47,107 @@ class _ProfileDialogState extends State<ProfileDialog> {
     showDialog<void>(
       context: context,
       builder: (dialogContext) {
-        void startModule(String moduleId, {bool resetAll = false}) {
-          if (resetAll) {
-            state.resetTutorialProgress();
-          }
+        void startModule(String moduleId) {
           state.startTutorialModule(moduleId);
           Navigator.pop(dialogContext);
           Navigator.pop(context);
         }
 
-        return AlertDialog(
+        return Dialog(
           backgroundColor: bg,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(18),
           ),
-          title: Text(
-            'Пройти обучение заново',
-            style: TextStyle(color: txt, fontWeight: FontWeight.w900),
-          ),
-          content: SizedBox(
-            width: 420,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 460,
+              maxHeight: MediaQuery.sizeOf(dialogContext).height - 48,
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  'Выбери короткую тему. Подсказки появятся поверх настоящего интерфейса и не сбросят твои данные.',
-                  style: TextStyle(
-                    color: sub,
-                    height: 1.35,
-                    fontWeight: FontWeight.w700,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 18, 12, 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Обучение',
+                          style: TextStyle(
+                            color: txt,
+                            fontSize: 21,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Закрыть обучение',
+                        onPressed: () => Navigator.pop(dialogContext),
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 12),
-                _TutorialModuleTile(
-                  title: 'Первый путь',
-                  subtitle: 'Навык → квест → действие → XP → RoadMap',
-                  icon: Icons.auto_awesome,
-                  color: const Color(0xFFFF9500),
-                  completed: state.tutorialProgress.isModuleCompleted(
-                    TutorialModuleIds.core,
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Выбери короткую тему. Подсказки появятся поверх настоящего интерфейса и не изменят твои данные.',
+                          style: TextStyle(
+                            color: sub,
+                            height: 1.35,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        for (final module in TutorialCatalog.modules)
+                          _TutorialModuleTile(
+                            title: module.title,
+                            subtitle: module.subtitle,
+                            icon: _tutorialModuleIcon(module.id),
+                            color: _tutorialModuleColor(module.id),
+                            completed: state.tutorialProgress.isModuleCompleted(
+                              module.id,
+                            ),
+                            active: state.activeTutorialModuleId == module.id,
+                            isDark: isDark,
+                            borderColor: bdr,
+                            onTap: () => startModule(module.id),
+                          ),
+                      ],
+                    ),
                   ),
-                  isDark: isDark,
-                  borderColor: bdr,
-                  onTap: () => startModule(TutorialModuleIds.core),
-                ),
-                _TutorialModuleTile(
-                  title: 'Сейчас',
-                  subtitle: 'Следующий квест, минимум и быстрый старт',
-                  icon: Icons.bolt_rounded,
-                  color: const Color(0xFFFF9500),
-                  completed: state.tutorialProgress.isModuleCompleted(
-                    TutorialModuleIds.act,
-                  ),
-                  isDark: isDark,
-                  borderColor: bdr,
-                  onTap: () => startModule(TutorialModuleIds.act),
-                ),
-                _TutorialModuleTile(
-                  title: 'RoadMap',
-                  subtitle: 'Путь навыка, этапы и практика',
-                  icon: Icons.account_tree_rounded,
-                  color: const Color(0xFF4A9EFF),
-                  completed: state.tutorialProgress.isModuleCompleted(
-                    TutorialModuleIds.roadmap,
-                  ),
-                  isDark: isDark,
-                  borderColor: bdr,
-                  onTap: () => startModule(TutorialModuleIds.roadmap),
-                ),
-                _TutorialModuleTile(
-                  title: 'Статистика',
-                  subtitle: 'История роста и review-корректировка',
-                  icon: Icons.query_stats_rounded,
-                  color: const Color(0xFF34C759),
-                  completed: state.tutorialProgress.isModuleCompleted(
-                    TutorialModuleIds.stats,
-                  ),
-                  isDark: isDark,
-                  borderColor: bdr,
-                  onTap: () => startModule(TutorialModuleIds.stats),
-                ),
-                _TutorialModuleTile(
-                  title: 'Трофеи и эффекты',
-                  subtitle: 'Feedback-layer после действий',
-                  icon: Icons.redeem_rounded,
-                  color: const Color(0xFFFFCC00),
-                  completed: state.tutorialProgress.isModuleCompleted(
-                    TutorialModuleIds.trophies,
-                  ),
-                  isDark: isDark,
-                  borderColor: bdr,
-                  onTap: () => startModule(TutorialModuleIds.trophies),
-                ),
-                _TutorialModuleTile(
-                  title: 'Профиль',
-                  subtitle: 'Повтор обучения, подсказки, звук и тема',
-                  icon: Icons.person_rounded,
-                  color: const Color(0xFFAF52DE),
-                  completed: state.tutorialProgress.isModuleCompleted(
-                    TutorialModuleIds.profile,
-                  ),
-                  isDark: isDark,
-                  borderColor: bdr,
-                  onTap: () => startModule(TutorialModuleIds.profile),
-                ),
-                _TutorialModuleTile(
-                  title: 'Пройти всё заново',
-                  subtitle:
-                      'Сбросить прогресс обучения и начать с первого пути',
-                  icon: Icons.replay_rounded,
-                  color: const Color(0xFFFF3B30),
-                  completed: false,
-                  isDark: isDark,
-                  borderColor: bdr,
-                  onTap: () =>
-                      startModule(TutorialModuleIds.core, resetAll: true),
                 ),
               ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Закрыть'),
-            ),
-          ],
         );
       },
     );
   }
+
+  IconData _tutorialModuleIcon(String moduleId) => switch (moduleId) {
+    TutorialModuleIds.core => Icons.auto_awesome_rounded,
+    TutorialModuleIds.act => Icons.bolt_rounded,
+    TutorialModuleIds.roadmap => Icons.account_tree_rounded,
+    TutorialModuleIds.stats => Icons.query_stats_rounded,
+    TutorialModuleIds.trophies => Icons.redeem_rounded,
+    TutorialModuleIds.profile => Icons.person_rounded,
+    _ => Icons.play_arrow_rounded,
+  };
+
+  Color _tutorialModuleColor(String moduleId) => switch (moduleId) {
+    TutorialModuleIds.core || TutorialModuleIds.act => const Color(0xFFFF9500),
+    TutorialModuleIds.roadmap => const Color(0xFF4A9EFF),
+    TutorialModuleIds.stats => const Color(0xFF34C759),
+    TutorialModuleIds.trophies => const Color(0xFFFFCC00),
+    TutorialModuleIds.profile => const Color(0xFFAF52DE),
+    _ => const Color(0xFF4A9EFF),
+  };
 
   @override
   void didChangeDependencies() {
@@ -1085,7 +1058,7 @@ class _ProfileDialogState extends State<ProfileDialog> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Пройти обучение заново',
+                        'Обучение',
                         style: TextStyle(
                           color: txt,
                           fontSize: 13,
@@ -1094,7 +1067,7 @@ class _ProfileDialogState extends State<ProfileDialog> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Выбери тему: первый путь, Сейчас, RoadMap или Статистика.',
+                        'Короткие темы можно проходить в любом порядке и повторять.',
                         style: TextStyle(color: sub, fontSize: 11.5),
                       ),
                     ],
@@ -1259,6 +1232,7 @@ class _TutorialModuleTile extends StatelessWidget {
   final IconData icon;
   final Color color;
   final bool completed;
+  final bool active;
   final bool isDark;
   final Color borderColor;
   final VoidCallback onTap;
@@ -1269,6 +1243,7 @@ class _TutorialModuleTile extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.completed,
+    required this.active,
     required this.isDark,
     required this.borderColor,
     required this.onTap,
@@ -1279,59 +1254,74 @@ class _TutorialModuleTile extends StatelessWidget {
     final txt = textColor(isDark);
     final sub = subtext(isDark);
 
+    final status = active ? 'Сейчас' : (completed ? 'Пройдено' : 'Доступно');
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: PressFeedback(
-        scale: 0.98,
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(11),
-          decoration: BoxDecoration(
-            color: color.withAlpha(isDark ? 18 : 12),
-            borderRadius: BorderRadius.circular(13),
-            border: Border.all(color: borderColor),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: color.withAlpha(isDark ? 30 : 22),
-                  borderRadius: BorderRadius.circular(11),
-                ),
-                child: Icon(icon, color: color, size: 18),
+      child: Semantics(
+        button: true,
+        selected: active,
+        label: '$title. $status. $subtitle',
+        child: PressFeedback(
+          scale: 0.98,
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.all(11),
+            decoration: BoxDecoration(
+              color: color.withAlpha(
+                active ? (isDark ? 30 : 20) : (isDark ? 18 : 12),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(color: txt, fontWeight: FontWeight.w900),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        color: sub,
-                        fontSize: 11.5,
-                        height: 1.25,
-                        fontWeight: FontWeight.w700,
+              borderRadius: BorderRadius.circular(13),
+              border: Border.all(
+                color: active ? color.withAlpha(150) : borderColor,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: color.withAlpha(isDark ? 30 : 22),
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: Icon(icon, color: color, size: 18),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          color: txt,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          color: sub,
+                          fontSize: 11.5,
+                          height: 1.25,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              Icon(
-                completed
-                    ? Icons.check_circle_rounded
-                    : Icons.play_arrow_rounded,
-                color: completed ? const Color(0xFF34C759) : color,
-                size: 20,
-              ),
-            ],
+                Icon(
+                  active
+                      ? Icons.play_circle_fill_rounded
+                      : completed
+                      ? Icons.check_circle_rounded
+                      : Icons.play_arrow_rounded,
+                  color: completed && !active ? const Color(0xFF34C759) : color,
+                  size: 20,
+                ),
+              ],
+            ),
           ),
         ),
       ),
