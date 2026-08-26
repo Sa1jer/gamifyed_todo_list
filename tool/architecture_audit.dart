@@ -145,6 +145,7 @@ Future<void> main() async {
   }
 
   _checkMainPageObservation(root, violations);
+  _checkTutorialBoundaries(root, violations);
   _checkReturnContextBoundaries(root, violations);
   _checkMomentumBoundaries(root, violations);
   _checkVersionSync(root, violations);
@@ -158,6 +159,45 @@ Future<void> main() async {
     stderr.writeln('- $violation');
   }
   exitCode = 1;
+}
+
+void _checkTutorialBoundaries(Directory root, List<String> violations) {
+  final tutorialDirectory = Directory(
+    '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
+    'tutorial',
+  );
+  if (!tutorialDirectory.existsSync()) return;
+
+  for (final file
+      in tutorialDirectory
+          .listSync(recursive: true, followLinks: false)
+          .whereType<File>()
+          .where((file) => file.path.endsWith('.dart'))) {
+    final path = _relativePath(root, file);
+    final source = file.readAsStringSync();
+    for (final dependency in const [
+      'package:flutter/',
+      'app_state.dart',
+      '/widgets/',
+      'storage_service.dart',
+      '/persistence/',
+      'package:hive',
+    ]) {
+      _forbidImport(path, source, dependency, violations);
+    }
+  }
+
+  final snapshot = File(
+    '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
+    'storage_snapshot.dart',
+  );
+  if (snapshot.existsSync() &&
+      RegExp(r'\bwelcomeSeen\b').hasMatch(snapshot.readAsStringSync())) {
+    violations.add(
+      'lib/storage_snapshot.dart must not persist device-local welcomeSeen; '
+      'Welcome is outside domain snapshot and conflict semantics.',
+    );
+  }
 }
 
 void _checkMomentumBoundaries(Directory root, List<String> violations) {

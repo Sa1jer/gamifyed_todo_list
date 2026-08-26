@@ -287,16 +287,60 @@ void main() {
 
       expect(find.text('Не удалось загрузить данные'), findsOneWidget);
       expect(find.byKey(const Key('persistence-retry-load')), findsOneWidget);
+      expect(find.byKey(const ValueKey('welcome-page')), findsNothing);
 
       storage.clearFailures();
       await tester.tap(find.byKey(const Key('persistence-retry-load')));
       await tester.pumpAndSettle();
 
       expect(find.text('Не удалось загрузить данные'), findsNothing);
-      expect(
-        find.byKey(const ValueKey('desktop-three-panel-shell')),
-        findsOneWidget,
-      );
+      expect(find.byKey(const ValueKey('welcome-page')), findsOneWidget);
+    });
+
+    test(
+      'fresh snapshot install remains Welcome-eligible until Begin',
+      () async {
+        final storage = FaultInjectingStorageService(snapshotSupport: true);
+        final firstRun = AppState(storage: storage, seedDefaults: false);
+        addTearDown(firstRun.dispose);
+
+        await firstRun.loadSavedData();
+
+        expect(firstRun.shouldShowWelcome, isTrue);
+
+        final restarted = AppState(storage: storage, seedDefaults: false);
+        addTearDown(restarted.dispose);
+        await restarted.loadSavedData();
+
+        expect(restarted.shouldShowWelcome, isTrue);
+        expect(restarted.welcomeSeen, isFalse);
+      },
+    );
+
+    testWidgets('successful recovery of existing data does not show Welcome', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1440, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final storage = FaultInjectingStorageService(
+        skills: <Skill>[skill('existing-skill')],
+      )..failBeforeOperation = StorageOperation.loadTasks;
+
+      await tester.pumpWidget(RPGApp(storage: storage));
+      await tester.pump();
+
+      expect(find.text('Не удалось загрузить данные'), findsOneWidget);
+      expect(find.byKey(const ValueKey('welcome-page')), findsNothing);
+
+      storage.clearFailures();
+      await tester.tap(find.byKey(const Key('persistence-retry-load')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Не удалось загрузить данные'), findsNothing);
+      expect(find.byKey(const ValueKey('welcome-page')), findsNothing);
+      expect(find.text('existing-skill'), findsWidgets);
     });
 
     testWidgets('startup recovery retries storage initialization', (

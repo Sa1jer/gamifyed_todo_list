@@ -86,6 +86,7 @@ class InMemoryStorageService extends StorageService {
   DailyStats? dailyStats;
   bool? _theme;
   bool? _tooltipsEnabled;
+  bool? _welcomeSeen;
   bool? _onboardingSeen;
   TutorialProgress? _tutorialProgress;
   int? _bestStreak;
@@ -119,6 +120,14 @@ class InMemoryStorageService extends StorageService {
   @override
   Future<void> saveTooltipsEnabled(bool enabled) async {
     _tooltipsEnabled = enabled;
+  }
+
+  @override
+  Future<bool?> loadWelcomeSeen() async => _welcomeSeen;
+
+  @override
+  Future<void> saveWelcomeSeen(bool seen) async {
+    _welcomeSeen = seen;
   }
 
   @override
@@ -276,14 +285,19 @@ void main() {
     final storage = InMemoryStorageService();
     await storage.init();
     await tester.pumpWidget(RPGApp(storage: storage));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('welcome-page')), findsOneWidget);
+    expect(find.text('Добро пожаловать'), findsOneWidget);
+    expect(find.text('RPG To-Do'), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('welcome-begin-action')));
+    await tester.pumpAndSettle();
 
     expect(find.text('RPG To-Do'), findsOneWidget);
     expect(find.text('Действовать сегодня'), findsOneWidget);
-    expect(find.text('Первый запуск'), findsOneWidget);
-    expect(find.textContaining('В форме достаточно названия'), findsOneWidget);
-    expect(find.textContaining('1. Навык'), findsNothing);
+    expect(find.text('Первый навык'), findsOneWidget);
+    expect(storage._welcomeSeen, isTrue);
     await tester.tap(find.text('Пропустить обучение'));
     await tester.pumpAndSettle();
 
@@ -369,8 +383,7 @@ void main() {
       ];
     await storage.init();
     await tester.pumpWidget(RPGApp(storage: storage));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
 
     expect(
       find.byKey(const ValueKey('desktop-three-panel-shell')),
@@ -542,8 +555,7 @@ void main() {
       ];
     await storage.init();
     await tester.pumpWidget(RPGApp(storage: storage));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
 
     final surface = find.byKey(
       const ValueKey('desktop-focus-surface-hover-task'),
@@ -599,8 +611,7 @@ void main() {
       ];
     await storage.init();
     await tester.pumpWidget(RPGApp(storage: storage));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
 
     final titleFinder = find.byKey(
       const ValueKey('desktop-focus-title-focus-readable-task'),
@@ -641,8 +652,7 @@ void main() {
       ];
     await storage.init();
     await tester.pumpWidget(RPGApp(storage: storage));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('desktop-inbox-shortcut')));
     await tester.pumpAndSettle();
@@ -692,8 +702,7 @@ void main() {
       ];
     await storage.init();
     await tester.pumpWidget(RPGApp(storage: storage));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('desktop-nav-map')));
     await tester.pumpAndSettle();
@@ -2212,7 +2221,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('First-run tutorial dismisses once and persists', (
+  testWidgets('Welcome starts Core and dismissal persists independently', (
     WidgetTester tester,
   ) async {
     tester.view.physicalSize = const Size(1400, 900);
@@ -2226,9 +2235,15 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    expect(find.text('Первый запуск'), findsOneWidget);
+    expect(find.byKey(const ValueKey('welcome-page')), findsOneWidget);
+    expect(storage._welcomeSeen, isFalse);
     expect(storage._onboardingSeen, isFalse);
 
+    await tester.tap(find.byKey(const ValueKey('welcome-begin-action')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Первый навык'), findsOneWidget);
+    expect(storage._welcomeSeen, isTrue);
     await tester.tap(find.text('Пропустить обучение'));
     await tester.pumpAndSettle();
 
@@ -2237,6 +2252,105 @@ void main() {
       findsNothing,
     );
     expect(storage._onboardingSeen, isTrue);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+
+  testWidgets('Core acknowledgement shows one session-only completion card', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = InMemoryStorageService()
+      .._welcomeSeen = true
+      .._onboardingSeen = false
+      .._tutorialProgress = const TutorialProgress(
+        activeModuleId: TutorialModuleIds.core,
+        activeStepId: TutorialStepIds.coreCompleteQuest,
+        completedStepIds: {
+          TutorialStepIds.coreCreateSkill,
+          TutorialStepIds.coreCreateQuest,
+        },
+      )
+      ..skills = [
+        Skill(
+          id: 'skill-core',
+          name: 'Плавание',
+          goal: 'Проплыть километр',
+          color: const Color(0xFF4A9EFF),
+          icon: Icons.pool,
+        ),
+      ]
+      ..tasks = [
+        Task(
+          id: 'task-core',
+          title: 'Проплыть 100 метров',
+          skillId: 'skill-core',
+          xpReward: 20,
+          type: TaskType.shortTerm,
+        ),
+      ];
+    await storage.init();
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Первое полезное действие'), findsOneWidget);
+    await tester.tap(find.text('Понятно'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('tutorial-core-completion')),
+      findsOneWidget,
+    );
+    expect(find.text('Готово. Основу ты знаешь.'), findsOneWidget);
+    expect(storage.tasks.single.isDone, isFalse);
+
+    await tester.tap(
+      find.byKey(const ValueKey('tutorial-core-completion-continue')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('tutorial-core-completion')),
+      findsNothing,
+    );
+    expect(storage._onboardingSeen, isTrue);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+
+  testWidgets('completed legacy Core does not reopen completion card', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = InMemoryStorageService()
+      .._welcomeSeen = true
+      .._onboardingSeen = true
+      .._tutorialProgress = const TutorialProgress(
+        completedModuleIds: {TutorialModuleIds.core},
+        completedStepIds: {
+          TutorialStepIds.coreCreateSkill,
+          TutorialStepIds.coreCreateQuest,
+          TutorialStepIds.coreCompleteQuest,
+        },
+      );
+    await storage.init();
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('tutorial-core-completion')),
+      findsNothing,
+    );
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
@@ -2290,122 +2404,7 @@ void main() {
     expect(find.byTooltip('Закрыть полноэкранную карту'), findsOneWidget);
   });
 
-  testWidgets('First-run tutorial continues from skill to first quest', (
-    WidgetTester tester,
-  ) async {
-    tester.view.physicalSize = const Size(1400, 900);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-
-    final storage = InMemoryStorageService();
-    await storage.init();
-    await tester.pumpWidget(RPGApp(storage: storage));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
-
-    await tester.tap(find.text('Создать навык').last);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 350));
-
-    expect(find.text('Новый навык'), findsOneWidget);
-    expect(
-      tester
-          .widget<Opacity>(
-            find.byKey(const ValueKey('first-run-tutorial-opacity')),
-          )
-          .opacity,
-      lessThan(0.05),
-    );
-    expect(find.textContaining('Достаточно названия и цели'), findsOneWidget);
-    expect(find.text('Первый квест'), findsNothing);
-
-    await tester.enterText(find.byType(TextField).at(0), 'Подтягивания');
-    await tester.enterText(
-      find.byType(TextField).at(1),
-      'Подтягиваться 20 раз',
-    );
-    await tester.ensureVisible(find.text('Создать'));
-    await tester.pump();
-    await tester.tap(find.text('Создать'));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
-    expect(
-      tester
-          .widget<Opacity>(
-            find.byKey(const ValueKey('first-run-tutorial-opacity')),
-          )
-          .opacity,
-      lessThan(0.05),
-    );
-    await tester.pump(const Duration(seconds: 2));
-    await tester.pump(const Duration(milliseconds: 500));
-
-    final savedUserSkills = storage.skills
-        .where((skill) => skill.id != kInboxSkillId)
-        .toList();
-    expect(savedUserSkills, hasLength(1));
-    expect(savedUserSkills.single.treeNodes, isEmpty);
-    expect(storage.tasks, isEmpty);
-    expect(storage._onboardingSeen, isFalse);
-    expect(find.text('Первый квест'), findsWidgets);
-    expect(
-      find.textContaining('Теперь добавь один маленький квест'),
-      findsOneWidget,
-    );
-
-    await tester.tap(find.text('Создать квест').last);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 350));
-
-    expect(find.text('Новый квест'), findsWidgets);
-    expect(
-      tester
-          .widget<Opacity>(
-            find.byKey(const ValueKey('first-run-tutorial-opacity')),
-          )
-          .opacity,
-      lessThan(0.05),
-    );
-    expect(
-      find.textContaining('Квест — одно конкретное действие'),
-      findsOneWidget,
-    );
-
-    await tester.enterText(
-      find.byType(TextField).first,
-      'Сделать 3 подтягивания',
-    );
-    await tester.ensureVisible(find.text('Создать'));
-    await tester.pump();
-    await tester.tap(find.text('Создать'));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
-    expect(
-      tester
-          .widget<Opacity>(
-            find.byKey(const ValueKey('first-run-tutorial-opacity')),
-          )
-          .opacity,
-      lessThan(0.05),
-    );
-    await tester.pump(const Duration(seconds: 2));
-    await tester.pump(const Duration(milliseconds: 500));
-
-    expect(storage.tasks, hasLength(1));
-    expect(storage._onboardingSeen, isFalse);
-    expect(find.text('Действовать сегодня!'), findsOneWidget);
-    expect(
-      find.textContaining('Здесь выполняется следующий квест'),
-      findsOneWidget,
-    );
-    expect(find.text('Сделать сейчас'), findsNothing);
-
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump();
-  });
-
-  testWidgets('core tutorial replay skips skill creation when skill exists', (
+  testWidgets('Core resumes at quest when a skill already exists', (
     WidgetTester tester,
   ) async {
     tester.view.physicalSize = const Size(1400, 900);
@@ -2414,7 +2413,8 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final storage = InMemoryStorageService()
-      .._onboardingSeen = true
+      .._welcomeSeen = true
+      .._onboardingSeen = false
       .._tutorialProgress = const TutorialProgress(
         activeModuleId: TutorialModuleIds.core,
       )
@@ -2430,10 +2430,9 @@ void main() {
 
     await storage.init();
     await tester.pumpWidget(RPGApp(storage: storage));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
 
-    expect(find.text('Первый запуск'), findsNothing);
+    expect(find.byKey(const ValueKey('welcome-page')), findsNothing);
     expect(find.text('Создать навык'), findsNothing);
     expect(find.text('Первый квест'), findsOneWidget);
     expect(find.text('Создать квест'), findsWidgets);
@@ -2442,7 +2441,7 @@ void main() {
     await tester.pump();
   });
 
-  testWidgets('first action tutorial continues without completing quest', (
+  testWidgets('first useful action acknowledgement does not complete quest', (
     WidgetTester tester,
   ) async {
     tester.view.physicalSize = const Size(1400, 900);
@@ -2458,7 +2457,8 @@ void main() {
       type: TaskType.shortTerm,
     );
     final storage = InMemoryStorageService()
-      .._onboardingSeen = true
+      .._welcomeSeen = true
+      .._onboardingSeen = false
       .._tutorialProgress = const TutorialProgress(
         activeModuleId: TutorialModuleIds.core,
       )
@@ -2475,55 +2475,32 @@ void main() {
 
     await storage.init();
     await tester.pumpWidget(RPGApp(storage: storage));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
 
-    expect(find.text('Действовать сегодня!'), findsOneWidget);
-    expect(find.text('Понял!'), findsOneWidget);
+    expect(find.text('Первое полезное действие'), findsOneWidget);
+    expect(find.text('Понятно'), findsOneWidget);
     expect(find.text('Сделать сейчас'), findsNothing);
 
-    await tester.tap(find.text('Понял!'));
-    await tester.pump();
+    await tester.tap(find.text('Понятно'));
+    await tester.pumpAndSettle();
 
     expect(task.isDone, isFalse);
+    expect(storage._onboardingSeen, isTrue);
     expect(
-      tester
-          .widget<Opacity>(
-            find.byKey(const ValueKey('first-run-tutorial-opacity')),
-          )
-          .opacity,
-      lessThan(0.05),
+      storage._tutorialProgress!.isModuleCompleted(TutorialModuleIds.core),
+      isTrue,
     );
-
-    await tester.pump(const Duration(seconds: 1));
     expect(
-      tester
-          .widget<Opacity>(
-            find.byKey(const ValueKey('first-run-tutorial-opacity')),
-          )
-          .opacity,
-      lessThan(0.05),
+      storage._tutorialProgress!.isModuleCompleted(TutorialModuleIds.roadmap),
+      isFalse,
     );
-
-    await tester.pump(const Duration(seconds: 2));
-    await tester.pump(const Duration(milliseconds: 500));
-    expect(find.text('Дорожная карта'), findsOneWidget);
-    expect(
-      tester
-          .widget<Opacity>(
-            find.byKey(const ValueKey('first-run-tutorial-opacity')),
-          )
-          .opacity,
-      greaterThan(0.9),
-    );
-    expect(find.text('Открыть Карту'), findsOneWidget);
-    expect(task.isDone, isFalse);
+    expect(find.text('Первое полезное действие'), findsNothing);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
   });
 
-  testWidgets('XP tutorial opens RoadMap and continues inside the map', (
+  testWidgets('optional RoadMap tutorial starts without another module', (
     WidgetTester tester,
   ) async {
     tester.view.physicalSize = const Size(1400, 900);
@@ -2532,10 +2509,12 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final storage = InMemoryStorageService()
+      .._welcomeSeen = true
       .._onboardingSeen = true
       .._tutorialProgress = const TutorialProgress(
-        activeModuleId: TutorialModuleIds.core,
-        activeStepId: TutorialStepIds.coreXpFeedback,
+        completedModuleIds: {TutorialModuleIds.core},
+        activeModuleId: TutorialModuleIds.roadmap,
+        activeStepId: TutorialStepIds.roadmapPath,
       )
       ..skills = [
         Skill(
@@ -2550,85 +2529,24 @@ void main() {
 
     await storage.init();
     await tester.pumpWidget(RPGApp(storage: storage));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
 
-    expect(find.text('Дорожная карта'), findsOneWidget);
+    expect(find.text('Дорожная карта'), findsWidgets);
+    expect(find.text('Открыть карту'), findsOneWidget);
 
-    await tester.tap(find.text('Открыть Карту'));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 2));
-    await tester.pump(const Duration(milliseconds: 500));
+    await tester.tap(find.text('Открыть карту'));
+    await tester.pumpAndSettle();
 
     expect(find.text('Дорожная карта'), findsWidgets);
     expect(find.text('Карта'), findsWidgets);
-    expect(find.textContaining('Большой пузырь'), findsOneWidget);
-
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump();
-  });
-
-  testWidgets('Statistics tutorial opens spotlight and completes core module', (
-    WidgetTester tester,
-  ) async {
-    tester.view.physicalSize = const Size(1400, 900);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-
-    final storage = InMemoryStorageService()
-      .._onboardingSeen = true
-      .._tutorialProgress = const TutorialProgress(
-        activeModuleId: TutorialModuleIds.core,
-        activeStepId: TutorialStepIds.coreOpenStats,
-      )
-      ..skills = [
-        Skill(
-          id: 'skill-1',
-          name: 'Подтягивания',
-          goal: 'Подтягиваться 20 раз',
-          color: const Color(0xFFFF9500),
-          icon: Icons.fitness_center,
-        ),
-      ];
-
-    await storage.init();
-    await tester.pumpWidget(RPGApp(storage: storage));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
-
-    await tester.tap(find.text('Открыть статистику'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Статистика'), findsWidgets);
-    expect(find.textContaining('история роста'), findsWidgets);
-    expect(find.text('Завершить обучение'), findsOneWidget);
-
-    await tester.tap(find.text('Завершить обучение'));
-    await tester.pumpAndSettle();
-
-    expect(storage._onboardingSeen, isTrue);
     expect(
-      storage._tutorialProgress!.isModuleCompleted(TutorialModuleIds.core),
-      isTrue,
+      storage._tutorialProgress!.activeModuleId,
+      TutorialModuleIds.roadmap,
     );
-
-    await tester.pump(const Duration(milliseconds: 250));
-    await tester.pump(const Duration(seconds: 2));
-    await tester.pump(const Duration(milliseconds: 500));
-    expect(find.text('Трофеи и эффекты'), findsOneWidget);
-
-    await tester.tap(find.text('Открыть трофеи'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Дальше: профиль'), findsOneWidget);
-
-    await tester.tap(find.text('Дальше: профиль'));
-    await tester.pumpAndSettle();
-    await tester.pump(const Duration(seconds: 2));
-    await tester.pump(const Duration(milliseconds: 500));
-
-    expect(find.text('Профиль и подсказки'), findsOneWidget);
+    expect(
+      storage._tutorialProgress!.isModuleCompleted(TutorialModuleIds.stats),
+      isFalse,
+    );
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
@@ -2697,7 +2615,10 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    final storage = InMemoryStorageService().._tooltipsEnabled = false;
+    final storage = InMemoryStorageService()
+      .._welcomeSeen = true
+      .._onboardingSeen = true
+      .._tooltipsEnabled = false;
     await storage.init();
     await tester.pumpWidget(RPGApp(storage: storage));
     await tester.pump();
@@ -2729,20 +2650,20 @@ void main() {
       await tester.tap(find.text('Your Name').first);
       await tester.pumpAndSettle();
 
-      expect(find.text('Пройти обучение заново'), findsOneWidget);
+      expect(find.text('Обучение'), findsOneWidget);
 
-      await tester.ensureVisible(find.text('Пройти обучение заново'));
+      await tester.ensureVisible(find.text('Обучение'));
       await tester.pump();
-      await tester.tap(find.text('Пройти обучение заново'));
+      await tester.tap(find.text('Обучение'));
       await tester.pumpAndSettle();
 
       expect(find.text('Первый путь'), findsOneWidget);
-      expect(find.text('RoadMap'), findsOneWidget);
+      expect(find.text('Дорожная карта'), findsOneWidget);
 
-      await tester.tap(find.text('RoadMap').last);
+      await tester.tap(find.text('Дорожная карта').last);
       await tester.pumpAndSettle();
 
-      expect(find.text('Дорожная карта навыка'), findsOneWidget);
+      expect(find.text('Дорожная карта'), findsWidgets);
       expect(
         storage._tutorialProgress!.activeModuleId,
         TutorialModuleIds.roadmap,

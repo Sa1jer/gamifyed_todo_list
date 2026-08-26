@@ -8,6 +8,7 @@ import 'package:todo_list_app/engines/goal_progress_engine.dart';
 import 'package:todo_list_app/engines/roadmap_engine.dart';
 import 'package:todo_list_app/models.dart';
 import 'package:todo_list_app/storage_service.dart';
+import 'package:todo_list_app/tutorial/tutorial_catalog.dart';
 import 'package:todo_list_app/utils.dart';
 
 class _InMemoryStorageService extends StorageService {
@@ -15,6 +16,7 @@ class _InMemoryStorageService extends StorageService {
   List<Task> _tasks = [];
   bool? _theme;
   bool? _tooltipsEnabled;
+  bool? _welcomeSeen;
   bool? _onboardingSeen;
   TutorialProgress? _tutorialProgress;
   int? _bestStreak;
@@ -48,6 +50,14 @@ class _InMemoryStorageService extends StorageService {
   @override
   Future<void> saveTooltipsEnabled(bool enabled) async {
     _tooltipsEnabled = enabled;
+  }
+
+  @override
+  Future<bool?> loadWelcomeSeen() async => _welcomeSeen;
+
+  @override
+  Future<void> saveWelcomeSeen(bool seen) async {
+    _welcomeSeen = seen;
   }
 
   @override
@@ -1016,33 +1026,65 @@ void main() {
       state.dispose();
     });
 
-    test('first-run tutorial state loads and persists', () async {
+    test('fresh install shows Welcome before tutorial', () async {
       final storage = _InMemoryStorageService();
       final state = AppState(storage: storage, seedDefaults: false);
 
       await state.loadSavedData();
 
-      expect(state.shouldShowFirstRunTutorial, isTrue);
+      expect(state.shouldShowWelcome, isTrue);
+      expect(state.shouldShowFirstRunTutorial, isFalse);
       expect(state.onboardingSeen, isFalse);
+      expect(state.welcomeSeen, isFalse);
 
+      state.beginWelcome();
+      await state.flushSaves();
+
+      expect(state.shouldShowWelcome, isFalse);
+      expect(state.shouldShowFirstRunTutorial, isTrue);
+      expect(state.activeTutorialModuleId, TutorialModuleIds.core);
+      expect(state.activeTutorialStepId, TutorialStepIds.coreCreateSkill);
+      expect(storage._welcomeSeen, isTrue);
+      expect(state.skills.map((skill) => skill.id), [kInboxSkillId]);
+      expect(state.tasks, isEmpty);
+      expect(state.profile.xp, 0);
+      expect(state.profile.totalXpEarned, 0);
+
+      state.dispose();
+    });
+
+    test('Welcome does not return after restart', () async {
+      final storage = _InMemoryStorageService();
+      final state = AppState(storage: storage, seedDefaults: false);
+
+      await state.loadSavedData();
+      state.beginWelcome();
+      await state.flushSaves();
       state.dismissFirstRunTutorial();
       await state.flushSaves();
 
+      final restarted = AppState(storage: storage, seedDefaults: false);
+      await restarted.loadSavedData();
+
+      expect(restarted.shouldShowWelcome, isFalse);
+      expect(restarted.welcomeSeen, isTrue);
+      expect(restarted.shouldShowFirstRunTutorial, isFalse);
       expect(state.shouldShowFirstRunTutorial, isFalse);
       expect(state.onboardingSeen, isTrue);
       expect(storage._onboardingSeen, isTrue);
 
       state.dispose();
+      restarted.dispose();
     });
 
     test(
-      'first-run tutorial continues through quest action before completion',
+      'Core completes after acknowledging first useful action without XP',
       () async {
         final storage = _InMemoryStorageService();
         final state = AppState(storage: storage, seedDefaults: false);
 
         await state.loadSavedData();
-        state.startTutorialModule(TutorialModuleIds.core);
+        state.beginWelcome();
 
         state.addSkill(
           Skill(
@@ -1076,20 +1118,14 @@ void main() {
         expect(state.onboardingSeen, isFalse);
         expect(state.activeTutorialStepId, TutorialStepIds.coreCompleteQuest);
 
-        state.completeMinimumAction('task-1');
-
-        expect(state.shouldShowFirstRunTutorial, isTrue);
-        expect(state.activeTutorialStepId, TutorialStepIds.coreXpFeedback);
-        expect(state.onboardingSeen, isFalse);
-
-        state.completeTutorialStep(TutorialStepIds.coreXpFeedback);
-        state.completeTutorialStep(TutorialStepIds.coreOpenRoadmap);
-        state.completeTutorialStep(TutorialStepIds.coreRoadmapDetails);
-        state.completeTutorialStep(TutorialStepIds.coreOpenStats);
+        state.completeTutorialStep(TutorialStepIds.coreCompleteQuest);
         await state.flushSaves();
 
         expect(state.shouldShowFirstRunTutorial, isFalse);
         expect(state.onboardingSeen, isTrue);
+        expect(state.tasks.single.isDone, isFalse);
+        expect(state.profile.xp, 0);
+        expect(state.profile.totalXpEarned, 0);
         expect(storage._onboardingSeen, isTrue);
         expect(
           storage._tutorialProgress!.isModuleCompleted(TutorialModuleIds.core),
@@ -1105,6 +1141,7 @@ void main() {
       final state = AppState(storage: storage, seedDefaults: false);
 
       await state.loadSavedData();
+      state.beginWelcome();
       state.startTutorialModule(TutorialModuleIds.core);
 
       expect(state.activeTutorialStepId, TutorialStepIds.coreCreateSkill);
@@ -1119,6 +1156,7 @@ void main() {
         final state = AppState(storage: storage, seedDefaults: false);
 
         await state.loadSavedData();
+        state.beginWelcome();
         state.addSkill(
           Skill(
             id: 'skill-1',
@@ -1141,6 +1179,7 @@ void main() {
       final state = AppState(storage: storage, seedDefaults: false);
 
       await state.loadSavedData();
+      state.beginWelcome();
       state.addSkill(
         Skill(
           id: 'skill-1',
@@ -1167,6 +1206,84 @@ void main() {
     });
 
     test(
+      'quest work outside active Core does not mutate tutorial progress',
+      () async {
+        final storage = _InMemoryStorageService();
+        final state = AppState(storage: storage, seedDefaults: false);
+
+        await state.loadSavedData();
+        state.addSkill(
+          Skill(
+            id: 'skill-1',
+            name: 'Плавание',
+            goal: 'Проплыть километр',
+            color: const Color(0xFF4A9EFF),
+            icon: Icons.pool,
+          ),
+        );
+        state.addTask(
+          Task(
+            id: 'task-1',
+            title: 'Проплыть 100 метров',
+            skillId: 'skill-1',
+            xpReward: 20,
+            type: TaskType.shortTerm,
+          ),
+        );
+
+        expect(state.activeTutorialModuleId, isNull);
+        expect(state.tutorialProgress.completedStepIds, isEmpty);
+
+        state.completeTask('task-1');
+
+        expect(state.activeTutorialModuleId, isNull);
+        expect(state.tutorialProgress.completedStepIds, isEmpty);
+        expect(state.onboardingSeen, isFalse);
+
+        state.dispose();
+      },
+    );
+
+    test(
+      'deleting the first quest returns active Core to quest creation',
+      () async {
+        final storage = _InMemoryStorageService();
+        final state = AppState(storage: storage, seedDefaults: false);
+
+        await state.loadSavedData();
+        state.beginWelcome();
+        state.addSkill(
+          Skill(
+            id: 'skill-1',
+            name: 'Плавание',
+            goal: 'Проплыть километр',
+            color: const Color(0xFF4A9EFF),
+            icon: Icons.pool,
+          ),
+        );
+        state.addTask(
+          Task(
+            id: 'task-1',
+            title: 'Проплыть 100 метров',
+            skillId: 'skill-1',
+            xpReward: 20,
+            type: TaskType.shortTerm,
+          ),
+        );
+
+        expect(state.activeTutorialStepId, TutorialStepIds.coreCompleteQuest);
+
+        state.removeTask('task-1');
+
+        expect(state.activeTutorialModuleId, TutorialModuleIds.core);
+        expect(state.activeTutorialStepId, TutorialStepIds.coreCreateQuest);
+        expect(state.onboardingSeen, isFalse);
+
+        state.dispose();
+      },
+    );
+
+    test(
       'legacy onboardingSeen maps to completed core tutorial module',
       () async {
         final storage = _InMemoryStorageService().._onboardingSeen = true;
@@ -1175,12 +1292,160 @@ void main() {
         await state.loadSavedData();
 
         expect(state.shouldShowFirstRunTutorial, isFalse);
+        expect(state.shouldShowWelcome, isFalse);
+        expect(state.welcomeSeen, isTrue);
         expect(
           state.tutorialProgress.isModuleCompleted(TutorialModuleIds.core),
           isTrue,
         );
 
         state.dispose();
+      },
+    );
+
+    test('meaningful existing data infers Welcome as seen', () async {
+      final storage = _InMemoryStorageService()
+        .._skills = [
+          Skill(
+            id: 'existing-skill',
+            name: 'Existing',
+            goal: '',
+            color: const Color(0xFF4A9EFF),
+            icon: Icons.star,
+          ),
+        ];
+      final state = AppState(storage: storage, seedDefaults: false);
+
+      await state.loadSavedData();
+
+      expect(state.shouldShowWelcome, isFalse);
+      expect(state.welcomeSeen, isTrue);
+      expect(
+        state.tutorialProgress.isModuleCompleted(TutorialModuleIds.core),
+        isTrue,
+      );
+
+      state.dispose();
+    });
+
+    test(
+      'legacy Core progress normalizes without starting optional modules',
+      () async {
+        final storage = _InMemoryStorageService()
+          .._tutorialProgress = const TutorialProgress(
+            activeModuleId: TutorialModuleIds.core,
+            activeStepId: TutorialStepIds.coreOpenRoadmap,
+          );
+        final state = AppState(storage: storage, seedDefaults: false);
+
+        await state.loadSavedData();
+
+        expect(state.shouldShowWelcome, isFalse);
+        expect(state.activeTutorialModuleId, isNull);
+        expect(
+          state.tutorialProgress.isModuleCompleted(TutorialModuleIds.core),
+          isTrue,
+        );
+        expect(
+          state.tutorialProgress.isModuleCompleted(TutorialModuleIds.roadmap),
+          isFalse,
+        );
+
+        state.dispose();
+      },
+    );
+
+    test('optional tutorial modules start and dismiss independently', () async {
+      final storage = _InMemoryStorageService().._onboardingSeen = true;
+      final state = AppState(storage: storage, seedDefaults: false);
+
+      await state.loadSavedData();
+      state.startTutorialModule(TutorialModuleIds.roadmap);
+
+      expect(state.activeTutorialModuleId, TutorialModuleIds.roadmap);
+      expect(state.activeTutorialStepId, TutorialStepIds.roadmapPath);
+
+      state.dismissActiveTutorial();
+
+      expect(state.activeTutorialModuleId, isNull);
+      expect(
+        state.tutorialProgress.dismissedModuleIds.contains(
+          TutorialModuleIds.roadmap,
+        ),
+        isTrue,
+      );
+      expect(
+        state.tutorialProgress.isModuleCompleted(TutorialModuleIds.core),
+        isTrue,
+      );
+      expect(
+        state.tutorialProgress.isModuleCompleted(TutorialModuleIds.stats),
+        isFalse,
+      );
+
+      state.dispose();
+    });
+
+    test(
+      'every optional tutorial module supports an independent lifecycle',
+      () async {
+        final optionalModuleIds = TutorialCatalog.modules
+            .where((module) => !module.isMandatory)
+            .map((module) => module.id)
+            .toList(growable: false);
+
+        for (final moduleId in optionalModuleIds) {
+          final storage = _InMemoryStorageService().._onboardingSeen = true;
+          final state = AppState(storage: storage, seedDefaults: false);
+          await state.loadSavedData();
+
+          state.startTutorialModule(moduleId);
+          expect(state.activeTutorialModuleId, moduleId, reason: moduleId);
+          expect(
+            state.activeTutorialStepId,
+            TutorialCatalog.stepIdsForModule(moduleId).first,
+            reason: moduleId,
+          );
+
+          state.dismissActiveTutorial();
+          expect(state.activeTutorialModuleId, isNull, reason: moduleId);
+          expect(
+            state.tutorialProgress.dismissedModuleIds,
+            contains(moduleId),
+            reason: moduleId,
+          );
+
+          state.startTutorialModule(moduleId);
+          expect(
+            state.tutorialProgress.dismissedModuleIds,
+            isNot(contains(moduleId)),
+            reason: moduleId,
+          );
+          state.completeTutorialModule(moduleId);
+          expect(
+            state.tutorialProgress.isModuleCompleted(moduleId),
+            isTrue,
+            reason: moduleId,
+          );
+          expect(
+            state.tutorialProgress.isModuleCompleted(TutorialModuleIds.core),
+            isTrue,
+            reason: moduleId,
+          );
+          for (final otherModuleId in optionalModuleIds) {
+            if (otherModuleId == moduleId) continue;
+            expect(
+              state.tutorialProgress.isModuleCompleted(otherModuleId),
+              isFalse,
+              reason: '$moduleId must not complete $otherModuleId',
+            );
+          }
+
+          state.startTutorialModule(moduleId);
+          expect(state.activeTutorialModuleId, moduleId, reason: moduleId);
+
+          state.dispose();
+        }
       },
     );
   });
