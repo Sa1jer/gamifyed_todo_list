@@ -19,6 +19,7 @@ import 'dialogs/dialog_choice_chip.dart';
 import 'dialogs/reward_components.dart';
 import 'dialogs/rewards_tutorial.dart';
 import 'dialogs/skill_tree_inspector.dart';
+import 'dialogs/skill_creator_sections.dart';
 
 export 'dialogs/add_skill_tree_node_dialog.dart';
 export 'dialogs/bosses_dialog.dart';

@@ -355,6 +355,8 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
   bool _submitting = false;
   bool _allowPop = false;
   bool _discardDialogOpen = false;
+  bool _showAllIcons = false;
+  bool _firstStageExpanded = false;
   String? _nameError;
   late final String _initialDraftSignature;
   _SkillIconCategory _iconCategory = _SkillIconCategory.all;
@@ -512,6 +514,9 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
   ];
 
   List<_SkillIconOption> get _visibleIconOptions {
+    if (_showAllIcons && _iconCategory == _SkillIconCategory.all) {
+      return _iconOptions;
+    }
     if (_iconCategory != _SkillIconCategory.all) {
       return _iconOptions
           .where((option) => option.category == _iconCategory)
@@ -593,7 +598,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
     final title = widget.existing != null
         ? 'Редактировать навык'
         : 'Новый навык';
-    final iconOptions = widget.fullScreen ? _visibleIconOptions : _iconOptions;
+    final iconOptions = _visibleIconOptions;
     final desktopDialogHeight = (MediaQuery.sizeOf(context).height - 48)
         .clamp(620.0, 800.0)
         .toDouble();
@@ -636,14 +641,14 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (widget.fullScreen) ...[
-            _MobileSkillEmblemPreview(
+            MobileSkillEmblemPreview(
               icon: _icon,
               color: _color,
               name: _nameCtrl.text,
               isDark: isDark,
             ),
             const SizedBox(height: 16),
-            _MobileSkillFormSection(
+            MobileSkillFormSection(
               title: 'Название навыка',
               subtitle: '',
               isDark: isDark,
@@ -652,14 +657,10 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
             nameField,
             if (_nameError != null) ...[
               const SizedBox(height: 6),
-              _SkillNameError(message: _nameError!),
+              SkillCreatorNameError(message: _nameError!),
             ],
             const SizedBox(height: 18),
-            _MobileSkillFormSection(
-              title: 'Цель',
-              subtitle: '',
-              isDark: isDark,
-            ),
+            MobileSkillFormSection(title: 'Цель', subtitle: '', isDark: isDark),
             const SizedBox(height: 9),
             goalField,
             const SizedBox(height: 7),
@@ -673,16 +674,19 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
               ),
             ),
           ] else ...[
-            _DesktopSkillIdentitySection(
+            DesktopSkillIdentityPreview(
               icon: _icon,
               color: _color,
+              name: _nameCtrl.text,
+              goal: _goalCtrl.text,
+              isDark: isDark,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   nameField,
                   if (_nameError != null) ...[
                     const SizedBox(height: 6),
-                    _SkillNameError(message: _nameError!),
+                    SkillCreatorNameError(message: _nameError!),
                   ],
                   const SizedBox(height: 12),
                   goalField,
@@ -701,31 +705,67 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
             const SizedBox(height: 14),
           ],
           if (widget.fullScreen) ...[
-            _MobileSkillFormSection(
+            MobileSkillFormSection(
               title: 'Внешний вид',
               subtitle: 'Цвет связывает навык с квестами и RoadMap.',
               isDark: isDark,
             ),
             const SizedBox(height: 12),
+          ] else ...[
+            Text(
+              'Внешний вид',
+              style: TextStyle(
+                color: txt,
+                fontSize: 15,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 10),
           ],
           Row(
             children: [
               SubLbl('Иконка', sub),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  widget.fullScreen
-                      ? '${iconOptions.length} вариантов · категории расширяют выбор'
-                      : '${_iconOptions.length} иконок · прокрутите',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.right,
-                  style: TextStyle(color: sub, fontSize: 11),
+              const Spacer(),
+              TextButton.icon(
+                key: const ValueKey('skill-icon-picker-toggle'),
+                onPressed: () {
+                  setState(() {
+                    _showAllIcons = !_showAllIcons;
+                    _iconCategory = _SkillIconCategory.all;
+                  });
+                },
+                style: TextButton.styleFrom(
+                  foregroundColor: _color,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 5,
+                  ),
+                  visualDensity: VisualDensity.compact,
+                ),
+                icon: Icon(
+                  _showAllIcons
+                      ? Icons.expand_less_rounded
+                      : Icons.apps_rounded,
+                  size: 17,
+                ),
+                label: Text(
+                  _showAllIcons ? 'Основные' : 'Все иконки',
+                  style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
               ),
             ],
           ),
-          if (widget.fullScreen) ...[
+          Text(
+            _showAllIcons
+                ? '${iconOptions.length} вариантов в выбранной категории'
+                : '12 понятных вариантов для быстрого старта',
+            style: TextStyle(
+              color: sub,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          if (_showAllIcons) ...[
             const SizedBox(height: 8),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -850,37 +890,17 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
           const SizedBox(height: 14),
 
           if (widget.existing == null) ...[
-            if (widget.fullScreen) ...[
-              const SizedBox(height: 4),
-              _MobileSkillFormSection(
-                title: 'Первый этап',
-                subtitle:
-                    'Можно оставить пустым и собрать дорожную карту позже.',
-                isDark: isDark,
-              ),
-              const SizedBox(height: 9),
-            ],
-            DlgField(
-              label: widget.fullScreen
-                  ? 'Название первого этапа (необязательно)'
-                  : 'Первый этап (опционально)',
-              ctrl: _firstStageCtrl,
-              fBg: fBg,
-              txt: txt,
-              sub: sub,
-              bdr: bdr,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              widget.fullScreen
-                  ? 'Например: «Основа» или «Первая неделя практики».'
-                  : 'Например: «Основа». Можно оставить пустым и собрать дорожную карту позже.',
-              style: TextStyle(
-                color: sub,
-                fontSize: 11.5,
-                height: 1.3,
-                fontWeight: FontWeight.w600,
-              ),
+            _OptionalFirstStageSection(
+              expanded: _firstStageExpanded,
+              isDark: isDark,
+              color: _color,
+              borderColor: bdr,
+              fieldBackground: fBg,
+              textColor: txt,
+              secondaryTextColor: sub,
+              controller: _firstStageCtrl,
+              onToggle: () =>
+                  setState(() => _firstStageExpanded = !_firstStageExpanded),
             ),
             const SizedBox(height: 14),
           ],
@@ -1009,7 +1029,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
     setState(() => _submitting = true);
     if (widget.fullScreen) {
       FocusManager.instance.primaryFocus?.unfocus();
-      await Future<void>.delayed(const Duration(milliseconds: 120));
+      await WidgetsBinding.instance.endOfFrame;
       if (!mounted) return;
     }
     final initialTreeNodes = _initialTreeNodes();
@@ -1041,175 +1061,130 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
   }
 }
 
-class _SkillNameError extends StatelessWidget {
-  final String message;
-
-  const _SkillNameError({required this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      message,
-      key: const ValueKey('add-skill-name-error'),
-      style: const TextStyle(
-        color: Color(0xFFFF453A),
-        fontSize: 12,
-        fontWeight: FontWeight.w700,
-      ),
-    );
-  }
-}
-
-class _DesktopSkillIdentitySection extends StatelessWidget {
-  final IconData icon;
-  final Color color;
-  final Widget child;
-
-  const _DesktopSkillIdentitySection({
-    required this.icon,
-    required this.color,
-    required this.child,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          key: const ValueKey('skill-preview-icon'),
-          width: 84,
-          height: 84,
-          decoration: BoxDecoration(
-            color: color.withAlpha(30),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: color.withAlpha(110)),
-          ),
-          child: Icon(icon, color: color, size: 39),
-        ),
-        const SizedBox(width: 16),
-        Expanded(child: child),
-      ],
-    );
-  }
-}
-
-class _MobileSkillEmblemPreview extends StatelessWidget {
-  final IconData icon;
-  final Color color;
-  final String name;
+class _OptionalFirstStageSection extends StatelessWidget {
+  final bool expanded;
   final bool isDark;
+  final Color color;
+  final Color borderColor;
+  final Color fieldBackground;
+  final Color textColor;
+  final Color secondaryTextColor;
+  final TextEditingController controller;
+  final VoidCallback onToggle;
 
-  const _MobileSkillEmblemPreview({
-    required this.icon,
-    required this.color,
-    required this.name,
+  const _OptionalFirstStageSection({
+    required this.expanded,
     required this.isDark,
+    required this.color,
+    required this.borderColor,
+    required this.fieldBackground,
+    required this.textColor,
+    required this.secondaryTextColor,
+    required this.controller,
+    required this.onToggle,
   });
 
   @override
   Widget build(BuildContext context) {
-    final reduceMotion = MobileMotion.reduced(
-      context,
-      appReducedMotion:
-          AppStateProvider.maybeOf(context)?.reducedMotion ?? false,
-    );
-    final displayName = name.trim().isEmpty ? 'Твой новый навык' : name.trim();
-
-    return Center(
+    return Container(
+      key: const ValueKey('skill-first-stage-section'),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF13131A) : const Color(0xFFF7F8FA),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: borderColor),
+      ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AnimatedContainer(
-            key: const ValueKey('skill-preview-icon'),
-            duration: reduceMotion ? Duration.zero : kMotionSlow,
-            curve: kMotionCurve,
-            width: 112,
-            height: 112,
-            decoration: BoxDecoration(
-              color: color.withAlpha(isDark ? 24 : 16),
-              borderRadius: BorderRadius.circular(34),
-              border: Border.all(color: color.withAlpha(150), width: 2),
-              boxShadow: [
-                BoxShadow(
-                  color: color.withAlpha(isDark ? 46 : 30),
-                  blurRadius: 22,
-                  spreadRadius: 1,
+          Semantics(
+            button: true,
+            expanded: expanded,
+            child: InkWell(
+              key: const ValueKey('skill-first-stage-disclosure'),
+              onTap: onToggle,
+              borderRadius: BorderRadius.circular(14),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
                 ),
-              ],
-            ),
-            child: AnimatedSwitcher(
-              duration: reduceMotion ? Duration.zero : kMotionStandard,
-              child: Icon(
-                icon,
-                key: ValueKey(icon.codePoint),
-                color: color,
-                size: 50,
+                child: Row(
+                  children: [
+                    Icon(Icons.route_rounded, color: color, size: 19),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Первый этап (необязательно)',
+                            style: TextStyle(
+                              color: textColor,
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Можно собрать RoadMap позже.',
+                            style: TextStyle(
+                              color: secondaryTextColor,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    AnimatedRotation(
+                      turns: expanded ? 0.5 : 0,
+                      duration: kMotionFast,
+                      child: Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: secondaryTextColor,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-          const SizedBox(height: 12),
-          AnimatedSwitcher(
-            duration: reduceMotion ? Duration.zero : kMotionStandard,
-            child: Text(
-              displayName,
-              key: ValueKey(displayName),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: name.trim().isEmpty
-                    ? subtext(isDark)
-                    : textColor(isDark),
-                fontSize: 16,
-                fontWeight: FontWeight.w900,
+          AnimatedCrossFade(
+            duration: kMotionStandard,
+            crossFadeState: expanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            firstChild: const SizedBox(width: double.infinity),
+            secondChild: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  DlgField(
+                    label: 'Название первого этапа',
+                    ctrl: controller,
+                    fBg: fieldBackground,
+                    txt: textColor,
+                    sub: secondaryTextColor,
+                    bdr: borderColor,
+                    fieldKey: const ValueKey('add-skill-first-stage-field'),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Например: «Основа» или «Первая неделя практики».',
+                    style: TextStyle(
+                      color: secondaryTextColor,
+                      fontSize: 11.5,
+                      height: 1.3,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
         ],
       ),
-    );
-  }
-}
-
-class _MobileSkillFormSection extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final bool isDark;
-
-  const _MobileSkillFormSection({
-    required this.title,
-    required this.subtitle,
-    required this.isDark,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final hasSubtitle = subtitle.isNotEmpty;
-    return Column(
-      key: ValueKey('mobile-skill-section-$title'),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: TextStyle(
-            color: textColor(isDark),
-            fontSize: hasSubtitle ? 14.5 : 15.5,
-            height: 1.2,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        if (hasSubtitle) ...[
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: TextStyle(
-              color: subtext(isDark),
-              fontSize: 11.5,
-              height: 1.3,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ],
     );
   }
 }
