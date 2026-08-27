@@ -465,77 +465,68 @@ class _DesktopNavItemState extends State<_DesktopNavItem> {
       button: true,
       selected: active,
       label: widget.label,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 2),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(
-                DesktopJournalTokens.navRadius,
-              ),
-              overlayColor: const WidgetStatePropertyAll(Colors.transparent),
-              onTap: widget.onTap,
-              child: AnimatedContainer(
-                duration: DesktopJournalTokens.fastMotion,
-                curve: DesktopJournalTokens.motionCurve,
-                constraints: BoxConstraints(
-                  minHeight: widget.compact ? 36 : 42,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            mouseCursor: SystemMouseCursors.click,
+            borderRadius: BorderRadius.circular(DesktopJournalTokens.navRadius),
+            overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+            onHover: (value) {
+              if (_hovered != value) setState(() => _hovered = value);
+            },
+            onTap: widget.onTap,
+            child: AnimatedContainer(
+              key: ValueKey('desktop-nav-surface-${widget.label}'),
+              duration: DesktopJournalTokens.fastMotion,
+              curve: DesktopJournalTokens.motionCurve,
+              constraints: BoxConstraints(minHeight: widget.compact ? 36 : 42),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: active
+                    ? tokens.profilePurple.withValues(alpha: 0.16)
+                    : _hovered
+                    ? tokens.raisedSurface
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(
+                  DesktopJournalTokens.navRadius,
                 ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
+                border: Border.all(
                   color: active
-                      ? tokens.profilePurple.withValues(alpha: 0.16)
-                      : _hovered
-                      ? tokens.raisedSurface
+                      ? tokens.profilePurple.withValues(alpha: 0.42)
                       : Colors.transparent,
-                  borderRadius: BorderRadius.circular(
-                    DesktopJournalTokens.navRadius,
-                  ),
-                  border: Border.all(
-                    color: active
-                        ? tokens.profilePurple.withValues(alpha: 0.42)
-                        : Colors.transparent,
-                  ),
                 ),
-                child: Row(
-                  children: [
-                    Icon(
-                      widget.icon,
-                      color: active ? tokens.profilePurple : tokens.mutedText,
-                      size: 19,
-                    ),
-                    const SizedBox(width: 11),
-                    Expanded(
-                      child: Text(
-                        widget.label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.appTextTheme.labelLarge?.copyWith(
-                          color: active ? tokens.text : tokens.mutedText,
-                          fontWeight: active
-                              ? FontWeight.w800
-                              : FontWeight.w700,
-                        ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    widget.icon,
+                    color: active ? tokens.profilePurple : tokens.mutedText,
+                    size: 19,
+                  ),
+                  const SizedBox(width: 11),
+                  Expanded(
+                    child: Text(
+                      widget.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.appTextTheme.labelLarge?.copyWith(
+                        color: active ? tokens.text : tokens.mutedText,
+                        fontWeight: active ? FontWeight.w800 : FontWeight.w700,
                       ),
                     ),
-                    if (active)
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: BoxDecoration(
-                          color: tokens.profilePurple,
-                          shape: BoxShape.circle,
-                        ),
+                  ),
+                  if (active)
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: tokens.profilePurple,
+                        shape: BoxShape.circle,
                       ),
-                  ],
-                ),
+                    ),
+                ],
               ),
             ),
           ),
@@ -715,9 +706,10 @@ class _DesktopSkillRowState extends State<_DesktopSkillRow> {
                                 child: IconButton(
                                   tooltip: 'Открыть путь навыка в RoadMap',
                                   padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints.tightFor(
-                                    width: 38,
-                                    height: 44,
+                                  constraints: const BoxConstraints(
+                                    minWidth: 38,
+                                    minHeight: 44,
+                                    maxWidth: 38,
                                   ),
                                   onPressed: widget.onRoadmap,
                                   icon: Icon(
@@ -739,9 +731,9 @@ class _DesktopSkillRowState extends State<_DesktopSkillRow> {
                                 child: PopupMenuButton<String>(
                                   tooltip: 'Действия с навыком ${skill.name}',
                                   padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints.tightFor(
-                                    width: 38,
-                                    height: 44,
+                                  constraints: const BoxConstraints(
+                                    minWidth: 220,
+                                    maxWidth: 260,
                                   ),
                                   icon: Icon(
                                     Icons.more_vert_rounded,
@@ -760,6 +752,9 @@ class _DesktopSkillRowState extends State<_DesktopSkillRow> {
                                   },
                                   itemBuilder: (_) => [
                                     PopupMenuItem(
+                                      key: ValueKey(
+                                        'desktop-skill-menu-edit-${skill.id}',
+                                      ),
                                       value: 'edit',
                                       child: Text(
                                         'Редактировать навык',
@@ -769,6 +764,9 @@ class _DesktopSkillRowState extends State<_DesktopSkillRow> {
                                       ),
                                     ),
                                     PopupMenuItem(
+                                      key: ValueKey(
+                                        'desktop-skill-menu-delete-${skill.id}',
+                                      ),
                                       value: 'delete',
                                       child: Text(
                                         'Удалить навык',

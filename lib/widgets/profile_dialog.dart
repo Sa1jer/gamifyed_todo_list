@@ -19,8 +19,15 @@ import 'shared.dart';
 
 class ProfileDialog extends StatefulWidget {
   final bool fullScreen;
+  final bool showTutorialHint;
+  final VoidCallback? onTutorialComplete;
 
-  const ProfileDialog({super.key, this.fullScreen = false});
+  const ProfileDialog({
+    super.key,
+    this.fullScreen = false,
+    this.showTutorialHint = false,
+    this.onTutorialComplete,
+  });
   @override
   State<ProfileDialog> createState() => _ProfileDialogState();
 }
@@ -208,81 +215,43 @@ class _ProfileDialogState extends State<ProfileDialog> {
             ? const BoxConstraints()
             : const BoxConstraints(maxHeight: 680),
         color: bg,
-        child: Stack(
-          clipBehavior: Clip.none,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // ── Banner ─────────────────────────────────────────────────
-                _buildBannerSection(context, s, p),
-                // ── Scrollable Body ───────────────────────────────────────
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildNameRow(context, s, p, txt, sub),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            LvlBadge(
-                              level: p.level,
-                              color: const Color(0xFF4A9EFF),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 18),
-                        Container(height: 1, color: bdr),
-                        const SizedBox(height: 14),
-                        _buildXPSection(context, p, sub),
-                        const SizedBox(height: 6),
-                        _buildTotalXP(context, p, txt, sub),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Изучаю ${s.activeSkillCount} ${_skillWord(s.activeSkillCount)}',
-                          style: TextStyle(color: sub, fontSize: 13),
-                        ),
-                        const SizedBox(height: 10),
-                        _ProfileTimelineButton(
-                          state: s,
-                          isDark: isDark,
-                          txt: txt,
-                          sub: sub,
-                          fullScreen: widget.fullScreen,
-                        ),
-                        const SizedBox(height: 18),
-                        Container(height: 1, color: bdr),
-                        const SizedBox(height: 14),
-                        _buildPersonalInfo(
-                          context,
-                          s,
-                          p,
-                          isDark,
-                          txt,
-                          sub,
-                          bdr,
-                        ),
-                        const SizedBox(height: 18),
-                        Container(height: 1, color: bdr),
-                        const SizedBox(height: 14),
-                        _buildInterfaceSettings(s, isDark, txt, sub, bdr),
-                        const SizedBox(height: 18),
-                        Container(height: 1, color: bdr),
-                        const SizedBox(height: 14),
-                        _buildSkillsSection(context, s, isDark, txt, sub),
-                      ],
-                    ),
+            _buildDesktopProfileHero(context, s, p, isDark, txt, sub, bdr),
+            Expanded(
+              child: ListView(
+                key: const ValueKey('desktop-profile-body-scroll'),
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                children: [
+                  _buildTotalXP(context, p, txt, sub),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Изучаю ${s.activeSkillCount} ${_skillWord(s.activeSkillCount)}',
+                    style: TextStyle(color: sub, fontSize: 13),
                   ),
-                ),
-              ],
-            ),
-            // Keep avatar above the scrollable body during scroll.
-            Positioned(
-              top: 120,
-              left: 24,
-              child: _buildAvatar(context, s, p, isDark),
+                  const SizedBox(height: 10),
+                  _ProfileTimelineButton(
+                    state: s,
+                    isDark: isDark,
+                    txt: txt,
+                    sub: sub,
+                    fullScreen: widget.fullScreen,
+                  ),
+                  const SizedBox(height: 18),
+                  Container(height: 1, color: bdr),
+                  const SizedBox(height: 14),
+                  _buildPersonalInfo(context, s, p, isDark, txt, sub, bdr),
+                  const SizedBox(height: 18),
+                  Container(height: 1, color: bdr),
+                  const SizedBox(height: 14),
+                  _buildInterfaceSettings(s, isDark, txt, sub, bdr),
+                  const SizedBox(height: 18),
+                  Container(height: 1, color: bdr),
+                  const SizedBox(height: 14),
+                  _buildSkillsSection(context, s, isDark, txt, sub),
+                ],
+              ),
             ),
           ],
         ),
@@ -315,56 +284,124 @@ class _ProfileDialogState extends State<ProfileDialog> {
         icon: Icons.person_rounded,
         accentColor: Color(0xFF7562FF),
       ),
-      child: ListView(
-        key: const ValueKey('mobile-profile-scroll'),
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+      child: Column(
         children: [
-          _buildMobileProfileHero(
-            context,
-            state,
-            profile,
-            isDark,
-            text,
-            secondary,
-            border,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: _buildMobileProfileHero(
+              context,
+              state,
+              profile,
+              isDark,
+              text,
+              secondary,
+              border,
+            ),
           ),
-          const SizedBox(height: 18),
-          SubLbl('Прогресс', secondary),
           const SizedBox(height: 10),
-          _buildTotalXP(context, profile, text, secondary),
-          const SizedBox(height: 5),
-          Text(
-            'Изучаю ${state.activeSkillCount} ${_skillWord(state.activeSkillCount)}',
-            style: TextStyle(color: secondary, fontSize: 13),
+          Expanded(
+            child: ListView(
+              key: const ValueKey('mobile-profile-scroll'),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+              children: [
+                SubLbl('Прогресс', secondary),
+                const SizedBox(height: 10),
+                _buildTotalXP(context, profile, text, secondary),
+                const SizedBox(height: 5),
+                Text(
+                  'Изучаю ${state.activeSkillCount} ${_skillWord(state.activeSkillCount)}',
+                  style: TextStyle(color: secondary, fontSize: 13),
+                ),
+                const SizedBox(height: 12),
+                _ProfileTimelineButton(
+                  state: state,
+                  isDark: isDark,
+                  txt: text,
+                  sub: secondary,
+                  fullScreen: true,
+                ),
+                const SizedBox(height: 18),
+                Container(height: 1, color: border),
+                const SizedBox(height: 16),
+                _buildPersonalInfo(
+                  context,
+                  state,
+                  profile,
+                  isDark,
+                  text,
+                  secondary,
+                  border,
+                ),
+                const SizedBox(height: 18),
+                Container(height: 1, color: border),
+                const SizedBox(height: 16),
+                _buildInterfaceSettings(state, isDark, text, secondary, border),
+                const SizedBox(height: 18),
+                Container(height: 1, color: border),
+                const SizedBox(height: 16),
+                _buildSkillsSection(context, state, isDark, text, secondary),
+              ],
+            ),
           ),
-          const SizedBox(height: 12),
-          _ProfileTimelineButton(
-            state: state,
-            isDark: isDark,
-            txt: text,
-            sub: secondary,
-            fullScreen: true,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopProfileHero(
+    BuildContext context,
+    AppState state,
+    UserProfile profile,
+    bool isDark,
+    Color text,
+    Color secondary,
+    Color border,
+  ) {
+    return DecoratedBox(
+      key: const ValueKey('desktop-profile-fixed-hero'),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF171925) : const Color(0xFFF7F8FC),
+        border: Border(bottom: BorderSide(color: border)),
+      ),
+      child: Column(
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.bottomLeft,
+            children: [
+              Column(
+                children: [
+                  _buildBannerSection(context, state, profile),
+                  const SizedBox(height: 42),
+                ],
+              ),
+              Positioned(
+                left: 24,
+                bottom: 0,
+                child: _buildAvatar(context, state, profile, isDark),
+              ),
+            ],
           ),
-          const SizedBox(height: 18),
-          Container(height: 1, color: border),
-          const SizedBox(height: 16),
-          _buildPersonalInfo(
-            context,
-            state,
-            profile,
-            isDark,
-            text,
-            secondary,
-            border,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 10, 24, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildNameRow(
+                  context,
+                  state,
+                  profile,
+                  text,
+                  secondary,
+                  offsetForAvatar: false,
+                ),
+                const SizedBox(height: 7),
+                LvlBadge(level: profile.level, color: const Color(0xFF4A9EFF)),
+                const SizedBox(height: 12),
+                _buildXPSection(context, profile, secondary),
+              ],
+            ),
           ),
-          const SizedBox(height: 18),
-          Container(height: 1, color: border),
-          const SizedBox(height: 16),
-          _buildInterfaceSettings(state, isDark, text, secondary, border),
-          const SizedBox(height: 18),
-          Container(height: 1, color: border),
-          const SizedBox(height: 16),
-          _buildSkillsSection(context, state, isDark, text, secondary),
         ],
       ),
     );
@@ -986,6 +1023,13 @@ class _ProfileDialogState extends State<ProfileDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (widget.showTutorialHint) ...[
+          _ProfileTutorialHint(
+            isDark: isDark,
+            onComplete: widget.onTutorialComplete,
+          ),
+          const SizedBox(height: 12),
+        ],
         SubLbl('Интерфейс', sub),
         const SizedBox(height: 10),
         Container(
@@ -1226,6 +1270,73 @@ class _ProfileTimelineButton extends StatelessWidget {
 
 // ─── Tutorial module tile ─────────────────────────────────────────────────────
 
+class _ProfileTutorialHint extends StatelessWidget {
+  final bool isDark;
+  final VoidCallback? onComplete;
+
+  const _ProfileTutorialHint({required this.isDark, this.onComplete});
+
+  @override
+  Widget build(BuildContext context) {
+    const accent = Color(0xFFAF52DE);
+    return Container(
+      key: const ValueKey('profile-tutorial-inline-guidance'),
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: accent.withAlpha(isDark ? 24 : 14),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: accent.withAlpha(92)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.auto_awesome_rounded, color: accent, size: 19),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Настройки под тебя',
+                  style: TextStyle(
+                    color: textColor(isDark),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 7),
+          Text(
+            'Здесь можно настроить подсказки и заново открыть любую короткую тему обучения.',
+            style: TextStyle(
+              color: subtext(isDark),
+              fontSize: 12,
+              height: 1.35,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          if (onComplete != null) ...[
+            const SizedBox(height: 10),
+            FilledButton.icon(
+              key: const ValueKey('profile-tutorial-complete'),
+              onPressed: onComplete,
+              style: FilledButton.styleFrom(
+                backgroundColor: accent,
+                foregroundColor: Colors.white,
+                visualDensity: VisualDensity.compact,
+              ),
+              icon: const Icon(Icons.check_rounded, size: 17),
+              label: const Text('Завершить тему'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class _TutorialModuleTile extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -1373,44 +1484,41 @@ class _SkillChipState extends State<_SkillChip> {
             children: [
               Icon(sk.icon, color: sk.color, size: 14),
               const SizedBox(width: 6),
-              if (widget.expanded)
-                Expanded(
-                  child: Text(
-                    sk.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: sk.color,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                )
-              else
-                Text(
+              Flexible(
+                fit: widget.expanded ? FlexFit.tight : FlexFit.loose,
+                child: Text(
                   sk.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: sk.color,
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
+              ),
               const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${sk.xp}/${sk.xpNeeded} XP',
-                    style: TextStyle(color: sub, fontSize: 10),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Text(
-                    'Ур.${sk.level}',
-                    style: TextStyle(color: sub.withAlpha(190), fontSize: 9.5),
-                  ),
-                  SizedBox(
-                    width: 78,
-                    child: ClipRRect(
+              SizedBox(
+                width: 78,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${sk.xp}/${sk.xpNeeded} XP',
+                      maxLines: 1,
+                      style: TextStyle(color: sub, fontSize: 10),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      'Ур.${sk.level}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: sub.withAlpha(190),
+                        fontSize: 9.5,
+                      ),
+                    ),
+                    ClipRRect(
                       borderRadius: BorderRadius.circular(2),
                       child: LinearProgressIndicator(
                         value: sk.progress,
@@ -1419,8 +1527,8 @@ class _SkillChipState extends State<_SkillChip> {
                         valueColor: AlwaysStoppedAnimation(sk.color),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
