@@ -1,6 +1,6 @@
 # Welcome And Tutorial Architecture
 
-Last updated: 2026-08-26
+Last updated: 2026-08-27
 
 ## Product Boundary
 
@@ -57,20 +57,58 @@ the first relevant Core step without changing domain data.
 | Progression and normalization | `lib/tutorial/tutorial_coordinator.dart` | Pure compatibility, next-step, and default-Core policy. |
 | Welcome copy | `lib/tutorial/welcome_copy.dart` | Central product copy without widget dependencies. |
 | Welcome presentation | `lib/widgets/welcome_page.dart` | Responsive, accessible full-screen route and future action slots. |
-| Target readiness | `lib/widgets/tutorial/tutorial_target_readiness.dart` | Mounted/layout readiness with bounded frame retries and a dismissible fallback. |
+| Target readiness | `lib/widgets/tutorial/tutorial_target_readiness.dart` | Shared mounted/layout probe with a wall-clock deadline and safe fallback. |
+| Runtime sequencing | `lib/widgets/main_page/first_run_tutorial.dart` | Session-only phases, target presentation, focus, motion, and fallback mode. |
+| Navigation binding | `lib/widgets/main_page/shell.dart` | Opens real workspaces/dialogs and advances only after the destination target is laid out. |
 | Runtime facade | `lib/app_state.dart` | Public commands, current progress, persistence scheduling, and one final notification. |
 | Profile module picker | `lib/widgets/profile_dialog.dart` | Compact replay/start/skip entry point for each module. |
 
 The files in `lib/tutorial/` must not import Flutter, widgets, AppState, or
 persistence. UI navigation and `GlobalKey` targets remain presentation-owned.
 
-## Timing And Motion
+## Tutorial V3 Runtime
 
-Tutorial target discovery does not use a wall-clock delay. The readiness widget
-checks after layout frames, stops after a bounded number of attempts, and then
-shows a safe fallback card if the target is absent in the current responsive
-composition. Reduced motion removes non-essential Welcome and overlay movement;
-it never hides the state transition itself.
+The session-only runtime has explicit phases: `idle`, `transitioning`,
+`waitingForTarget`, `presenting`, `completing`, and `completed`. Only
+`TutorialProgress` is persisted. Runtime phases never create another tutorial
+state model and remain safe for legacy v2 progress.
+
+Target readiness uses `TutorialTargetProbe`: mounted `RenderBox` state is
+checked on layout events and short periodic probes, while a `1200ms` wall-clock
+deadline bounds the wait. The deadline is not a visual delay and does not count
+frames, so 60 Hz and high-refresh displays receive the same readiness window.
+An unavailable target becomes a dismissible Coach Card instead of trapping the
+user.
+
+Navigation follows this order:
+
+```text
+CTA -> transitioning -> open real destination -> wait for laid-out target
+    -> commit old step -> wait/present next step
+```
+
+The RoadMap chapter hides the old overlay while its workspace changes. The
+Profile chapter opens the real Profile surface and completes from inline
+guidance inside it. No arbitrary two-second delay or one-frame progression
+callback owns navigation.
+
+Tutorial v3 uses three presentation modes:
+
+- `spotlight`: a real, current control such as `+ Навык`, `+ Квест`, or an
+  available desktop `Минимальный шаг`;
+- `coachCard`: a concept without a reliable control, including Minimum Action
+  when current data has no such action;
+- `inlineGuidance`: guidance inside real creation/Profile surfaces.
+
+Active spotlight geometry is re-read after every real rendered frame, so
+scrolling and resizing cannot leave a stale rectangle. Coach Cards use a light
+scrim and avoid the spotlight `saveLayer`. `Escape` dismisses tutorial UI on
+desktop. Reduced motion removes translation and uses the stable final state.
+
+After the third Core acknowledgement, persisted Core progress is already
+complete. A compact session-only banner says that optional topics are available
+in Profile, dismisses automatically, and never requires a fourth continuation
+action. It grants no XP, trophy, chest, or reward.
 
 ## Responsive And Accessibility Contract
 
@@ -80,6 +118,8 @@ it never hides the state transition itself.
 - Dark is the polished target and light uses the existing usable semantic
   tokens.
 - Optional tutorial content remains dismissible when a target is unavailable.
+- The Core completion banner is a live region but does not block the app.
+- Coach/spotlight panels receive keyboard focus and support `Escape`.
 
 ## Future Slots
 
@@ -92,8 +132,10 @@ exists. No account, cloud, or locale state is introduced by this implementation.
 
 Automated coverage characterizes fresh/existing installs, persistence across
 restart, recovery precedence, legacy progress normalization, Core data/XP
-isolation, independent optional modules, bounded target readiness, responsive
-Welcome layout, reduced motion, and profile module selection.
+isolation, automatic non-blocking Core completion, independent optional
+modules, wall-clock target readiness, RoadMap transition ordering, real Profile
+inline completion, actual/fallback Minimum Action targeting, `Escape`,
+responsive Welcome layout, reduced motion, and profile module selection.
 
 Manual release QA should still verify Welcome and every tutorial module on a
 real narrow Android device, desktop resizing, TalkBack/VoiceOver traversal,

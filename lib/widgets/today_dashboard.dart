@@ -12,6 +12,7 @@ class TodayDashboard extends StatefulWidget {
   final VoidCallback? onCreateFirstSkill;
   final Key? createFirstSkillButtonKey;
   final Key? nextQuestActionKey;
+  final Key? minimumActionTutorialKey;
   final bool initiallyExpanded;
   final bool compactSummary;
   final bool mobileJournal;
@@ -24,6 +25,7 @@ class TodayDashboard extends StatefulWidget {
     this.onCreateFirstSkill,
     this.createFirstSkillButtonKey,
     this.nextQuestActionKey,
+    this.minimumActionTutorialKey,
     this.initiallyExpanded = true,
     this.compactSummary = false,
     this.mobileJournal = false,
@@ -110,6 +112,7 @@ class _TodayDashboardState extends State<TodayDashboard> {
           onCreateFirstSkill: widget.onCreateFirstSkill,
           createFirstSkillButtonKey: widget.createFirstSkillButtonKey,
           nextQuestActionKey: widget.nextQuestActionKey,
+          minimumActionTutorialKey: widget.minimumActionTutorialKey,
         );
 
         if (widget.compactSummary && !_expanded) {
@@ -305,6 +308,8 @@ class _TodayDashboardState extends State<TodayDashboard> {
                                           widget.createFirstSkillButtonKey,
                                       nextQuestActionKey:
                                           widget.nextQuestActionKey,
+                                      minimumActionTutorialKey:
+                                          widget.minimumActionTutorialKey,
                                     );
 
                                     if (constraints.maxWidth < 720) {
@@ -320,6 +325,8 @@ class _TodayDashboardState extends State<TodayDashboard> {
                                             widget.createFirstSkillButtonKey,
                                         nextQuestActionKey:
                                             widget.nextQuestActionKey,
+                                        minimumActionTutorialKey:
+                                            widget.minimumActionTutorialKey,
                                       );
                                     }
 
@@ -370,6 +377,7 @@ class _DashboardContent extends StatelessWidget {
   final VoidCallback? onCreateFirstSkill;
   final Key? createFirstSkillButtonKey;
   final Key? nextQuestActionKey;
+  final Key? minimumActionTutorialKey;
 
   const _DashboardContent({
     required this.state,
@@ -386,6 +394,7 @@ class _DashboardContent extends StatelessWidget {
     required this.onCreateFirstSkill,
     required this.createFirstSkillButtonKey,
     required this.nextQuestActionKey,
+    required this.minimumActionTutorialKey,
   });
 
   @override
@@ -407,6 +416,7 @@ class _DashboardContent extends StatelessWidget {
             onCreateFirstSkill: onCreateFirstSkill,
             createFirstSkillButtonKey: createFirstSkillButtonKey,
             nextQuestActionKey: nextQuestActionKey,
+            minimumActionTutorialKey: minimumActionTutorialKey,
           ),
         ),
         const SizedBox(width: 10),
@@ -451,6 +461,7 @@ class _CompactDashboardContent extends StatelessWidget {
   final VoidCallback? onCreateFirstSkill;
   final Key? createFirstSkillButtonKey;
   final Key? nextQuestActionKey;
+  final Key? minimumActionTutorialKey;
 
   const _CompactDashboardContent({
     required this.state,
@@ -461,6 +472,7 @@ class _CompactDashboardContent extends StatelessWidget {
     required this.onCreateFirstSkill,
     required this.createFirstSkillButtonKey,
     required this.nextQuestActionKey,
+    required this.minimumActionTutorialKey,
   });
 
   @override
@@ -475,6 +487,7 @@ class _CompactDashboardContent extends StatelessWidget {
       onCreateFirstSkill: onCreateFirstSkill,
       createFirstSkillButtonKey: createFirstSkillButtonKey,
       nextQuestActionKey: nextQuestActionKey,
+      minimumActionTutorialKey: minimumActionTutorialKey,
     );
   }
 }
@@ -489,6 +502,7 @@ class _MobileNextActionSummary extends StatelessWidget {
   final VoidCallback? onCreateFirstSkill;
   final Key? createFirstSkillButtonKey;
   final Key? nextQuestActionKey;
+  final Key? minimumActionTutorialKey;
 
   const _MobileNextActionSummary({
     required this.state,
@@ -500,6 +514,7 @@ class _MobileNextActionSummary extends StatelessWidget {
     required this.onCreateFirstSkill,
     required this.createFirstSkillButtonKey,
     required this.nextQuestActionKey,
+    required this.minimumActionTutorialKey,
   });
 
   @override
@@ -570,7 +585,9 @@ class _MobileNextActionSummary extends StatelessWidget {
       return KeyedSubtree(
         key: nextQuestActionKey,
         child: _MobileSummaryButton(
-          key: ValueKey('mobile-next-action-trigger-${currentTask.id}'),
+          key: canStartMinimum
+              ? minimumActionTutorialKey
+              : ValueKey('mobile-next-action-trigger-${currentTask.id}'),
           controlKey: controlKey,
           label: canStartMinimum ? 'Начать' : 'Готово',
           icon: canStartMinimum
@@ -797,6 +814,7 @@ class _NextActionCard extends StatelessWidget {
   final VoidCallback? onCreateFirstSkill;
   final Key? createFirstSkillButtonKey;
   final Key? nextQuestActionKey;
+  final Key? minimumActionTutorialKey;
 
   const _NextActionCard({
     required this.state,
@@ -808,6 +826,7 @@ class _NextActionCard extends StatelessWidget {
     required this.onCreateFirstSkill,
     required this.createFirstSkillButtonKey,
     required this.nextQuestActionKey,
+    required this.minimumActionTutorialKey,
   });
 
   @override
@@ -984,22 +1003,25 @@ class _NextActionCard extends StatelessWidget {
           if (compact)
             Align(
               alignment: Alignment.centerRight,
-              child: TodayQuickActionButton(
+              child: KeyedSubtree(
                 key: nextQuestActionKey,
-                task: task!,
-                color: accent,
-                label: actionLabel,
-                tooltip: actionTooltip,
-                icon: canStartMinimum ? Icons.play_arrow : Icons.check,
-                compact: false,
-                primary: true,
-                zone: compact
-                    ? ActionToastZone.mobileContent
-                    : ActionToastZone.mainWorkspace,
-                originKind: canStartMinimum
-                    ? ActionToastOriginKind.minimumAction
-                    : ActionToastOriginKind.questCheckbox,
-                onTrigger: canStartMinimum ? onMinimumAction : onComplete,
+                child: TodayQuickActionButton(
+                  key: canStartMinimum ? minimumActionTutorialKey : null,
+                  task: task!,
+                  color: accent,
+                  label: actionLabel,
+                  tooltip: actionTooltip,
+                  icon: canStartMinimum ? Icons.play_arrow : Icons.check,
+                  compact: false,
+                  primary: true,
+                  zone: compact
+                      ? ActionToastZone.mobileContent
+                      : ActionToastZone.mainWorkspace,
+                  originKind: canStartMinimum
+                      ? ActionToastOriginKind.minimumAction
+                      : ActionToastOriginKind.questCheckbox,
+                  onTrigger: canStartMinimum ? onMinimumAction : onComplete,
+                ),
               ),
             )
           else
@@ -1016,19 +1038,22 @@ class _NextActionCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 10),
-                TodayQuickActionButton(
+                KeyedSubtree(
                   key: nextQuestActionKey,
-                  task: task!,
-                  color: accent,
-                  label: actionLabel,
-                  tooltip: actionTooltip,
-                  icon: canStartMinimum ? Icons.play_arrow : Icons.check,
-                  compact: false,
-                  primary: true,
-                  originKind: canStartMinimum
-                      ? ActionToastOriginKind.minimumAction
-                      : ActionToastOriginKind.questCheckbox,
-                  onTrigger: canStartMinimum ? onMinimumAction : onComplete,
+                  child: TodayQuickActionButton(
+                    key: canStartMinimum ? minimumActionTutorialKey : null,
+                    task: task!,
+                    color: accent,
+                    label: actionLabel,
+                    tooltip: actionTooltip,
+                    icon: canStartMinimum ? Icons.play_arrow : Icons.check,
+                    compact: false,
+                    primary: true,
+                    originKind: canStartMinimum
+                        ? ActionToastOriginKind.minimumAction
+                        : ActionToastOriginKind.questCheckbox,
+                    onTrigger: canStartMinimum ? onMinimumAction : onComplete,
+                  ),
                 ),
               ],
             ),

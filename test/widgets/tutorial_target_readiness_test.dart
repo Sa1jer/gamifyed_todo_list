@@ -6,7 +6,7 @@ Widget _harness({
   required GlobalKey targetKey,
   required bool showTarget,
   bool enabled = true,
-  int maxFrameAttempts = 3,
+  Duration fallbackTimeout = const Duration(milliseconds: 300),
 }) {
   return MaterialApp(
     home: Stack(
@@ -16,7 +16,8 @@ Widget _harness({
           stepId: 'step',
           targetKey: targetKey,
           enabled: enabled,
-          maxFrameAttempts: maxFrameAttempts,
+          fallbackTimeout: fallbackTimeout,
+          probeInterval: const Duration(milliseconds: 25),
           builder: (context, status) =>
               Text(status.name, textDirection: TextDirection.ltr),
         ),
@@ -53,10 +54,15 @@ void main() {
     final targetKey = GlobalKey();
 
     await tester.pumpWidget(
-      _harness(targetKey: targetKey, showTarget: false, maxFrameAttempts: 2),
+      _harness(
+        targetKey: targetKey,
+        showTarget: false,
+        fallbackTimeout: const Duration(milliseconds: 100),
+      ),
     );
-    await tester.pump();
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 99));
+    expect(find.text('waiting'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 1));
 
     expect(find.text('fallback'), findsOneWidget);
   });
@@ -81,14 +87,60 @@ void main() {
           targetKey: targetKey,
           showTarget: false,
           enabled: false,
-          maxFrameAttempts: 1,
+          fallbackTimeout: const Duration(milliseconds: 50),
         ),
       );
-      await tester.pump();
-      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('waiting'), findsOneWidget);
       expect(find.text('fallback'), findsNothing);
     },
   );
+
+  testWidgets('navigation probe completes only after target is laid out', (
+    tester,
+  ) async {
+    final targetKey = GlobalKey();
+    await tester.pumpWidget(_harness(targetKey: targetKey, showTarget: false));
+
+    var completed = false;
+    var ready = false;
+    TutorialTargetProbe.waitUntilReady(
+      targetKey,
+      timeout: const Duration(milliseconds: 200),
+      probeInterval: const Duration(milliseconds: 25),
+    ).then((value) {
+      completed = true;
+      ready = value;
+    });
+
+    await tester.pump(const Duration(milliseconds: 24));
+    expect(completed, isFalse);
+
+    await tester.pumpWidget(_harness(targetKey: targetKey, showTarget: true));
+    await tester.pump(const Duration(milliseconds: 25));
+
+    expect(completed, isTrue);
+    expect(ready, isTrue);
+  });
+
+  testWidgets('navigation probe has a wall-clock bounded fallback', (
+    tester,
+  ) async {
+    final targetKey = GlobalKey();
+    await tester.pumpWidget(_harness(targetKey: targetKey, showTarget: false));
+
+    bool? ready;
+    TutorialTargetProbe.waitUntilReady(
+      targetKey,
+      timeout: const Duration(milliseconds: 100),
+      probeInterval: const Duration(milliseconds: 25),
+    ).then((value) => ready = value);
+
+    await tester.pump(const Duration(milliseconds: 99));
+    expect(ready, isNull);
+    await tester.pump(const Duration(milliseconds: 1));
+
+    expect(ready, isFalse);
+  });
 }

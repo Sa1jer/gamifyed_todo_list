@@ -844,6 +844,52 @@ path. The graph model, stage ordering, progress, storage, and camera persistence
 are unchanged. Native profile-mode visual confirmation remains part of the
 physical-device/desktop gate.
 
+## RoadMap/Profile/Creation Corrective Batch (2026-08-27)
+
+### RoadMap viewport and hierarchy
+
+The mobile RoadMap header and Skill switcher now sit outside one
+`ClipRect`-owned graph viewport. The internal ascent scroll and stack also use
+hard-edge clipping. This fixes the prior ownership error where node cards,
+root labels, and active glow could paint through fixed header/profile/bottom
+navigation surfaces. No opaque cover or arbitrary padding masks the graph.
+
+Mobile stage cards center title and status and use a slightly stronger title
+scale. Desktop horizontal labels now carry a clearer Skill/stage hierarchy;
+desktop vertical labels alternate beside the central orb axis without card
+frames. Both responsive branches use the shared neutral `#F4F5F8` light canvas
+token. RoadMap topology, progression, quest links, insertion, templates, and
+storage are unchanged.
+
+### Profile scroll ownership
+
+Mobile and desktop Profile now separate a fixed hero from a single body
+`ListView`. Scrolling Timeline/settings/Skills cannot move content under the
+avatar. Automated coverage exercises mobile and desktop boundary scrolling,
+short desktop height, and `2.0x` text. A large-text desktop Skill-chip overflow
+found by this coverage was fixed with flexible name and bounded XP metadata.
+
+### Skill Creator
+
+Name and Goal lead the form. Appearance starts with twelve curated labelled
+icons plus an explicit full categorized picker. Desktop has a live preview;
+mobile keeps a compact emblem. Optional first Stage starts collapsed, and the
+first-run hint explicitly says that name and Goal are enough. Existing Skill
+edits preserve checklist and all existing appearance/RoadMap values.
+
+### Tutorial v3
+
+Tutorial presentation now distinguishes real-control spotlight, conceptual
+Coach Card, and inline guidance. Target waits are wall-clock bounded rather
+than frame-count bounded. RoadMap navigation hides the old overlay until the
+real canvas is laid out; Profile guidance runs inside the real Profile page;
+Minimum Action uses a dedicated real control or a Coach Card fallback. Core
+completion is non-blocking and auto-dismisses. No fake domain data or rewards
+are introduced.
+
+Physical Android overscroll/glow review, TalkBack ordering, high-refresh
+transition profiling, and outdoor light-canvas contrast remain manual gates.
+
 ## Reference Checklist
 
 - Flutter adaptive layout: <https://docs.flutter.dev/ui/adaptive-responsive/general>

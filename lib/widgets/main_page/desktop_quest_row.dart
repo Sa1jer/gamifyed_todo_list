@@ -18,6 +18,7 @@ class DesktopQuestRow extends StatefulWidget {
   final DesktopJournalTokens tokens;
   final void Function(String taskId, ActionToastOrigin origin) onComplete;
   final void Function(String taskId, ActionToastOrigin origin) onMinimumAction;
+  final GlobalKey? minimumActionTutorialKey;
   final VoidCallback onEdit;
 
   const DesktopQuestRow({
@@ -28,6 +29,7 @@ class DesktopQuestRow extends StatefulWidget {
     required this.tokens,
     required this.onComplete,
     required this.onMinimumAction,
+    this.minimumActionTutorialKey,
     required this.onEdit,
   });
 
@@ -149,6 +151,7 @@ class _DesktopQuestRowState extends State<DesktopQuestRow> {
                             _DesktopMiniAction(
                               label: 'Минимальный шаг',
                               color: widget.skill.color,
+                              tutorialKey: widget.minimumActionTutorialKey,
                               onTap: (origin) =>
                                   widget.onMinimumAction(task.id, origin),
                             ),
@@ -338,11 +341,13 @@ class _DesktopTypeBadge extends StatelessWidget {
 class _DesktopMiniAction extends StatefulWidget {
   final String label;
   final Color color;
+  final GlobalKey? tutorialKey;
   final ValueChanged<ActionToastOrigin> onTap;
 
   const _DesktopMiniAction({
     required this.label,
     required this.color,
+    this.tutorialKey,
     required this.onTap,
   });
 
@@ -353,12 +358,13 @@ class _DesktopMiniAction extends StatefulWidget {
 class _DesktopMiniActionState extends State<_DesktopMiniAction> {
   ActionToastOrigin? _origin;
   final GlobalKey _actionKey = GlobalKey();
+  GlobalKey get _anchorKey => widget.tutorialKey ?? _actionKey;
 
   void _completeTap() {
     final origin =
         _origin ??
         actionToastOriginForContext(
-          _actionKey.currentContext ?? context,
+          _anchorKey.currentContext ?? context,
           kind: ActionToastOriginKind.minimumAction,
           zone: ActionToastZone.mainWorkspace,
         );
@@ -368,10 +374,11 @@ class _DesktopMiniActionState extends State<_DesktopMiniAction> {
 
   @override
   Widget build(BuildContext context) {
+    final anchorKey = _anchorKey;
     return InkWell(
-      key: _actionKey,
+      key: anchorKey,
       onTapDown: (_) => _origin = actionToastOriginForContext(
-        _actionKey.currentContext ?? context,
+        anchorKey.currentContext ?? context,
         kind: ActionToastOriginKind.minimumAction,
         zone: ActionToastZone.mainWorkspace,
       ),

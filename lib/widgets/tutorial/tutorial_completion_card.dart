@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../utils.dart';
@@ -8,123 +10,162 @@ import '../shared/motion_controls.dart';
 /// It deliberately owns no progression state and grants no rewards. Existing
 /// installs with an already-completed Core module never see it because the
 /// parent boundary only shows it after an observed active Core action step.
-class TutorialCompletionCard extends StatelessWidget {
+class TutorialCompletionCard extends StatefulWidget {
   const TutorialCompletionCard({
     super.key,
     required this.isDark,
     required this.reducedMotion,
-    required this.onContinue,
+    required this.onDismiss,
+    this.displayDuration = const Duration(seconds: 4),
   });
 
   final bool isDark;
   final bool reducedMotion;
-  final VoidCallback onContinue;
+  final VoidCallback onDismiss;
+  final Duration displayDuration;
+
+  @override
+  State<TutorialCompletionCard> createState() => _TutorialCompletionCardState();
+}
+
+class _TutorialCompletionCardState extends State<TutorialCompletionCard> {
+  Timer? _dismissTimer;
+  bool _dismissed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scheduleDismiss();
+  }
+
+  @override
+  void didUpdateWidget(covariant TutorialCompletionCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.displayDuration != widget.displayDuration) {
+      _scheduleDismiss();
+    }
+  }
+
+  @override
+  void dispose() {
+    _dismissTimer?.cancel();
+    super.dispose();
+  }
+
+  void _scheduleDismiss() {
+    _dismissTimer?.cancel();
+    _dismissTimer = Timer(widget.displayDuration, _dismiss);
+  }
+
+  void _dismiss() {
+    if (_dismissed) return;
+    _dismissed = true;
+    _dismissTimer?.cancel();
+    widget.onDismiss();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final duration = reducedMotion || MediaQuery.disableAnimationsOf(context)
+    final duration =
+        widget.reducedMotion || MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
         : kMotionSlow;
-    final foreground = textColor(isDark);
-    final secondary = subtext(isDark);
+    final foreground = textColor(widget.isDark);
+    final secondary = subtext(widget.isDark);
 
-    return Positioned.fill(
+    return Positioned(
       key: const ValueKey('tutorial-core-completion'),
-      child: Material(
-        color: Colors.black.withAlpha(isDark ? 170 : 104),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0, end: 1),
-                duration: duration,
-                curve: kMotionCurve,
-                builder: (context, value, child) => Opacity(
-                  opacity: value,
-                  child: Transform.translate(
-                    offset: Offset(0, 10 * (1 - value)),
-                    child: child,
+      left: 16,
+      right: 16,
+      bottom: 16,
+      child: SafeArea(
+        top: false,
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: 1),
+              duration: duration,
+              curve: kMotionCurve,
+              builder: (context, value, child) => Opacity(
+                opacity: value,
+                child: Transform.translate(
+                  offset: Offset(0, 10 * (1 - value)),
+                  child: child,
+                ),
+              ),
+              child: Material(
+                color: widget.isDark
+                    ? const Color(0xFF181820)
+                    : const Color(0xFFFFFFFF),
+                elevation: 12,
+                shadowColor: Colors.black.withAlpha(widget.isDark ? 130 : 34),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: BorderSide(
+                    color: widget.isDark
+                        ? Colors.white.withAlpha(26)
+                        : Colors.black.withAlpha(18),
                   ),
                 ),
                 child: Semantics(
                   container: true,
-                  explicitChildNodes: true,
+                  liveRegion: true,
                   label: 'Основное обучение завершено',
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 420),
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? const Color(0xFF181820)
-                            : const Color(0xFFFFFFFF),
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(
-                          color: isDark
-                              ? Colors.white.withAlpha(26)
-                              : Colors.black.withAlpha(18),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withAlpha(isDark ? 130 : 34),
-                            blurRadius: 34,
-                            offset: const Offset(0, 18),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFF9500).withAlpha(30),
+                            borderRadius: BorderRadius.circular(14),
                           ),
-                        ],
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 52,
-                              height: 52,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFF9500).withAlpha(30),
-                                borderRadius: BorderRadius.circular(17),
-                              ),
-                              child: const Icon(
-                                Icons.auto_awesome_rounded,
-                                color: Color(0xFFFF9500),
-                              ),
-                            ),
-                            const SizedBox(height: 18),
-                            Text(
-                              'Готово. Основу ты знаешь.',
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.titleLarge
-                                  ?.copyWith(
-                                    color: foreground,
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                            ),
-                            const SizedBox(height: 10),
-                            Text(
-                              'Остальные темы можно открыть отдельно в профиле, когда они понадобятся.',
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(
-                                    color: secondary,
-                                    height: 1.4,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                            ),
-                            const SizedBox(height: 20),
-                            SizedBox(
-                              width: double.infinity,
-                              child: FilledButton.icon(
-                                key: const ValueKey(
-                                  'tutorial-core-completion-continue',
-                                ),
-                                onPressed: onContinue,
-                                icon: const Icon(Icons.arrow_forward_rounded),
-                                label: const Text('Продолжить'),
-                              ),
-                            ),
-                          ],
+                          child: const Icon(
+                            Icons.check_rounded,
+                            color: Color(0xFFFF9500),
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Основу ты знаешь.',
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(
+                                      color: foreground,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                'Остальные темы доступны в профиле.',
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(
+                                      color: secondary,
+                                      height: 1.35,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          key: const ValueKey(
+                            'tutorial-core-completion-dismiss',
+                          ),
+                          tooltip: 'Закрыть',
+                          onPressed: _dismiss,
+                          icon: Icon(Icons.close_rounded, color: secondary),
+                        ),
+                      ],
                     ),
                   ),
                 ),

@@ -34,6 +34,7 @@ class DesktopWorkspaceShell extends StatelessWidget {
   final GlobalKey? rewardsKey;
   final GlobalKey? roadmapKey;
   final GlobalKey? statsKey;
+  final GlobalKey? minimumActionTutorialKey;
   final GlobalKey? contextualToastHostKey;
   final GlobalKey? rightRailKey;
   final ReturnContextCandidate? returnContext;
@@ -62,6 +63,7 @@ class DesktopWorkspaceShell extends StatelessWidget {
     this.rewardsKey,
     this.roadmapKey,
     this.statsKey,
+    this.minimumActionTutorialKey,
     this.contextualToastHostKey,
     this.rightRailKey,
     this.returnContext,
@@ -139,6 +141,7 @@ class DesktopWorkspaceShell extends StatelessWidget {
                             showDesktopEditTask(context, state, skill, task),
                         onComplete: onComplete,
                         onMinimumAction: onMinimumAction,
+                        minimumActionTutorialKey: minimumActionTutorialKey,
                         returnContext: returnContext,
                         momentum: momentum,
                         onContinueReturnContext: onContinueReturnContext,

@@ -25,6 +25,7 @@ const _ordinaryExtractedModules = <String>{
   'lib/widgets/main_page/desktop_sidebar.dart',
   'lib/widgets/main_page/desktop_workspace.dart',
   'lib/widgets/main_page/desktop_workspace_support.dart',
+  'lib/widgets/dialogs/skill_creator_sections.dart',
 };
 
 const _selectorMigratedFeatureRoots = <String>{
@@ -146,6 +147,8 @@ Future<void> main() async {
 
   _checkMainPageObservation(root, violations);
   _checkTutorialBoundaries(root, violations);
+  _checkTutorialRuntimeGuards(root, violations);
+  _checkRoadmapPresentationTokens(root, violations);
   _checkReturnContextBoundaries(root, violations);
   _checkMomentumBoundaries(root, violations);
   _checkVersionSync(root, violations);
@@ -159,6 +162,115 @@ Future<void> main() async {
     stderr.writeln('- $violation');
   }
   exitCode = 1;
+}
+
+void _checkTutorialRuntimeGuards(Directory root, List<String> violations) {
+  final paths = <String>[
+    'lib/tutorial',
+    'lib/widgets/tutorial',
+    'lib/widgets/main_page/first_run_tutorial.dart',
+  ];
+  final sources = <MapEntry<String, String>>[];
+  for (final relative in paths) {
+    final entity = FileSystemEntity.typeSync(
+      '${root.path}${Platform.pathSeparator}'
+      '${relative.replaceAll('/', Platform.pathSeparator)}',
+    );
+    if (entity == FileSystemEntityType.file) {
+      final file = File(
+        '${root.path}${Platform.pathSeparator}'
+        '${relative.replaceAll('/', Platform.pathSeparator)}',
+      );
+      sources.add(MapEntry(relative, file.readAsStringSync()));
+    } else if (entity == FileSystemEntityType.directory) {
+      final directory = Directory(
+        '${root.path}${Platform.pathSeparator}'
+        '${relative.replaceAll('/', Platform.pathSeparator)}',
+      );
+      for (final file
+          in directory
+              .listSync(recursive: true, followLinks: false)
+              .whereType<File>()
+              .where((file) => file.path.endsWith('.dart'))) {
+        sources.add(
+          MapEntry(_relativePath(root, file), file.readAsStringSync()),
+        );
+      }
+    }
+  }
+
+  final fixedTwoSecondDelay = RegExp(
+    r'Future(?:<[^>]+>)?\.delayed\s*\(\s*(?:const\s+)?Duration\s*\('
+    r'\s*seconds\s*:\s*2\s*\)',
+  );
+  final frameCountTimeout = RegExp(
+    r'\b(?:maxFrameAttempts|frameAttempts|maxFrameCount)\b',
+  );
+  final fakeDomainSeed = RegExp(
+    r'\b(?:Task|Skill|HistoryEntry|SkillTreeNode)\s*\(',
+  );
+  for (final entry in sources) {
+    if (fixedTwoSecondDelay.hasMatch(entry.value)) {
+      violations.add(
+        '${entry.key} uses a fixed two-second tutorial delay; wait for a '
+        'bounded target/layout event instead.',
+      );
+    }
+    if (frameCountTimeout.hasMatch(entry.value)) {
+      violations.add(
+        '${entry.key} uses a frame-count tutorial timeout; readiness must be '
+        'wall-clock bounded and refresh-rate independent.',
+      );
+    }
+    if (fakeDomainSeed.hasMatch(entry.value)) {
+      violations.add(
+        '${entry.key} constructs domain data for tutorial presentation; '
+        'tutorials must use the user\'s real data only.',
+      );
+    }
+  }
+
+  final readiness = File(
+    '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
+    'widgets${Platform.pathSeparator}tutorial${Platform.pathSeparator}'
+    'tutorial_target_readiness.dart',
+  );
+  if (!readiness.existsSync() ||
+      !readiness.readAsStringSync().contains('TutorialTargetProbe')) {
+    violations.add(
+      'Tutorial v3 requires the shared time-bounded TutorialTargetProbe.',
+    );
+  }
+}
+
+void _checkRoadmapPresentationTokens(Directory root, List<String> violations) {
+  const tokenPath = 'lib/widgets/mastery_map/visual_tokens.dart';
+  final tokenFile = File(
+    '${root.path}${Platform.pathSeparator}'
+    '${tokenPath.replaceAll('/', Platform.pathSeparator)}',
+  );
+  if (!tokenFile.existsSync()) {
+    violations.add('$tokenPath must own shared RoadMap canvas colors.');
+    return;
+  }
+  if (!tokenFile.readAsStringSync().contains('0xFFF4F5F8')) {
+    violations.add(
+      '$tokenPath must retain the neutral cool light RoadMap canvas surface.',
+    );
+  }
+
+  for (final relative in const [
+    'lib/widgets/mastery_map/canvas.dart',
+    'lib/widgets/mastery_map/mobile_path_view.dart',
+  ]) {
+    final file = File(
+      '${root.path}${Platform.pathSeparator}'
+      '${relative.replaceAll('/', Platform.pathSeparator)}',
+    );
+    if (!file.readAsStringSync().contains('RoadmapVisualTokens.')) {
+      violations.add('$relative must use RoadmapVisualTokens.');
+    }
+  }
 }
 
 void _checkTutorialBoundaries(Directory root, List<String> violations) {

@@ -1,6 +1,6 @@
 # DESIGN / Product And UI Notes
 
-Last updated: 2026-08-26
+Last updated: 2026-08-27
 
 This file records design direction, product guardrails, and UI decisions. Update it after every meaningful product/UI change so implementation stays aligned with the app's intended mental model.
 
@@ -347,3 +347,53 @@ After every implementation pass:
 - Update `TODO.md` with what changed and what remains.
 - Update this file if the change affects product language, navigation, hierarchy, or component behavior.
 - Keep documentation honest: if something feels unresolved, record it instead of burying it in code.
+
+## RoadMap Visual Hardening
+
+- Desktop horizontal RoadMap keeps its existing geometry but gives stage titles
+  a readable `15-17dp` range, Skill/root titles an `18-20dp` hierarchy, and
+  progress metadata a subordinate readable scale. Width and current text scale,
+  not string length alone, determine adaptation.
+- Desktop vertical RoadMap is a central progression axis with orbs on the axis
+  and text-only labels alternating by path side. Left labels align right; right
+  labels align left. Stage cards/frames are intentionally absent.
+- Mobile ascent cards center title and status around their stage orb. The graph
+  scrolls inside one hard-clipped viewport below the RoadMap header/switcher, so
+  nodes, labels, and glow cannot paint through fixed app chrome.
+- Desktop and mobile RoadMap share the cool light canvas token `#F4F5F8`.
+  Grid, locked-state contrast, accent paths, and dark surfaces remain local to
+  RoadMap presentation. Progression, prerequisites, selection, insertion, and
+  storage are unchanged.
+
+## Profile Scroll Ownership
+
+- Profile owns one fixed hero per platform: banner/avatar, identity, level, and
+  primary XP remain above the scrolling boundary.
+- Everything below the hero uses one primary `ListView`. Timeline, personal
+  data, interface settings, tutorial center, and Skills do not own competing
+  primary scroll physics.
+- Skill chips flex their name and constrain XP metadata so desktop Profile
+  remains valid in short windows and at `200%` text without moving the hero.
+
+## Skill Creator Hierarchy
+
+- Name and Goal are the essential first fields. Appearance is secondary and
+  the first RoadMap Stage is optional progressive disclosure.
+- Desktop uses a live identity preview beside the essential fields. Mobile uses
+  a compact emblem preview above them.
+- The primary form shows twelve curated, labelled icons. `Все иконки` reveals
+  the existing category catalog without turning initial creation into an icon
+  browser.
+- Editing preserves legacy checklist, color, icon, Goal, name, and existing
+  RoadMap data. The simplified creation UI must never erase hidden compatible
+  values.
+
+## Tutorial V3 Presentation
+
+- Spotlight is reserved for real controls, Coach Card for concepts without a
+  current target, and inline guidance for real forms/Profile.
+- Core remains `Навык -> Квест -> первое полезное действие`; its completion is
+  a compact auto-dismissing confirmation rather than a fourth blocking screen.
+- Tutorial UI never creates fake Skills, Tasks, XP, rewards, or RoadMap state.
+- Navigation hides the old lesson while the real destination is changing and
+  advances only after a bounded mounted/layout readiness check.

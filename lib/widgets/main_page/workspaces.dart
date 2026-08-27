@@ -15,6 +15,7 @@ class _ActWorkspace extends StatelessWidget {
   final Key? createFirstSkillButtonKey;
   final Key? createFirstQuestButtonKey;
   final Key? nextQuestActionKey;
+  final Key? minimumActionTutorialKey;
   final GlobalKey<_MobileActJournalState>? mobileJournalKey;
   final ReturnContextCandidate? returnContext;
   final MomentumSnapshot? momentum;
@@ -31,6 +32,7 @@ class _ActWorkspace extends StatelessWidget {
     this.createFirstSkillButtonKey,
     this.createFirstQuestButtonKey,
     this.nextQuestActionKey,
+    this.minimumActionTutorialKey,
     this.mobileJournalKey,
     this.returnContext,
     this.momentum,
@@ -68,6 +70,7 @@ class _ActWorkspace extends StatelessWidget {
               onCreateFirstSkill: onCreateFirstSkill,
               createFirstSkillButtonKey: createFirstSkillButtonKey,
               nextQuestActionKey: nextQuestActionKey,
+              minimumActionTutorialKey: minimumActionTutorialKey,
             ),
             const SizedBox(height: 8),
             Expanded(

@@ -1,6 +1,6 @@
 # Mobile Accessibility, Motion, And Usability QA
 
-Updated: 2026-08-18
+Updated: 2026-08-27
 
 ## Automated Coverage
 
@@ -33,9 +33,19 @@ Updated: 2026-08-18
 - Core tutorial regression coverage verifies Skill -> Quest -> first useful
   action without automatic Task completion or XP. Optional modules are started,
   skipped, and replayed independently.
-- Tutorial spotlight readiness is frame/layout based, bounded, and falls back
-  to a dismissible card when a target is unavailable; there is no fixed
-  two-second transition timer.
+- Tutorial target readiness is mounted/layout based with a `1200ms` wall-clock
+  bound, not a frame-count timeout. Missing controls fall back to a dismissible
+  Coach Card, and there is no fixed two-second transition timer.
+- Tutorial panels accept desktop `Escape`, use focusable semantics, reduce
+  Coach Card scrim strength, and remove translation when reduced motion is on.
+- Core completion is a compact live-region banner that auto-dismisses without
+  a required fourth action and grants no reward.
+- Mobile RoadMap owns one hard-clipped graph viewport; cards, root labels, and
+  active glow cannot paint through fixed header or bottom navigation.
+- Profile fixed-hero/one-body-scroll coverage includes mobile and short desktop
+  layouts at `2.0x` text. Skill names and XP metadata reflow without overflow.
+- Skill Creator curated/full icon controls expose labels, optional Stage
+  disclosure exposes expanded state, and tutorial hints remain inline.
 
 ## Opt-in Frame Timing
 
@@ -89,6 +99,12 @@ refresh rate, and whether any interaction exceeds the frame budget.
   and Chronicle as full-page routes: Android Back closes one route at a time,
   text remains usable at `2.0x`, and no route transition drops frames in
   profile mode.
+- [ ] Fling the mobile RoadMap repeatedly to absolute top/bottom at `360`,
+  `393`, and `430dp`; confirm active glow and labels stay inside its clipped
+  viewport in both themes.
+- [ ] Run every Tutorial v3 presentation mode with TalkBack/VoiceOver; verify
+  coach focus, spotlight copy, inline Profile/Skill guidance, `Escape`, skip,
+  and the auto-dismissing Core live region.
 
 ## Five-Scenario Usability Script — Pending Physical Run
 

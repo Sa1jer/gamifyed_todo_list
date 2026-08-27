@@ -1,6 +1,6 @@
 # TODO / Living Backlog
 
-Last updated: 2026-08-18
+Last updated: 2026-08-27
 
 This file tracks the active implementation roadmap and completed project work. Update it after every meaningful code or design change.
 
@@ -38,6 +38,18 @@ This file tracks the active implementation roadmap and completed project work. U
 - [ ] Add native startup-dispose/background-foreground regression checks around slow storage and plugin initialization.
 - [ ] Capture an interactive macOS DevTools trace for intermittent UI unresponsiveness. The 2026-07-18 visible profile process showed non-monotonic idle RSS without runaway growth, but Accessibility automation and heap snapshots were unavailable; record the active workspace and CPU timeline during an actual stall before changing lifecycle or animation code.
 - [ ] Run native desktop pointer and visual QA for `1.3.64` reward feedback: repeated completion must keep the local halo beside its checkbox, minimum-action button, focus task check, or RoadMap inspector control without crossing into neighbouring rails or the Inbox composer.
+
+## UX Runtime Hardening — 2026-08-27
+
+- [x] Increase desktop RoadMap label hierarchy, replace vertical card labels with alternating text beside the central axis, center mobile stage cards, and share a neutral cool light canvas token without changing graph/progression rules.
+- [x] Isolate mobile RoadMap painting inside one hard-clipped graph viewport below fixed controls.
+- [x] Split Profile into a fixed hero plus one body scroll owner on desktop/mobile; fix large-text Skill-chip overflow found by short-window `2.0x` coverage.
+- [x] Restore a usable `220-260dp` desktop Skill popup, stable hover geometry, `Escape`, Edit/Delete callbacks, and reorder compatibility.
+- [x] Redesign Skill Creator around name/Goal, live preview, twelve curated icons plus categorized full picker, and collapsed optional first Stage while preserving hidden checklist and existing RoadMap data on edit.
+- [x] Introduce Tutorial v3 runtime phases, spotlight/Coach/inline modes, wall-clock target readiness, real Profile teaching, dedicated Minimum Action targeting, readiness-gated RoadMap navigation, and non-blocking Core completion without fake data or rewards.
+- [ ] Perform native macOS/Windows pointer QA for sidebar hover, popup overlay transfer, keyboard traversal, and RoadMap resize while a tutorial spotlight is active.
+- [ ] Perform physical Android QA for RoadMap top/bottom fling clipping at `360/393/430dp`, Profile inertia boundaries, Skill Creator keyboard/Back, Tutorial v3 TalkBack order, and `2.0x` font/display size.
+- [ ] Capture profile-mode frame timings for long RoadMap scrolling, Profile body scrolling, Skill icon expansion, and Tutorial spotlight movement before making performance claims.
 
 ## P1 — Architecture Decomposition
 

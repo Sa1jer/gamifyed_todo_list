@@ -39,6 +39,7 @@ class _MainPageState extends State<MainPage> {
   final GlobalKey _firstSkillCtaKey = GlobalKey();
   final GlobalKey _firstQuestCtaKey = GlobalKey();
   final GlobalKey _nextQuestActionKey = GlobalKey();
+  final GlobalKey _minimumActionTutorialKey = GlobalKey();
   final GlobalKey _roadmapNavKey = GlobalKey();
   final GlobalKey _statsButtonKey = GlobalKey();
   final GlobalKey _roadmapCanvasKey = GlobalKey();
@@ -58,6 +59,7 @@ class _MainPageState extends State<MainPage> {
   int _debugAdminTapCount = 0;
   Timer? _debugAdminTapResetTimer;
   bool _firstRunDialogOpen = false;
+  bool _tutorialNavigationInFlight = false;
   bool _statsTutorialActive = false;
   bool _rewardsTutorialActive = false;
   final MobileSecondaryNavigator _mobileSecondaryNavigator =
@@ -460,6 +462,12 @@ class _MainPageState extends State<MainPage> {
     }
   }
 
+  void _completeProfileTutorial(AppState state) {
+    if (state.activeTutorialModuleId == TutorialModuleIds.profile) {
+      state.completeTutorialStep(TutorialStepIds.profileReplay);
+    }
+  }
+
   Widget _buildStatisticsWorkspace(
     AppState state,
     bool isDark, {
@@ -543,10 +551,25 @@ class _MainPageState extends State<MainPage> {
     }
   }
 
+  Future<void> _openRoadmapTutorialAndAdvance(AppState state) async {
+    if (_tutorialNavigationInFlight) return;
+    setState(() => _tutorialNavigationInFlight = true);
+    _openRoadmapTutorialTarget(state);
+    await TutorialTargetProbe.waitUntilReady(_roadmapCanvasKey);
+    if (!mounted) return;
+    if (state.activeTutorialStepId == TutorialStepIds.roadmapPath) {
+      state.completeTutorialStep(TutorialStepIds.roadmapPath);
+    }
+    if (mounted) {
+      setState(() => _tutorialNavigationInFlight = false);
+    }
+  }
+
   _GuidedTutorialStep? _tutorialStepFor(
     AppState state,
     bool mobileShell,
     void Function({bool tutorial}) openStatistics,
+    void Function({bool tutorial}) openProfile,
   ) {
     if (!state.shouldShowFirstRunTutorial) return null;
     final stepId =
@@ -559,6 +582,7 @@ class _MainPageState extends State<MainPage> {
       required VoidCallback onPrimaryAction,
       IconData primaryIcon = Icons.arrow_forward_rounded,
       String? primaryLabel,
+      TutorialPresentationMode? presentationMode,
     }) {
       return _GuidedTutorialStep(
         id: stepId,
@@ -568,6 +592,7 @@ class _MainPageState extends State<MainPage> {
         primaryLabel: primaryLabel ?? definition.primaryLabel,
         primaryIcon: primaryIcon,
         secondaryLabel: definition.secondaryLabel,
+        presentationMode: presentationMode ?? definition.presentationMode,
         onPrimaryAction: onPrimaryAction,
       );
     }
@@ -605,8 +630,13 @@ class _MainPageState extends State<MainPage> {
         );
       case TutorialStepIds.actMinimum:
         return buildStep(
-          targetKey: _nextQuestActionKey,
+          targetKey: mobileShell
+              ? _nextQuestActionKey
+              : _minimumActionTutorialKey,
           primaryIcon: Icons.check_rounded,
+          presentationMode: mobileShell
+              ? TutorialPresentationMode.coachCard
+              : TutorialPresentationMode.spotlight,
           onPrimaryAction: () =>
               state.completeTutorialStep(TutorialStepIds.actMinimum),
         );
@@ -620,10 +650,11 @@ class _MainPageState extends State<MainPage> {
               ? Icons.check_rounded
               : Icons.account_tree_rounded,
           onPrimaryAction: () {
-            state.completeTutorialStep(TutorialStepIds.roadmapPath);
             if (_mode != WorkspaceMode.mastery) {
-              _openRoadmapTutorialTarget(state);
+              unawaited(_openRoadmapTutorialAndAdvance(state));
+              return;
             }
+            state.completeTutorialStep(TutorialStepIds.roadmapPath);
           },
         );
       case TutorialStepIds.roadmapPractice:
@@ -649,9 +680,8 @@ class _MainPageState extends State<MainPage> {
       case TutorialStepIds.profileReplay:
         return buildStep(
           targetKey: _profileBarKey,
-          primaryIcon: Icons.check_rounded,
-          onPrimaryAction: () =>
-              state.completeTutorialStep(TutorialStepIds.profileReplay),
+          primaryIcon: Icons.person_rounded,
+          onPrimaryAction: () => openProfile(tutorial: true),
         );
       case TutorialStepIds.coreXpFeedback:
       case TutorialStepIds.coreOpenRoadmap:
@@ -936,24 +966,52 @@ class _MainPageState extends State<MainPage> {
             }
           }
 
-          void openProfile() {
+          void openProfile({bool tutorial = false}) {
             final capturedState = s;
+            if (tutorial && mounted) {
+              setState(() => _firstRunDialogOpen = true);
+            }
             if (mobileShell) {
               _openMobileWorkspaceRoute(
-                (_) => AppStateProvider(
+                (routeContext) => AppStateProvider(
                   state: capturedState,
-                  child: const ProfileDialog(fullScreen: true),
+                  child: ProfileDialog(
+                    fullScreen: true,
+                    showTutorialHint: tutorial,
+                    onTutorialComplete: tutorial
+                        ? () {
+                            _completeProfileTutorial(capturedState);
+                            Navigator.of(routeContext).maybePop();
+                          }
+                        : null,
+                  ),
                 ),
-              );
+              ).whenComplete(() {
+                if (tutorial && mounted) {
+                  setState(() => _firstRunDialogOpen = false);
+                }
+              });
               return;
             }
             showDialog<void>(
               context: context,
-              builder: (_) => AppStateProvider(
+              builder: (dialogContext) => AppStateProvider(
                 state: capturedState,
-                child: const ProfileDialog(),
+                child: ProfileDialog(
+                  showTutorialHint: tutorial,
+                  onTutorialComplete: tutorial
+                      ? () {
+                          _completeProfileTutorial(capturedState);
+                          Navigator.of(dialogContext).maybePop();
+                        }
+                      : null,
+                ),
               ),
-            );
+            ).whenComplete(() {
+              if (tutorial && mounted) {
+                setState(() => _firstRunDialogOpen = false);
+              }
+            });
           }
 
           return Scaffold(
@@ -994,6 +1052,7 @@ class _MainPageState extends State<MainPage> {
                     rewardsKey: _rewardsButtonKey,
                     roadmapKey: _roadmapNavKey,
                     statsKey: _statsButtonKey,
+                    minimumActionTutorialKey: _minimumActionTutorialKey,
                     alternateWorkspace: switch (displayedMode) {
                       WorkspaceMode.mastery => _MasteryWorkspace(
                         key: const ValueKey('mastery-workspace'),
@@ -1050,7 +1109,7 @@ class _MainPageState extends State<MainPage> {
                           onAppIconTap: !kReleaseMode
                               ? () => _handleDebugAdminTap(s)
                               : null,
-                          onProfileTap: openProfile,
+                          onProfileTap: () => openProfile(),
                           rewardsKey: _rewardsButtonKey,
                           statsKey: _statsButtonKey,
                         ),
@@ -1070,6 +1129,8 @@ class _MainPageState extends State<MainPage> {
                                 createFirstSkillButtonKey: _firstSkillCtaKey,
                                 createFirstQuestButtonKey: _firstQuestCtaKey,
                                 nextQuestActionKey: _nextQuestActionKey,
+                                minimumActionTutorialKey:
+                                    _minimumActionTutorialKey,
                                 mobileJournalKey: _mobileActJournalKey,
                                 returnContext: returnContext,
                                 momentum: momentum,
@@ -1155,10 +1216,16 @@ class _MainPageState extends State<MainPage> {
                   blocked:
                       _firstRunDialogOpen ||
                       _statsTutorialActive ||
-                      _rewardsTutorialActive,
+                      _rewardsTutorialActive ||
+                      _tutorialNavigationInFlight,
+                  transitioning: _tutorialNavigationInFlight,
                   isDark: isDark,
-                  resolveStep: () =>
-                      _tutorialStepFor(s, mobileShell, openStatistics),
+                  resolveStep: () => _tutorialStepFor(
+                    s,
+                    mobileShell,
+                    openStatistics,
+                    openProfile,
+                  ),
                   onBuildForTesting: widget.onTutorialBuildForTesting,
                 ),
                 ..._bubbles,

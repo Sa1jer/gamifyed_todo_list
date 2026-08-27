@@ -1,5 +1,7 @@
 import '../models/tutorial_progress.dart';
 
+enum TutorialPresentationMode { spotlight, coachCard, inlineGuidance }
+
 class TutorialModuleDefinition {
   const TutorialModuleDefinition({
     required this.id,
@@ -24,6 +26,7 @@ class TutorialStepDefinition {
     required this.body,
     required this.primaryLabel,
     this.secondaryLabel = 'Пропустить обучение',
+    this.presentationMode = TutorialPresentationMode.spotlight,
   });
 
   final String id;
@@ -32,6 +35,7 @@ class TutorialStepDefinition {
   final String body;
   final String primaryLabel;
   final String? secondaryLabel;
+  final TutorialPresentationMode presentationMode;
 }
 
 /// Static tutorial knowledge. It intentionally owns no navigation, context,
@@ -136,6 +140,7 @@ class TutorialCatalog {
       body:
           'Минимальный шаг помогает начать с меньшего действия и не меняет сам квест.',
       primaryLabel: 'Завершить тему',
+      presentationMode: TutorialPresentationMode.coachCard,
     ),
     TutorialStepDefinition(
       id: TutorialStepIds.roadmapPath,
@@ -175,7 +180,8 @@ class TutorialCatalog {
       title: 'Профиль и обучение',
       body:
           'В профиле доступны тема, звук, уменьшение движения и повтор любого раздела обучения.',
-      primaryLabel: 'Завершить тему',
+      primaryLabel: 'Открыть профиль',
+      presentationMode: TutorialPresentationMode.inlineGuidance,
     ),
   ];
 

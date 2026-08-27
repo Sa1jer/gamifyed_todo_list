@@ -27,6 +27,7 @@ class DesktopMainWorkspace extends StatelessWidget {
   final void Function(Skill skill, Task task) onEditTask;
   final void Function(String taskId, ActionToastOrigin origin) onComplete;
   final void Function(String taskId, ActionToastOrigin origin) onMinimumAction;
+  final GlobalKey? minimumActionTutorialKey;
   final ReturnContextCandidate? returnContext;
   final MomentumSnapshot? momentum;
   final VoidCallback? onContinueReturnContext;
@@ -44,6 +45,7 @@ class DesktopMainWorkspace extends StatelessWidget {
     required this.onEditTask,
     required this.onComplete,
     required this.onMinimumAction,
+    this.minimumActionTutorialKey,
     this.returnContext,
     this.momentum,
     this.onContinueReturnContext,
@@ -73,6 +75,10 @@ class DesktopMainWorkspace extends StatelessWidget {
         ? const <Task>[]
         : state.tasksForSkill(currentSkill.id);
     final active = tasks.where((task) => !task.isDone).toList();
+    final tutorialMinimumTaskId = active
+        .where(state.canCompleteMinimumAction)
+        .firstOrNull
+        ?.id;
     final completed =
         tasks.where((task) => task.isDone && !task.isArchived).toList()
           ..sort((a, b) {
@@ -334,6 +340,10 @@ class DesktopMainWorkspace extends StatelessWidget {
                                 tokens: tokens,
                                 onComplete: onComplete,
                                 onMinimumAction: onMinimumAction,
+                                minimumActionTutorialKey:
+                                    task.id == tutorialMinimumTaskId
+                                    ? minimumActionTutorialKey
+                                    : null,
                                 onEdit: () => onEditTask(currentSkill, task),
                               ),
                             ),
