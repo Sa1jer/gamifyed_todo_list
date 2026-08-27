@@ -52,47 +52,56 @@ class _MobileRoadmapJournalState extends State<_MobileRoadmapJournal> {
               .where((candidate) => candidate.id == selection.skillId)
               .firstOrNull;
 
-    return Column(
-      key: const ValueKey('mobile-roadmap-journal'),
-      children: [
-        _MobileRoadmapHeader(
-          isDark: widget.isDark,
-          onTemplates: skill == null ? null : () => _showTemplates(skill),
-        ),
-        const SizedBox(height: 6),
-        if (skill == null)
-          Expanded(
-            child: _MobileRoadmapSkillChooser(
-              state: widget.state,
-              isDark: widget.isDark,
-              onSelect: (selected) => widget.onSelectionChanged(
-                _MasterySelection.skill(selected.id),
-              ),
-            ),
-          )
-        else ...[
-          _buildSkillSwitcher(skill),
-          const SizedBox(height: 5),
-          Expanded(
-            child: AnimatedSwitcher(
-              duration: _roadmapMotionDuration(context),
-              switchInCurve: Curves.easeOutCubic,
-              switchOutCurve: Curves.easeIn,
-              transitionBuilder: (child, animation) => FadeTransition(
-                opacity: animation,
-                child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0, 0.035),
-                    end: Offset.zero,
-                  ).animate(animation),
-                  child: child,
+    return ColoredBox(
+      color: widget.isDark
+          ? RoadmapVisualTokens.mobileJournalDark
+          : RoadmapVisualTokens.lightCanvas,
+      child: Column(
+        key: const ValueKey('mobile-roadmap-journal'),
+        children: [
+          _MobileRoadmapHeader(
+            isDark: widget.isDark,
+            onTemplates: skill == null ? null : () => _showTemplates(skill),
+          ),
+          const SizedBox(height: 6),
+          if (skill == null)
+            Expanded(
+              child: _MobileRoadmapSkillChooser(
+                state: widget.state,
+                isDark: widget.isDark,
+                onSelect: (selected) => widget.onSelectionChanged(
+                  _MasterySelection.skill(selected.id),
                 ),
               ),
-              child: _buildUnifiedGraph(skill),
+            )
+          else ...[
+            _buildSkillSwitcher(skill),
+            const SizedBox(height: 5),
+            Expanded(
+              child: ClipRect(
+                key: const ValueKey('mobile-roadmap-graph-viewport'),
+                clipBehavior: Clip.hardEdge,
+                child: AnimatedSwitcher(
+                  duration: _roadmapMotionDuration(context),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeIn,
+                  transitionBuilder: (child, animation) => FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, 0.035),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: child,
+                    ),
+                  ),
+                  child: _buildUnifiedGraph(skill),
+                ),
+              ),
             ),
-          ),
+          ],
         ],
-      ],
+      ),
     );
   }
 
@@ -311,13 +320,13 @@ class _MobileRoadmapAscentGraph extends StatelessWidget {
         return RepaintBoundary(
           child: SingleChildScrollView(
             key: ValueKey('mobile-roadmap-graph-scroll-${skill.id}'),
-            clipBehavior: Clip.none,
+            clipBehavior: Clip.hardEdge,
             padding: const EdgeInsets.only(bottom: 18),
             child: SizedBox(
               width: layout.size.width,
               height: layout.size.height,
               child: Stack(
-                clipBehavior: Clip.none,
+                clipBehavior: Clip.hardEdge,
                 children: [
                   Positioned.fill(
                     child: CustomPaint(
@@ -519,17 +528,18 @@ class _MobileRoadmapStageCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text(
                   geometry.stage.node.title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
                   style: TextStyle(
                     color: geometry.stage.role == RoadmapStageRole.locked
                         ? MobileJournalTokens.muted(isDark)
                         : MobileJournalTokens.text(isDark),
-                    fontSize: 12,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -538,7 +548,12 @@ class _MobileRoadmapStageCard extends StatelessWidget {
                   '${visual.label} · ${geometry.stage.completedLinkedQuests}/${geometry.stage.questTarget}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: visual.color, fontSize: 10.5),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: visual.color,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ],
             ),

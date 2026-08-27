@@ -80,8 +80,8 @@ class MobileRoadMapAscentLayout {
 
     final maxDepth = byDepth.keys.fold<int>(1, math.max);
     final cardWidth = (safeWidth * 0.37).clamp(108.0, 166.0);
-    final cardHeight = (72 * textScale.clamp(1, 1.65))
-        .clamp(72.0, 122.0)
+    final cardHeight = (78 * textScale.clamp(1, 1.65))
+        .clamp(78.0, 132.0)
         .toDouble();
     const stageRadius = 31.0;
     const rootRadius = 46.0;

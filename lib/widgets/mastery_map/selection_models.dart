@@ -8,14 +8,16 @@ const _roadmapFocusedSkillOrbDiameter = 149.0;
 const _roadmapMobileFocusedSkillOrbDiameter = 120.0;
 const _roadmapSkillLabelGap = 9.0;
 const _roadmapSkillLabelHeight = 46.0;
-const _roadmapNodeItemWidth = 154.0;
-const _roadmapNodeItemHeight = 151.0;
+const _roadmapNodeItemWidth = 176.0;
+const _roadmapNodeItemHeight = 164.0;
+const _roadmapVerticalNodeItemWidth = 430.0;
+const _roadmapVerticalNodeItemHeight = 118.0;
 // Centers the orb itself on the layout/painter endpoint. The remaining item
 // height is reserved for the label below the orb.
-const _roadmapNodeItemTopOffset = 54.0;
+const _roadmapNodeItemTopOffset = 53.5;
 const _roadmapNodeLabelGap = 13.0;
-const _roadmapNodeLabelWidth = 108.0;
-const _roadmapNodeLabelHeight = 30.0;
+const _roadmapNodeLabelWidth = 156.0;
+const _roadmapNodeLabelHeight = 44.0;
 const _roadmapInsertHitSize = 46.0;
 const _roadmapInsertVisibleDiameter = 32.0;
 const _roadmapVerticalStageStep = 170.0;
@@ -43,7 +45,11 @@ double _roadmapNodeLabelTextBottomOffset(
   TextStyle baseTextStyle,
   TextScaler textScaler,
   TextDirection textDirection,
+  _RoadmapLayoutAxis layoutAxis,
 ) {
+  if (layoutAxis == _RoadmapLayoutAxis.vertical) {
+    return _roadmapNodeOrbDiameter(node.questTarget) / 2;
+  }
   final labelTop =
       _roadmapNodeContentTopOffset(node) +
       _roadmapNodeOrbDiameter(node.questTarget) +
@@ -53,7 +59,11 @@ double _roadmapNodeLabelTextBottomOffset(
         text: node.title,
         maxWidth: _roadmapNodeLabelWidth,
         maxLines: 2,
-        fontSize: _adaptiveNodeLabelFontSize(node.title),
+        fontSize: _adaptiveNodeLabelFontSize(
+          node.title,
+          availableWidth: _roadmapNodeLabelWidth,
+          textScale: textScaler.scale(1),
+        ),
         fontWeight: FontWeight.w600,
         baseTextStyle: baseTextStyle,
         textScaler: textScaler,
@@ -72,7 +82,12 @@ double _roadmapFocusedSkillLabelTextBottomOffset(
     text: skill.name,
     maxWidth: 190,
     maxLines: 2,
-    fontSize: _adaptiveSkillLabelFontSize(skill.name, true),
+    fontSize: _adaptiveSkillLabelFontSize(
+      skill.name,
+      true,
+      availableWidth: 190,
+      textScale: textScaler.scale(1),
+    ),
     fontWeight: FontWeight.w900,
     baseTextStyle: baseTextStyle,
     textScaler: textScaler,
@@ -201,19 +216,46 @@ List<Task> _sortedCompletedQuests(Iterable<Task> tasks) {
 
 DateTime _questSortDate(Task task) => task.lastCompletedAt ?? task.updatedAt;
 
-double _adaptiveSkillLabelFontSize(String text, bool selected) {
+double _adaptiveSkillLabelFontSize(
+  String text,
+  bool selected, {
+  double availableWidth = 190,
+  double textScale = 1,
+}) {
   final length = text.trim().length;
-  final base = selected ? 14.5 : 13.5;
-  if (length <= 10) return base;
-  if (length <= 16) return base - 1.0;
-  if (length <= 24) return base - 2.1;
-  return base - 3.0;
+  final base = selected ? 20.0 : 17.0;
+  final widthFactor = availableWidth < 150 ? 0.92 : 1.0;
+  final scaleFactor = textScale >= 1.8
+      ? 0.84
+      : textScale >= 1.4
+      ? 0.92
+      : 1.0;
+  final lengthFactor = length <= 16
+      ? 1.0
+      : length <= 26
+      ? 0.92
+      : 0.84;
+  return (base * widthFactor * scaleFactor * lengthFactor).clamp(14.0, base);
 }
 
-double _adaptiveNodeLabelFontSize(String text) {
+double _adaptiveNodeLabelFontSize(
+  String text, {
+  double availableWidth = _roadmapNodeLabelWidth,
+  double textScale = 1,
+  bool vertical = false,
+}) {
   final length = text.trim().length;
-  if (length <= 10) return 12.0;
-  if (length <= 18) return 11.2;
-  if (length <= 26) return 10.5;
-  return 10.0;
+  final base = vertical ? 17.0 : 16.0;
+  final widthFactor = availableWidth < 140 ? 0.9 : 1.0;
+  final scaleFactor = textScale >= 1.8
+      ? 0.84
+      : textScale >= 1.4
+      ? 0.92
+      : 1.0;
+  final lengthFactor = length <= 18
+      ? 1.0
+      : length <= 30
+      ? 0.92
+      : 0.84;
+  return (base * widthFactor * scaleFactor * lengthFactor).clamp(13.5, base);
 }

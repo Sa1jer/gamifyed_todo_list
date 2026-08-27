@@ -186,7 +186,7 @@ class _MasteryVectorGridPainter extends CustomPainter {
     const minorCell = 42.0;
     const majorEvery = 5;
     const majorCell = minorCell * majorEvery;
-    final gridColor = isDark ? Colors.white : const Color(0xFF756A58);
+    final gridColor = isDark ? Colors.white : const Color(0xFF64748B);
     final minorPaint = Paint()
       ..color = gridColor.withAlpha(isDark ? 13 : 10)
       ..style = PaintingStyle.stroke

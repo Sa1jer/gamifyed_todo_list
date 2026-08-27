@@ -18,6 +18,7 @@ import 'shared.dart';
 import 'skill_goal_progress.dart';
 import 'mobile_journal_tokens.dart';
 import 'mastery_map/quest_practice_section.dart';
+import 'mastery_map/visual_tokens.dart';
 
 part 'mastery_map/selection_models.dart';
 part 'mastery_map/workspace_shell.dart';

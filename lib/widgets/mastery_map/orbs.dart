@@ -300,7 +300,12 @@ class _AdaptiveOrbLabel extends StatelessWidget {
           textAlign: TextAlign.center,
           style: TextStyle(
             color: selected ? textColor(isDark) : subtext(isDark),
-            fontSize: _adaptiveSkillLabelFontSize(text, selected),
+            fontSize: _adaptiveSkillLabelFontSize(
+              text,
+              selected,
+              availableWidth: selected ? 190 : 160,
+              textScale: MediaQuery.textScalerOf(context).scale(1),
+            ),
             height: 1.05,
             fontWeight: selected ? FontWeight.w900 : FontWeight.w800,
           ),
@@ -404,6 +409,8 @@ class _MapNodeButton extends StatefulWidget {
   final SkillTreeNode node;
   final bool isDark;
   final bool selected;
+  final _RoadmapLayoutAxis layoutAxis;
+  final bool verticalLabelOnLeft;
   final VoidCallback onTap;
 
   const _MapNodeButton({
@@ -413,6 +420,8 @@ class _MapNodeButton extends StatefulWidget {
     required this.node,
     required this.isDark,
     required this.selected,
+    required this.layoutAxis,
+    this.verticalLabelOnLeft = false,
     required this.onTap,
   });
 
@@ -438,6 +447,18 @@ class _MapNodeButtonState extends State<_MapNodeButton> {
       SkillTreeNodeStatus.active => Icons.bolt_rounded,
       SkillTreeNodeStatus.mastered => Icons.workspace_premium,
     };
+
+    if (widget.layoutAxis == _RoadmapLayoutAxis.vertical) {
+      return _buildVerticalNode(
+        context,
+        status: status,
+        statusColor: statusColor,
+        completed: completed,
+        target: target,
+        diameter: diameter,
+        icon: icon,
+      );
+    }
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
@@ -546,7 +567,139 @@ class _MapNodeButtonState extends State<_MapNodeButton> {
       ),
     );
   }
+
+  Widget _buildVerticalNode(
+    BuildContext context, {
+    required SkillTreeNodeStatus status,
+    required Color statusColor,
+    required int completed,
+    required int target,
+    required double diameter,
+    required IconData icon,
+  }) {
+    final labelOnLeft = widget.verticalLabelOnLeft;
+    final label = SizedBox(
+      key: ValueKey('map-node-label-${widget.skill.id}-${widget.node.id}'),
+      width: 150,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: labelOnLeft
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
+        children: [
+          Text(
+            widget.node.title,
+            key: ValueKey(
+              'map-node-label-text-${widget.skill.id}-${widget.node.id}',
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: labelOnLeft ? TextAlign.right : TextAlign.left,
+            style: TextStyle(
+              color: status == SkillTreeNodeStatus.locked
+                  ? subtext(widget.isDark)
+                  : textColor(widget.isDark),
+              fontSize: _adaptiveNodeLabelFontSize(
+                widget.node.title,
+                availableWidth: 150,
+                textScale: MediaQuery.textScalerOf(context).scale(1),
+                vertical: true,
+              ),
+              height: 1.12,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            '${_roadmapStageStatusLabel(status)} · ${math.min(completed, target)}/$target',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: labelOnLeft ? TextAlign.right : TextAlign.left,
+            style: TextStyle(
+              color: statusColor,
+              fontSize: 12.5,
+              height: 1.1,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      cursor: SystemMouseCursors.click,
+      child: AnimatedScale(
+        duration: kMotionSlow,
+        curve: kMotionCurve,
+        scale: _hovered ? 1.025 : 1,
+        child: PressFeedback(
+          scale: 0.97,
+          onTap: widget.onTap,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Positioned(
+                left: labelOnLeft ? 18 : null,
+                right: labelOnLeft ? null : 18,
+                child: label,
+              ),
+              AnimatedContainer(
+                key: ValueKey(
+                  'map-node-surface-${widget.skill.id}-${widget.node.id}',
+                ),
+                duration: kMotionStandard,
+                curve: kMotionCurve,
+                width: diameter,
+                height: diameter,
+                decoration: BoxDecoration(
+                  color: status == SkillTreeNodeStatus.locked
+                      ? surface(
+                          widget.isDark,
+                        ).withAlpha(widget.isDark ? 180 : 230)
+                      : statusColor.withAlpha(widget.isDark ? 34 : 24),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: widget.selected ? Colors.white : statusColor,
+                    width: widget.selected ? 3 : 2,
+                  ),
+                  boxShadow: [
+                    if (_hovered ||
+                        widget.selected ||
+                        status == SkillTreeNodeStatus.active)
+                      BoxShadow(
+                        color: statusColor.withAlpha(
+                          _hovered
+                              ? 110
+                              : widget.selected
+                              ? 105
+                              : 50,
+                        ),
+                        blurRadius: _hovered
+                            ? 28
+                            : widget.selected
+                            ? 26
+                            : 18,
+                        spreadRadius: _hovered ? 1 : 0,
+                      ),
+                  ],
+                ),
+                child: Icon(icon, color: statusColor, size: diameter * 0.42),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
+
+String _roadmapStageStatusLabel(SkillTreeNodeStatus status) => switch (status) {
+  SkillTreeNodeStatus.active => 'Активный',
+  SkillTreeNodeStatus.mastered => 'Пройден',
+  SkillTreeNodeStatus.locked => 'Закрыт',
+};
 
 class _AdaptiveNodeLabel extends StatelessWidget {
   final String text;
@@ -576,7 +729,11 @@ class _AdaptiveNodeLabel extends StatelessWidget {
           textAlign: TextAlign.center,
           style: TextStyle(
             color: color,
-            fontSize: _adaptiveNodeLabelFontSize(text),
+            fontSize: _adaptiveNodeLabelFontSize(
+              text,
+              availableWidth: _roadmapNodeLabelWidth,
+              textScale: MediaQuery.textScalerOf(context).scale(1),
+            ),
             height: 1.05,
             fontWeight: FontWeight.w600,
           ),
