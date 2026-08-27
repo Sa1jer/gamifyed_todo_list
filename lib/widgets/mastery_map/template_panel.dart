@@ -2,13 +2,18 @@ part of '../mastery_map_workspace.dart';
 
 const _roadmapEngine = RoadmapEngine();
 const _roadmapGoalAnchorTopOffset = 198.0;
-const _roadmapGoalAnchorEstimatedHeight = 120.0;
 const _roadmapGoalAnchorHorizontalPadding = 20.0;
 const _roadmapGoalAnchorHeaderFontSize = 14.0;
 const _roadmapGoalAnchorHeaderIconSize = 17.0;
 const _roadmapGoalAnchorGoalFontSize = 16.0;
 
-double _roadmapGoalAnchorWidth(String text) {
+Size _roadmapGoalAnchorSize({
+  required String text,
+  required bool vertical,
+  required TextStyle baseTextStyle,
+  required TextScaler textScaler,
+  required TextDirection textDirection,
+}) {
   final goal = text.trim();
   final headerWidth =
       _roadmapGoalAnchorHeaderIconSize +
@@ -16,26 +21,101 @@ double _roadmapGoalAnchorWidth(String text) {
       _measureRoadmapAnchorText(
         'Цель пути',
         fontSize: _roadmapGoalAnchorHeaderFontSize,
+        fontWeight: FontWeight.w900,
+        baseTextStyle: baseTextStyle,
+        textScaler: textScaler,
+        textDirection: textDirection,
       );
   final goalWidth = _measureRoadmapAnchorText(
     goal,
     fontSize: _roadmapGoalAnchorGoalFontSize,
+    fontWeight: FontWeight.w900,
+    baseTextStyle: baseTextStyle,
+    textScaler: textScaler,
+    textDirection: textDirection,
   );
   final contentWidth = math.max(headerWidth, goalWidth);
-  final width = contentWidth + _roadmapGoalAnchorHorizontalPadding * 2;
-  return width.clamp(178.0, 340.0).toDouble();
+  final minWidth = vertical ? 250.0 : 178.0;
+  final maxWidth = vertical ? 320.0 : 340.0;
+  final width = (contentWidth + _roadmapGoalAnchorHorizontalPadding * 2)
+      .clamp(minWidth, maxWidth)
+      .toDouble();
+  final headerHeight = _measureRoadmapAnchorTextHeight(
+    'Цель пути',
+    maxWidth: width - _roadmapGoalAnchorHorizontalPadding * 2,
+    maxLines: 1,
+    fontSize: _roadmapGoalAnchorHeaderFontSize,
+    height: 1.0,
+    fontWeight: FontWeight.w900,
+    baseTextStyle: baseTextStyle,
+    textScaler: textScaler,
+    textDirection: textDirection,
+  );
+  final goalHeight = _measureRoadmapAnchorTextHeight(
+    goal,
+    maxWidth: width - _roadmapGoalAnchorHorizontalPadding * 2,
+    maxLines: 2,
+    fontSize: _roadmapGoalAnchorGoalFontSize,
+    height: 1.15,
+    fontWeight: FontWeight.w900,
+    baseTextStyle: baseTextStyle,
+    textScaler: textScaler,
+    textDirection: textDirection,
+  );
+  // TextTheme title metrics can exceed the scalar estimate by a few pixels.
+  return Size(width, 16 + headerHeight + 9 + goalHeight + 18 + 4);
 }
 
-double _measureRoadmapAnchorText(String text, {required double fontSize}) {
+double _measureRoadmapAnchorText(
+  String text, {
+  required double fontSize,
+  required FontWeight fontWeight,
+  required TextStyle baseTextStyle,
+  required TextScaler textScaler,
+  required TextDirection textDirection,
+}) {
   final painter = TextPainter(
     text: TextSpan(
       text: text.trim().isEmpty ? ' ' : text.trim(),
-      style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w900),
+      style: baseTextStyle.merge(
+        TextStyle(fontSize: fontSize, fontWeight: fontWeight),
+      ),
     ),
     maxLines: 1,
-    textDirection: TextDirection.ltr,
+    textScaler: textScaler,
+    textDirection: textDirection,
   )..layout();
-  return painter.width;
+  final width = painter.width;
+  painter.dispose();
+  return width;
+}
+
+double _measureRoadmapAnchorTextHeight(
+  String text, {
+  required double maxWidth,
+  required int maxLines,
+  required double fontSize,
+  required double height,
+  required FontWeight fontWeight,
+  required TextStyle baseTextStyle,
+  required TextScaler textScaler,
+  required TextDirection textDirection,
+}) {
+  final painter = TextPainter(
+    text: TextSpan(
+      text: text.trim().isEmpty ? ' ' : text.trim(),
+      style: baseTextStyle.merge(
+        TextStyle(fontSize: fontSize, height: height, fontWeight: fontWeight),
+      ),
+    ),
+    maxLines: maxLines,
+    ellipsis: '…',
+    textScaler: textScaler,
+    textDirection: textDirection,
+  )..layout(maxWidth: maxWidth);
+  final measuredHeight = painter.height;
+  painter.dispose();
+  return measuredHeight;
 }
 
 class _RoadmapGoalAnchor extends StatelessWidget {
@@ -395,7 +475,11 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
-      child: content,
+      child: SingleChildScrollView(
+        key: const ValueKey('desktop-roadmap-template-scroll'),
+        primary: false,
+        child: content,
+      ),
     );
   }
 }

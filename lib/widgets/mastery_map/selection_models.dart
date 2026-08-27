@@ -10,8 +10,9 @@ const _roadmapSkillLabelGap = 9.0;
 const _roadmapSkillLabelHeight = 46.0;
 const _roadmapNodeItemWidth = 176.0;
 const _roadmapNodeItemHeight = 164.0;
-const _roadmapVerticalNodeItemWidth = 430.0;
-const _roadmapVerticalNodeItemHeight = 118.0;
+const _roadmapVerticalNodeLabelWidth = 196.0;
+const _roadmapVerticalNodeLabelMinHeight = 58.0;
+const _roadmapVerticalNodeLabelGap = 18.0;
 // Centers the orb itself on the layout/painter endpoint. The remaining item
 // height is reserved for the label below the orb.
 const _roadmapNodeItemTopOffset = 53.5;
@@ -71,6 +72,46 @@ double _roadmapNodeLabelTextBottomOffset(
       );
 }
 
+double _roadmapVerticalNodeLabelHeight({
+  required SkillTreeNode node,
+  required String metadata,
+  required TextStyle baseTextStyle,
+  required TextScaler textScaler,
+  required TextDirection textDirection,
+}) {
+  final titleHeight = _roadmapLabelTextHeight(
+    text: node.title,
+    maxWidth: _roadmapVerticalNodeLabelWidth,
+    maxLines: 2,
+    fontSize: _adaptiveNodeLabelFontSize(
+      node.title,
+      availableWidth: _roadmapVerticalNodeLabelWidth,
+      textScale: textScaler.scale(1),
+      vertical: true,
+    ),
+    fontWeight: FontWeight.w900,
+    baseTextStyle: baseTextStyle,
+    textScaler: textScaler,
+    textDirection: textDirection,
+    lineHeight: 1.12,
+  );
+  final metadataHeight = _roadmapLabelTextHeight(
+    text: metadata,
+    maxWidth: _roadmapVerticalNodeLabelWidth,
+    maxLines: 1,
+    fontSize: 12.5,
+    fontWeight: FontWeight.w700,
+    baseTextStyle: baseTextStyle,
+    textScaler: textScaler,
+    textDirection: textDirection,
+    lineHeight: 1.1,
+  );
+  return math.max(
+    _roadmapVerticalNodeLabelMinHeight,
+    titleHeight + 5 + metadataHeight,
+  );
+}
+
 double _roadmapFocusedSkillLabelTextBottomOffset(
   Skill skill,
   TextStyle baseTextStyle,
@@ -107,12 +148,17 @@ double _roadmapLabelTextHeight({
   required TextStyle baseTextStyle,
   required TextScaler textScaler,
   required TextDirection textDirection,
+  double lineHeight = 1.05,
 }) {
   final painter = TextPainter(
     text: TextSpan(
       text: text,
       style: baseTextStyle.merge(
-        TextStyle(fontSize: fontSize, height: 1.05, fontWeight: fontWeight),
+        TextStyle(
+          fontSize: fontSize,
+          height: lineHeight,
+          fontWeight: fontWeight,
+        ),
       ),
     ),
     maxLines: maxLines,
@@ -120,9 +166,9 @@ double _roadmapLabelTextHeight({
     textScaler: textScaler,
     textDirection: textDirection,
   )..layout(maxWidth: maxWidth);
-  final height = painter.height;
+  final measuredHeight = painter.height;
   painter.dispose();
-  return height;
+  return measuredHeight;
 }
 
 Color _roadmapStageStatusColor(Skill skill, SkillTreeNodeStatus status) {

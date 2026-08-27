@@ -209,24 +209,27 @@ class _EmptyMapInspector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sub = subtext(isDark);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _InspectorTitle(
-          icon: Icons.touch_app_outlined,
-          color: const Color(0xFF4A9EFF),
-          title: 'Выберите навык',
-          subtitle: 'шар раскроет свою ветку мастерства',
-          isDark: isDark,
-        ),
-        const SizedBox(height: 12),
-        Text(
-          'Карта показывает все навыки как сферы. Нажмите на любую сферу, чтобы увидеть этапы, практику и следующий шаг освоения.',
-          style: TextStyle(color: sub, fontSize: 12.5, height: 1.35),
-        ),
-        const SizedBox(height: 16),
-        Expanded(
-          child: ListView.separated(
+    return SingleChildScrollView(
+      key: const ValueKey('desktop-roadmap-empty-inspector-scroll'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _InspectorTitle(
+            icon: Icons.touch_app_outlined,
+            color: const Color(0xFF4A9EFF),
+            title: 'Выберите навык',
+            subtitle: 'шар раскроет свою ветку мастерства',
+            isDark: isDark,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Карта показывает все навыки как сферы. Нажмите на любую сферу, чтобы увидеть этапы, практику и следующий шаг освоения.',
+            style: TextStyle(color: sub, fontSize: 12.5, height: 1.35),
+          ),
+          const SizedBox(height: 16),
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
             itemCount: state.roadmapSkills.length,
             separatorBuilder: (_, _) => const SizedBox(height: 7),
             itemBuilder: (context, index) {
@@ -274,8 +277,8 @@ class _EmptyMapInspector extends StatelessWidget {
               );
             },
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -341,141 +344,135 @@ class _SkillInspector extends StatelessWidget {
         )
         .firstOrNull;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _InspectorTitle(
-          icon: skill.icon,
-          color: skill.color,
-          title: skill.name,
-          subtitle: skill.goal.trim().isEmpty
-              ? 'Цель пути пока не задана'
-              : 'Цель пути: ${skill.goal}',
-          isDark: isDark,
-        ),
-        const SizedBox(height: 12),
-        Container(
-          key: const ValueKey('desktop-roadmap-skill-summary'),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: skill.color.withValues(alpha: 0.055),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: skill.color.withValues(alpha: 0.18)),
+    return SingleChildScrollView(
+      key: const ValueKey('desktop-roadmap-skill-inspector-scroll'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _InspectorTitle(
+            icon: skill.icon,
+            color: skill.color,
+            title: skill.name,
+            subtitle: skill.goal.trim().isEmpty
+                ? 'Цель пути пока не задана'
+                : 'Цель пути: ${skill.goal}',
+            isDark: isDark,
           ),
-          child: Row(
-            children: [
-              _InspectorMiniMetric(
-                label: 'Уровень',
-                value: '${skill.level}',
-                color: skill.color,
-                isDark: isDark,
-              ),
-              _InspectorMiniMetric(
-                label: 'Этапы',
-                value:
-                    '${skill.masteredTreeNodeCount}/${skill.treeNodes.length}',
-                color: skill.color,
-                isDark: isDark,
-              ),
-              Expanded(
-                child: _InspectorMiniMetric(
-                  label: 'Текущий этап',
-                  value: activeStage?.title ?? 'Нет',
+          const SizedBox(height: 12),
+          Container(
+            key: const ValueKey('desktop-roadmap-skill-summary'),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: skill.color.withValues(alpha: 0.055),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: skill.color.withValues(alpha: 0.18)),
+            ),
+            child: Row(
+              children: [
+                _InspectorMiniMetric(
+                  label: 'Уровень',
+                  value: '${skill.level}',
                   color: skill.color,
                   isDark: isDark,
-                  alignEnd: true,
                 ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        SkillGoalProgress(
-          skill: skill,
-          isDark: isDark,
-          onSetNextGoal: () async {
-            final choice = await _showNextGoalFlow(
-              context,
-              state: state,
-              skill: skill,
-            );
-            if (choice == NextRoadmapChoice.addStage && context.mounted) {
-              onAddStage(skill);
-            }
-          },
-        ),
-        if (skill.treeNodes.length > 1) ...[
-          const SizedBox(height: 10),
-          SmallBtn(
-            label: 'Порядок этапов',
-            icon: Icons.swap_vert,
-            color: skill.color,
-            onTap: () => _showRoadmapStageOrderDialog(
-              context,
-              state: state,
-              skill: skill,
-            ),
-          ),
-        ],
-        const SizedBox(height: 14),
-        Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (hasFreeTasks || stageGroups.isEmpty) ...[
-                  Text(
-                    hasFreeTasks ? 'Квесты без этапа' : 'Квесты навыка',
-                    style: TextStyle(
-                      color: textColor(isDark),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  MasteryStagePracticeQuestList(
-                    isDark: isDark,
+                _InspectorMiniMetric(
+                  label: 'Этапы',
+                  value:
+                      '${skill.masteredTreeNodeCount}/${skill.treeNodes.length}',
+                  color: skill.color,
+                  isDark: isDark,
+                ),
+                Expanded(
+                  child: _InspectorMiniMetric(
+                    label: 'Текущий этап',
+                    value: activeStage?.title ?? 'Нет',
                     color: skill.color,
-                    activeTasks: activeFreeTasks,
-                    completedTasks: completedFreeTasks,
-                    emptyText: 'Квестов у навыка пока нет.',
-                    shrinkWrap: true,
-                    onToggleQuest: onToggleQuest,
-                    onMinimumAction: onMinimumAction,
-                    onEditQuest: onEditQuest,
-                    onDeleteQuest: onDeleteQuest,
+                    isDark: isDark,
+                    alignEnd: true,
                   ),
-                ],
-                if (stageGroups.isNotEmpty) ...[
-                  if (hasFreeTasks) const SizedBox(height: 14),
-                  for (final group in stageGroups) ...[
-                    MasteryCollapsibleQuestSection(
-                      isDark: isDark,
-                      color: skill.color,
-                      title: group.node.title,
-                      subtitle: 'Квесты, которые двигают этот этап',
-                      count: group.count,
-                      child: MasteryStagePracticeQuestList(
-                        isDark: isDark,
-                        color: skill.color,
-                        activeTasks: group.activeTasks,
-                        completedTasks: group.completedTasks,
-                        emptyText: 'Создайте практику для этого этапа.',
-                        shrinkWrap: true,
-                        onToggleQuest: onToggleQuest,
-                        onMinimumAction: onMinimumAction,
-                        onEditQuest: onEditQuest,
-                        onDeleteQuest: onDeleteQuest,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                  ],
-                ],
+                ),
               ],
             ),
           ),
-        ),
-      ],
+          const SizedBox(height: 12),
+          SkillGoalProgress(
+            skill: skill,
+            isDark: isDark,
+            onSetNextGoal: () async {
+              final choice = await _showNextGoalFlow(
+                context,
+                state: state,
+                skill: skill,
+              );
+              if (choice == NextRoadmapChoice.addStage && context.mounted) {
+                onAddStage(skill);
+              }
+            },
+          ),
+          if (skill.treeNodes.length > 1) ...[
+            const SizedBox(height: 10),
+            SmallBtn(
+              label: 'Порядок этапов',
+              icon: Icons.swap_vert,
+              color: skill.color,
+              onTap: () => _showRoadmapStageOrderDialog(
+                context,
+                state: state,
+                skill: skill,
+              ),
+            ),
+          ],
+          const SizedBox(height: 14),
+          if (hasFreeTasks || stageGroups.isEmpty) ...[
+            Text(
+              hasFreeTasks ? 'Квесты без этапа' : 'Квесты навыка',
+              style: TextStyle(
+                color: textColor(isDark),
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 8),
+            MasteryStagePracticeQuestList(
+              isDark: isDark,
+              color: skill.color,
+              activeTasks: activeFreeTasks,
+              completedTasks: completedFreeTasks,
+              emptyText: 'Квестов у навыка пока нет.',
+              shrinkWrap: true,
+              onToggleQuest: onToggleQuest,
+              onMinimumAction: onMinimumAction,
+              onEditQuest: onEditQuest,
+              onDeleteQuest: onDeleteQuest,
+            ),
+          ],
+          if (stageGroups.isNotEmpty) ...[
+            if (hasFreeTasks) const SizedBox(height: 14),
+            for (final group in stageGroups) ...[
+              MasteryCollapsibleQuestSection(
+                isDark: isDark,
+                color: skill.color,
+                title: group.node.title,
+                subtitle: 'Квесты, которые двигают этот этап',
+                count: group.count,
+                child: MasteryStagePracticeQuestList(
+                  isDark: isDark,
+                  color: skill.color,
+                  activeTasks: group.activeTasks,
+                  completedTasks: group.completedTasks,
+                  emptyText: 'Создайте практику для этого этапа.',
+                  shrinkWrap: true,
+                  onToggleQuest: onToggleQuest,
+                  onMinimumAction: onMinimumAction,
+                  onEditQuest: onEditQuest,
+                  onDeleteQuest: onDeleteQuest,
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
+          ],
+        ],
+      ),
     );
   }
 }

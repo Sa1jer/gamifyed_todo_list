@@ -410,7 +410,6 @@ class _MapNodeButton extends StatefulWidget {
   final bool isDark;
   final bool selected;
   final _RoadmapLayoutAxis layoutAxis;
-  final bool verticalLabelOnLeft;
   final VoidCallback onTap;
 
   const _MapNodeButton({
@@ -421,7 +420,6 @@ class _MapNodeButton extends StatefulWidget {
     required this.isDark,
     required this.selected,
     required this.layoutAxis,
-    this.verticalLabelOnLeft = false,
     required this.onTap,
   });
 
@@ -449,12 +447,9 @@ class _MapNodeButtonState extends State<_MapNodeButton> {
     };
 
     if (widget.layoutAxis == _RoadmapLayoutAxis.vertical) {
-      return _buildVerticalNode(
-        context,
+      return _buildVerticalOrb(
         status: status,
         statusColor: statusColor,
-        completed: completed,
-        target: target,
         diameter: diameter,
         icon: icon,
       );
@@ -568,64 +563,12 @@ class _MapNodeButtonState extends State<_MapNodeButton> {
     );
   }
 
-  Widget _buildVerticalNode(
-    BuildContext context, {
+  Widget _buildVerticalOrb({
     required SkillTreeNodeStatus status,
     required Color statusColor,
-    required int completed,
-    required int target,
     required double diameter,
     required IconData icon,
   }) {
-    final labelOnLeft = widget.verticalLabelOnLeft;
-    final label = SizedBox(
-      key: ValueKey('map-node-label-${widget.skill.id}-${widget.node.id}'),
-      width: 150,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: labelOnLeft
-            ? CrossAxisAlignment.end
-            : CrossAxisAlignment.start,
-        children: [
-          Text(
-            widget.node.title,
-            key: ValueKey(
-              'map-node-label-text-${widget.skill.id}-${widget.node.id}',
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            textAlign: labelOnLeft ? TextAlign.right : TextAlign.left,
-            style: TextStyle(
-              color: status == SkillTreeNodeStatus.locked
-                  ? subtext(widget.isDark)
-                  : textColor(widget.isDark),
-              fontSize: _adaptiveNodeLabelFontSize(
-                widget.node.title,
-                availableWidth: 150,
-                textScale: MediaQuery.textScalerOf(context).scale(1),
-                vertical: true,
-              ),
-              height: 1.12,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            '${_roadmapStageStatusLabel(status)} · ${math.min(completed, target)}/$target',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: labelOnLeft ? TextAlign.right : TextAlign.left,
-            style: TextStyle(
-              color: statusColor,
-              fontSize: 12.5,
-              height: 1.1,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
@@ -637,57 +580,131 @@ class _MapNodeButtonState extends State<_MapNodeButton> {
         child: PressFeedback(
           scale: 0.97,
           onTap: widget.onTap,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Positioned(
-                left: labelOnLeft ? 18 : null,
-                right: labelOnLeft ? null : 18,
-                child: label,
+          child: AnimatedContainer(
+            key: ValueKey(
+              'map-node-surface-${widget.skill.id}-${widget.node.id}',
+            ),
+            duration: kMotionStandard,
+            curve: kMotionCurve,
+            width: diameter,
+            height: diameter,
+            decoration: BoxDecoration(
+              color: status == SkillTreeNodeStatus.locked
+                  ? surface(widget.isDark).withAlpha(widget.isDark ? 180 : 230)
+                  : statusColor.withAlpha(widget.isDark ? 34 : 24),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: widget.selected ? Colors.white : statusColor,
+                width: widget.selected ? 3 : 2,
               ),
-              AnimatedContainer(
-                key: ValueKey(
-                  'map-node-surface-${widget.skill.id}-${widget.node.id}',
-                ),
-                duration: kMotionStandard,
-                curve: kMotionCurve,
-                width: diameter,
-                height: diameter,
-                decoration: BoxDecoration(
-                  color: status == SkillTreeNodeStatus.locked
-                      ? surface(
-                          widget.isDark,
-                        ).withAlpha(widget.isDark ? 180 : 230)
-                      : statusColor.withAlpha(widget.isDark ? 34 : 24),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: widget.selected ? Colors.white : statusColor,
-                    width: widget.selected ? 3 : 2,
+              boxShadow: [
+                if (_hovered ||
+                    widget.selected ||
+                    status == SkillTreeNodeStatus.active)
+                  BoxShadow(
+                    color: statusColor.withAlpha(
+                      _hovered
+                          ? 110
+                          : widget.selected
+                          ? 105
+                          : 50,
+                    ),
+                    blurRadius: _hovered
+                        ? 28
+                        : widget.selected
+                        ? 26
+                        : 18,
+                    spreadRadius: _hovered ? 1 : 0,
                   ),
-                  boxShadow: [
-                    if (_hovered ||
-                        widget.selected ||
-                        status == SkillTreeNodeStatus.active)
-                      BoxShadow(
-                        color: statusColor.withAlpha(
-                          _hovered
-                              ? 110
-                              : widget.selected
-                              ? 105
-                              : 50,
-                        ),
-                        blurRadius: _hovered
-                            ? 28
-                            : widget.selected
-                            ? 26
-                            : 18,
-                        spreadRadius: _hovered ? 1 : 0,
-                      ),
-                  ],
+              ],
+            ),
+            child: Icon(icon, color: statusColor, size: diameter * 0.42),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _VerticalRoadmapStageLabel extends StatelessWidget {
+  const _VerticalRoadmapStageLabel({
+    super.key,
+    required this.state,
+    required this.skill,
+    required this.node,
+    required this.isDark,
+    required this.side,
+    required this.onTap,
+  });
+
+  final AppState state;
+  final Skill skill;
+  final SkillTreeNode node;
+  final bool isDark;
+  final VerticalRoadmapLabelSide side;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final status = skill.treeNodeStatus(node);
+    final statusColor = _roadmapStageStatusColor(skill, status);
+    final completed = state.completedTasksForTreeNode(skill.id, node.id);
+    final target = node.questTarget;
+    final onLeft = side == VerticalRoadmapLabelSide.left;
+    final metadata =
+        '${_roadmapStageStatusLabel(status)} · ${math.min(completed, target)}/$target';
+
+    return Semantics(
+      button: true,
+      label: '${node.title}, $metadata',
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: Align(
+            alignment: onLeft ? Alignment.centerRight : Alignment.centerLeft,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: onLeft
+                  ? CrossAxisAlignment.end
+                  : CrossAxisAlignment.start,
+              children: [
+                Text(
+                  node.title,
+                  key: ValueKey('map-node-label-text-${skill.id}-${node.id}'),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: onLeft ? TextAlign.right : TextAlign.left,
+                  style: TextStyle(
+                    color: status == SkillTreeNodeStatus.locked
+                        ? subtext(isDark)
+                        : textColor(isDark),
+                    fontSize: _adaptiveNodeLabelFontSize(
+                      node.title,
+                      availableWidth: _roadmapVerticalNodeLabelWidth,
+                      textScale: MediaQuery.textScalerOf(context).scale(1),
+                      vertical: true,
+                    ),
+                    height: 1.12,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
-                child: Icon(icon, color: statusColor, size: diameter * 0.42),
-              ),
-            ],
+                const SizedBox(height: 5),
+                Text(
+                  metadata,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: onLeft ? TextAlign.right : TextAlign.left,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontSize: 12.5,
+                    height: 1.1,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -178,6 +178,7 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
       selectedSkill.goal.trim().isEmpty ? 'no-goal' : 'goal',
       pathShape,
       layout.pathInsertionPoints.length,
+      layout.geometrySignature,
     ].join(':');
   }
 
@@ -275,104 +276,6 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
     return Matrix4.identity()
       ..translateByDouble(dx, dy, 0, 1)
       ..scaleByDouble(scale, scale, scale, 1);
-  }
-
-  Rect _roadmapOverviewTargetViewport(Size viewport) {
-    const padding = 28.0;
-    return Rect.fromLTRB(
-      padding,
-      padding,
-      math.max(padding, viewport.width - padding),
-      math.max(padding, viewport.height - padding),
-    );
-  }
-
-  Rect _roadmapTargetViewport(
-    Size viewport,
-    bool templatePanelCollapsed,
-    _RoadmapLayoutAxis layoutAxis,
-  ) {
-    final isNarrow = viewport.width < 760;
-    final vertical = layoutAxis == _RoadmapLayoutAxis.vertical;
-    final edgePadding = vertical ? 16.0 : 28.0;
-    final left = !isNarrow && !templatePanelCollapsed ? 284.0 : edgePadding;
-    final top = vertical ? 16.0 : 86.0;
-    final right = math.max(left + 160, viewport.width - edgePadding);
-    final bottomPadding = isNarrow && !templatePanelCollapsed
-        ? 238.0
-        : vertical
-        ? 12.0
-        : 48.0;
-    final bottom = math.max(top + 160, viewport.height - bottomPadding);
-    return Rect.fromLTRB(left, top, right, bottom);
-  }
-
-  Rect _roadmapContentBounds(_OrbCanvasLayout layout) {
-    final selectedSkill = layout.selectedSkill;
-    if (selectedSkill == null) {
-      var overviewBounds = Rect.zero;
-      var hasOverviewBounds = false;
-      for (final position in layout.skillPositions.values) {
-        final orbBounds = Rect.fromCenter(
-          center: position,
-          width: 216,
-          height: 170,
-        );
-        overviewBounds = hasOverviewBounds
-            ? overviewBounds.expandToInclude(orbBounds)
-            : orbBounds;
-        hasOverviewBounds = true;
-      }
-      return (hasOverviewBounds ? overviewBounds : (Offset.zero & layout.size))
-          .inflate(28);
-    }
-    final selectedCenter = layout.skillPositions[selectedSkill];
-    var bounds = Rect.zero;
-    var hasBounds = false;
-
-    void include(Rect rect) {
-      bounds = hasBounds ? bounds.expandToInclude(rect) : rect;
-      hasBounds = true;
-    }
-
-    if (selectedCenter != null) {
-      final focusedDiameter = layout.focusedSkillOrbDiameter;
-      final focusedWidth = layout.compactVisuals ? 216.0 : 264.0;
-      include(
-        layout.layoutAxis == _RoadmapLayoutAxis.vertical
-            ? Rect.fromLTWH(
-                selectedCenter.dx - focusedWidth / 2,
-                selectedCenter.dy - focusedDiameter / 2,
-                focusedWidth,
-                focusedDiameter +
-                    _roadmapSkillLabelGap +
-                    _roadmapSkillLabelHeight,
-              )
-            : Rect.fromCenter(center: selectedCenter, width: 284, height: 264),
-      );
-      if (layout.goalAnchorRect case final goalAnchorRect?) {
-        include(goalAnchorRect);
-      }
-    }
-    for (final position in layout.nodePositions.values) {
-      include(
-        layout.layoutAxis == _RoadmapLayoutAxis.vertical
-            ? Rect.fromLTWH(
-                position.dx - _roadmapVerticalNodeItemWidth / 2,
-                position.dy - _roadmapVerticalNodeItemHeight / 2,
-                _roadmapVerticalNodeItemWidth,
-                _roadmapVerticalNodeItemHeight,
-              )
-            : Rect.fromCenter(center: position, width: 202, height: 182),
-      );
-    }
-    for (final point in layout.pathInsertionPoints) {
-      include(Rect.fromCircle(center: point.position, radius: 30));
-    }
-
-    return (hasBounds ? bounds : (Offset.zero & layout.size)).inflate(
-      layout.layoutAxis == _RoadmapLayoutAxis.vertical ? 8 : 38,
-    );
   }
 
   @override
@@ -517,60 +420,94 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
                             );
                           }),
                           if (selectedSkill != null)
-                            ...selectedSkill.treeNodes.map((node) {
+                            ...selectedSkill.treeNodes.expand((node) {
                               final position = geometry.nodePositions[node.id];
                               if (position == null) {
-                                return const SizedBox.shrink();
+                                return const <Widget>[];
                               }
                               final vertical =
                                   geometry.layoutAxis ==
                                   _RoadmapLayoutAxis.vertical;
-                              final itemWidth = vertical
-                                  ? _roadmapVerticalNodeItemWidth
-                                  : _roadmapNodeItemWidth;
-                              final itemHeight = vertical
-                                  ? _roadmapVerticalNodeItemHeight
-                                  : _roadmapNodeItemHeight;
-                              return Positioned(
-                                key: ValueKey(
-                                  'map-node-${selectedSkill.id}-${node.id}',
-                                ),
-                                left: position.dx - itemWidth / 2,
-                                top: vertical
-                                    ? position.dy - itemHeight / 2
-                                    : position.dy - _roadmapNodeItemTopOffset,
-                                width: itemWidth,
-                                height: itemHeight,
-                                child: AnimatedSwitcher(
-                                  duration: layoutMotionDuration,
-                                  switchInCurve: kMotionCurve,
-                                  switchOutCurve: kMotionExitCurve,
-                                  child: _MapNodeButton(
-                                    key: ValueKey(
-                                      'node-button-${selectedSkill.id}-${node.id}',
+                              final selected =
+                                  selection?.nodeId == node.id &&
+                                  selection?.type !=
+                                      _MasterySelectionType.skill;
+                              void onTap() =>
+                                  widget.onSelectNode(selectedSkill, node);
+                              if (vertical) {
+                                final nodeGeometry =
+                                    geometry.verticalNodeGeometry[node.id];
+                                if (nodeGeometry == null) {
+                                  return const <Widget>[];
+                                }
+                                return <Widget>[
+                                  Positioned.fromRect(
+                                    rect: nodeGeometry.labelRect,
+                                    child: _VerticalRoadmapStageLabel(
+                                      key: ValueKey(
+                                        'map-node-label-${selectedSkill.id}-${node.id}',
+                                      ),
+                                      state: state,
+                                      skill: selectedSkill,
+                                      node: node,
+                                      isDark: isDark,
+                                      side: nodeGeometry.labelSide,
+                                      onTap: onTap,
                                     ),
-                                    state: state,
-                                    skill: selectedSkill,
-                                    node: node,
-                                    isDark: isDark,
-                                    selected:
-                                        selection?.nodeId == node.id &&
-                                        selection?.type !=
-                                            _MasterySelectionType.skill,
-                                    layoutAxis: geometry.layoutAxis,
-                                    verticalLabelOnLeft: vertical
-                                        ? _verticalNodeLabelOnLeft(
-                                            geometry.pathLayout,
-                                            node.id,
-                                          )
-                                        : false,
-                                    onTap: () => widget.onSelectNode(
-                                      selectedSkill,
-                                      node,
+                                  ),
+                                  Positioned.fromRect(
+                                    key: ValueKey(
+                                      'map-node-${selectedSkill.id}-${node.id}',
+                                    ),
+                                    rect: nodeGeometry.orbRect,
+                                    child: AnimatedSwitcher(
+                                      duration: layoutMotionDuration,
+                                      switchInCurve: kMotionCurve,
+                                      switchOutCurve: kMotionExitCurve,
+                                      child: _MapNodeButton(
+                                        key: ValueKey(
+                                          'node-button-${selectedSkill.id}-${node.id}',
+                                        ),
+                                        state: state,
+                                        skill: selectedSkill,
+                                        node: node,
+                                        isDark: isDark,
+                                        selected: selected,
+                                        layoutAxis: geometry.layoutAxis,
+                                        onTap: onTap,
+                                      ),
+                                    ),
+                                  ),
+                                ];
+                              }
+                              return <Widget>[
+                                Positioned(
+                                  key: ValueKey(
+                                    'map-node-${selectedSkill.id}-${node.id}',
+                                  ),
+                                  left: position.dx - _roadmapNodeItemWidth / 2,
+                                  top: position.dy - _roadmapNodeItemTopOffset,
+                                  width: _roadmapNodeItemWidth,
+                                  height: _roadmapNodeItemHeight,
+                                  child: AnimatedSwitcher(
+                                    duration: layoutMotionDuration,
+                                    switchInCurve: kMotionCurve,
+                                    switchOutCurve: kMotionExitCurve,
+                                    child: _MapNodeButton(
+                                      key: ValueKey(
+                                        'node-button-${selectedSkill.id}-${node.id}',
+                                      ),
+                                      state: state,
+                                      skill: selectedSkill,
+                                      node: node,
+                                      isDark: isDark,
+                                      selected: selected,
+                                      layoutAxis: geometry.layoutAxis,
+                                      onTap: onTap,
                                     ),
                                   ),
                                 ),
-                              );
+                              ];
                             }),
                           if (selectedSkill != null)
                             ...geometry.pathInsertionPoints.map((point) {
@@ -623,13 +560,11 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
                                 if (rect == null) {
                                   return const SizedBox.shrink();
                                 }
-                                return Positioned(
+                                return Positioned.fromRect(
                                   key: ValueKey(
                                     'roadmap-goal-anchor-${selectedSkill.id}',
                                   ),
-                                  left: rect.left,
-                                  top: rect.top,
-                                  width: rect.width,
+                                  rect: rect,
                                   child: _RoadmapGoalAnchor(
                                     skill: selectedSkill,
                                     isDark: isDark,
@@ -666,7 +601,7 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
                 Positioned(
                   left: 14,
                   top: constraints.maxWidth < 760 ? null : 14,
-                  bottom: constraints.maxWidth < 760 ? 14 : null,
+                  bottom: 14,
                   width: constraints.maxWidth < 760
                       ? math.min(constraints.maxWidth - 28, 276)
                       : 235,
@@ -824,6 +759,19 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
             widget.layoutAxis,
             verticalStageStep: verticalStageStep,
           );
+    final verticalNodeGeometry = selectedSkill == null || selectedCenter == null
+        ? const <String, VerticalRoadmapNodeGeometry>{}
+        : _buildVerticalNodeGeometry(
+            state: state,
+            skill: selectedSkill,
+            pathLayout: pathLayout,
+            nodePositions: nodePositions,
+            skillCenter: selectedCenter,
+            layoutAxis: widget.layoutAxis,
+            baseTextStyle: baseTextStyle,
+            textScaler: textScaler,
+            textDirection: textDirection,
+          );
     final pathInsertionPoints = selectedSkill == null || selectedCenter == null
         ? const <_RoadmapInsertionPoint>[]
         : _placeRoadmapInsertionActions(
@@ -847,6 +795,9 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
             focusedSkillOrbDiameter: compactVisuals
                 ? _roadmapMobileFocusedSkillOrbDiameter
                 : _roadmapFocusedSkillOrbDiameter,
+            baseTextStyle: baseTextStyle,
+            textScaler: textScaler,
+            textDirection: textDirection,
           );
     return _OrbCanvasLayout(
       size: Size(width, height),
@@ -856,6 +807,7 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
       pathLayout: pathLayout,
       skillPositions: skillPositions,
       nodePositions: nodePositions,
+      verticalNodeGeometry: verticalNodeGeometry,
       pathInsertionPoints: pathInsertionPoints,
       goalAnchorRect: goalAnchorRect,
       compactVisuals: compactVisuals,
@@ -869,6 +821,7 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
         selectedSkill: selectedSkill,
         skillPositions: skillPositions,
         nodePositions: nodePositions,
+        verticalNodeGeometry: verticalNodeGeometry,
         pathInsertionPoints: pathInsertionPoints,
         goalAnchorRect: goalAnchorRect,
         compactVisuals: compactVisuals,
@@ -891,6 +844,7 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
     required Skill? selectedSkill,
     required Map<Skill, Offset> skillPositions,
     required Map<String, Offset> nodePositions,
+    required Map<String, VerticalRoadmapNodeGeometry> verticalNodeGeometry,
     required List<_RoadmapInsertionPoint> pathInsertionPoints,
     required Rect? goalAnchorRect,
     required bool compactVisuals,
@@ -907,6 +861,13 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
       ..sort((left, right) => left.key.compareTo(right.key));
     for (final entry in nodes) {
       signature.write(':${entry.key}@${entry.value.dx},${entry.value.dy}');
+    }
+    final verticalNodes = verticalNodeGeometry.entries.toList()
+      ..sort((left, right) => left.key.compareTo(right.key));
+    for (final entry in verticalNodes) {
+      signature.write(
+        ':vertical:${entry.key}:${entry.value.orbRect}:${entry.value.labelRect}:${entry.value.labelSide.name}',
+      );
     }
     for (final point in pathInsertionPoints) {
       signature.write(
@@ -959,30 +920,6 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
 
   Offset _verticalRoadmapSkillCenter(Size size, int stageCount) =>
       Offset(size.width / 2, 200);
-
-  Rect _roadmapGoalAnchorRectFor({
-    required Skill skill,
-    required Offset skillCenter,
-    required _RoadmapLayoutAxis layoutAxis,
-    required double focusedSkillOrbDiameter,
-  }) {
-    final measuredWidth = _roadmapGoalAnchorWidth(skill.goal);
-    if (layoutAxis == _RoadmapLayoutAxis.vertical) {
-      final width = math.min(measuredWidth, 260.0);
-      return Rect.fromLTWH(
-        skillCenter.dx + focusedSkillOrbDiameter / 2 + 34,
-        skillCenter.dy - _roadmapGoalAnchorEstimatedHeight / 2,
-        width,
-        _roadmapGoalAnchorEstimatedHeight,
-      );
-    }
-    return Rect.fromLTWH(
-      skillCenter.dx - measuredWidth / 2,
-      skillCenter.dy - _roadmapGoalAnchorTopOffset,
-      measuredWidth,
-      _roadmapGoalAnchorEstimatedHeight,
-    );
-  }
 
   Offset _roadmapSkillCenter(
     Size size,
@@ -1066,16 +1003,6 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
       }
     }
     return positions;
-  }
-
-  bool _verticalNodeLabelOnLeft(RoadmapPathLayout layout, String nodeId) {
-    for (var pathIndex = 0; pathIndex < layout.paths.length; pathIndex++) {
-      final stageIndex = layout.paths[pathIndex].nodes.indexWhere(
-        (node) => node.id == nodeId,
-      );
-      if (stageIndex >= 0) return (pathIndex + stageIndex).isEven;
-    }
-    return true;
   }
 
   List<_RoadmapInsertionPoint> _placeRoadmapInsertionActions(
@@ -1210,6 +1137,7 @@ class _OrbCanvasLayout {
   final RoadmapPathLayout pathLayout;
   final Map<Skill, Offset> skillPositions;
   final Map<String, Offset> nodePositions;
+  final Map<String, VerticalRoadmapNodeGeometry> verticalNodeGeometry;
   final List<_RoadmapInsertionPoint> pathInsertionPoints;
   final Rect? goalAnchorRect;
   final bool compactVisuals;
@@ -1226,6 +1154,7 @@ class _OrbCanvasLayout {
     required this.pathLayout,
     required this.skillPositions,
     required this.nodePositions,
+    required this.verticalNodeGeometry,
     required this.pathInsertionPoints,
     required this.goalAnchorRect,
     required this.compactVisuals,
@@ -1351,6 +1280,12 @@ _OrbCanvasLayout _interpolateOrbCanvasLayout(
         t,
       )!,
   };
+  final verticalNodeGeometry = <String, VerticalRoadmapNodeGeometry>{
+    for (final entry in to.verticalNodeGeometry.entries)
+      entry.key: entry.value.translatedTo(
+        nodePositions[entry.key] ?? entry.value.orbCenter,
+      ),
+  };
   final fromInsertionPoints = {
     for (final point in from.pathInsertionPoints)
       '${point.leftNodeId}:${point.rightNodeId ?? 'skill'}': point.position,
@@ -1369,7 +1304,11 @@ _OrbCanvasLayout _interpolateOrbCanvasLayout(
       ),
   ];
   final goalAnchorRect = switch ((from.goalAnchorRect, to.goalAnchorRect)) {
-    (final Rect fromRect, final Rect toRect) => Rect.lerp(fromRect, toRect, t),
+    (final Rect fromRect, final Rect toRect) => Rect.fromCenter(
+      center: Offset.lerp(fromRect.center, toRect.center, t)!,
+      width: toRect.width,
+      height: toRect.height,
+    ),
     (_, final Rect toRect) => toRect,
     _ => null,
   };
@@ -1381,6 +1320,7 @@ _OrbCanvasLayout _interpolateOrbCanvasLayout(
     pathLayout: to.pathLayout,
     skillPositions: skillPositions,
     nodePositions: nodePositions,
+    verticalNodeGeometry: verticalNodeGeometry,
     pathInsertionPoints: insertionPoints,
     goalAnchorRect: goalAnchorRect,
     compactVisuals: to.compactVisuals,
