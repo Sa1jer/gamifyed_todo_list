@@ -1229,19 +1229,65 @@ void main() {
       final pointer = await tester.createGesture(kind: PointerDeviceKind.mouse);
       await pointer.addPointer(location: const Offset(1, 1));
       await pointer.moveTo(tester.getCenter(nav));
-      await tester.pumpAndSettle();
+      await tester.pump();
       final stableRect = tester.getRect(surface);
+      expect(
+        find.descendant(of: nav, matching: find.byType(AnimatedContainer)),
+        findsNothing,
+      );
       final stableDecoration =
-          tester.widget<AnimatedContainer>(surface).decoration as BoxDecoration;
+          tester.widget<DecoratedBox>(surface).decoration as BoxDecoration;
 
-      for (var frame = 0; frame < 4; frame++) {
-        await tester.pump(const Duration(milliseconds: 80));
+      for (var frame = 0; frame < 12; frame++) {
+        await tester.pump(const Duration(milliseconds: 20));
         expect(tester.getRect(surface), stableRect);
         expect(
-          (tester.widget<AnimatedContainer>(surface).decoration
-                  as BoxDecoration)
+          (tester.widget<DecoratedBox>(surface).decoration as BoxDecoration)
               .color,
           stableDecoration.color,
+        );
+      }
+      await pointer.moveTo(stableRect.center + const Offset(10, 4));
+      await tester.pump();
+      expect(
+        (tester.widget<DecoratedBox>(surface).decoration as BoxDecoration)
+            .color,
+        stableDecoration.color,
+      );
+      tester
+          .widget<AppStateProvider>(find.byType(AppStateProvider).first)
+          .state
+          .refresh();
+      await tester.pump();
+      expect(tester.getRect(surface), stableRect);
+      expect(
+        (tester.widget<DecoratedBox>(surface).decoration as BoxDecoration)
+            .color,
+        stableDecoration.color,
+      );
+      await pointer.moveTo(const Offset(1, 1));
+      await tester.pump();
+      expect(
+        (tester.widget<DecoratedBox>(surface).decoration as BoxDecoration)
+            .color,
+        Colors.transparent,
+      );
+      await pointer.moveTo(stableRect.center);
+      await tester.pump();
+      await pointer.down(stableRect.center);
+      await pointer.up();
+      await tester.pumpAndSettle();
+      final activeColor =
+          (tester.widget<DecoratedBox>(surface).decoration as BoxDecoration)
+              .color;
+      expect(activeColor, isNot(Colors.transparent));
+      for (var frame = 0; frame < 12; frame++) {
+        await tester.pump(const Duration(milliseconds: 20));
+        expect(tester.getRect(surface), stableRect);
+        expect(
+          (tester.widget<DecoratedBox>(surface).decoration as BoxDecoration)
+              .color,
+          activeColor,
         );
       }
       await pointer.removePointer();
@@ -4590,10 +4636,10 @@ void main() {
       verticalRoot.dy,
       greaterThan(verticalCanvasRect.top + verticalCanvasRect.height * 0.65),
     );
-    expect(verticalSkillRect.top, lessThan(verticalCanvasRect.top + 48));
+    expect(verticalSkillRect.top, lessThan(verticalCanvasRect.top + 64));
     expect(
       tester.getRect(node(root.id)).bottom,
-      greaterThan(verticalCanvasRect.bottom - 48),
+      greaterThan(verticalCanvasRect.bottom - 64),
     );
     expect(
       verticalViewer.transformationController!.value.getMaxScaleOnAxis(),
@@ -4614,6 +4660,25 @@ void main() {
     final verticalRootLabel = tester.widget<Text>(nodeLabel(root.id));
     expect(verticalRootLabel.textAlign, isNot(TextAlign.center));
     expect(verticalRootLabel.style?.fontSize, greaterThanOrEqualTo(16));
+    for (final stage in [root, middle, terminal]) {
+      final labelFinder = find.byKey(
+        ValueKey('map-node-label-layout-skill-${stage.id}'),
+      );
+      final labelRect = tester.getRect(labelFinder);
+      final orbRect = tester.getRect(nodeSurface(stage.id));
+      expect(labelRect.size.isEmpty, isFalse);
+      expect(verticalCanvasRect.contains(labelRect.topLeft), isTrue);
+      expect(verticalCanvasRect.contains(labelRect.bottomRight), isTrue);
+      expect(labelRect.overlaps(orbRect), isFalse);
+      expect(
+        find.ancestor(of: labelFinder, matching: node(stage.id)),
+        findsNothing,
+      );
+    }
+    expect(verticalGoalRect.width, greaterThanOrEqualTo(240));
+    expect(verticalGoalRect.center.dy, closeTo(verticalSkillRect.center.dy, 1));
+    expect(verticalCanvasRect.contains(verticalGoalRect.topLeft), isTrue);
+    expect(verticalCanvasRect.contains(verticalGoalRect.bottomRight), isTrue);
 
     void expectInsertionBetween({
       required Finder insertionFinder,
@@ -5330,6 +5395,133 @@ void main() {
     await tester.pump();
   });
 
+  testWidgets(
+    'vertical RoadMap keeps branched labels and goal visible at increased text scales',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1440, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      final root = SkillTreeNode(
+        id: 'branch-root',
+        title: 'Сформировать подробную основу сценария',
+      );
+      final left = SkillTreeNode(
+        id: 'branch-left',
+        title: 'Подготовить визуальные материалы',
+        prerequisiteIds: [root.id],
+      );
+      final right = SkillTreeNode(
+        id: 'branch-right',
+        title: 'Записать чистовой звук выпуска',
+        prerequisiteIds: [root.id],
+      );
+      final leftEnd = SkillTreeNode(
+        id: 'branch-left-end',
+        title: 'Собрать черновой монтаж ролика',
+        prerequisiteIds: [left.id],
+      );
+      final rightEnd = SkillTreeNode(
+        id: 'branch-right-end',
+        title: 'Проверить музыку и звуковые эффекты',
+        prerequisiteIds: [right.id],
+      );
+      final finish = SkillTreeNode(
+        id: 'branch-finish',
+        title: 'Опубликовать готовый выпуск',
+        prerequisiteIds: [leftEnd.id, rightEnd.id],
+      );
+      final stages = [root, left, right, leftEnd, rightEnd, finish];
+      final storage = InMemoryStorageService()
+        .._onboardingSeen = true
+        ..skills = [
+          Skill(
+            id: 'branch-desktop',
+            name: 'Видео производство',
+            goal:
+                'Выпустить самостоятельное видео со сценарием, звуком и монтажом',
+            color: const Color(0xFFFF453A),
+            icon: Icons.ondemand_video_rounded,
+            treeNodes: stages,
+          ),
+        ];
+      await storage.init();
+      await tester.pumpWidget(RPGApp(storage: storage));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      await tester.tap(find.byKey(const ValueKey('desktop-nav-map')));
+      await tester.pumpAndSettle();
+      tester.platformDispatcher.textScaleFactorTestValue = 1.25;
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      await tester.tap(
+        find.byKey(const ValueKey('map-skill-orb-branch-desktop')),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.byKey(const ValueKey('roadmap-layout-vertical')));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+
+      for (final configuration in [
+        (textScale: 1.25, viewport: const Size(1440, 900)),
+        (textScale: 1.5, viewport: const Size(1200, 720)),
+        (textScale: 2.0, viewport: const Size(1440, 900)),
+      ]) {
+        tester.view.physicalSize = configuration.viewport;
+        tester.platformDispatcher.textScaleFactorTestValue =
+            configuration.textScale;
+        await tester.pumpAndSettle();
+        final canvas = tester.getRect(
+          find.byKey(const ValueKey('roadmap-canvas-vertical')),
+        );
+        var labelsOnLeft = 0;
+        var labelsOnRight = 0;
+        for (final stage in stages) {
+          final label = tester.getRect(
+            find.byKey(ValueKey('map-node-label-branch-desktop-${stage.id}')),
+          );
+          final orb = tester.getRect(
+            find.byKey(ValueKey('map-node-surface-branch-desktop-${stage.id}')),
+          );
+          expect(label.size.isEmpty, isFalse);
+          expect(canvas.contains(label.topLeft), isTrue);
+          expect(canvas.contains(label.bottomRight), isTrue);
+          expect(label.overlaps(orb), isFalse);
+          if (label.center.dx < orb.center.dx) {
+            labelsOnLeft++;
+          } else {
+            labelsOnRight++;
+          }
+        }
+        expect(labelsOnLeft, greaterThan(0));
+        expect(labelsOnRight, greaterThan(0));
+        final goal = tester.getRect(
+          find.byKey(const ValueKey('roadmap-goal-anchor-branch-desktop')),
+        );
+        final goalSize = tester.getSize(
+          find.byKey(const ValueKey('roadmap-goal-anchor-branch-desktop')),
+        );
+        final skillOrb = tester.getRect(
+          find.byKey(const ValueKey('map-skill-surface-branch-desktop')),
+        );
+        expect(goalSize.width, greaterThanOrEqualTo(240));
+        expect(goal.center.dy, closeTo(skillOrb.center.dy, 1));
+        expect(goal.left, greaterThan(skillOrb.right + 4));
+        expect(canvas.contains(goal.topLeft), isTrue);
+        expect(canvas.contains(goal.bottomRight), isTrue);
+        expect(
+          tester.takeException(),
+          isNull,
+          reason:
+              'RoadMap must remain overflow-free at ${configuration.textScale}x text in ${configuration.viewport}',
+        );
+      }
+    },
+  );
+
   testWidgets('mobile vertical RoadMap handles zero and one stages', (
     WidgetTester tester,
   ) async {
@@ -5873,15 +6065,19 @@ void main() {
 
     String? savedName;
     String? savedGoal;
+    Color? savedColor;
+    IconData? savedIcon;
     List<SkillTreeNode>? savedNodes;
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: AddSkillDialog(
             isDark: true,
-            onSave: (name, goal, _, _, _, nodes, _) {
+            onSave: (name, goal, _, color, icon, nodes, _) {
               savedName = name;
               savedGoal = goal;
+              savedColor = color;
+              savedIcon = icon;
               savedNodes = nodes;
             },
           ),
@@ -5893,16 +6089,20 @@ void main() {
     expect(
       tester
           .getSize(find.byKey(const ValueKey('desktop-skill-live-preview')))
-          .width,
-      190,
+          .height,
+      lessThanOrEqualTo(112),
     );
     expect(
       tester
-          .widget<GridView>(find.byKey(const ValueKey('skill-icon-grid')))
-          .childrenDelegate
-          .estimatedChildCount,
-      12,
+          .getSize(find.byKey(const ValueKey('desktop-add-skill-content')))
+          .height,
+      lessThan(700),
     );
+    expect(
+      find.byKey(const ValueKey('skill-curated-icon-strip')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('skill-icon-grid')), findsNothing);
     expect(find.text('Все иконки'), findsOneWidget);
     expect(
       find.byKey(const ValueKey('add-skill-first-stage-field')).hitTestable(),
@@ -5921,6 +6121,42 @@ void main() {
     expect(find.text('Сценарий'), findsWidgets);
     expect(find.text('Подготовить первый выпуск'), findsWidgets);
 
+    await tester.tap(find.byKey(const ValueKey('skill-icon-picker-toggle')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('desktop-skill-icon-picker')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('skill-icon-category-creativity')),
+      findsOneWidget,
+    );
+    await tester.tap(
+      find.byKey(const ValueKey('skill-icon-category-creativity')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Видео').last);
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('desktop-skill-icon-picker')),
+      findsNothing,
+    );
+    expect(
+      tester
+          .widget<Icon>(
+            find
+                .descendant(
+                  of: find.byKey(const ValueKey('skill-preview-icon')),
+                  matching: find.byType(Icon),
+                )
+                .first,
+          )
+          .icon,
+      Icons.tv,
+    );
+    await tester.tap(find.byKey(const ValueKey('skill-color-0')));
+    await tester.pump();
+
     await tester.tap(
       find.byKey(const ValueKey('skill-first-stage-disclosure')),
     );
@@ -5934,8 +6170,64 @@ void main() {
 
     expect(savedName, 'Сценарий');
     expect(savedGoal, 'Подготовить первый выпуск');
+    expect(savedColor, kColors.first);
+    expect(savedIcon, Icons.tv);
     expect(savedNodes, hasLength(1));
     expect(savedNodes!.single.title, 'Черновик');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('desktop AddSkill remains scrollable at 200 percent text', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(900, 650);
+    tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AddSkillDialog(isDark: true, onSave: (_, _, _, _, _, _, _) {}),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final dialogRect = tester.getRect(
+      find.byKey(const ValueKey('desktop-add-skill-content')),
+    );
+    expect(dialogRect.top, greaterThanOrEqualTo(0));
+    expect(dialogRect.bottom, lessThanOrEqualTo(650));
+    expect(find.text('Создать').hitTestable(), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    final disclosure = find.byKey(
+      const ValueKey('skill-first-stage-disclosure'),
+    );
+    await tester.ensureVisible(disclosure);
+    await tester.pumpAndSettle();
+    await tester.tap(disclosure);
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('add-skill-first-stage-field')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+
+    final pickerToggle = find.byKey(const ValueKey('skill-icon-picker-toggle'));
+    await tester.ensureVisible(pickerToggle);
+    await tester.pumpAndSettle();
+    await tester.tap(pickerToggle);
+    await tester.pumpAndSettle();
+    final pickerRect = tester.getRect(
+      find.byKey(const ValueKey('desktop-skill-icon-picker')),
+    );
+    expect(pickerRect.top, greaterThanOrEqualTo(0));
+    expect(pickerRect.bottom, lessThanOrEqualTo(650));
+    expect(find.byKey(const ValueKey('skill-full-icon-grid')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

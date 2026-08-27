@@ -1,5 +1,15 @@
 # Mobile UX/UI Product Audit
 
+## Desktop Corrective Compatibility — 2026-08-27
+
+The desktop RoadMap geometry, sidebar hover, and Skill Creator density pass did
+not change the mobile product model. Mobile RoadMap remains the existing
+vertical ascent projection, mobile AddSkill keeps its touch-oriented icon grid
+and full-screen dirty-draft protection, and Tutorial v3 was not redesigned.
+Focused regression coverage confirms zero/one-stage and branched mobile
+RoadMaps plus mobile Skill creation after the shared icon data extraction.
+Physical Android `2.0x`, keyboard/Back, and TalkBack checks remain manual gates.
+
 ## Stabilization Update — 2026-08-18
 
 This pass kept the established Overview/Focus and RoadMap product model while

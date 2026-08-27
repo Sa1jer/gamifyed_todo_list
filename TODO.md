@@ -42,12 +42,15 @@ This file tracks the active implementation roadmap and completed project work. U
 ## UX Runtime Hardening — 2026-08-27
 
 - [x] Increase desktop RoadMap label hierarchy, replace vertical card labels with alternating text beside the central axis, center mobile stage cards, and share a neutral cool light canvas token without changing graph/progression rules.
+- [x] Rebuild desktop vertical RoadMap labels as scene-level siblings with exact transformed bounds, deterministic branch-aware sides, measured Goal geometry, and `1.25x/1.5x/2.0x` regression coverage.
 - [x] Isolate mobile RoadMap painting inside one hard-clipped graph viewport below fixed controls.
 - [x] Split Profile into a fixed hero plus one body scroll owner on desktop/mobile; fix large-text Skill-chip overflow found by short-window `2.0x` coverage.
 - [x] Restore a usable `220-260dp` desktop Skill popup, stable hover geometry, `Escape`, Edit/Delete callbacks, and reorder compatibility.
 - [x] Redesign Skill Creator around name/Goal, live preview, twelve curated icons plus categorized full picker, and collapsed optional first Stage while preserving hidden checklist and existing RoadMap data on edit.
+- [x] Make desktop Skill Creator content-driven and compact, replace the primary icon grid with a curated wrap, and move the full catalog into a bounded categorized dialog with short-window `2.0x` coverage.
+- [x] Remove the desktop sidebar hover DecorationTween and centralize hover ownership in one stable pointer region; automated light/dark pointer tests show no false exit or geometry change across stationary frames and parent rebuilds.
 - [x] Introduce Tutorial v3 runtime phases, spotlight/Coach/inline modes, wall-clock target readiness, real Profile teaching, dedicated Minimum Action targeting, readiness-gated RoadMap navigation, and non-blocking Core completion without fake data or rewards.
-- [ ] Perform native macOS/Windows pointer QA for sidebar hover, popup overlay transfer, keyboard traversal, and RoadMap resize while a tutorial spotlight is active.
+- [ ] Perform native macOS/Windows pointer QA for the corrected light sidebar hover, popup overlay transfer, keyboard traversal, and RoadMap resize while a tutorial spotlight is active; automated tests cannot prove compositor stability.
 - [ ] Perform physical Android QA for RoadMap top/bottom fling clipping at `360/393/430dp`, Profile inertia boundaries, Skill Creator keyboard/Back, Tutorial v3 TalkBack order, and `2.0x` font/display size.
 - [ ] Capture profile-mode frame timings for long RoadMap scrolling, Profile body scrolling, Skill icon expansion, and Tutorial spotlight movement before making performance claims.
 

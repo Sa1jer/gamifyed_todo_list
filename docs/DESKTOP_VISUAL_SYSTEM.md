@@ -1,6 +1,6 @@
 # Desktop Visual System
 
-Last updated: 2026-07-13
+Last updated: 2026-08-27
 
 ## Scope
 
@@ -24,6 +24,38 @@ Welcome is a pre-shell, full-window startup surface shared with narrow layouts;
 it appears only after successful fresh storage load. Once begun, desktop enters
 this existing adaptive shell. Tutorial replay remains a compact Profile action
 and does not create another desktop navigation family.
+
+## 1.3.64 Corrective Geometry And Creation Density
+
+Vertical RoadMap labels previously existed in the widget tree but lived inside
+a generic `430x118` node wrapper. Camera bounds fitted that approximation, so
+an `InteractiveViewer` transform could leave the actual text clipped or outside
+the useful viewport even while finder-only tests stayed green. Each vertical
+stage now exposes exact orb and label rectangles. The connector painter, text
+label, orb hit target, insertion controls, and Goal share one scene authority;
+global-rectangle tests verify both sides, branches, viewport containment, and
+orientation transitions at `1.0x`, `1.25x`, `1.5x`, and `2.0x` text.
+
+The Goal card uses measured target geometry rather than an estimated `120dp`
+height. Its vertical center matches the focused Skill orb and its intrinsic
+width remains at least `250dp` before camera scaling. During geometry animation
+the card moves between centers but immediately adopts its target size, avoiding
+temporary text overflow when system scaling changes.
+
+The navigation hover boolean remained visually stable in automated stationary
+pointer, intra-row movement, parent-refresh, active, light, and dark scenarios;
+no false exit was observed. The remaining suspect path was the implicit
+decoration tween itself. Navigation now has one opaque `MouseRegion`, fixed
+Material/Ink geometry, and an immediate `DecoratedBox`; focus retains a visible
+border and active remains stronger than hover. Native compositor confirmation
+on macOS and Windows is still pending and is not claimed by these tests.
+
+Desktop Skill Creator is content-driven up to `88%` of the viewport. A compact
+identity preview sits beside Name and Goal, the primary appearance block uses a
+twelve-icon wrap plus color dots, and `Все иконки` opens a bounded categorized
+dialog whose grid is built only while open. The optional first Stage remains a
+collapsed disclosure; short-window and `2.0x` text tests verify scrolling and a
+stable action footer.
 
 ## Responsive Boundary
 

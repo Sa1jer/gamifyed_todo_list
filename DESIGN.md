@@ -4,6 +4,23 @@ Last updated: 2026-08-27
 
 This file records design direction, product guardrails, and UI decisions. Update it after every meaningful product/UI change so implementation stays aligned with the app's intended mental model.
 
+## Corrective Desktop UX Contract — 2026-08-27
+
+- Desktop vertical RoadMap labels are scene-level text siblings of their orbs.
+  Their real orb, label, Goal, and insertion rectangles define camera bounds;
+  no oversized node wrapper may stand in for visible geometry.
+- A vertical Goal is a major endpoint: its measured card keeps a `250dp`
+  minimum intrinsic width, sits to the right of the final Skill orb, and shares
+  its vertical centre. Typography changes update the target size immediately
+  while only the position is animated.
+- Desktop Skill Creator stays content-led: Name and Goal lead, the identity
+  preview is compact, twelve curated icons use an unframed wrap, the complete
+  categorized catalog is a secondary dialog, and the first Stage remains an
+  optional collapsed disclosure.
+- Desktop navigation uses one stable pointer region and immediate semantic
+  surface colors. Hover, active, and keyboard-focus states may change color or
+  border color, but never geometry or Material ancestry.
+
 ## Product Core
 
 The core loop remains:

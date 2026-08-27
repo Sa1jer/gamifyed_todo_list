@@ -324,27 +324,6 @@ class AddSkillDialog extends StatefulWidget {
   State<AddSkillDialog> createState() => _AddSkillDialogState();
 }
 
-enum _SkillIconCategory {
-  all('Все'),
-  body('Тело'),
-  mind('Разум'),
-  creativity('Творчество'),
-  work('Работа'),
-  home('Быт');
-
-  final String label;
-
-  const _SkillIconCategory(this.label);
-}
-
-class _SkillIconOption {
-  final IconData icon;
-  final String label;
-  final _SkillIconCategory category;
-
-  const _SkillIconOption(this.icon, this.label, this.category);
-}
-
 class _AddSkillDialogState extends State<AddSkillDialog> {
   final _nameCtrl = TextEditingController();
   final _goalCtrl = TextEditingController();
@@ -359,144 +338,132 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
   bool _firstStageExpanded = false;
   String? _nameError;
   late final String _initialDraftSignature;
-  _SkillIconCategory _iconCategory = _SkillIconCategory.all;
+  SkillIconCategory _iconCategory = SkillIconCategory.all;
 
-  static const _curatedIconOptions = <_SkillIconOption>[
-    _SkillIconOption(Icons.sports_martial_arts, 'Бой', _SkillIconCategory.body),
-    _SkillIconOption(Icons.psychology, 'Разум', _SkillIconCategory.mind),
-    _SkillIconOption(Icons.fitness_center, 'Тело', _SkillIconCategory.body),
-    _SkillIconOption(Icons.favorite, 'Здоровье', _SkillIconCategory.body),
-    _SkillIconOption(Icons.attach_money, 'Финансы', _SkillIconCategory.work),
-    _SkillIconOption(Icons.business_center, 'Работа', _SkillIconCategory.work),
-    _SkillIconOption(
+  static const _curatedIconOptions = <SkillIconOption>[
+    SkillIconOption(Icons.sports_martial_arts, 'Бой', SkillIconCategory.body),
+    SkillIconOption(Icons.psychology, 'Разум', SkillIconCategory.mind),
+    SkillIconOption(Icons.fitness_center, 'Тело', SkillIconCategory.body),
+    SkillIconOption(Icons.favorite, 'Здоровье', SkillIconCategory.body),
+    SkillIconOption(Icons.attach_money, 'Финансы', SkillIconCategory.work),
+    SkillIconOption(Icons.business_center, 'Работа', SkillIconCategory.work),
+    SkillIconOption(
       Icons.music_note,
       'Творчество',
-      _SkillIconCategory.creativity,
+      SkillIconCategory.creativity,
     ),
-    _SkillIconOption(Icons.public, 'Мир', _SkillIconCategory.mind),
-    _SkillIconOption(
-      Icons.favorite_border,
-      'Отношения',
-      _SkillIconCategory.home,
-    ),
-    _SkillIconOption(Icons.palette, 'Хобби', _SkillIconCategory.creativity),
-    _SkillIconOption(Icons.flag_rounded, 'Цель', _SkillIconCategory.work),
-    _SkillIconOption(Icons.adjust_rounded, 'Фокус', _SkillIconCategory.mind),
+    SkillIconOption(Icons.public, 'Мир', SkillIconCategory.mind),
+    SkillIconOption(Icons.favorite_border, 'Отношения', SkillIconCategory.home),
+    SkillIconOption(Icons.palette, 'Хобби', SkillIconCategory.creativity),
+    SkillIconOption(Icons.flag_rounded, 'Цель', SkillIconCategory.work),
+    SkillIconOption(Icons.adjust_rounded, 'Фокус', SkillIconCategory.mind),
   ];
 
-  static const _iconOptions = <_SkillIconOption>[
-    _SkillIconOption(
+  static const _iconOptions = <SkillIconOption>[
+    SkillIconOption(
       Icons.fitness_center,
       'Силовые тренировки',
-      _SkillIconCategory.body,
+      SkillIconCategory.body,
     ),
-    _SkillIconOption(Icons.code, 'Программирование', _SkillIconCategory.mind),
-    _SkillIconOption(Icons.sports_esports, 'Игры', _SkillIconCategory.home),
-    _SkillIconOption(Icons.menu_book, 'Чтение', _SkillIconCategory.mind),
-    _SkillIconOption(Icons.music_note, 'Музыка', _SkillIconCategory.creativity),
-    _SkillIconOption(Icons.palette, 'Рисование', _SkillIconCategory.creativity),
-    _SkillIconOption(
+    SkillIconOption(Icons.code, 'Программирование', SkillIconCategory.mind),
+    SkillIconOption(Icons.sports_esports, 'Игры', SkillIconCategory.home),
+    SkillIconOption(Icons.menu_book, 'Чтение', SkillIconCategory.mind),
+    SkillIconOption(Icons.music_note, 'Музыка', SkillIconCategory.creativity),
+    SkillIconOption(Icons.palette, 'Рисование', SkillIconCategory.creativity),
+    SkillIconOption(
       Icons.language,
       'Иностранные языки',
-      _SkillIconCategory.mind,
+      SkillIconCategory.mind,
     ),
-    _SkillIconOption(Icons.science, 'Наука', _SkillIconCategory.mind),
-    _SkillIconOption(Icons.directions_run, 'Бег', _SkillIconCategory.body),
-    _SkillIconOption(Icons.psychology, 'Психология', _SkillIconCategory.mind),
-    _SkillIconOption(Icons.attach_money, 'Финансы', _SkillIconCategory.work),
-    _SkillIconOption(Icons.business_center, 'Карьера', _SkillIconCategory.work),
-    _SkillIconOption(
+    SkillIconOption(Icons.science, 'Наука', SkillIconCategory.mind),
+    SkillIconOption(Icons.directions_run, 'Бег', SkillIconCategory.body),
+    SkillIconOption(Icons.psychology, 'Психология', SkillIconCategory.mind),
+    SkillIconOption(Icons.attach_money, 'Финансы', SkillIconCategory.work),
+    SkillIconOption(Icons.business_center, 'Карьера', SkillIconCategory.work),
+    SkillIconOption(
       Icons.camera_alt,
       'Фотография',
-      _SkillIconCategory.creativity,
+      SkillIconCategory.creativity,
     ),
-    _SkillIconOption(Icons.school, 'Обучение', _SkillIconCategory.mind),
-    _SkillIconOption(Icons.sports_soccer, 'Футбол', _SkillIconCategory.body),
-    _SkillIconOption(Icons.flight, 'Путешествия', _SkillIconCategory.home),
-    _SkillIconOption(Icons.favorite, 'Здоровье', _SkillIconCategory.body),
-    _SkillIconOption(Icons.emoji_events, 'Достижения', _SkillIconCategory.work),
-    _SkillIconOption(Icons.restaurant, 'Кулинария', _SkillIconCategory.home),
-    _SkillIconOption(Icons.local_hospital, 'Медицина', _SkillIconCategory.body),
-    _SkillIconOption(Icons.trending_up, 'Рост', _SkillIconCategory.work),
-    _SkillIconOption(
+    SkillIconOption(Icons.school, 'Обучение', SkillIconCategory.mind),
+    SkillIconOption(Icons.sports_soccer, 'Футбол', SkillIconCategory.body),
+    SkillIconOption(Icons.flight, 'Путешествия', SkillIconCategory.home),
+    SkillIconOption(Icons.favorite, 'Здоровье', SkillIconCategory.body),
+    SkillIconOption(Icons.emoji_events, 'Достижения', SkillIconCategory.work),
+    SkillIconOption(Icons.restaurant, 'Кулинария', SkillIconCategory.home),
+    SkillIconOption(Icons.local_hospital, 'Медицина', SkillIconCategory.body),
+    SkillIconOption(Icons.trending_up, 'Рост', SkillIconCategory.work),
+    SkillIconOption(
       Icons.self_improvement,
       'Медитация',
-      _SkillIconCategory.body,
+      SkillIconCategory.body,
     ),
-    _SkillIconOption(Icons.star, 'Личное мастерство', _SkillIconCategory.work),
-    _SkillIconOption(Icons.public, 'Мир и культура', _SkillIconCategory.mind),
-    _SkillIconOption(Icons.home, 'Дом', _SkillIconCategory.home),
-    _SkillIconOption(Icons.shopping_cart, 'Покупки', _SkillIconCategory.home),
-    _SkillIconOption(Icons.pets, 'Питомцы', _SkillIconCategory.home),
-    _SkillIconOption(Icons.nature, 'Природа', _SkillIconCategory.home),
-    _SkillIconOption(Icons.sports_tennis, 'Теннис', _SkillIconCategory.body),
-    _SkillIconOption(
+    SkillIconOption(Icons.star, 'Личное мастерство', SkillIconCategory.work),
+    SkillIconOption(Icons.public, 'Мир и культура', SkillIconCategory.mind),
+    SkillIconOption(Icons.home, 'Дом', SkillIconCategory.home),
+    SkillIconOption(Icons.shopping_cart, 'Покупки', SkillIconCategory.home),
+    SkillIconOption(Icons.pets, 'Питомцы', SkillIconCategory.home),
+    SkillIconOption(Icons.nature, 'Природа', SkillIconCategory.home),
+    SkillIconOption(Icons.sports_tennis, 'Теннис', SkillIconCategory.body),
+    SkillIconOption(
       Icons.sports_basketball,
       'Баскетбол',
-      _SkillIconCategory.body,
+      SkillIconCategory.body,
     ),
-    _SkillIconOption(
-      Icons.directions_bike,
-      'Велоспорт',
-      _SkillIconCategory.body,
-    ),
-    _SkillIconOption(Icons.pool, 'Плавание', _SkillIconCategory.body),
-    _SkillIconOption(
+    SkillIconOption(Icons.directions_bike, 'Велоспорт', SkillIconCategory.body),
+    SkillIconOption(Icons.pool, 'Плавание', SkillIconCategory.body),
+    SkillIconOption(
       Icons.laptop_mac,
       'Компьютерная работа',
-      _SkillIconCategory.work,
+      SkillIconCategory.work,
     ),
-    _SkillIconOption(
+    SkillIconOption(
       Icons.phone_android,
       'Мобильные технологии',
-      _SkillIconCategory.work,
+      SkillIconCategory.work,
     ),
-    _SkillIconOption(Icons.headphones, 'Аудио', _SkillIconCategory.creativity),
-    _SkillIconOption(Icons.tv, 'Видео', _SkillIconCategory.creativity),
-    _SkillIconOption(
+    SkillIconOption(Icons.headphones, 'Аудио', SkillIconCategory.creativity),
+    SkillIconOption(Icons.tv, 'Видео', SkillIconCategory.creativity),
+    SkillIconOption(
       Icons.local_florist,
       'Цветоводство',
-      _SkillIconCategory.home,
+      SkillIconCategory.home,
     ),
-    _SkillIconOption(Icons.eco, 'Экология', _SkillIconCategory.home),
-    _SkillIconOption(Icons.park, 'Садоводство', _SkillIconCategory.home),
-    _SkillIconOption(Icons.beach_access, 'Отдых', _SkillIconCategory.home),
-    _SkillIconOption(Icons.spa, 'Восстановление', _SkillIconCategory.body),
-    _SkillIconOption(Icons.hiking, 'Походы', _SkillIconCategory.body),
-    _SkillIconOption(Icons.bolt, 'Энергия', _SkillIconCategory.body),
-    _SkillIconOption(Icons.water_drop, 'Водный режим', _SkillIconCategory.body),
-    _SkillIconOption(Icons.wb_sunny, 'Дневной режим', _SkillIconCategory.home),
-    _SkillIconOption(Icons.nightlight_round, 'Сон', _SkillIconCategory.body),
-    _SkillIconOption(
-      Icons.cloud,
-      'Облачные технологии',
-      _SkillIconCategory.work,
-    ),
-    _SkillIconOption(Icons.recycling, 'Переработка', _SkillIconCategory.home),
-    _SkillIconOption(Icons.biotech, 'Биология', _SkillIconCategory.mind),
-    _SkillIconOption(Icons.agriculture, 'Земледелие', _SkillIconCategory.home),
-    _SkillIconOption(
+    SkillIconOption(Icons.eco, 'Экология', SkillIconCategory.home),
+    SkillIconOption(Icons.park, 'Садоводство', SkillIconCategory.home),
+    SkillIconOption(Icons.beach_access, 'Отдых', SkillIconCategory.home),
+    SkillIconOption(Icons.spa, 'Восстановление', SkillIconCategory.body),
+    SkillIconOption(Icons.hiking, 'Походы', SkillIconCategory.body),
+    SkillIconOption(Icons.bolt, 'Энергия', SkillIconCategory.body),
+    SkillIconOption(Icons.water_drop, 'Водный режим', SkillIconCategory.body),
+    SkillIconOption(Icons.wb_sunny, 'Дневной режим', SkillIconCategory.home),
+    SkillIconOption(Icons.nightlight_round, 'Сон', SkillIconCategory.body),
+    SkillIconOption(Icons.cloud, 'Облачные технологии', SkillIconCategory.work),
+    SkillIconOption(Icons.recycling, 'Переработка', SkillIconCategory.home),
+    SkillIconOption(Icons.biotech, 'Биология', SkillIconCategory.mind),
+    SkillIconOption(Icons.agriculture, 'Земледелие', SkillIconCategory.home),
+    SkillIconOption(
       Icons.volunteer_activism,
       'Волонтёрство',
-      _SkillIconCategory.home,
+      SkillIconCategory.home,
     ),
-    _SkillIconOption(Icons.construction, 'Ремесло', _SkillIconCategory.work),
-    _SkillIconOption(
+    SkillIconOption(Icons.construction, 'Ремесло', SkillIconCategory.work),
+    SkillIconOption(
       Icons.auto_fix_high,
       'Дизайн',
-      _SkillIconCategory.creativity,
+      SkillIconCategory.creativity,
     ),
-    _SkillIconOption(Icons.brush, 'Живопись', _SkillIconCategory.creativity),
-    _SkillIconOption(Icons.calculate, 'Математика', _SkillIconCategory.mind),
-    _SkillIconOption(Icons.translate, 'Перевод', _SkillIconCategory.mind),
-    _SkillIconOption(Icons.history_edu, 'История', _SkillIconCategory.mind),
-    _SkillIconOption(
+    SkillIconOption(Icons.brush, 'Живопись', SkillIconCategory.creativity),
+    SkillIconOption(Icons.calculate, 'Математика', SkillIconCategory.mind),
+    SkillIconOption(Icons.translate, 'Перевод', SkillIconCategory.mind),
+    SkillIconOption(Icons.history_edu, 'История', SkillIconCategory.mind),
+    SkillIconOption(
       Icons.sports_martial_arts,
       'Боевые искусства',
-      _SkillIconCategory.body,
+      SkillIconCategory.body,
     ),
-    _SkillIconOption(Icons.sailing, 'Парусный спорт', _SkillIconCategory.body),
-    _SkillIconOption(Icons.snowboarding, 'Сноуборд', _SkillIconCategory.body),
+    SkillIconOption(Icons.sailing, 'Парусный спорт', SkillIconCategory.body),
+    SkillIconOption(Icons.snowboarding, 'Сноуборд', SkillIconCategory.body),
   ];
   static const _colorLabels = <String>[
     'Алый',
@@ -513,11 +480,11 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
     'Серый',
   ];
 
-  List<_SkillIconOption> get _visibleIconOptions {
-    if (_showAllIcons && _iconCategory == _SkillIconCategory.all) {
+  List<SkillIconOption> get _visibleIconOptions {
+    if (_showAllIcons && _iconCategory == SkillIconCategory.all) {
       return _iconOptions;
     }
-    if (_iconCategory != _SkillIconCategory.all) {
+    if (_iconCategory != SkillIconCategory.all) {
       return _iconOptions
           .where((option) => option.category == _iconCategory)
           .toList(growable: false);
@@ -530,17 +497,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
     return [selected.first, ..._curatedIconOptions.take(11)];
   }
 
-  // Grid geometry
-  static const _crossAxisCount = 9;
-  static const _itemSize = 38.0;
   static const _spacing = 6.0;
-  static const _visibleRows = 2;
-  // Height shows exactly 2 rows + gaps
-  static const _gridHeight =
-      (_visibleRows * _itemSize +
-          (_visibleRows - 1) * _spacing +
-          _spacing * 2) *
-      1.08;
 
   String get _draftSignature => jsonEncode({
     'name': _nameCtrl.text,
@@ -555,6 +512,20 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
 
   void _refreshDraft() {
     if (mounted) setState(() {});
+  }
+
+  Future<void> _openDesktopIconPicker() async {
+    final selected = await showDialog<IconData>(
+      context: context,
+      builder: (pickerContext) => DesktopSkillIconPickerDialog(
+        options: _iconOptions,
+        selectedIcon: _icon,
+        accentColor: _color,
+        isDark: widget.isDark,
+      ),
+    );
+    if (!mounted || selected == null || selected == _icon) return;
+    setState(() => _icon = selected);
   }
 
   @override
@@ -599,8 +570,8 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
         ? 'Редактировать навык'
         : 'Новый навык';
     final iconOptions = _visibleIconOptions;
-    final desktopDialogHeight = (MediaQuery.sizeOf(context).height - 48)
-        .clamp(620.0, 800.0)
+    final desktopDialogMaxHeight = (MediaQuery.sizeOf(context).height * 0.88)
+        .clamp(420.0, 800.0)
         .toDouble();
     final nameField = DlgField(
       label: 'Название навыка',
@@ -713,7 +684,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
             const SizedBox(height: 12),
           ] else ...[
             Text(
-              'Внешний вид',
+              'Оформление',
               style: TextStyle(
                 color: txt,
                 fontSize: 15,
@@ -729,9 +700,13 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
               TextButton.icon(
                 key: const ValueKey('skill-icon-picker-toggle'),
                 onPressed: () {
+                  if (!widget.fullScreen) {
+                    unawaited(_openDesktopIconPicker());
+                    return;
+                  }
                   setState(() {
                     _showAllIcons = !_showAllIcons;
-                    _iconCategory = _SkillIconCategory.all;
+                    _iconCategory = SkillIconCategory.all;
                   });
                 },
                 style: TextButton.styleFrom(
@@ -743,34 +718,37 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
                   visualDensity: VisualDensity.compact,
                 ),
                 icon: Icon(
-                  _showAllIcons
+                  widget.fullScreen && _showAllIcons
                       ? Icons.expand_less_rounded
                       : Icons.apps_rounded,
                   size: 17,
                 ),
                 label: Text(
-                  _showAllIcons ? 'Основные' : 'Все иконки',
+                  widget.fullScreen && _showAllIcons
+                      ? 'Основные'
+                      : 'Все иконки',
                   style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
               ),
             ],
           ),
-          Text(
-            _showAllIcons
-                ? '${iconOptions.length} вариантов в выбранной категории'
-                : '12 понятных вариантов для быстрого старта',
-            style: TextStyle(
-              color: sub,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
+          if (widget.fullScreen)
+            Text(
+              _showAllIcons
+                  ? '${iconOptions.length} вариантов в выбранной категории'
+                  : '12 понятных вариантов для быстрого старта',
+              style: TextStyle(
+                color: sub,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
-          if (_showAllIcons) ...[
+          if (widget.fullScreen && _showAllIcons) ...[
             const SizedBox(height: 8),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
-                children: _SkillIconCategory.values.map((category) {
+                children: SkillIconCategory.values.map((category) {
                   final selected = category == _iconCategory;
                   return Padding(
                     padding: const EdgeInsets.only(right: 6),
@@ -798,44 +776,61 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
             ),
           ],
           const SizedBox(height: 8),
-          Container(
-            height: widget.fullScreen ? 158 : _gridHeight,
-            decoration: BoxDecoration(
-              color: fBg,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: bdr),
-            ),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final crossAxisCount = widget.fullScreen ? 6 : _crossAxisCount;
-                return GridView.builder(
-                  key: const ValueKey('skill-icon-grid'),
-                  padding: const EdgeInsets.all(_spacing),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: crossAxisCount,
-                    mainAxisSpacing: _spacing,
-                    crossAxisSpacing: _spacing,
-                    childAspectRatio: widget.fullScreen ? 0.72 : 1,
+          if (widget.fullScreen)
+            Container(
+              height: 158,
+              decoration: BoxDecoration(
+                color: fBg,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: bdr),
+              ),
+              child: GridView.builder(
+                key: const ValueKey('skill-icon-grid'),
+                padding: const EdgeInsets.all(_spacing),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 6,
+                  mainAxisSpacing: _spacing,
+                  crossAxisSpacing: _spacing,
+                  childAspectRatio: 0.72,
+                ),
+                itemCount: iconOptions.length,
+                itemBuilder: (_, i) {
+                  final option = iconOptions[i];
+                  final sel = option.icon == _icon;
+                  return _IconChoiceButton(
+                    icon: option.icon,
+                    selected: sel,
+                    color: _color,
+                    inactiveColor: sub,
+                    mobile: true,
+                    semanticsLabel: option.label,
+                    displayLabel: option.label,
+                    onTap: () => setState(() => _icon = option.icon),
+                  );
+                },
+              ),
+            )
+          else
+            Wrap(
+              key: const ValueKey('skill-curated-icon-strip'),
+              spacing: 7,
+              runSpacing: 7,
+              children: iconOptions.map((option) {
+                return SizedBox(
+                  key: ValueKey('skill-curated-icon-${option.icon.codePoint}'),
+                  width: 42,
+                  height: 42,
+                  child: _IconChoiceButton(
+                    icon: option.icon,
+                    selected: option.icon == _icon,
+                    color: _color,
+                    inactiveColor: sub,
+                    semanticsLabel: option.label,
+                    onTap: () => setState(() => _icon = option.icon),
                   ),
-                  itemCount: iconOptions.length,
-                  itemBuilder: (_, i) {
-                    final option = iconOptions[i];
-                    final sel = option.icon == _icon;
-                    return _IconChoiceButton(
-                      icon: option.icon,
-                      selected: sel,
-                      color: _color,
-                      inactiveColor: sub,
-                      mobile: widget.fullScreen,
-                      semanticsLabel: option.label,
-                      displayLabel: widget.fullScreen ? option.label : null,
-                      onTap: () => setState(() => _icon = option.icon),
-                    );
-                  },
                 );
-              },
+              }).toList(),
             ),
-          ),
           const SizedBox(height: 14),
 
           SubLbl('Цвет', sub),
@@ -969,17 +964,21 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
       backgroundColor: bg,
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: SizedBox(
-        width: 720,
-        height: desktopDialogHeight,
+      child: ConstrainedBox(
+        key: const ValueKey('desktop-add-skill-content'),
+        constraints: BoxConstraints(
+          maxWidth: 800,
+          maxHeight: desktopDialogMaxHeight,
+        ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 20, 16, 14),
               child: DlgHeader(title: title, txtColor: txt),
             ),
             Divider(height: 1, color: bdr),
-            Expanded(child: form),
+            Flexible(child: form),
             Divider(height: 1, color: bdr),
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 14, 24, 18),
