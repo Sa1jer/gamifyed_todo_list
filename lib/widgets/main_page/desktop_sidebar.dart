@@ -456,6 +456,7 @@ class _DesktopNavItem extends StatefulWidget {
 
 class _DesktopNavItemState extends State<_DesktopNavItem> {
   bool _hovered = false;
+  bool _focused = false;
 
   @override
   Widget build(BuildContext context) {
@@ -467,66 +468,91 @@ class _DesktopNavItemState extends State<_DesktopNavItem> {
       label: widget.label,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 2),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            mouseCursor: SystemMouseCursors.click,
-            borderRadius: BorderRadius.circular(DesktopJournalTokens.navRadius),
-            overlayColor: const WidgetStatePropertyAll(Colors.transparent),
-            onHover: (value) {
-              if (_hovered != value) setState(() => _hovered = value);
-            },
-            onTap: widget.onTap,
-            child: AnimatedContainer(
-              key: ValueKey('desktop-nav-surface-${widget.label}'),
-              duration: DesktopJournalTokens.fastMotion,
-              curve: DesktopJournalTokens.motionCurve,
-              constraints: BoxConstraints(minHeight: widget.compact ? 36 : 42),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: active
-                    ? tokens.profilePurple.withValues(alpha: 0.16)
-                    : _hovered
-                    ? tokens.raisedSurface
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(
-                  DesktopJournalTokens.navRadius,
-                ),
-                border: Border.all(
-                  color: active
-                      ? tokens.profilePurple.withValues(alpha: 0.42)
-                      : Colors.transparent,
-                ),
+        child: MouseRegion(
+          opaque: true,
+          cursor: SystemMouseCursors.click,
+          onEnter: (_) {
+            if (!_hovered) setState(() => _hovered = true);
+          },
+          onExit: (_) {
+            if (_hovered) setState(() => _hovered = false);
+          },
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              mouseCursor: SystemMouseCursors.click,
+              borderRadius: BorderRadius.circular(
+                DesktopJournalTokens.navRadius,
               ),
-              child: Row(
-                children: [
-                  Icon(
-                    widget.icon,
-                    color: active ? tokens.profilePurple : tokens.mutedText,
-                    size: 19,
-                  ),
-                  const SizedBox(width: 11),
-                  Expanded(
-                    child: Text(
-                      widget.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: context.appTextTheme.labelLarge?.copyWith(
-                        color: active ? tokens.text : tokens.mutedText,
-                        fontWeight: active ? FontWeight.w800 : FontWeight.w700,
-                      ),
+              overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+              onFocusChange: (value) {
+                if (_focused != value) setState(() => _focused = value);
+              },
+              onTap: widget.onTap,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: widget.compact ? 36 : 42,
+                ),
+                child: DecoratedBox(
+                  key: ValueKey('desktop-nav-surface-${widget.label}'),
+                  decoration: BoxDecoration(
+                    color: active
+                        ? tokens.profilePurple.withValues(alpha: 0.16)
+                        : _hovered
+                        ? tokens.raisedSurface
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(
+                      DesktopJournalTokens.navRadius,
+                    ),
+                    border: Border.all(
+                      color: active
+                          ? tokens.profilePurple.withValues(alpha: 0.42)
+                          : _focused
+                          ? tokens.profilePurple.withValues(alpha: 0.34)
+                          : Colors.transparent,
                     ),
                   ),
-                  if (active)
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: tokens.profilePurple,
-                        shape: BoxShape.circle,
-                      ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
                     ),
-                ],
+                    child: Row(
+                      children: [
+                        Icon(
+                          widget.icon,
+                          color: active
+                              ? tokens.profilePurple
+                              : tokens.mutedText,
+                          size: 19,
+                        ),
+                        const SizedBox(width: 11),
+                        Expanded(
+                          child: Text(
+                            widget.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.appTextTheme.labelLarge?.copyWith(
+                              color: active ? tokens.text : tokens.mutedText,
+                              fontWeight: active
+                                  ? FontWeight.w800
+                                  : FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        if (active)
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color: tokens.profilePurple,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
