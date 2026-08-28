@@ -168,13 +168,16 @@ class _MobileRoadmapJournalState extends State<_MobileRoadmapJournal> {
       );
     }
 
-    return _MobileRoadmapAscentGraph(
-      key: ValueKey('mobile-roadmap-unified-${skill.id}'),
-      skill: skill,
-      snapshot: snapshot,
-      isDark: widget.isDark,
-      onTapRoot: () => _showSkillDetails(skill),
-      onTapStage: (node) => _showStageDetails(skill, node),
+    return KeyedSubtree(
+      key: widget.practiceTutorialKey,
+      child: _MobileRoadmapAscentGraph(
+        key: ValueKey('mobile-roadmap-unified-${skill.id}'),
+        skill: skill,
+        snapshot: snapshot,
+        isDark: widget.isDark,
+        onTapRoot: () => _showSkillDetails(skill),
+        onTapStage: (node) => _showStageDetails(skill, node),
+      ),
     );
   }
 
@@ -241,7 +244,6 @@ class _MobileRoadmapJournalState extends State<_MobileRoadmapJournal> {
     final onDeleteQuest = widget.onDeleteQuest;
     final onMasterNode = widget.onMasterNode;
     final onDeleteNode = widget.onDeleteNode;
-    final practiceKey = widget.practiceTutorialKey;
 
     showModalBottomSheet<void>(
       context: context,
@@ -261,7 +263,7 @@ class _MobileRoadmapJournalState extends State<_MobileRoadmapJournal> {
               state: state,
               isDark: isDark,
               selection: selection,
-              practiceTutorialKey: practiceKey,
+              practiceTutorialKey: null,
               onSelectSkill: (skill) {
                 Navigator.pop(sheetContext);
                 onSelectionChanged(_MasterySelection.skill(skill.id));

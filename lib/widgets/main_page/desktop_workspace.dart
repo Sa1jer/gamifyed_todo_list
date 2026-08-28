@@ -31,9 +31,13 @@ class DesktopWorkspaceShell extends StatelessWidget {
   final void Function(String taskId, ActionToastOrigin origin) onMinimumAction;
   final Widget? alternateWorkspace;
   final GlobalKey? profileKey;
+  final GlobalKey? skillCreateKey;
+  final GlobalKey? questCreateKey;
+  final GlobalKey? nextActionKey;
   final GlobalKey? rewardsKey;
   final GlobalKey? roadmapKey;
   final GlobalKey? statsKey;
+  final GlobalKey? inboxKey;
   final GlobalKey? minimumActionTutorialKey;
   final GlobalKey? contextualToastHostKey;
   final GlobalKey? rightRailKey;
@@ -60,9 +64,13 @@ class DesktopWorkspaceShell extends StatelessWidget {
     required this.onMinimumAction,
     this.alternateWorkspace,
     this.profileKey,
+    this.skillCreateKey,
+    this.questCreateKey,
+    this.nextActionKey,
     this.rewardsKey,
     this.roadmapKey,
     this.statsKey,
+    this.inboxKey,
     this.minimumActionTutorialKey,
     this.contextualToastHostKey,
     this.rightRailKey,
@@ -118,9 +126,11 @@ class DesktopWorkspaceShell extends StatelessWidget {
                     showDesktopDeleteSkill(context, state, skill),
                 onOpenRoadmap: onOpenRoadmap,
                 profileKey: profileKey,
+                skillCreateKey: skillCreateKey,
                 rewardsKey: rewardsKey,
                 roadmapKey: roadmapKey,
                 statsKey: statsKey,
+                inboxKey: inboxKey,
               ),
             ),
             VerticalDivider(width: 1, thickness: 1, color: tokens.outline),
@@ -141,6 +151,8 @@ class DesktopWorkspaceShell extends StatelessWidget {
                             showDesktopEditTask(context, state, skill, task),
                         onComplete: onComplete,
                         onMinimumAction: onMinimumAction,
+                        questCreateKey: questCreateKey,
+                        nextActionKey: nextActionKey,
                         minimumActionTutorialKey: minimumActionTutorialKey,
                         returnContext: returnContext,
                         momentum: momentum,

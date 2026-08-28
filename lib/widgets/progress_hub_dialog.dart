@@ -8,7 +8,6 @@ import 'progress_hub/progress_hub_actions.dart';
 import 'progress_hub/progress_hub_cards.dart';
 import 'progress_hub/progress_hub_goal_review.dart';
 import 'progress_hub/progress_hub_story.dart';
-import 'progress_hub/progress_hub_tutorial.dart';
 import 'shared.dart';
 import 'weekly_review_card.dart';
 
@@ -24,15 +23,11 @@ class ProgressHubDialog extends StatelessWidget {
   final VoidCallback onOpenAchievements;
   final VoidCallback onOpenHistory;
   final VoidCallback onOpenRewards;
-  final bool showTutorialHint;
-  final VoidCallback? onTutorialComplete;
 
   const ProgressHubDialog({
     super.key,
     required this.state,
     required this.isDark,
-    this.showTutorialHint = false,
-    this.onTutorialComplete,
     required this.onOpenDailyVictories,
     required this.onOpenCharacterTimeline,
     required this.onOpenWeekly,
@@ -69,15 +64,8 @@ class ProgressHubDialog extends StatelessWidget {
         width: dialogWidth,
         constraints: BoxConstraints.tightFor(height: dialogHeight),
         showCloseButton: true,
-        showTutorialHint: showTutorialHint,
         subtitle: 'Что получилось, какой навык вырос и что продолжить.',
         onClose: () => Navigator.pop(context),
-        onTutorialComplete: onTutorialComplete == null
-            ? null
-            : () {
-                onTutorialComplete!.call();
-                Navigator.maybePop(context);
-              },
         onOpenDailyVictories: onOpenDailyVictories,
         onOpenCharacterTimeline: onOpenCharacterTimeline,
         onOpenWeekly: onOpenWeekly,
@@ -98,10 +86,9 @@ class ProgressHubContent extends StatelessWidget {
   final double? width;
   final BoxConstraints? constraints;
   final bool showCloseButton;
-  final bool showTutorialHint;
+  final Key? summaryTutorialKey;
   final String subtitle;
   final VoidCallback? onClose;
-  final VoidCallback? onTutorialComplete;
   final VoidCallback onOpenDailyVictories;
   final VoidCallback onOpenCharacterTimeline;
   final VoidCallback onOpenWeekly;
@@ -119,10 +106,9 @@ class ProgressHubContent extends StatelessWidget {
     this.width,
     this.constraints,
     this.showCloseButton = false,
-    this.showTutorialHint = false,
+    this.summaryTutorialKey,
     this.subtitle = 'Что получилось, какой навык вырос и что продолжить.',
     this.onClose,
-    this.onTutorialComplete,
     required this.onOpenDailyVictories,
     required this.onOpenCharacterTimeline,
     required this.onOpenWeekly,
@@ -160,7 +146,6 @@ class ProgressHubContent extends StatelessWidget {
         ? 'события пути'
         : 'спокойно';
     final courseNudge = visiblePrimaryCourseNudge(state);
-    final tutorialTargetKey = GlobalKey();
     final guidance = Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -208,7 +193,7 @@ class ProgressHubContent extends StatelessWidget {
             mainAxisSize: MainAxisSize.max,
             children: [
               KeyedSubtree(
-                key: tutorialTargetKey,
+                key: summaryTutorialKey,
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(22, 20, 16, 14),
                   child: Row(
@@ -454,14 +439,6 @@ class ProgressHubContent extends StatelessWidget {
             ],
           ),
         ),
-        if (showTutorialHint && onTutorialComplete != null)
-          Positioned.fill(
-            child: ProgressTutorialSpotlight(
-              targetKey: tutorialTargetKey,
-              isDark: isDark,
-              onComplete: onTutorialComplete!,
-            ),
-          ),
       ],
     );
   }

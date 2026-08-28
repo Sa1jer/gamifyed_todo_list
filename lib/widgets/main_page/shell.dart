@@ -35,17 +35,10 @@ class _MainPageState extends State<MainPage> {
   final GlobalKey _pageStackKey = GlobalKey();
   final GlobalKey _desktopContextualToastHostKey = GlobalKey();
   final GlobalKey _desktopRightRailKey = GlobalKey();
-  final GlobalKey _rewardsButtonKey = GlobalKey();
-  final GlobalKey _firstSkillCtaKey = GlobalKey();
-  final GlobalKey _firstQuestCtaKey = GlobalKey();
-  final GlobalKey _nextQuestActionKey = GlobalKey();
-  final GlobalKey _minimumActionTutorialKey = GlobalKey();
-  final GlobalKey _roadmapNavKey = GlobalKey();
-  final GlobalKey _statsButtonKey = GlobalKey();
-  final GlobalKey _roadmapCanvasKey = GlobalKey();
   final GlobalKey _roadmapInspectorKey = GlobalKey();
-  final GlobalKey _roadmapPracticeKey = GlobalKey();
-  final GlobalKey _profileBarKey = GlobalKey();
+  late final GuidedTourAppCoordinator _guidedTour;
+  final GuidedTourSurfaceController _guidedTourSurfaces =
+      GuidedTourSurfaceController();
   final GlobalKey<_MobileActJournalState> _mobileActJournalKey = GlobalKey();
   final ReturnContextController _returnContextController =
       ReturnContextController();
@@ -59,17 +52,33 @@ class _MainPageState extends State<MainPage> {
   int _debugAdminTapCount = 0;
   Timer? _debugAdminTapResetTimer;
   bool _firstRunDialogOpen = false;
-  bool _tutorialNavigationInFlight = false;
-  bool _statsTutorialActive = false;
-  bool _rewardsTutorialActive = false;
   final MobileSecondaryNavigator _mobileSecondaryNavigator =
       MobileSecondaryNavigator();
   String? _roadmapFocusSkillId;
+  String? _roadmapFocusNodeId;
 
   @override
   void initState() {
     super.initState();
+    _guidedTour = GuidedTourAppCoordinator(
+      currentDestination: _currentGuidedTourDestination,
+      openDestination: _openGuidedTourDestination,
+      waitForDestination: _guidedTourSurfaces.waitFor,
+      isMounted: () => mounted,
+      hasMinimumAction: () => _hasTutorialMinimumAction(widget.state),
+      hasRoadmapPractice: () => _hasTutorialRoadmapPractice(widget.state),
+      onCreateSkill: () => _addSkill(context, showTutorialHints: true),
+      onCreateQuest: () =>
+          _openFirstQuestDialog(context, widget.state, showTutorialHints: true),
+      onAcknowledgeNextAction: () =>
+          widget.state.completeTutorialStep(TutorialStepIds.coreCompleteQuest),
+      onDismissFirstRun: () => widget.state.dismissActiveTutorial(),
+      onCompleteModule: (moduleId) =>
+          widget.state.completeTutorialModule(moduleId),
+      onTutorialChanged: widget.onTutorialBuildForTesting,
+    );
     _bindEventState(widget.state);
+    _syncGuidedTourFromState(widget.state);
   }
 
   @override
@@ -78,6 +87,7 @@ class _MainPageState extends State<MainPage> {
     if (!identical(oldWidget.state, widget.state)) {
       _returnContextController.reset();
       _bindEventState(widget.state);
+      _syncGuidedTourFromState(widget.state);
     }
   }
 
@@ -92,6 +102,8 @@ class _MainPageState extends State<MainPage> {
   void dispose() {
     _eventState?.removeListener(_handleStateEvents);
     _debugAdminTapResetTimer?.cancel();
+    _guidedTour.dispose();
+    _guidedTourSurfaces.dispose();
     super.dispose();
   }
 
@@ -206,7 +218,9 @@ class _MainPageState extends State<MainPage> {
     final pageBounds = Offset.zero & _pageStackSize;
     final main = _stackRectFor(_desktopContextualToastHostKey);
     final rightRail = _stackRectFor(_desktopRightRailKey);
-    final canvas = _stackRectFor(_roadmapCanvasKey);
+    final canvas = _stackRectFor(
+      _guidedTour.anchors.keyFor(TutorialAnchorId.roadmapCanvas),
+    );
     final inspector = _stackRectFor(_roadmapInspectorKey);
     return switch (origin.zone) {
       ActionToastZone.rightRail => rightRail ?? main ?? pageBounds,
@@ -253,6 +267,7 @@ class _MainPageState extends State<MainPage> {
     final state = _eventState;
     if (state == null || !mounted) return;
     widget.onEventNotificationForTesting?.call();
+    _syncGuidedTourFromState(state);
     _showGoalMilestoneNotifications(state);
   }
 
@@ -282,58 +297,20 @@ class _MainPageState extends State<MainPage> {
     allowNested: allowNested,
   );
 
-  void _openRewardsDialog(
-    AppState state, {
-    bool showTutorialHint = false,
-    bool nestedMobileRoute = false,
-  }) {
+  void _openRewardsDialog(AppState state, {bool nestedMobileRoute = false}) {
     AppFeedback.selection();
-    setState(() {
-      _rewardNoticeQueue.clear();
-      if (showTutorialHint) _rewardsTutorialActive = true;
-    });
+    setState(() => _rewardNoticeQueue.clear());
     if (_usesMobileWorkspaceRoutes) {
       _openMobileWorkspaceRoute(
-        (routeContext) => RewardsDialog(
-          state: state,
-          fullScreen: true,
-          showTutorialHint: showTutorialHint,
-          onTutorialComplete: showTutorialHint
-              ? () {
-                  _completeRewardsTutorial(state);
-                  Navigator.of(routeContext).maybePop();
-                  if (mounted) {
-                    setState(() => _rewardsTutorialActive = false);
-                  }
-                }
-              : null,
-        ),
+        (_) => RewardsDialog(state: state, fullScreen: true),
         allowNested: nestedMobileRoute,
-      ).whenComplete(() {
-        if (showTutorialHint && mounted) {
-          setState(() => _rewardsTutorialActive = false);
-        }
-      });
+      );
       return;
     }
     showDialog(
       context: context,
-      builder: (dialogContext) => RewardsDialog(
-        state: state,
-        showTutorialHint: showTutorialHint,
-        onTutorialComplete: showTutorialHint
-            ? () {
-                _completeRewardsTutorial(state);
-                Navigator.of(dialogContext).maybePop();
-                if (mounted) setState(() => _rewardsTutorialActive = false);
-              }
-            : null,
-      ),
-    ).whenComplete(() {
-      if (showTutorialHint && mounted) {
-        setState(() => _rewardsTutorialActive = false);
-      }
-    });
+      builder: (_) => RewardsDialog(state: state),
+    );
   }
 
   void _openDailyVictoriesDialog(
@@ -423,73 +400,17 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
-  void _openStatisticsTutorial(AppState state) {
-    setState(() => _statsTutorialActive = true);
-    showDialog<void>(
-      context: context,
-      builder: (_) => ProgressHubDialog(
-        state: state,
-        isDark: state.isDark,
-        showTutorialHint: true,
-        onTutorialComplete: () {
-          _completeStatisticsTutorial(state);
-          if (mounted) setState(() => _statsTutorialActive = false);
-        },
-        onOpenDailyVictories: () => _openDailyVictoriesDialog(state),
-        onOpenCharacterTimeline: () => _openCharacterTimelineDialog(state),
-        onOpenWeekly: () => _openWeeklyDialog(state),
-        onOpenStats: () => _openGrowthSliceDialog(state),
-        onOpenCalendar: () => _openCalendarDialog(state),
-        onOpenBosses: () => _openBossesDialog(state),
-        onOpenAchievements: () => _openAchievementsDialog(state),
-        onOpenHistory: () => _openHistoryDialog(state),
-        onOpenRewards: () => _openRewardsDialog(state),
-      ),
-    ).whenComplete(() {
-      if (mounted) setState(() => _statsTutorialActive = false);
-    });
-  }
-
-  void _completeStatisticsTutorial(AppState state) {
-    if (state.activeTutorialModuleId == TutorialModuleIds.stats) {
-      state.completeTutorialStep(TutorialStepIds.statsGrowth);
-    }
-  }
-
-  void _completeRewardsTutorial(AppState state) {
-    if (state.activeTutorialModuleId == TutorialModuleIds.trophies) {
-      state.completeTutorialStep(TutorialStepIds.trophiesFeedback);
-    }
-  }
-
-  void _completeProfileTutorial(AppState state) {
-    if (state.activeTutorialModuleId == TutorialModuleIds.profile) {
-      state.completeTutorialStep(TutorialStepIds.profileReplay);
-    }
-  }
-
   Widget _buildStatisticsWorkspace(
     AppState state,
     bool isDark, {
-    bool showTutorialHint = false,
+    Key? summaryTutorialKey,
   }) {
     return ProgressWorkspace(
       key: const ValueKey('stats-workspace'),
       state: state,
       isDark: isDark,
-      showTutorialHint: showTutorialHint,
-      onClose: () {
-        setState(() {
-          _mode = _lastNormalMode;
-          _statsTutorialActive = false;
-        });
-      },
-      onTutorialComplete: showTutorialHint
-          ? () {
-              _completeStatisticsTutorial(state);
-              setState(() => _statsTutorialActive = false);
-            }
-          : null,
+      summaryTutorialKey: summaryTutorialKey,
+      onClose: () => setState(() => _mode = _lastNormalMode),
       destinations: _progressDestinations(state),
     );
   }
@@ -522,174 +443,290 @@ class _MainPageState extends State<MainPage> {
   Widget _buildMobileStatisticsPage(
     AppState state,
     bool isDark, {
-    bool showTutorialHint = false,
+    Key? summaryTutorialKey,
   }) {
     return MobileStatisticsPage(
       state: state,
       isDark: isDark,
-      showTutorialHint: showTutorialHint,
-      onTutorialComplete: showTutorialHint
-          ? () => _completeStatisticsTutorial(state)
-          : null,
+      summaryTutorialKey: summaryTutorialKey,
       destinations: _progressDestinations(state, nestedMobileRoutes: true),
     );
   }
 
-  void _openRoadmapTutorialTarget(AppState state) {
-    final selected = state.selectedSkill;
-    final skill = selected?.id == kInboxSkillId
-        ? state.roadmapSkills.firstOrNull
-        : selected ?? state.roadmapSkills.firstOrNull;
-    if (skill != null) {
-      _openRoadmapForSkill(state, skill);
-    } else {
-      setState(() {
-        _mode = WorkspaceMode.mastery;
-        _lastNormalMode = WorkspaceMode.mastery;
-        _statsTutorialActive = false;
-      });
+  bool _hasTutorialMinimumAction(AppState state) => state.tasks.any(
+    (task) =>
+        !task.isDone &&
+        !task.isMinimumActionDone &&
+        task.minimumAction.trim().isNotEmpty,
+  );
+
+  bool _hasTutorialRoadmapPractice(AppState state) =>
+      state.roadmapSkills.any((skill) => skill.treeNodes.isNotEmpty);
+
+  void _syncGuidedTourFromState(AppState state) =>
+      _guidedTour.syncPersistedState(
+        shouldShowFirstRun: state.shouldShowFirstRunTutorial,
+        activeModuleId: state.activeTutorialModuleId,
+        activeStepId: state.activeTutorialStepId,
+        coreCompleted: state.tutorialProgress.isModuleCompleted(
+          TutorialModuleIds.core,
+        ),
+      );
+
+  GuidedTourDestination _currentGuidedTourDestination() {
+    final rootDestination = switch (_mode) {
+      WorkspaceMode.mastery => GuidedTourDestination.roadmap,
+      WorkspaceMode.stats => GuidedTourDestination.statistics,
+      WorkspaceMode.rewards => GuidedTourDestination.trophies,
+      _ => GuidedTourDestination.act,
+    };
+    return _guidedTourSurfaces.currentDestination(rootDestination);
+  }
+
+  Future<void> _openGuidedTourDestination(
+    GuidedTourDestination destination,
+  ) async {
+    final state = widget.state;
+    switch (destination) {
+      case GuidedTourDestination.act:
+        await _closeGuidedTourSurface();
+        if (!mounted) return;
+        setState(() {
+          _mode = WorkspaceMode.act;
+          _lastNormalMode = WorkspaceMode.act;
+        });
+        return;
+      case GuidedTourDestination.roadmap:
+        await _closeGuidedTourSurface();
+        if (!mounted) return;
+        _guidedTourSurfaces.beginRoadmapReadiness();
+        final selected = state.selectedSkill;
+        final skill = selected?.id == kInboxSkillId
+            ? state.roadmapSkills.firstOrNull
+            : selected ?? state.roadmapSkills.firstOrNull;
+        final nodeId =
+            _guidedTour.controller.session?.plan.steps.any(
+                  (step) => step.anchorId == TutorialAnchorId.roadmapPractice,
+                ) ==
+                true
+            ? skill?.treeNodes.firstOrNull?.id
+            : null;
+        setState(() {
+          _roadmapFocusSkillId = skill?.id;
+          _roadmapFocusNodeId = nodeId;
+          _mode = WorkspaceMode.mastery;
+          _lastNormalMode = WorkspaceMode.mastery;
+        });
+        return;
+      case GuidedTourDestination.statistics:
+        await _closeGuidedTourSurface();
+        if (!mounted) return;
+        if (_usesMobileWorkspaceRoutes) {
+          _openGuidedTourMobileStatistics(state);
+        } else {
+          setState(() => _mode = WorkspaceMode.stats);
+        }
+        return;
+      case GuidedTourDestination.trophies:
+        await _closeGuidedTourSurface();
+        if (!mounted) return;
+        if (_usesMobileWorkspaceRoutes) {
+          _openGuidedTourMobileTrophies(state);
+        } else {
+          setState(() => _mode = WorkspaceMode.rewards);
+        }
+        return;
+      case GuidedTourDestination.profile:
+        await _closeGuidedTourSurface();
+        if (!mounted) return;
+        _openProfileSurface(state, guidedTour: true);
+        return;
     }
   }
 
-  Future<void> _openRoadmapTutorialAndAdvance(AppState state) async {
-    if (_tutorialNavigationInFlight) return;
-    setState(() => _tutorialNavigationInFlight = true);
-    _openRoadmapTutorialTarget(state);
-    await TutorialTargetProbe.waitUntilReady(_roadmapCanvasKey);
-    if (!mounted) return;
-    if (state.activeTutorialStepId == TutorialStepIds.roadmapPath) {
-      state.completeTutorialStep(TutorialStepIds.roadmapPath);
-    }
-    if (mounted) {
-      setState(() => _tutorialNavigationInFlight = false);
-    }
+  int _prepareGuidedTourSurface(GuidedTourSurface surface) {
+    final generation = _guidedTourSurfaces.prepare(surface);
+    setState(() {});
+    return generation;
   }
 
-  _GuidedTutorialStep? _tutorialStepFor(
-    AppState state,
-    bool mobileShell,
-    void Function({bool tutorial}) openStatistics,
-    void Function({bool tutorial}) openProfile,
-  ) {
-    if (!state.shouldShowFirstRunTutorial) return null;
-    final stepId =
-        state.activeTutorialStepId ?? TutorialStepIds.coreCreateSkill;
-    final definition = TutorialCatalog.step(stepId);
-    if (definition == null) return null;
+  void _registerGuidedTourSurfaceContext(BuildContext routeContext) {
+    _guidedTourSurfaces.registerRouteContext(routeContext);
+  }
 
-    _GuidedTutorialStep buildStep({
-      required GlobalKey targetKey,
-      required VoidCallback onPrimaryAction,
-      IconData primaryIcon = Icons.arrow_forward_rounded,
-      String? primaryLabel,
-      TutorialPresentationMode? presentationMode,
-    }) {
-      return _GuidedTutorialStep(
-        id: stepId,
-        targetKey: targetKey,
-        title: definition.title,
-        body: definition.body,
-        primaryLabel: primaryLabel ?? definition.primaryLabel,
-        primaryIcon: primaryIcon,
-        secondaryLabel: definition.secondaryLabel,
-        presentationMode: presentationMode ?? definition.presentationMode,
-        onPrimaryAction: onPrimaryAction,
+  void _openGuidedTourMobileStatistics(AppState state) {
+    final generation = _prepareGuidedTourSurface(GuidedTourSurface.statistics);
+    unawaited(
+      _openMobileWorkspaceRoute((routeContext) {
+        _registerGuidedTourSurfaceContext(routeContext);
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            _buildMobileStatisticsPage(
+              state,
+              state.isDark,
+              summaryTutorialKey: _guidedTour.anchors.keyFor(
+                TutorialAnchorId.statisticsSummary,
+              ),
+            ),
+            _buildGuidedTourOverlay(
+              state: state,
+              mobile: true,
+              surface: GuidedTourSurface.statistics,
+            ),
+          ],
+        );
+      }).whenComplete(
+        () => _handleGuidedTourSurfaceClosed(
+          GuidedTourSurface.statistics,
+          generation,
+        ),
+      ),
+    );
+  }
+
+  void _openGuidedTourMobileTrophies(AppState state) {
+    final generation = _prepareGuidedTourSurface(GuidedTourSurface.trophies);
+    unawaited(
+      _openMobileWorkspaceRoute((routeContext) {
+        _registerGuidedTourSurfaceContext(routeContext);
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            RewardsDialog(
+              state: state,
+              fullScreen: true,
+              summaryTutorialKey: _guidedTour.anchors.keyFor(
+                TutorialAnchorId.trophiesSummary,
+              ),
+            ),
+            _buildGuidedTourOverlay(
+              state: state,
+              mobile: true,
+              surface: GuidedTourSurface.trophies,
+            ),
+          ],
+        );
+      }).whenComplete(
+        () => _handleGuidedTourSurfaceClosed(
+          GuidedTourSurface.trophies,
+          generation,
+        ),
+      ),
+    );
+  }
+
+  void _openProfileSurface(AppState state, {bool guidedTour = false}) {
+    final mobile = _usesMobileWorkspaceRoutes;
+    var generation = _guidedTourSurfaces.generation;
+    if (guidedTour) {
+      generation = _prepareGuidedTourSurface(GuidedTourSurface.profile);
+    }
+
+    Widget buildProfile(BuildContext routeContext, {required bool fullScreen}) {
+      if (guidedTour) _registerGuidedTourSurfaceContext(routeContext);
+      return AppStateProvider(
+        state: state,
+        child: ProfileDialog(
+          fullScreen: fullScreen,
+          onToggleTheme: widget.onToggleTheme,
+          tutorialSession: _guidedTour.controller.snapshot,
+          onTutorialSelection: _guidedTour.handleTrainingSelection,
+          tutorialTrainingKey: _guidedTour.anchors.keyFor(
+            TutorialAnchorId.profileTraining,
+          ),
+          tutorialOverlay: guidedTour
+              ? _buildGuidedTourOverlay(
+                  state: state,
+                  mobile: mobile,
+                  surface: GuidedTourSurface.profile,
+                )
+              : null,
+        ),
       );
     }
 
-    switch (stepId) {
-      case TutorialStepIds.coreCreateSkill:
-        return buildStep(
-          targetKey: _firstSkillCtaKey,
-          primaryIcon: Icons.add,
-          onPrimaryAction: () {
-            state.startTutorialModule(TutorialModuleIds.core);
-            _addSkill(context, showTutorialHints: true);
-          },
-        );
-      case TutorialStepIds.coreCreateQuest:
-        return buildStep(
-          targetKey: _firstQuestCtaKey,
-          primaryIcon: Icons.add_task_rounded,
-          onPrimaryAction: () =>
-              _openFirstQuestDialog(context, state, showTutorialHints: true),
-        );
-      case TutorialStepIds.coreCompleteQuest:
-        return buildStep(
-          targetKey: _nextQuestActionKey,
-          primaryIcon: Icons.check_rounded,
-          onPrimaryAction: () =>
-              state.completeTutorialStep(TutorialStepIds.coreCompleteQuest),
-        );
-      case TutorialStepIds.actNextQuest:
-        return buildStep(
-          targetKey: _nextQuestActionKey,
-          primaryIcon: Icons.check_rounded,
-          onPrimaryAction: () =>
-              state.completeTutorialStep(TutorialStepIds.actNextQuest),
-        );
-      case TutorialStepIds.actMinimum:
-        return buildStep(
-          targetKey: mobileShell
-              ? _nextQuestActionKey
-              : _minimumActionTutorialKey,
-          primaryIcon: Icons.check_rounded,
-          presentationMode: mobileShell
-              ? TutorialPresentationMode.coachCard
-              : TutorialPresentationMode.spotlight,
-          onPrimaryAction: () =>
-              state.completeTutorialStep(TutorialStepIds.actMinimum),
-        );
-      case TutorialStepIds.roadmapPath:
-        return buildStep(
-          targetKey: _roadmapCanvasKey,
-          primaryLabel: _mode == WorkspaceMode.mastery
-              ? 'Понятно'
-              : definition.primaryLabel,
-          primaryIcon: _mode == WorkspaceMode.mastery
-              ? Icons.check_rounded
-              : Icons.account_tree_rounded,
-          onPrimaryAction: () {
-            if (_mode != WorkspaceMode.mastery) {
-              unawaited(_openRoadmapTutorialAndAdvance(state));
-              return;
-            }
-            state.completeTutorialStep(TutorialStepIds.roadmapPath);
-          },
-        );
-      case TutorialStepIds.roadmapPractice:
-        return buildStep(
-          targetKey: _roadmapPracticeKey,
-          primaryIcon: Icons.check_rounded,
-          onPrimaryAction: () =>
-              state.completeTutorialStep(TutorialStepIds.roadmapPractice),
-        );
-      case TutorialStepIds.statsGrowth:
-        return buildStep(
-          targetKey: _statsButtonKey,
-          primaryIcon: Icons.query_stats_rounded,
-          onPrimaryAction: () => openStatistics(tutorial: true),
-        );
-      case TutorialStepIds.trophiesFeedback:
-        return buildStep(
-          targetKey: _rewardsButtonKey,
-          primaryIcon: Icons.redeem_rounded,
-          onPrimaryAction: () =>
-              _openRewardsDialog(state, showTutorialHint: true),
-        );
-      case TutorialStepIds.profileReplay:
-        return buildStep(
-          targetKey: _profileBarKey,
-          primaryIcon: Icons.person_rounded,
-          onPrimaryAction: () => openProfile(tutorial: true),
-        );
-      case TutorialStepIds.coreXpFeedback:
-      case TutorialStepIds.coreOpenRoadmap:
-      case TutorialStepIds.coreRoadmapDetails:
-      case TutorialStepIds.coreOpenStats:
-        return null;
+    final route = mobile
+        ? _openMobileWorkspaceRoute(
+            (routeContext) => buildProfile(routeContext, fullScreen: true),
+          )
+        : showDialog<void>(
+            context: context,
+            builder: (dialogContext) =>
+                buildProfile(dialogContext, fullScreen: false),
+          );
+    if (guidedTour) {
+      unawaited(
+        route.whenComplete(
+          () => _handleGuidedTourSurfaceClosed(
+            GuidedTourSurface.profile,
+            generation,
+          ),
+        ),
+      );
     }
-    return null;
+  }
+
+  Future<void> _closeGuidedTourSurface() async {
+    final changed = await _guidedTourSurfaces.close();
+    if (changed && mounted) setState(() {});
+  }
+
+  void _handleGuidedTourSurfaceClosed(
+    GuidedTourSurface surface,
+    int generation,
+  ) {
+    if (!mounted) return;
+    final interrupted = _guidedTourSurfaces.handleRouteClosed(
+      surface,
+      generation,
+    );
+    setState(() {});
+    if (interrupted && _guidedTour.controller.hasActiveSession) {
+      _guidedTour.controller.pause();
+    }
+  }
+
+  Widget _buildGuidedTourOverlay({
+    required AppState state,
+    required bool mobile,
+    required GuidedTourSurface surface,
+  }) {
+    if (!_guidedTourSurfaces.matches(surface)) {
+      return const SizedBox.shrink();
+    }
+    final rightRail = mobile ? null : _stackRectFor(_desktopRightRailKey);
+    final reserved = <Rect>[?rightRail];
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        GuidedTourHost(
+          controller: _guidedTour.controller,
+          anchors: _guidedTour.anchors,
+          isDark: state.isDark,
+          reducedMotion: state.reducedMotion,
+          mobile: mobile,
+          blocked: _firstRunDialogOpen,
+          reservedRegions: reserved,
+          onPrimary: _guidedTour.primary,
+          onDismiss: _guidedTour.dismiss,
+          onPrevious: _guidedTour.previous,
+        ),
+        if (surface == GuidedTourSurface.root)
+          ListenableBuilder(
+            listenable: _guidedTour.controller,
+            builder: (context, child) =>
+                _guidedTour.controller.showCoreCompletion
+                ? TutorialCompletionCard(
+                    isDark: state.isDark,
+                    reducedMotion: state.reducedMotion,
+                    onShowRest: _guidedTour.showRestOfTour,
+                    onStartUsing: _guidedTour.startUsingAfterCore,
+                  )
+                : const SizedBox.shrink(),
+          ),
+      ],
+    );
   }
 
   void _onComplete(String taskId, ActionToastOrigin origin) {
@@ -733,9 +770,9 @@ class _MainPageState extends State<MainPage> {
     state.selectSkill(skill.id);
     setState(() {
       _roadmapFocusSkillId = skill.id;
+      _roadmapFocusNodeId = null;
       _mode = WorkspaceMode.mastery;
       _lastNormalMode = WorkspaceMode.mastery;
-      _statsTutorialActive = false;
     });
   }
 
@@ -755,8 +792,13 @@ class _MainPageState extends State<MainPage> {
       state.selectSkill(validSkillId);
     }
 
-    if (_roadmapFocusSkillId == validSkillId) return;
-    setState(() => _roadmapFocusSkillId = validSkillId);
+    if (_roadmapFocusSkillId == validSkillId && _roadmapFocusNodeId == null) {
+      return;
+    }
+    setState(() {
+      _roadmapFocusSkillId = validSkillId;
+      _roadmapFocusNodeId = null;
+    });
   }
 
   void _addSkill(BuildContext context, {bool showTutorialHints = false}) {
@@ -907,7 +949,6 @@ class _MainPageState extends State<MainPage> {
               ? buildMomentumViewData(s, now, returnContext)
               : null;
           final roadmapFocusId = _validRoadmapSkillId(s, _roadmapFocusSkillId);
-
           void changeMode(WorkspaceMode mode) {
             if (_mode == mode) {
               if (mode == WorkspaceMode.act || mode == WorkspaceMode.mastery) {
@@ -916,7 +957,6 @@ class _MainPageState extends State<MainPage> {
               setState(() {
                 _rewardNoticeQueue.clear();
                 _mode = _lastNormalMode;
-                _statsTutorialActive = false;
               });
               return;
             }
@@ -935,84 +975,23 @@ class _MainPageState extends State<MainPage> {
                     selected == null || selected.id == kInboxSkillId
                     ? null
                     : selected.id;
-              }
-              if (mode != WorkspaceMode.stats) {
-                _statsTutorialActive = false;
+                _roadmapFocusNodeId = null;
               }
             });
           }
 
-          void openStatistics({bool tutorial = false}) {
+          void openStatistics() {
             if (mobileShell) {
               final capturedState = s;
-              if (tutorial && mounted) {
-                setState(() => _statsTutorialActive = true);
-              }
               _openMobileWorkspaceRoute(
-                (_) => _buildMobileStatisticsPage(
-                  capturedState,
-                  isDark,
-                  showTutorialHint: tutorial,
-                ),
-              ).whenComplete(() {
-                if (tutorial && mounted) {
-                  setState(() => _statsTutorialActive = false);
-                }
-              });
-            } else if (tutorial) {
-              _openStatisticsTutorial(s);
+                (_) => _buildMobileStatisticsPage(capturedState, isDark),
+              );
             } else {
               changeMode(WorkspaceMode.stats);
             }
           }
 
-          void openProfile({bool tutorial = false}) {
-            final capturedState = s;
-            if (tutorial && mounted) {
-              setState(() => _firstRunDialogOpen = true);
-            }
-            if (mobileShell) {
-              _openMobileWorkspaceRoute(
-                (routeContext) => AppStateProvider(
-                  state: capturedState,
-                  child: ProfileDialog(
-                    fullScreen: true,
-                    showTutorialHint: tutorial,
-                    onTutorialComplete: tutorial
-                        ? () {
-                            _completeProfileTutorial(capturedState);
-                            Navigator.of(routeContext).maybePop();
-                          }
-                        : null,
-                  ),
-                ),
-              ).whenComplete(() {
-                if (tutorial && mounted) {
-                  setState(() => _firstRunDialogOpen = false);
-                }
-              });
-              return;
-            }
-            showDialog<void>(
-              context: context,
-              builder: (dialogContext) => AppStateProvider(
-                state: capturedState,
-                child: ProfileDialog(
-                  showTutorialHint: tutorial,
-                  onTutorialComplete: tutorial
-                      ? () {
-                          _completeProfileTutorial(capturedState);
-                          Navigator.of(dialogContext).maybePop();
-                        }
-                      : null,
-                ),
-              ),
-            ).whenComplete(() {
-              if (tutorial && mounted) {
-                setState(() => _firstRunDialogOpen = false);
-              }
-            });
-          }
+          void openProfile() => _openProfileSurface(s);
 
           return Scaffold(
             backgroundColor: mobileShell
@@ -1020,216 +999,347 @@ class _MainPageState extends State<MainPage> {
                 : isDark
                 ? const Color(0xFF0F0F13)
                 : const Color(0xFFF0F2F8),
-            body: Stack(
-              key: _pageStackKey,
-              children: [
-                if (desktopShell)
-                  DesktopWorkspaceShell(
-                    state: s,
-                    mode: displayedMode,
-                    metrics: desktopMetrics,
-                    onModeChanged: changeMode,
-                    onAddSkill: () => _addSkill(context),
-                    onOpenRewards: () => changeMode(WorkspaceMode.rewards),
-                    onOpenStatistics: openStatistics,
-                    onOpenSettings: () => changeMode(WorkspaceMode.settings),
-                    onOpenProfile: openProfile,
-                    onDebugAppTap: !kReleaseMode
-                        ? () => _handleDebugAdminTap(s)
-                        : null,
-                    onOpenRoadmap: (skill) => _openRoadmapForSkill(s, skill),
-                    onComplete: _onComplete,
-                    onMinimumAction: _onMinimumAction,
-                    returnContext: returnContext,
-                    momentum: momentum,
-                    onContinueReturnContext:
-                        returnContextBinding?.continueOnDesktop,
-                    onAnotherReturnContext: returnContextBinding?.dismiss,
-                    onDismissReturnContext: returnContextBinding?.dismiss,
-                    contextualToastHostKey: _desktopContextualToastHostKey,
-                    rightRailKey: _desktopRightRailKey,
-                    profileKey: _profileBarKey,
-                    rewardsKey: _rewardsButtonKey,
-                    roadmapKey: _roadmapNavKey,
-                    statsKey: _statsButtonKey,
-                    minimumActionTutorialKey: _minimumActionTutorialKey,
-                    alternateWorkspace: switch (displayedMode) {
-                      WorkspaceMode.mastery => _MasteryWorkspace(
-                        key: const ValueKey('mastery-workspace'),
-                        isDark: isDark,
-                        focusSkillId: roadmapFocusId,
-                        canvasTutorialKey: _roadmapCanvasKey,
-                        inspectorTutorialKey: _roadmapInspectorKey,
-                        practiceTutorialKey: _roadmapPracticeKey,
-                        onFocusSkillChanged: (skillId) =>
-                            _syncRoadmapFocusSkill(s, skillId),
-                        onComplete: _onComplete,
-                        onMinimumAction: _onMinimumAction,
-                      ),
-                      WorkspaceMode.rewards => _DesktopRewardsWorkspace(
-                        key: const ValueKey('desktop-rewards-workspace'),
-                        state: s,
-                        tokens: DesktopJournalTokens.resolve(isDark),
-                      ),
-                      WorkspaceMode.stats => MainPageAnalyticsBoundary(
-                        state: s,
-                        builder: (context) => _DesktopStatisticsWorkspace(
-                          key: const ValueKey('desktop-statistics-workspace'),
-                          state: s,
-                          tokens: DesktopJournalTokens.resolve(isDark),
-                        ),
-                      ),
-                      WorkspaceMode.settings => MainPageSettingsBoundary(
-                        state: s,
-                        builder: (context) => _DesktopSettingsWorkspace(
-                          key: const ValueKey('desktop-settings-workspace'),
-                          state: s,
-                          tokens: DesktopJournalTokens.resolve(isDark),
-                          onOpenProfile: openProfile,
-                          onToggleTheme: widget.onToggleTheme,
-                        ),
-                      ),
-                      WorkspaceMode.act => null,
-                    },
-                  )
-                else
-                  Column(
-                    children: [
-                      MainPageProfileBoundary(
-                        key: _profileBarKey,
-                        state: s,
-                        onBuildForTesting: widget.onProfileBuildForTesting,
-                        builder: (context) => ProfileBar(
-                          isDark: isDark,
-                          mobile: true,
-                          state: s,
-                          onToggleTheme: widget.onToggleTheme,
-                          onRewardsTap: () => _openRewardsDialog(s),
-                          onStatsTap: openStatistics,
-                          onAppIconTap: !kReleaseMode
-                              ? () => _handleDebugAdminTap(s)
-                              : null,
-                          onProfileTap: () => openProfile(),
-                          rewardsKey: _rewardsButtonKey,
-                          statsKey: _statsButtonKey,
-                        ),
-                      ),
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                          child: MotionFadeSlideSwitcher(
-                            child: switch (displayedMode) {
-                              WorkspaceMode.act => _ActWorkspace(
-                                key: const ValueKey('act-workspace'),
-                                onComplete: _onComplete,
-                                onMinimumAction: _onMinimumAction,
-                                onCreateFirstSkill: () => _addSkill(context),
-                                onOpenRoadmap: (skill) =>
-                                    _openRoadmapForSkill(s, skill),
-                                createFirstSkillButtonKey: _firstSkillCtaKey,
-                                createFirstQuestButtonKey: _firstQuestCtaKey,
-                                nextQuestActionKey: _nextQuestActionKey,
-                                minimumActionTutorialKey:
-                                    _minimumActionTutorialKey,
-                                mobileJournalKey: _mobileActJournalKey,
-                                returnContext: returnContext,
-                                momentum: momentum,
-                                onContinueReturnContext:
-                                    returnContextBinding?.continueOnMobile,
-                                onAnotherReturnContext:
-                                    returnContextBinding?.dismiss,
-                                onDismissReturnContext:
-                                    returnContextBinding?.dismiss,
+            body: NotificationListener<ScrollNotification>(
+              onNotification: (notification) {
+                _guidedTour.anchors.notifyAnchorChanged();
+                return false;
+              },
+              child: Stack(
+                key: _pageStackKey,
+                children: [
+                  ValueListenableBuilder<TutorialAnchorId?>(
+                    valueListenable: _guidedTour.controller.activeAnchor,
+                    builder: (context, activeAnchor, child) {
+                      GlobalKey? activeTutorialKey(TutorialAnchorId id) =>
+                          activeAnchor == id
+                          ? _guidedTour.anchors.keyFor(id)
+                          : null;
+                      return desktopShell
+                          ? DesktopWorkspaceShell(
+                              state: s,
+                              mode: displayedMode,
+                              metrics: desktopMetrics,
+                              onModeChanged: changeMode,
+                              onAddSkill: () => _addSkill(context),
+                              onOpenRewards: () =>
+                                  changeMode(WorkspaceMode.rewards),
+                              onOpenStatistics: openStatistics,
+                              onOpenSettings: () =>
+                                  changeMode(WorkspaceMode.settings),
+                              onOpenProfile: openProfile,
+                              onDebugAppTap: !kReleaseMode
+                                  ? () => _handleDebugAdminTap(s)
+                                  : null,
+                              onOpenRoadmap: (skill) =>
+                                  _openRoadmapForSkill(s, skill),
+                              onComplete: _onComplete,
+                              onMinimumAction: _onMinimumAction,
+                              returnContext: returnContext,
+                              momentum: momentum,
+                              onContinueReturnContext:
+                                  returnContextBinding?.continueOnDesktop,
+                              onAnotherReturnContext:
+                                  returnContextBinding?.dismiss,
+                              onDismissReturnContext:
+                                  returnContextBinding?.dismiss,
+                              contextualToastHostKey:
+                                  _desktopContextualToastHostKey,
+                              rightRailKey: _desktopRightRailKey,
+                              profileKey: _guidedTour.anchors.keyFor(
+                                TutorialAnchorId.profileEntry,
                               ),
-                              WorkspaceMode.mastery => _MasteryWorkspace(
-                                key: const ValueKey('mastery-workspace'),
-                                isDark: isDark,
-                                focusSkillId: roadmapFocusId,
-                                canvasTutorialKey: _roadmapCanvasKey,
-                                inspectorTutorialKey: _roadmapInspectorKey,
-                                practiceTutorialKey: _roadmapPracticeKey,
-                                onFocusSkillChanged: (skillId) =>
-                                    _syncRoadmapFocusSkill(s, skillId),
-                                onComplete: _onComplete,
-                                onMinimumAction: _onMinimumAction,
+                              skillCreateKey: _guidedTour.anchors.keyFor(
+                                TutorialAnchorId.skillCreate,
                               ),
-                              WorkspaceMode.stats => MainPageAnalyticsBoundary(
-                                state: s,
-                                builder: (context) => _buildStatisticsWorkspace(
-                                  s,
-                                  isDark,
-                                  showTutorialHint: _statsTutorialActive,
+                              questCreateKey: activeTutorialKey(
+                                TutorialAnchorId.questCreate,
+                              ),
+                              nextActionKey: activeTutorialKey(
+                                TutorialAnchorId.actNextAction,
+                              ),
+                              rewardsKey: _guidedTour.anchors.keyFor(
+                                TutorialAnchorId.navTrophies,
+                              ),
+                              roadmapKey: _guidedTour.anchors.keyFor(
+                                TutorialAnchorId.navRoadmap,
+                              ),
+                              statsKey: _guidedTour.anchors.keyFor(
+                                TutorialAnchorId.navStatistics,
+                              ),
+                              inboxKey: _guidedTour.anchors.keyFor(
+                                TutorialAnchorId.actInbox,
+                              ),
+                              minimumActionTutorialKey: activeTutorialKey(
+                                TutorialAnchorId.actMinimumAction,
+                              ),
+                              alternateWorkspace: switch (displayedMode) {
+                                WorkspaceMode.mastery => _MasteryWorkspace(
+                                  key: const ValueKey('mastery-workspace'),
+                                  isDark: isDark,
+                                  focusSkillId: roadmapFocusId,
+                                  focusNodeId: _roadmapFocusNodeId,
+                                  canvasTutorialKey: _guidedTour.anchors.keyFor(
+                                    TutorialAnchorId.roadmapCanvas,
+                                  ),
+                                  inspectorTutorialKey: _roadmapInspectorKey,
+                                  practiceTutorialKey: _guidedTour.anchors
+                                      .keyFor(TutorialAnchorId.roadmapPractice),
+                                  onInitialViewReady:
+                                      _guidedTourSurfaces.reportRoadmapReady,
+                                  onFocusSkillChanged: (skillId) =>
+                                      _syncRoadmapFocusSkill(s, skillId),
+                                  onComplete: _onComplete,
+                                  onMinimumAction: _onMinimumAction,
                                 ),
-                              ),
-                              WorkspaceMode.rewards => const SizedBox.shrink(),
-                              WorkspaceMode.settings => const SizedBox.shrink(),
-                            },
-                          ),
-                        ),
-                      ),
-                      _MobileWorkspaceNav(
-                        mode: displayedMode,
-                        isDark: isDark,
-                        reducedMotion: workspace.reducedMotion,
-                        onChanged: changeMode,
-                        onReselectCurrent: displayedMode == WorkspaceMode.act
-                            ? _mobileActJournalKey.currentState?.collapseInbox
-                            : null,
-                        roadmapKey: _roadmapNavKey,
-                      ),
-                    ],
-                  ),
-                if (_rewardNoticeQueue.isNotEmpty)
-                  RewardNoticePopover(
-                    notice: _rewardNoticeQueue.first,
-                    isDark: isDark,
-                    desktop: desktopShell,
-                    desktopMetrics: desktopMetrics,
-                    reducedMotion: workspace.reducedMotion,
-                    queuedCount: _rewardNoticeQueue.length,
-                    onShow: () => _openRewardsDialog(s),
-                    onHide: () {
-                      if (!mounted || _rewardNoticeQueue.isEmpty) return;
-                      setState(() => _rewardNoticeQueue.removeAt(0));
+                                WorkspaceMode.rewards =>
+                                  _DesktopRewardsWorkspace(
+                                    key: const ValueKey(
+                                      'desktop-rewards-workspace',
+                                    ),
+                                    state: s,
+                                    tokens: DesktopJournalTokens.resolve(
+                                      isDark,
+                                    ),
+                                    summaryTutorialKey: _guidedTour.anchors
+                                        .keyFor(
+                                          TutorialAnchorId.trophiesSummary,
+                                        ),
+                                  ),
+                                WorkspaceMode.stats =>
+                                  MainPageAnalyticsBoundary(
+                                    state: s,
+                                    builder: (context) =>
+                                        _DesktopStatisticsWorkspace(
+                                          key: const ValueKey(
+                                            'desktop-statistics-workspace',
+                                          ),
+                                          state: s,
+                                          tokens: DesktopJournalTokens.resolve(
+                                            isDark,
+                                          ),
+                                          summaryTutorialKey: _guidedTour
+                                              .anchors
+                                              .keyFor(
+                                                TutorialAnchorId
+                                                    .statisticsSummary,
+                                              ),
+                                        ),
+                                  ),
+                                WorkspaceMode.settings =>
+                                  MainPageSettingsBoundary(
+                                    state: s,
+                                    builder: (context) =>
+                                        _DesktopSettingsWorkspace(
+                                          key: const ValueKey(
+                                            'desktop-settings-workspace',
+                                          ),
+                                          state: s,
+                                          tokens: DesktopJournalTokens.resolve(
+                                            isDark,
+                                          ),
+                                          onOpenProfile: openProfile,
+                                          onToggleTheme: widget.onToggleTheme,
+                                        ),
+                                  ),
+                                WorkspaceMode.act => null,
+                              },
+                            )
+                          : Column(
+                              children: [
+                                MainPageProfileBoundary(
+                                  key: _guidedTour.anchors.keyFor(
+                                    TutorialAnchorId.profileEntry,
+                                  ),
+                                  state: s,
+                                  onBuildForTesting:
+                                      widget.onProfileBuildForTesting,
+                                  builder: (context) => ProfileBar(
+                                    isDark: isDark,
+                                    mobile: true,
+                                    state: s,
+                                    onToggleTheme: widget.onToggleTheme,
+                                    onRewardsTap: () => _openRewardsDialog(s),
+                                    onStatsTap: openStatistics,
+                                    onAppIconTap: !kReleaseMode
+                                        ? () => _handleDebugAdminTap(s)
+                                        : null,
+                                    onProfileTap: () => openProfile(),
+                                    rewardsKey: _guidedTour.anchors.keyFor(
+                                      TutorialAnchorId.navTrophies,
+                                    ),
+                                    statsKey: _guidedTour.anchors.keyFor(
+                                      TutorialAnchorId.navStatistics,
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                      12,
+                                      8,
+                                      12,
+                                      0,
+                                    ),
+                                    child: MotionFadeSlideSwitcher(
+                                      child: switch (displayedMode) {
+                                        WorkspaceMode.act => _ActWorkspace(
+                                          key: const ValueKey('act-workspace'),
+                                          onComplete: _onComplete,
+                                          onMinimumAction: _onMinimumAction,
+                                          onCreateFirstSkill: () =>
+                                              _addSkill(context),
+                                          onOpenRoadmap: (skill) =>
+                                              _openRoadmapForSkill(s, skill),
+                                          createFirstSkillButtonKey: _guidedTour
+                                              .anchors
+                                              .keyFor(
+                                                TutorialAnchorId.skillCreate,
+                                              ),
+                                          createFirstQuestButtonKey:
+                                              activeTutorialKey(
+                                                TutorialAnchorId.questCreate,
+                                              ),
+                                          nextQuestActionKey: activeTutorialKey(
+                                            TutorialAnchorId.actNextAction,
+                                          ),
+                                          minimumActionTutorialKey:
+                                              activeTutorialKey(
+                                                TutorialAnchorId
+                                                    .actMinimumAction,
+                                              ),
+                                          inboxTutorialKey: _guidedTour.anchors
+                                              .keyFor(
+                                                TutorialAnchorId.actInbox,
+                                              ),
+                                          mobileJournalKey:
+                                              _mobileActJournalKey,
+                                          returnContext: returnContext,
+                                          momentum: momentum,
+                                          onContinueReturnContext:
+                                              returnContextBinding
+                                                  ?.continueOnMobile,
+                                          onAnotherReturnContext:
+                                              returnContextBinding?.dismiss,
+                                          onDismissReturnContext:
+                                              returnContextBinding?.dismiss,
+                                        ),
+                                        WorkspaceMode.mastery =>
+                                          _MasteryWorkspace(
+                                            key: const ValueKey(
+                                              'mastery-workspace',
+                                            ),
+                                            isDark: isDark,
+                                            focusSkillId: roadmapFocusId,
+                                            focusNodeId: _roadmapFocusNodeId,
+                                            canvasTutorialKey: _guidedTour
+                                                .anchors
+                                                .keyFor(
+                                                  TutorialAnchorId
+                                                      .roadmapCanvas,
+                                                ),
+                                            inspectorTutorialKey:
+                                                _roadmapInspectorKey,
+                                            practiceTutorialKey: _guidedTour
+                                                .anchors
+                                                .keyFor(
+                                                  TutorialAnchorId
+                                                      .roadmapPractice,
+                                                ),
+                                            onInitialViewReady:
+                                                _guidedTourSurfaces
+                                                    .reportRoadmapReady,
+                                            onFocusSkillChanged: (skillId) =>
+                                                _syncRoadmapFocusSkill(
+                                                  s,
+                                                  skillId,
+                                                ),
+                                            onComplete: _onComplete,
+                                            onMinimumAction: _onMinimumAction,
+                                          ),
+                                        WorkspaceMode.stats =>
+                                          MainPageAnalyticsBoundary(
+                                            state: s,
+                                            builder: (context) =>
+                                                _buildStatisticsWorkspace(
+                                                  s,
+                                                  isDark,
+                                                  summaryTutorialKey: _guidedTour
+                                                      .anchors
+                                                      .keyFor(
+                                                        TutorialAnchorId
+                                                            .statisticsSummary,
+                                                      ),
+                                                ),
+                                          ),
+                                        WorkspaceMode.rewards =>
+                                          const SizedBox.shrink(),
+                                        WorkspaceMode.settings =>
+                                          const SizedBox.shrink(),
+                                      },
+                                    ),
+                                  ),
+                                ),
+                                _MobileWorkspaceNav(
+                                  mode: displayedMode,
+                                  isDark: isDark,
+                                  reducedMotion: workspace.reducedMotion,
+                                  onChanged: changeMode,
+                                  onReselectCurrent:
+                                      displayedMode == WorkspaceMode.act
+                                      ? _mobileActJournalKey
+                                            .currentState
+                                            ?.collapseInbox
+                                      : null,
+                                  roadmapKey: _guidedTour.anchors.keyFor(
+                                    TutorialAnchorId.navRoadmap,
+                                  ),
+                                ),
+                              ],
+                            );
                     },
                   ),
-                if (_goalMilestoneNotice != null)
-                  GoalMilestoneBanner(
-                    key: ValueKey('goal-milestone-${_goalMilestoneNotice!.id}'),
-                    event: _goalMilestoneNotice!,
-                    isDark: isDark,
-                    onDismiss: () =>
-                        setState(() => _goalMilestoneNotice = null),
-                    onOpenRoadmap:
-                        _goalMilestoneNotice!.milestone ==
-                            GoalMilestone.complete
-                        ? () {
-                            final event = _goalMilestoneNotice;
-                            if (event == null) return;
-                            setState(() => _goalMilestoneNotice = null);
-                            _openMilestoneRoadmap(s, event);
-                          }
-                        : null,
+                  if (_rewardNoticeQueue.isNotEmpty)
+                    RewardNoticePopover(
+                      notice: _rewardNoticeQueue.first,
+                      isDark: isDark,
+                      desktop: desktopShell,
+                      desktopMetrics: desktopMetrics,
+                      reducedMotion: workspace.reducedMotion,
+                      queuedCount: _rewardNoticeQueue.length,
+                      onShow: () => _openRewardsDialog(s),
+                      onHide: () {
+                        if (!mounted || _rewardNoticeQueue.isEmpty) return;
+                        setState(() => _rewardNoticeQueue.removeAt(0));
+                      },
+                    ),
+                  if (_goalMilestoneNotice != null)
+                    GoalMilestoneBanner(
+                      key: ValueKey(
+                        'goal-milestone-${_goalMilestoneNotice!.id}',
+                      ),
+                      event: _goalMilestoneNotice!,
+                      isDark: isDark,
+                      onDismiss: () =>
+                          setState(() => _goalMilestoneNotice = null),
+                      onOpenRoadmap:
+                          _goalMilestoneNotice!.milestone ==
+                              GoalMilestone.complete
+                          ? () {
+                              final event = _goalMilestoneNotice;
+                              if (event == null) return;
+                              setState(() => _goalMilestoneNotice = null);
+                              _openMilestoneRoadmap(s, event);
+                            }
+                          : null,
+                    ),
+                  _buildGuidedTourOverlay(
+                    state: s,
+                    mobile: mobileShell,
+                    surface: GuidedTourSurface.root,
                   ),
-                _MainPageTutorialBoundary(
-                  state: s,
-                  blocked:
-                      _firstRunDialogOpen ||
-                      _statsTutorialActive ||
-                      _rewardsTutorialActive ||
-                      _tutorialNavigationInFlight,
-                  transitioning: _tutorialNavigationInFlight,
-                  isDark: isDark,
-                  resolveStep: () => _tutorialStepFor(
-                    s,
-                    mobileShell,
-                    openStatistics,
-                    openProfile,
-                  ),
-                  onBuildForTesting: widget.onTutorialBuildForTesting,
-                ),
-                ..._bubbles,
-              ],
+                  ..._bubbles,
+                ],
+              ),
             ),
           );
         },

@@ -14,11 +14,13 @@ enum _DesktopStatisticsDetail {
 class _DesktopStatisticsWorkspace extends StatefulWidget {
   final AppState state;
   final DesktopJournalTokens tokens;
+  final Key? summaryTutorialKey;
 
   const _DesktopStatisticsWorkspace({
     super.key,
     required this.state,
     required this.tokens,
+    this.summaryTutorialKey,
   });
 
   @override
@@ -45,6 +47,7 @@ class _DesktopStatisticsWorkspaceState
     return _DesktopStatisticsOverview(
       state: widget.state,
       tokens: widget.tokens,
+      summaryTutorialKey: widget.summaryTutorialKey,
       onOpen: (next) => setState(() => _detail = next),
     );
   }
@@ -54,11 +57,13 @@ class _DesktopStatisticsOverview extends StatelessWidget {
   final AppState state;
   final DesktopJournalTokens tokens;
   final ValueChanged<_DesktopStatisticsDetail> onOpen;
+  final Key? summaryTutorialKey;
 
   const _DesktopStatisticsOverview({
     required this.state,
     required this.tokens,
     required this.onOpen,
+    this.summaryTutorialKey,
   });
 
   @override
@@ -79,12 +84,15 @@ class _DesktopStatisticsOverview extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          DesktopStatisticsSummaryStrip(
-            tokens: tokens,
-            todayXp: state.todayStats?.xpEarned ?? 0,
-            weekXp: week.totalXp,
-            mainSkill: mainSkill,
-            mainSkillIdentity: mainSkillIdentity,
+          KeyedSubtree(
+            key: summaryTutorialKey,
+            child: DesktopStatisticsSummaryStrip(
+              tokens: tokens,
+              todayXp: state.todayStats?.xpEarned ?? 0,
+              weekXp: week.totalXp,
+              mainSkill: mainSkill,
+              mainSkillIdentity: mainSkillIdentity,
+            ),
           ),
           const SizedBox(height: 22),
           LayoutBuilder(

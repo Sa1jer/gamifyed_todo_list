@@ -28,6 +28,8 @@ class DesktopMainWorkspace extends StatelessWidget {
   final void Function(String taskId, ActionToastOrigin origin) onComplete;
   final void Function(String taskId, ActionToastOrigin origin) onMinimumAction;
   final GlobalKey? minimumActionTutorialKey;
+  final GlobalKey? questCreateKey;
+  final GlobalKey? nextActionKey;
   final ReturnContextCandidate? returnContext;
   final MomentumSnapshot? momentum;
   final VoidCallback? onContinueReturnContext;
@@ -46,6 +48,8 @@ class DesktopMainWorkspace extends StatelessWidget {
     required this.onComplete,
     required this.onMinimumAction,
     this.minimumActionTutorialKey,
+    this.questCreateKey,
+    this.nextActionKey,
     this.returnContext,
     this.momentum,
     this.onContinueReturnContext,
@@ -178,6 +182,7 @@ class DesktopMainWorkspace extends StatelessWidget {
 
     if (currentSkill != null && !hasQuestHistory) {
       final header = DesktopSelectedSkillHeader(
+        tutorialKey: questCreateKey,
         skill: currentSkill,
         tokens: tokens,
         totalQuestCount: tasks.length,
@@ -303,6 +308,7 @@ class DesktopMainWorkspace extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         DesktopSelectedSkillHeader(
+                          tutorialKey: questCreateKey,
                           skill: currentSkill,
                           tokens: tokens,
                           totalQuestCount: tasks.length,
@@ -340,6 +346,10 @@ class DesktopMainWorkspace extends StatelessWidget {
                                 tokens: tokens,
                                 onComplete: onComplete,
                                 onMinimumAction: onMinimumAction,
+                                completionTutorialKey:
+                                    task.id == active.firstOrNull?.id
+                                    ? nextActionKey
+                                    : null,
                                 minimumActionTutorialKey:
                                     task.id == tutorialMinimumTaskId
                                     ? minimumActionTutorialKey

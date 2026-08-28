@@ -26,6 +26,7 @@ class TutorialTargetProbe {
     GlobalKey targetKey, {
     Duration timeout = const Duration(milliseconds: 1200),
     Duration probeInterval = const Duration(milliseconds: 50),
+    Listenable? cancellation,
   }) {
     assert(timeout > Duration.zero);
     assert(probeInterval > Duration.zero);
@@ -34,14 +35,19 @@ class TutorialTargetProbe {
     final completer = Completer<bool>();
     Timer? probeTimer;
     Timer? timeoutTimer;
+    late final VoidCallback cancel;
 
     void finish(bool ready) {
       if (completer.isCompleted) return;
       probeTimer?.cancel();
       timeoutTimer?.cancel();
+      cancellation?.removeListener(cancel);
       completer.complete(ready);
     }
 
+    cancel = () => finish(false);
+
+    cancellation?.addListener(cancel);
     probeTimer = Timer.periodic(probeInterval, (_) {
       if (isReady(targetKey)) {
         finish(true);

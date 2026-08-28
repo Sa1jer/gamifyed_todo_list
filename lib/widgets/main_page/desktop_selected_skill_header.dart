@@ -5,6 +5,7 @@ import '../desktop_journal_tokens.dart';
 import '../shared.dart';
 
 class DesktopSelectedSkillHeader extends StatelessWidget {
+  final Key? tutorialKey;
   final Skill skill;
   final DesktopJournalTokens tokens;
   final VoidCallback onAddTask;
@@ -12,6 +13,7 @@ class DesktopSelectedSkillHeader extends StatelessWidget {
 
   const DesktopSelectedSkillHeader({
     super.key,
+    this.tutorialKey,
     required this.skill,
     required this.tokens,
     required this.totalQuestCount,
@@ -198,12 +200,15 @@ class DesktopSelectedSkillHeader extends StatelessWidget {
                 : remainingForContent;
             final reflowGoal = textScale >= 1.3 || contentWidth < 440;
             final stackXpValue = textScale >= 1.6 || contentWidth < 250;
-            final button = _DesktopSelectedSkillPrimaryButton(
-              key: ValueKey('desktop-add-task-${skill.id}'),
-              label: 'Новый квест',
-              icon: Icons.add_rounded,
-              color: skill.color,
-              onTap: onAddTask,
+            final button = KeyedSubtree(
+              key: tutorialKey,
+              child: _DesktopSelectedSkillPrimaryButton(
+                key: ValueKey('desktop-add-task-${skill.id}'),
+                label: 'Новый квест',
+                icon: Icons.add_rounded,
+                color: skill.color,
+                onTap: onAddTask,
+              ),
             );
             final contentBlock = KeyedSubtree(
               key: ValueKey('desktop-skill-content-block-${skill.id}'),

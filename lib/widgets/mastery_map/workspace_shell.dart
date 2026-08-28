@@ -47,10 +47,12 @@ Future<NextRoadmapChoice?> _showNextGoalFlow(
 class MasteryMapWorkspace extends StatefulWidget {
   final bool isDark;
   final String? focusSkillId;
+  final String? focusNodeId;
   final GlobalKey? canvasTutorialKey;
   final GlobalKey? inspectorTutorialKey;
   final GlobalKey? practiceTutorialKey;
   final ValueChanged<String?>? onFocusSkillChanged;
+  final VoidCallback? onInitialViewReady;
   final void Function(String taskId, ActionToastOrigin origin) onCompleteTask;
   final void Function(String taskId, ActionToastOrigin origin) onMinimumAction;
 
@@ -58,10 +60,12 @@ class MasteryMapWorkspace extends StatefulWidget {
     super.key,
     required this.isDark,
     this.focusSkillId,
+    this.focusNodeId,
     this.canvasTutorialKey,
     this.inspectorTutorialKey,
     this.practiceTutorialKey,
     this.onFocusSkillChanged,
+    this.onInitialViewReady,
     required this.onCompleteTask,
     required this.onMinimumAction,
   });
@@ -73,35 +77,49 @@ class MasteryMapWorkspace extends StatefulWidget {
 class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
   _MasterySelection? _selection;
   _RoadmapLayoutAxis _desktopLayoutAxis = _RoadmapLayoutAxis.horizontal;
-  String? _lastAppliedFocusSkillId;
   final GlobalKey<_OrbMasteryMapCanvasState> _desktopCanvasKey = GlobalKey();
+  bool _initialViewReadyReported = false;
+
+  void _reportInitialViewReady() {
+    if (_initialViewReadyReported) return;
+    _initialViewReadyReported = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onInitialViewReady?.call();
+    });
+  }
 
   @override
   void initState() {
     super.initState();
-    _applyExternalFocus(widget.focusSkillId);
+    _applyExternalFocus(widget.focusSkillId, widget.focusNodeId);
   }
 
   @override
   void didUpdateWidget(covariant MasteryMapWorkspace oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.focusSkillId != oldWidget.focusSkillId) {
-      _applyExternalFocus(widget.focusSkillId);
+    if (widget.focusSkillId != oldWidget.focusSkillId ||
+        widget.focusNodeId != oldWidget.focusNodeId) {
+      _applyExternalFocus(widget.focusSkillId, widget.focusNodeId);
     }
   }
 
-  void _applyExternalFocus(String? skillId) {
+  void _applyExternalFocus(String? skillId, String? nodeId) {
     if (skillId == null) {
-      _lastAppliedFocusSkillId = null;
       _selection = null;
       return;
     }
-    if (skillId == _lastAppliedFocusSkillId || skillId == _selection?.skillId) {
-      _lastAppliedFocusSkillId = skillId;
+    final sameFocus =
+        skillId == _selection?.skillId &&
+        (nodeId == null
+            ? _selection?.type == _MasterySelectionType.skill
+            : _selection?.type == _MasterySelectionType.node &&
+                  _selection?.nodeId == nodeId);
+    if (sameFocus) {
       return;
     }
-    _lastAppliedFocusSkillId = skillId;
-    _selection = _MasterySelection.skill(skillId);
+    _selection = nodeId == null
+        ? _MasterySelection.skill(skillId)
+        : _MasterySelection.node(skillId, nodeId);
   }
 
   void _setSelection(_MasterySelection? next) {
@@ -116,7 +134,6 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
     final skillChanged = current?.skillId != next?.skillId;
     setState(() {
       _selection = next;
-      _lastAppliedFocusSkillId = next?.skillId;
     });
     if (skillChanged) {
       widget.onFocusSkillChanged?.call(next?.skillId);
@@ -143,6 +160,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
         : _desktopLayoutAxis;
 
     if (state.roadmapSkills.isEmpty) {
+      _reportInitialViewReady();
       return AppPanel(
         isDark: isDark,
         child: _AdaptiveRoadmapEmptyState(isDark: isDark),
@@ -158,6 +176,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
       canvasTutorialKey: widget.canvasTutorialKey,
       inspectorTutorialKey: widget.inspectorTutorialKey,
       practiceTutorialKey: widget.practiceTutorialKey,
+      onInitialViewReady: _reportInitialViewReady,
       onSelectionChanged: _setSelection,
       onAddRoot: (skill) => _addNode(context, skill),
       onExtendPath: (skill, node) => _extendPath(context, skill, node),
@@ -191,6 +210,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
     );
 
     if (mobile) {
+      _reportInitialViewReady();
       return _MobileRoadmapJournal(
         state: state,
         isDark: isDark,

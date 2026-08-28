@@ -2,14 +2,12 @@ part of '../dialogs.dart';
 
 class RewardsDialog extends StatefulWidget {
   final AppState state;
-  final bool showTutorialHint;
-  final VoidCallback? onTutorialComplete;
+  final Key? summaryTutorialKey;
   final bool fullScreen;
   const RewardsDialog({
     super.key,
     required this.state,
-    this.showTutorialHint = false,
-    this.onTutorialComplete,
+    this.summaryTutorialKey,
     this.fullScreen = false,
   });
 
@@ -19,7 +17,6 @@ class RewardsDialog extends StatefulWidget {
 
 class _RewardsDialogState extends State<RewardsDialog> {
   RewardReveal? _lastReveal;
-  final GlobalKey _tutorialTargetKey = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
@@ -115,14 +112,6 @@ class _RewardsDialogState extends State<RewardsDialog> {
               ),
             ],
           ),
-          if (widget.showTutorialHint && widget.onTutorialComplete != null)
-            Positioned.fill(
-              child: RewardsTutorialSpotlight(
-                targetKey: _tutorialTargetKey,
-                isDark: isDark,
-                onComplete: widget.onTutorialComplete!,
-              ),
-            ),
         ],
       ),
     );
@@ -167,14 +156,6 @@ class _RewardsDialogState extends State<RewardsDialog> {
               buffs: buffs,
             ),
           ),
-          if (widget.showTutorialHint && widget.onTutorialComplete != null)
-            Positioned.fill(
-              child: RewardsTutorialSpotlight(
-                targetKey: _tutorialTargetKey,
-                isDark: isDark,
-                onComplete: widget.onTutorialComplete!,
-              ),
-            ),
         ],
       ),
     );
@@ -190,7 +171,7 @@ class _RewardsDialogState extends State<RewardsDialog> {
   }) {
     return [
       KeyedSubtree(
-        key: _tutorialTargetKey,
+        key: widget.summaryTutorialKey,
         child: _buildEffectsSection(
           isDark: isDark,
           txt: text,

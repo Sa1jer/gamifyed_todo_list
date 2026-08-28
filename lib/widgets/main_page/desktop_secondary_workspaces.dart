@@ -81,11 +81,13 @@ class _DesktopPageScaffold extends StatelessWidget {
 class _DesktopRewardsWorkspace extends StatefulWidget {
   final AppState state;
   final DesktopJournalTokens tokens;
+  final Key? summaryTutorialKey;
 
   const _DesktopRewardsWorkspace({
     super.key,
     required this.state,
     required this.tokens,
+    this.summaryTutorialKey,
   });
 
   @override
@@ -165,39 +167,42 @@ class _DesktopRewardsWorkspaceState extends State<_DesktopRewardsWorkspace> {
             ),
           ),
           const SizedBox(height: 22),
-          _DesktopSectionCard(
-            tokens: tokens,
-            child: _DesktopRewardCollection(
-              key: const ValueKey('desktop-rewards-effects'),
+          KeyedSubtree(
+            key: widget.summaryTutorialKey,
+            child: _DesktopSectionCard(
               tokens: tokens,
-              icon: Icons.bolt_rounded,
-              color: tokens.successGreen,
-              title: 'Эффекты',
-              count: buffs.length,
-              child: buffs.isEmpty
-                  ? _DesktopEmptyMessage(
-                      tokens: tokens,
-                      icon: Icons.bolt_outlined,
-                      title: 'Нет эффектов',
-                      subtitle:
-                          'Открой сундук, и здесь появится временное усиление.',
-                    )
-                  : Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      children: buffs
-                          .map(
-                            (buff) => Chip(
-                              avatar: Icon(
-                                Icons.auto_awesome,
-                                color: tokens.successGreen,
-                                size: 17,
+              child: _DesktopRewardCollection(
+                key: const ValueKey('desktop-rewards-effects'),
+                tokens: tokens,
+                icon: Icons.bolt_rounded,
+                color: tokens.successGreen,
+                title: 'Эффекты',
+                count: buffs.length,
+                child: buffs.isEmpty
+                    ? _DesktopEmptyMessage(
+                        tokens: tokens,
+                        icon: Icons.bolt_outlined,
+                        title: 'Нет эффектов',
+                        subtitle:
+                            'Открой сундук, и здесь появится временное усиление.',
+                      )
+                    : Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: buffs
+                            .map(
+                              (buff) => Chip(
+                                avatar: Icon(
+                                  Icons.auto_awesome,
+                                  color: tokens.successGreen,
+                                  size: 17,
+                                ),
+                                label: Text(buff.title),
                               ),
-                              label: Text(buff.title),
-                            ),
-                          )
-                          .toList(),
-                    ),
+                            )
+                            .toList(),
+                      ),
+              ),
             ),
           ),
           const SizedBox(height: 22),

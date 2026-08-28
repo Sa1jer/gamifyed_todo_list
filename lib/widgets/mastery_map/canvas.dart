@@ -17,6 +17,7 @@ class _OrbMasteryMapCanvas extends StatefulWidget {
   )
   onInsertStageAfter;
   final void Function(Skill skill, SkillTreeNode node) onSelectNode;
+  final VoidCallback? onInitialViewReady;
 
   const _OrbMasteryMapCanvas({
     super.key,
@@ -30,6 +31,7 @@ class _OrbMasteryMapCanvas extends StatefulWidget {
     required this.onExtendPath,
     required this.onInsertStageAfter,
     required this.onSelectNode,
+    this.onInitialViewReady,
   });
 
   @override
@@ -51,6 +53,7 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
   String? _lastRoadmapCameraSkillId;
   _RoadmapLayoutAxis? _lastRoadmapCameraAxis;
   bool _hasInitialRoadmapCameraFit = false;
+  bool _initialViewReadyReported = false;
   bool _reducedMotion = false;
   Timer? _roadmapCameraFitTimer;
   _OrbCanvasLayout? _lastLayout;
@@ -92,6 +95,14 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
     }
   }
 
+  void _reportInitialViewReady() {
+    if (_initialViewReadyReported) return;
+    _initialViewReadyReported = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onInitialViewReady?.call();
+    });
+  }
+
   void _handleRoadmapCameraTick() {
     final tween = _roadmapCameraTween;
     if (tween == null) return;
@@ -126,6 +137,7 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
       _hasInitialRoadmapCameraFit = true;
       _roadmapCameraAnimationController.stop();
       _roadmapCameraController.value = target;
+      _reportInitialViewReady();
       return;
     }
 

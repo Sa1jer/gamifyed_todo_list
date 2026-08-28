@@ -35,6 +35,7 @@ class _MobileActJournal extends StatefulWidget {
   final Key? createFirstSkillButtonKey;
   final Key? createFirstQuestButtonKey;
   final Key? nextQuestActionKey;
+  final Key? inboxTutorialKey;
   final ReturnContextCandidate? returnContext;
   final MomentumSnapshot? momentum;
   final VoidCallback? onContinueReturnContext;
@@ -49,6 +50,7 @@ class _MobileActJournal extends StatefulWidget {
     this.createFirstSkillButtonKey,
     this.createFirstQuestButtonKey,
     this.nextQuestActionKey,
+    this.inboxTutorialKey,
     this.returnContext,
     this.momentum,
     this.onContinueReturnContext,
@@ -189,6 +191,7 @@ class _MobileActJournalState extends State<_MobileActJournal> {
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: _MobileInboxAccordion(
+                  key: widget.inboxTutorialKey,
                   expanded: _inboxExpanded,
                   taskCount: inboxCount,
                   maxContentHeight: maxInboxContentHeight,
@@ -691,6 +694,7 @@ class _MobileInboxAccordion extends StatelessWidget {
   final void Function(String taskId, ActionToastOrigin origin) onComplete;
 
   const _MobileInboxAccordion({
+    super.key,
     required this.expanded,
     required this.taskCount,
     required this.maxContentHeight,

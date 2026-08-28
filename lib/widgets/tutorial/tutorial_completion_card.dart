@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 import '../../utils.dart';
@@ -15,55 +13,20 @@ class TutorialCompletionCard extends StatefulWidget {
     super.key,
     required this.isDark,
     required this.reducedMotion,
-    required this.onDismiss,
-    this.displayDuration = const Duration(seconds: 4),
+    required this.onShowRest,
+    required this.onStartUsing,
   });
 
   final bool isDark;
   final bool reducedMotion;
-  final VoidCallback onDismiss;
-  final Duration displayDuration;
+  final VoidCallback onShowRest;
+  final VoidCallback onStartUsing;
 
   @override
   State<TutorialCompletionCard> createState() => _TutorialCompletionCardState();
 }
 
 class _TutorialCompletionCardState extends State<TutorialCompletionCard> {
-  Timer? _dismissTimer;
-  bool _dismissed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _scheduleDismiss();
-  }
-
-  @override
-  void didUpdateWidget(covariant TutorialCompletionCard oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.displayDuration != widget.displayDuration) {
-      _scheduleDismiss();
-    }
-  }
-
-  @override
-  void dispose() {
-    _dismissTimer?.cancel();
-    super.dispose();
-  }
-
-  void _scheduleDismiss() {
-    _dismissTimer?.cancel();
-    _dismissTimer = Timer(widget.displayDuration, _dismiss);
-  }
-
-  void _dismiss() {
-    if (_dismissed) return;
-    _dismissed = true;
-    _dismissTimer?.cancel();
-    widget.onDismiss();
-  }
-
   @override
   Widget build(BuildContext context) {
     final duration =
@@ -115,55 +78,78 @@ class _TutorialCompletionCardState extends State<TutorialCompletionCard> {
                   label: 'Основное обучение завершено',
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
-                    child: Row(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          width: 42,
-                          height: 42,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFF9500).withAlpha(30),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: const Icon(
-                            Icons.check_rounded,
-                            color: Color(0xFFFF9500),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Основу ты знаешь.',
-                                style: Theme.of(context).textTheme.titleMedium
-                                    ?.copyWith(
-                                      color: foreground,
-                                      fontWeight: FontWeight.w900,
-                                    ),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 42,
+                              height: 42,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFF9500).withAlpha(30),
+                                borderRadius: BorderRadius.circular(14),
                               ),
-                              const SizedBox(height: 3),
-                              Text(
-                                'Остальные темы доступны в профиле.',
-                                style: Theme.of(context).textTheme.bodyMedium
-                                    ?.copyWith(
-                                      color: secondary,
-                                      height: 1.35,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                              child: const Icon(
+                                Icons.check_rounded,
+                                color: Color(0xFFFF9500),
                               ),
-                            ],
-                          ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Основу ты знаешь.',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(
+                                          color: foreground,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    'Можно посмотреть остальные разделы или сразу начать пользоваться приложением.',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color: secondary,
+                                          height: 1.35,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                        IconButton(
-                          key: const ValueKey(
-                            'tutorial-core-completion-dismiss',
-                          ),
-                          tooltip: 'Закрыть',
-                          onPressed: _dismiss,
-                          icon: Icon(Icons.close_rounded, color: secondary),
+                        const SizedBox(height: 14),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            FilledButton(
+                              key: const ValueKey('tutorial-core-show-rest'),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: const Color(0xFFFF9500),
+                                foregroundColor: Colors.white,
+                              ),
+                              onPressed: widget.onShowRest,
+                              child: const Text('Показать остальное'),
+                            ),
+                            TextButton(
+                              key: const ValueKey('tutorial-core-start-using'),
+                              onPressed: widget.onStartUsing,
+                              child: const Text('Начать пользоваться'),
+                            ),
+                          ],
                         ),
                       ],
                     ),

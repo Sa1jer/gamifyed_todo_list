@@ -25,9 +25,11 @@ class DesktopSidebar extends StatelessWidget {
   final ValueChanged<Skill> onDeleteSkill;
   final ValueChanged<Skill> onOpenRoadmap;
   final GlobalKey? profileKey;
+  final GlobalKey? skillCreateKey;
   final GlobalKey? rewardsKey;
   final GlobalKey? roadmapKey;
   final GlobalKey? statsKey;
+  final GlobalKey? inboxKey;
 
   const DesktopSidebar({
     super.key,
@@ -46,9 +48,11 @@ class DesktopSidebar extends StatelessWidget {
     required this.onDeleteSkill,
     required this.onOpenRoadmap,
     this.profileKey,
+    this.skillCreateKey,
     this.rewardsKey,
     this.roadmapKey,
     this.statsKey,
+    this.inboxKey,
   });
 
   @override
@@ -154,12 +158,15 @@ class DesktopSidebar extends StatelessWidget {
                         ),
                       ),
                     ),
-                    DesktopCompactButton(
-                      key: const ValueKey('desktop-add-skill'),
-                      label: 'Навык',
-                      icon: Icons.add_rounded,
-                      color: tokens.profilePurple,
-                      onTap: onAddSkill,
+                    KeyedSubtree(
+                      key: skillCreateKey,
+                      child: DesktopCompactButton(
+                        key: const ValueKey('desktop-add-skill'),
+                        label: 'Навык',
+                        icon: Icons.add_rounded,
+                        color: tokens.profilePurple,
+                        onTap: onAddSkill,
+                      ),
                     ),
                   ],
                 ),
@@ -205,7 +212,11 @@ class DesktopSidebar extends StatelessWidget {
                         },
                       ),
               ),
-              _DesktopInboxShortcut(state: state, tokens: tokens),
+              _DesktopInboxShortcut(
+                key: inboxKey,
+                state: state,
+                tokens: tokens,
+              ),
               Divider(height: 1, color: tokens.subtleOutline),
               Padding(
                 padding: const EdgeInsets.symmetric(
@@ -824,7 +835,11 @@ class _DesktopInboxShortcut extends StatelessWidget {
   final AppState state;
   final DesktopJournalTokens tokens;
 
-  const _DesktopInboxShortcut({required this.state, required this.tokens});
+  const _DesktopInboxShortcut({
+    super.key,
+    required this.state,
+    required this.tokens,
+  });
 
   @override
   Widget build(BuildContext context) {

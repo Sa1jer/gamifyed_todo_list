@@ -8,16 +8,14 @@ import 'progress_workspace.dart';
 class MobileStatisticsPage extends StatelessWidget {
   final AppState state;
   final bool isDark;
-  final bool showTutorialHint;
-  final VoidCallback? onTutorialComplete;
+  final Key? summaryTutorialKey;
   final ProgressWorkspaceDestinations destinations;
 
   const MobileStatisticsPage({
     super.key,
     required this.state,
     required this.isDark,
-    this.showTutorialHint = false,
-    this.onTutorialComplete,
+    this.summaryTutorialKey,
     required this.destinations,
   });
 
@@ -33,14 +31,8 @@ class MobileStatisticsPage extends StatelessWidget {
             key: const ValueKey('stats-workspace'),
             state: state,
             isDark: isDark,
-            showTutorialHint: showTutorialHint,
+            summaryTutorialKey: summaryTutorialKey,
             onClose: () => Navigator.of(routeContext).maybePop(),
-            onTutorialComplete: onTutorialComplete == null
-                ? null
-                : () {
-                    onTutorialComplete!();
-                    Navigator.of(routeContext).maybePop();
-                  },
             destinations: destinations,
           ),
         ),

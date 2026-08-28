@@ -16,6 +16,7 @@ class _ActWorkspace extends StatelessWidget {
   final Key? createFirstQuestButtonKey;
   final Key? nextQuestActionKey;
   final Key? minimumActionTutorialKey;
+  final Key? inboxTutorialKey;
   final GlobalKey<_MobileActJournalState>? mobileJournalKey;
   final ReturnContextCandidate? returnContext;
   final MomentumSnapshot? momentum;
@@ -33,6 +34,7 @@ class _ActWorkspace extends StatelessWidget {
     this.createFirstQuestButtonKey,
     this.nextQuestActionKey,
     this.minimumActionTutorialKey,
+    this.inboxTutorialKey,
     this.mobileJournalKey,
     this.returnContext,
     this.momentum,
@@ -54,6 +56,7 @@ class _ActWorkspace extends StatelessWidget {
             createFirstSkillButtonKey: createFirstSkillButtonKey,
             createFirstQuestButtonKey: createFirstQuestButtonKey,
             nextQuestActionKey: nextQuestActionKey,
+            inboxTutorialKey: inboxTutorialKey,
             returnContext: returnContext,
             momentum: momentum,
             onContinueReturnContext: onContinueReturnContext,
@@ -91,10 +94,12 @@ class _ActWorkspace extends StatelessWidget {
 class _MasteryWorkspace extends StatelessWidget {
   final bool isDark;
   final String? focusSkillId;
+  final String? focusNodeId;
   final GlobalKey? canvasTutorialKey;
   final GlobalKey? inspectorTutorialKey;
   final GlobalKey? practiceTutorialKey;
   final ValueChanged<String?>? onFocusSkillChanged;
+  final VoidCallback? onInitialViewReady;
   final void Function(String taskId, ActionToastOrigin origin) onComplete;
   final void Function(String taskId, ActionToastOrigin origin) onMinimumAction;
 
@@ -102,10 +107,12 @@ class _MasteryWorkspace extends StatelessWidget {
     super.key,
     required this.isDark,
     this.focusSkillId,
+    this.focusNodeId,
     this.canvasTutorialKey,
     this.inspectorTutorialKey,
     this.practiceTutorialKey,
     this.onFocusSkillChanged,
+    this.onInitialViewReady,
     required this.onComplete,
     required this.onMinimumAction,
   });
@@ -115,10 +122,12 @@ class _MasteryWorkspace extends StatelessWidget {
     return MasteryMapWorkspace(
       isDark: isDark,
       focusSkillId: focusSkillId,
+      focusNodeId: focusNodeId,
       canvasTutorialKey: canvasTutorialKey,
       inspectorTutorialKey: inspectorTutorialKey,
       practiceTutorialKey: practiceTutorialKey,
       onFocusSkillChanged: onFocusSkillChanged,
+      onInitialViewReady: onInitialViewReady,
       onCompleteTask: onComplete,
       onMinimumAction: onMinimumAction,
     );

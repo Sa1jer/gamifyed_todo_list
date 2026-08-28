@@ -7,11 +7,12 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../models.dart';
 import '../app_state.dart';
-import '../tutorial/tutorial_catalog.dart';
+import '../tutorial/guided_tour_session.dart';
 import '../utils.dart';
 import 'character_timeline_dialog.dart';
 import 'mobile_secondary_page.dart';
 import 'shared.dart';
+import 'tutorial/tutorial_training_center.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PROFILE DIALOG
@@ -19,14 +20,20 @@ import 'shared.dart';
 
 class ProfileDialog extends StatefulWidget {
   final bool fullScreen;
-  final bool showTutorialHint;
-  final VoidCallback? onTutorialComplete;
+  final VoidCallback? onToggleTheme;
+  final GuidedTourSessionSnapshot? tutorialSession;
+  final ValueChanged<TutorialTrainingSelection>? onTutorialSelection;
+  final Key? tutorialTrainingKey;
+  final Widget? tutorialOverlay;
 
   const ProfileDialog({
     super.key,
     this.fullScreen = false,
-    this.showTutorialHint = false,
-    this.onTutorialComplete,
+    this.onToggleTheme,
+    this.tutorialSession,
+    this.onTutorialSelection,
+    this.tutorialTrainingKey,
+    this.tutorialOverlay,
   });
   @override
   State<ProfileDialog> createState() => _ProfileDialogState();
@@ -45,116 +52,17 @@ class _ProfileDialogState extends State<ProfileDialog> {
     _ageCtrl = TextEditingController();
   }
 
-  void _openTrainingCenter(BuildContext context, AppState state, bool isDark) {
-    final txt = textColor(isDark);
-    final sub = subtext(isDark);
-    final bg = surface(isDark);
-    final bdr = borderColor(isDark);
-
-    showDialog<void>(
+  Future<void> _openTrainingCenter(BuildContext context, AppState state) async {
+    final selection = await showTutorialTrainingCenter(
       context: context,
-      builder: (dialogContext) {
-        void startModule(String moduleId) {
-          state.startTutorialModule(moduleId);
-          Navigator.pop(dialogContext);
-          Navigator.pop(context);
-        }
-
-        return Dialog(
-          backgroundColor: bg,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: 460,
-              maxHeight: MediaQuery.sizeOf(dialogContext).height - 48,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 18, 12, 12),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Обучение',
-                          style: TextStyle(
-                            color: txt,
-                            fontSize: 21,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        tooltip: 'Закрыть обучение',
-                        onPressed: () => Navigator.pop(dialogContext),
-                        icon: const Icon(Icons.close_rounded),
-                      ),
-                    ],
-                  ),
-                ),
-                Flexible(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Выбери короткую тему. Подсказки появятся поверх настоящего интерфейса и не изменят твои данные.',
-                          style: TextStyle(
-                            color: sub,
-                            height: 1.35,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        for (final module in TutorialCatalog.modules)
-                          _TutorialModuleTile(
-                            title: module.title,
-                            subtitle: module.subtitle,
-                            icon: _tutorialModuleIcon(module.id),
-                            color: _tutorialModuleColor(module.id),
-                            completed: state.tutorialProgress.isModuleCompleted(
-                              module.id,
-                            ),
-                            active: state.activeTutorialModuleId == module.id,
-                            isDark: isDark,
-                            borderColor: bdr,
-                            onTap: () => startModule(module.id),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+      progress: state.tutorialProgress,
+      session: widget.tutorialSession,
     );
+    final onSelected = widget.onTutorialSelection;
+    if (selection == null || onSelected == null || !context.mounted) return;
+    await Navigator.of(context).maybePop();
+    onSelected(selection);
   }
-
-  IconData _tutorialModuleIcon(String moduleId) => switch (moduleId) {
-    TutorialModuleIds.core => Icons.auto_awesome_rounded,
-    TutorialModuleIds.act => Icons.bolt_rounded,
-    TutorialModuleIds.roadmap => Icons.account_tree_rounded,
-    TutorialModuleIds.stats => Icons.query_stats_rounded,
-    TutorialModuleIds.trophies => Icons.redeem_rounded,
-    TutorialModuleIds.profile => Icons.person_rounded,
-    _ => Icons.play_arrow_rounded,
-  };
-
-  Color _tutorialModuleColor(String moduleId) => switch (moduleId) {
-    TutorialModuleIds.core || TutorialModuleIds.act => const Color(0xFFFF9500),
-    TutorialModuleIds.roadmap => const Color(0xFF4A9EFF),
-    TutorialModuleIds.stats => const Color(0xFF34C759),
-    TutorialModuleIds.trophies => const Color(0xFFFFCC00),
-    TutorialModuleIds.profile => const Color(0xFFAF52DE),
-    _ => const Color(0xFF4A9EFF),
-  };
 
   @override
   void didChangeDependencies() {
@@ -204,7 +112,9 @@ class _ProfileDialogState extends State<ProfileDialog> {
     final bdr = borderColor(isDark);
 
     if (widget.fullScreen) {
-      return _buildMobileProfilePage(context, s, p, isDark, bg, txt, sub, bdr);
+      return _withTutorialOverlay(
+        _buildMobileProfilePage(context, s, p, isDark, bg, txt, sub, bdr),
+      );
     }
 
     final content = ClipRRect(
@@ -258,11 +168,19 @@ class _ProfileDialogState extends State<ProfileDialog> {
       ),
     );
 
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 60, vertical: 40),
-      child: content,
+    return _withTutorialOverlay(
+      Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 60, vertical: 40),
+        child: content,
+      ),
     );
+  }
+
+  Widget _withTutorialOverlay(Widget child) {
+    final overlay = widget.tutorialOverlay;
+    if (overlay == null) return child;
+    return Stack(fit: StackFit.expand, children: [child, overlay]);
   }
 
   Widget _buildMobileProfilePage(
@@ -1020,109 +938,116 @@ class _ProfileDialogState extends State<ProfileDialog> {
   ) {
     final fBg = isDark ? const Color(0xFF13131A) : const Color(0xFFF5F5F7);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (widget.showTutorialHint) ...[
-          _ProfileTutorialHint(
-            isDark: isDark,
-            onComplete: widget.onTutorialComplete,
+    return KeyedSubtree(
+      key: widget.tutorialTrainingKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SubLbl('Интерфейс', sub),
+          const SizedBox(height: 10),
+          if (widget.onToggleTheme != null) ...[
+            _ProfileSettingsToggle(
+              background: fBg,
+              border: bdr,
+              text: txt,
+              secondary: sub,
+              icon: Icons.dark_mode_outlined,
+              title: 'Тёмная тема',
+              subtitle: 'Переключается сразу и сохраняется на устройстве.',
+              value: state.isDark,
+              onChanged: (_) => widget.onToggleTheme!(),
+            ),
+            const SizedBox(height: 8),
+          ],
+          _ProfileSettingsToggle(
+            background: fBg,
+            border: bdr,
+            text: txt,
+            secondary: sub,
+            icon: Icons.volume_up_outlined,
+            title: 'Звуки интерфейса',
+            subtitle: 'Отклик на действия, XP и награды.',
+            value: state.sfxEnabled,
+            onChanged: (_) => state.toggleSfxEnabled(),
           ),
-          const SizedBox(height: 12),
-        ],
-        SubLbl('Интерфейс', sub),
-        const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
+          const SizedBox(height: 8),
+          _ProfileSettingsToggle(
+            background: fBg,
+            border: bdr,
+            text: txt,
+            secondary: sub,
+            icon: Icons.motion_photos_off_outlined,
+            title: 'Сокращать анимации',
+            subtitle: 'Убирает необязательные перемещения и переходы.',
+            value: state.reducedMotion,
+            onChanged: (_) => state.toggleReducedMotion(),
+          ),
+          const SizedBox(height: 8),
+          _ProfileSettingsToggle(
+            background: fBg,
+            border: bdr,
+            text: txt,
+            secondary: sub,
+            icon: Icons.info_outline_rounded,
+            title: 'Подсказки при наведении',
+            subtitle: state.tooltipsEnabled
+                ? 'Включены для кнопок и действий.'
+                : 'Скрыты, интерфейс спокойнее.',
+            value: state.tooltipsEnabled,
+            onChanged: (_) => state.toggleTooltipsEnabled(),
+          ),
+          const SizedBox(height: 8),
+          Material(
             color: fBg,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: bdr),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.info_outline_rounded,
-                color: state.tooltipsEnabled
-                    ? const Color(0xFF4A9EFF)
-                    : sub.withAlpha(150),
-                size: 17,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+              side: BorderSide(color: bdr),
+            ),
+            child: InkWell(
+              key: const ValueKey('profile-training-center-entry'),
+              borderRadius: BorderRadius.circular(10),
+              onTap: () => _openTrainingCenter(context, state),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                child: Row(
                   children: [
-                    Text(
-                      'Подсказки при наведении',
-                      style: TextStyle(
-                        color: txt,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
+                    const Icon(
+                      Icons.auto_awesome,
+                      color: Color(0xFFFF9500),
+                      size: 17,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Обучение',
+                            style: TextStyle(
+                              color: txt,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Полный тур и отдельные темы всегда доступны здесь.',
+                            style: TextStyle(color: sub, fontSize: 11.5),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      state.tooltipsEnabled
-                          ? 'Включены для кнопок и действий.'
-                          : 'Скрыты, интерфейс спокойнее.',
-                      style: TextStyle(color: sub, fontSize: 11.5),
-                    ),
+                    Icon(Icons.play_arrow_rounded, color: sub, size: 20),
                   ],
                 ),
               ),
-              Switch(
-                value: state.tooltipsEnabled,
-                activeThumbColor: const Color(0xFF4A9EFF),
-                onChanged: (_) => state.toggleTooltipsEnabled(),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 8),
-        GestureDetector(
-          onTap: () => _openTrainingCenter(context, state, isDark),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: fBg,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: bdr),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.auto_awesome,
-                  color: Color(0xFFFF9500),
-                  size: 17,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Обучение',
-                        style: TextStyle(
-                          color: txt,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Короткие темы можно проходить в любом порядке и повторять.',
-                        style: TextStyle(color: sub, fontSize: 11.5),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(Icons.play_arrow_rounded, color: sub, size: 20),
-              ],
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -1268,176 +1193,73 @@ class _ProfileTimelineButton extends StatelessWidget {
   }
 }
 
-// ─── Tutorial module tile ─────────────────────────────────────────────────────
+class _ProfileSettingsToggle extends StatelessWidget {
+  const _ProfileSettingsToggle({
+    required this.background,
+    required this.border,
+    required this.text,
+    required this.secondary,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
 
-class _ProfileTutorialHint extends StatelessWidget {
-  final bool isDark;
-  final VoidCallback? onComplete;
-
-  const _ProfileTutorialHint({required this.isDark, this.onComplete});
+  final Color background;
+  final Color border;
+  final Color text;
+  final Color secondary;
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
 
   @override
-  Widget build(BuildContext context) {
-    const accent = Color(0xFFAF52DE);
-    return Container(
-      key: const ValueKey('profile-tutorial-inline-guidance'),
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: accent.withAlpha(isDark ? 24 : 14),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: accent.withAlpha(92)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    decoration: BoxDecoration(
+      color: background,
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(color: border),
+    ),
+    child: Row(
+      children: [
+        Icon(
+          icon,
+          color: value ? const Color(0xFF4A9EFF) : secondary.withAlpha(150),
+          size: 17,
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.auto_awesome_rounded, color: accent, size: 19),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Настройки под тебя',
-                  style: TextStyle(
-                    color: textColor(isDark),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
-                  ),
+              Text(
+                title,
+                style: TextStyle(
+                  color: text,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
                 ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: TextStyle(color: secondary, fontSize: 11.5),
               ),
             ],
           ),
-          const SizedBox(height: 7),
-          Text(
-            'Здесь можно настроить подсказки и заново открыть любую короткую тему обучения.',
-            style: TextStyle(
-              color: subtext(isDark),
-              fontSize: 12,
-              height: 1.35,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          if (onComplete != null) ...[
-            const SizedBox(height: 10),
-            FilledButton.icon(
-              key: const ValueKey('profile-tutorial-complete'),
-              onPressed: onComplete,
-              style: FilledButton.styleFrom(
-                backgroundColor: accent,
-                foregroundColor: Colors.white,
-                visualDensity: VisualDensity.compact,
-              ),
-              icon: const Icon(Icons.check_rounded, size: 17),
-              label: const Text('Завершить тему'),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _TutorialModuleTile extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final Color color;
-  final bool completed;
-  final bool active;
-  final bool isDark;
-  final Color borderColor;
-  final VoidCallback onTap;
-
-  const _TutorialModuleTile({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.color,
-    required this.completed,
-    required this.active,
-    required this.isDark,
-    required this.borderColor,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final txt = textColor(isDark);
-    final sub = subtext(isDark);
-
-    final status = active ? 'Сейчас' : (completed ? 'Пройдено' : 'Доступно');
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Semantics(
-        button: true,
-        selected: active,
-        label: '$title. $status. $subtitle',
-        child: PressFeedback(
-          scale: 0.98,
-          onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.all(11),
-            decoration: BoxDecoration(
-              color: color.withAlpha(
-                active ? (isDark ? 30 : 20) : (isDark ? 18 : 12),
-              ),
-              borderRadius: BorderRadius.circular(13),
-              border: Border.all(
-                color: active ? color.withAlpha(150) : borderColor,
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: color.withAlpha(isDark ? 30 : 22),
-                    borderRadius: BorderRadius.circular(11),
-                  ),
-                  child: Icon(icon, color: color, size: 18),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: TextStyle(
-                          color: txt,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle,
-                        style: TextStyle(
-                          color: sub,
-                          fontSize: 11.5,
-                          height: 1.25,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  active
-                      ? Icons.play_circle_fill_rounded
-                      : completed
-                      ? Icons.check_circle_rounded
-                      : Icons.play_arrow_rounded,
-                  color: completed && !active ? const Color(0xFF34C759) : color,
-                  size: 20,
-                ),
-              ],
-            ),
-          ),
         ),
-      ),
-    );
-  }
+        Switch(
+          value: value,
+          activeThumbColor: const Color(0xFF4A9EFF),
+          onChanged: onChanged,
+        ),
+      ],
+    ),
+  );
 }
 
 // ─── Skill chip (in profile) ──────────────────────────────────────────────────

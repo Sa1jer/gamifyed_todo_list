@@ -19,6 +19,7 @@ class DesktopQuestRow extends StatefulWidget {
   final void Function(String taskId, ActionToastOrigin origin) onComplete;
   final void Function(String taskId, ActionToastOrigin origin) onMinimumAction;
   final GlobalKey? minimumActionTutorialKey;
+  final GlobalKey? completionTutorialKey;
   final VoidCallback onEdit;
 
   const DesktopQuestRow({
@@ -30,6 +31,7 @@ class DesktopQuestRow extends StatefulWidget {
     required this.onComplete,
     required this.onMinimumAction,
     this.minimumActionTutorialKey,
+    this.completionTutorialKey,
     required this.onEdit,
   });
 
@@ -96,16 +98,19 @@ class _DesktopQuestRowState extends State<DesktopQuestRow> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                _DesktopQuestCheck(
-                  done: done,
-                  color: done ? tokens.successGreen : widget.skill.color,
-                  onTap: (origin) {
-                    if (done) {
-                      widget.state.uncompleteTask(task.id);
-                    } else {
-                      widget.onComplete(task.id, origin);
-                    }
-                  },
+                KeyedSubtree(
+                  key: widget.completionTutorialKey,
+                  child: _DesktopQuestCheck(
+                    done: done,
+                    color: done ? tokens.successGreen : widget.skill.color,
+                    onTap: (origin) {
+                      if (done) {
+                        widget.state.uncompleteTask(task.id);
+                      } else {
+                        widget.onComplete(task.id, origin);
+                      }
+                    },
+                  ),
                 ),
                 const SizedBox(width: 13),
                 Expanded(

@@ -30,18 +30,16 @@ class ProgressWorkspaceDestinations {
 class ProgressWorkspace extends StatelessWidget {
   final AppState state;
   final bool isDark;
-  final bool showTutorialHint;
+  final Key? summaryTutorialKey;
   final VoidCallback onClose;
-  final VoidCallback? onTutorialComplete;
   final ProgressWorkspaceDestinations destinations;
 
   const ProgressWorkspace({
     super.key,
     required this.state,
     required this.isDark,
-    this.showTutorialHint = false,
+    this.summaryTutorialKey,
     required this.onClose,
-    this.onTutorialComplete,
     required this.destinations,
   });
 
@@ -52,10 +50,9 @@ class ProgressWorkspace extends StatelessWidget {
         child: ProgressHubContent(
           state: state,
           isDark: isDark,
-          showTutorialHint: showTutorialHint,
+          summaryTutorialKey: summaryTutorialKey,
           showCloseButton: constraints.maxWidth < 761,
           onClose: onClose,
-          onTutorialComplete: onTutorialComplete,
           subtitle: 'Что получилось, какой навык вырос и что продолжить.',
           onOpenDailyVictories: destinations.onOpenDailyVictories,
           onOpenCharacterTimeline: destinations.onOpenCharacterTimeline,

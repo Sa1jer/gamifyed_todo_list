@@ -256,6 +256,7 @@ class _MasteryMapBody extends StatelessWidget {
   final GlobalKey<_OrbMasteryMapCanvasState>? canvasControlKey;
   final GlobalKey? inspectorTutorialKey;
   final GlobalKey? practiceTutorialKey;
+  final VoidCallback? onInitialViewReady;
   final ValueChanged<_MasterySelection?> onSelectionChanged;
   final ValueChanged<Skill> onAddRoot;
   final void Function(Skill skill, SkillTreeNode node) onExtendPath;
@@ -285,6 +286,7 @@ class _MasteryMapBody extends StatelessWidget {
     this.canvasControlKey,
     this.inspectorTutorialKey,
     this.practiceTutorialKey,
+    this.onInitialViewReady,
     required this.onSelectionChanged,
     required this.onAddRoot,
     required this.onExtendPath,
@@ -333,6 +335,7 @@ class _MasteryMapBody extends StatelessWidget {
             }
             onSelectionChanged(_MasterySelection.node(skill.id, node.id));
           },
+          onInitialViewReady: onInitialViewReady,
         );
         final canvas = canvasControlKey != null && canvasTutorialKey != null
             ? KeyedSubtree(key: canvasTutorialKey, child: canvasWidget)
