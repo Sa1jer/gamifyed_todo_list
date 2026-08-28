@@ -165,11 +165,7 @@ Future<void> main() async {
 }
 
 void _checkTutorialRuntimeGuards(Directory root, List<String> violations) {
-  final paths = <String>[
-    'lib/tutorial',
-    'lib/widgets/tutorial',
-    'lib/widgets/main_page/first_run_tutorial.dart',
-  ];
+  final paths = <String>['lib/tutorial', 'lib/widgets/tutorial'];
   final sources = <MapEntry<String, String>>[];
   for (final relative in paths) {
     final entity = FileSystemEntity.typeSync(
@@ -238,7 +234,46 @@ void _checkTutorialRuntimeGuards(Directory root, List<String> violations) {
   if (!readiness.existsSync() ||
       !readiness.readAsStringSync().contains('TutorialTargetProbe')) {
     violations.add(
-      'Tutorial v3 requires the shared time-bounded TutorialTargetProbe.',
+      'Tutorial v4 requires the shared time-bounded TutorialTargetProbe.',
+    );
+  }
+
+  for (final removedPath in const [
+    'lib/widgets/main_page/first_run_tutorial.dart',
+    'lib/widgets/dialogs/rewards_tutorial.dart',
+    'lib/widgets/progress_hub/progress_hub_tutorial.dart',
+  ]) {
+    final file = File(
+      '${root.path}${Platform.pathSeparator}'
+      '${removedPath.replaceAll('/', Platform.pathSeparator)}',
+    );
+    if (file.existsSync()) {
+      violations.add('$removedPath is a removed Tutorial v3 visual owner.');
+    }
+  }
+
+  final shell = File(
+    '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
+    'widgets${Platform.pathSeparator}main_page${Platform.pathSeparator}'
+    'shell.dart',
+  ).readAsStringSync();
+  for (final legacySymbol in const [
+    '_statsTutorialActive',
+    '_rewardsTutorialActive',
+    '_openRoadmapTutorialAndAdvance',
+    '_GuidedTutorialStep',
+  ]) {
+    if (shell.contains(legacySymbol)) {
+      violations.add(
+        'lib/widgets/main_page/shell.dart reintroduces legacy tutorial owner '
+        '$legacySymbol.',
+      );
+    }
+  }
+  if (RegExp(r'showTutorialHint\s*:').hasMatch(shell)) {
+    violations.add(
+      'MainPage must route Tutorial v4 through real Statistics/Trophies '
+      'surfaces instead of tutorial-only dialog flags.',
     );
   }
 }
@@ -296,6 +331,55 @@ void _checkTutorialBoundaries(Directory root, List<String> violations) {
       'package:hive',
     ]) {
       _forbidImport(path, source, dependency, violations);
+    }
+    if ((path.endsWith('guided_tour_plan.dart') ||
+            path.endsWith('guided_tour_session.dart')) &&
+        source.contains('firstIncompleteStep')) {
+      violations.add(
+        '$path must build replay from its session plan, not persisted '
+        'firstIncompleteStep history.',
+      );
+    }
+  }
+
+  final widgetTutorialDirectory = Directory(
+    '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
+    'widgets${Platform.pathSeparator}tutorial',
+  );
+  for (final file
+      in widgetTutorialDirectory
+          .listSync(recursive: true, followLinks: false)
+          .whereType<File>()
+          .where((file) => file.path.endsWith('.dart'))) {
+    final path = _relativePath(root, file);
+    final source = file.readAsStringSync();
+    _forbidPartOf(path, source, violations);
+    for (final dependency in const [
+      'app_state.dart',
+      'storage_service.dart',
+      '/persistence/',
+      'package:hive',
+    ]) {
+      _forbidImport(path, source, dependency, violations);
+    }
+  }
+
+  for (final requiredPath in const [
+    'lib/tutorial/guided_tour_plan.dart',
+    'lib/tutorial/guided_tour_session.dart',
+    'lib/widgets/tutorial/guided_tour_app_coordinator.dart',
+    'lib/widgets/tutorial/guided_tour_host.dart',
+    'lib/widgets/tutorial/guided_tour_navigation_coordinator.dart',
+    'lib/widgets/tutorial/guided_tour_surface_controller.dart',
+    'lib/widgets/tutorial/tutorial_anchor_registry.dart',
+    'lib/widgets/tutorial/tutorial_training_center.dart',
+  ]) {
+    final file = File(
+      '${root.path}${Platform.pathSeparator}'
+      '${requiredPath.replaceAll('/', Platform.pathSeparator)}',
+    );
+    if (!file.existsSync()) {
+      violations.add('Tutorial v4 requires $requiredPath.');
     }
   }
 

@@ -6,8 +6,8 @@ Widget _harness({
   required bool isDark,
   required bool reducedMotion,
   required double textScale,
-  required VoidCallback onDismiss,
-  Duration displayDuration = const Duration(seconds: 4),
+  required VoidCallback onShowRest,
+  required VoidCallback onStartUsing,
 }) {
   return MaterialApp(
     theme: ThemeData.light(),
@@ -24,8 +24,8 @@ Widget _harness({
         TutorialCompletionCard(
           isDark: isDark,
           reducedMotion: reducedMotion,
-          onDismiss: onDismiss,
-          displayDuration: displayDuration,
+          onShowRest: onShowRest,
+          onStartUsing: onStartUsing,
         ),
       ],
     ),
@@ -33,29 +33,29 @@ Widget _harness({
 }
 
 void main() {
-  testWidgets('Core completion is dismissible without a continuation gate', (
+  testWidgets('Core completion offers optional continuation and normal use', (
     tester,
   ) async {
-    var dismissed = false;
+    var showRest = false;
+    var startUsing = false;
 
     await tester.pumpWidget(
       _harness(
         isDark: true,
         reducedMotion: true,
         textScale: 1,
-        onDismiss: () => dismissed = true,
+        onShowRest: () => showRest = true,
+        onStartUsing: () => startUsing = true,
       ),
     );
 
     expect(find.text('Основу ты знаешь.'), findsOneWidget);
-    expect(find.text('Остальные темы доступны в профиле.'), findsOneWidget);
-    expect(find.byType(FilledButton), findsNothing);
+    expect(find.text('Показать остальное'), findsOneWidget);
+    expect(find.text('Начать пользоваться'), findsOneWidget);
 
-    await tester.tap(
-      find.byKey(const ValueKey('tutorial-core-completion-dismiss')),
-    );
-
-    expect(dismissed, isTrue);
+    await tester.tap(find.byKey(const ValueKey('tutorial-core-show-rest')));
+    expect(showRest, isTrue);
+    expect(startUsing, isFalse);
   });
 
   testWidgets('Core completion supports light theme and 200 percent text', (
@@ -66,26 +66,26 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    var dismissed = false;
+    var startUsing = false;
     await tester.pumpWidget(
       _harness(
         isDark: false,
         reducedMotion: false,
         textScale: 2,
-        onDismiss: () => dismissed = true,
-        displayDuration: const Duration(milliseconds: 500),
+        onShowRest: () {},
+        onStartUsing: () => startUsing = true,
       ),
     );
     await tester.pumpAndSettle();
 
     expect(find.text('Основу ты знаешь.'), findsOneWidget);
     expect(
-      find.byKey(const ValueKey('tutorial-core-completion-dismiss')),
+      find.byKey(const ValueKey('tutorial-core-start-using')),
       findsOneWidget,
     );
     expect(tester.takeException(), isNull);
 
-    await tester.pump(const Duration(milliseconds: 501));
-    expect(dismissed, isTrue);
+    await tester.tap(find.byKey(const ValueKey('tutorial-core-start-using')));
+    expect(startUsing, isTrue);
   });
 }

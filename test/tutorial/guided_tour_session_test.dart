@@ -44,6 +44,12 @@ void main() {
         isTrue,
       );
       expect(populatedPlan.steps.length, shortPlan.steps.length + 1);
+      expect(
+        populatedPlan.steps
+            .where((step) => step.id.startsWith('tour.nav.'))
+            .map((step) => step.destination),
+        everyElement(GuidedTourDestination.act),
+      );
     });
 
     test('module replay order is independent of historical completion', () {
