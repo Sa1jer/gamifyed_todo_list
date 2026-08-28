@@ -1,6 +1,6 @@
 # TODO / Living Backlog
 
-Last updated: 2026-08-27
+Last updated: 2026-08-28
 
 This file tracks the active implementation roadmap and completed project work. Update it after every meaningful code or design change.
 
@@ -49,11 +49,13 @@ This file tracks the active implementation roadmap and completed project work. U
 - [x] Redesign Skill Creator around name/Goal, live preview, twelve curated icons plus categorized full picker, and collapsed optional first Stage while preserving hidden checklist and existing RoadMap data on edit.
 - [x] Make desktop Skill Creator content-driven and compact, replace the primary icon grid with a curated wrap, and move the full catalog into a bounded categorized dialog with short-window `2.0x` coverage.
 - [x] Remove the desktop sidebar hover DecorationTween and centralize hover ownership in one stable pointer region; automated light/dark pointer tests show no false exit or geometry change across stationary frames and parent rebuilds.
-- [x] Introduce Tutorial v3 runtime phases, spotlight/Coach/inline modes, wall-clock target readiness, real Profile teaching, dedicated Minimum Action targeting, readiness-gated RoadMap navigation, and non-blocking Core completion without fake data or rewards.
+- [x] Replace disconnected Tutorial v3 overlays with Tutorial v4: separate persisted history from a session-only plan/runtime, keep Core at Skill -> Quest -> next action, and route one read-only full replay through the real Act, RoadMap, Statistics, Trophies, and Profile surfaces.
+- [x] Add semantic tutorial anchors, collision-aware desktop placement, a stable mobile bottom coach card, readiness/disposal-safe navigation, visible whole-tour progress, and a Profile Training Center with full replay, genuine continuation/restart, and independent topic replay.
+- [x] Remove tutorial-only Statistics/Rewards presentation paths and legacy nested visual owners; protect replay from Welcome/history/domain reset and keep XP, rewards, RoadMap, Goal, History, and settings unchanged.
 - [x] Verify the corrected light/dark sidebar hover, transformed vertical RoadMap labels and Goal alignment, compact Skill Creator, and categorized full icon picker in a native macOS release session.
-- [ ] Perform native Windows pointer QA plus popup overlay transfer, keyboard traversal, and RoadMap resize while a tutorial spotlight is active; automated tests and the macOS pass cannot prove those remaining platform paths.
-- [ ] Perform physical Android QA for RoadMap top/bottom fling clipping at `360/393/430dp`, Profile inertia boundaries, Skill Creator keyboard/Back, Tutorial v3 TalkBack order, and `2.0x` font/display size.
-- [ ] Capture profile-mode frame timings for long RoadMap scrolling, Profile body scrolling, Skill icon expansion, and Tutorial spotlight movement before making performance claims.
+- [ ] Perform native macOS and Windows Tutorial v4 QA in light/dark themes: full replay, all four placement sides, keyboard focus/Escape, Profile ending, RoadMap/Statistics/Trophies transitions, rapid resize, and popup/route transfer. Automated tests do not prove compositor or spoken-focus quality.
+- [ ] Perform physical Android QA for RoadMap top/bottom fling clipping at `360/393/430dp`, Profile inertia boundaries, Skill Creator keyboard/Back, Tutorial v4 Core/full/topic TalkBack order, gesture Back, and `2.0x` font/display size.
+- [ ] Capture profile-mode frame timings for long RoadMap scrolling, Profile body scrolling, Skill icon expansion, and Tutorial v4 spotlight movement before making performance claims.
 
 ## P1 — Architecture Decomposition
 

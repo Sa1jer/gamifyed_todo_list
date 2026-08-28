@@ -1,14 +1,16 @@
 # Mobile UX/UI Product Audit
 
-## Desktop Corrective Compatibility — 2026-08-27
+## Tutorial v4 Mobile Compatibility — 2026-08-28
 
-The desktop RoadMap geometry, sidebar hover, and Skill Creator density pass did
-not change the mobile product model. Mobile RoadMap remains the existing
-vertical ascent projection, mobile AddSkill keeps its touch-oriented icon grid
-and full-screen dirty-draft protection, and Tutorial v3 was not redesigned.
-Focused regression coverage confirms zero/one-stage and branched mobile
-RoadMaps plus mobile Skill creation after the shared icon data extraction.
-Physical Android `2.0x`, keyboard/Back, and TalkBack checks remain manual gates.
+Tutorial v4 keeps the established mobile product model: RoadMap remains the
+vertical ascent projection, Skill/Quest creation still uses full-screen
+dirty-draft-safe routes, and Statistics/Trophies/Profile use their ordinary
+secondary pages. One SafeArea-aware bottom coach card follows semantic anchors;
+system Back closes/pauses the temporary tour surface without leaving a dead
+overlay. Focused coverage verifies mobile Statistics navigation and Back,
+`2.0x` reachability, reduced motion, and lifecycle cancellation. Physical
+Android TalkBack, keyboard, display-size, and gesture-Back checks remain manual
+gates.
 
 ## Stabilization Update — 2026-08-18
 
@@ -211,8 +213,9 @@ less predictable.
 ### First Run
 
 Current path: successful fresh startup -> Welcome -> guided skill creation ->
-guided quest creation -> acknowledgement of the first useful action. Act,
-RoadMap, Growth, Trophies, and Profile are separate optional modules.
+guided quest creation -> acknowledgement of the first useful action -> choose
+normal use or the optional cohesive product tour. Individual Act, RoadMap,
+Growth, Trophies, and Profile topics also remain replayable.
 
 What works:
 
@@ -229,8 +232,9 @@ Remaining validation:
 
 - Physical-device research must confirm that the shorter Core still gives
   enough context without becoming another mandatory wizard.
-- Optional overlays still need TalkBack/VoiceOver and `2.0x` text-scale review
-  against their real responsive targets.
+- Core, full replay, and topic replay still need physical TalkBack/VoiceOver
+  review against their real responsive targets; automated `2.0x` layout alone
+  cannot prove comfortable spoken order.
 - First useful action is intentionally acknowledged rather than completed; the
   product still needs usage evidence for whether that is the right adoption
   success signal.
@@ -564,8 +568,8 @@ Remaining quick wins:
    and scheduling failure; offer inexact timing when product requirements allow.
 5. Restore a last-active skill as device-local presentation state, with a clear
    way to return to the skill chooser.
-6. Validate the new Welcome and short Core funnel on physical devices; keep
-   RoadMap, Growth, Trophies, Profile, and Act as optional learn-more modules.
+6. Validate Welcome, short Core, cohesive full replay, and topic replay on
+   physical devices; keep the longer tour optional and read-only.
 7. Create final launcher/splash artwork and replace placeholder metadata before
    release.
 8. Design a real streak model and stats contract before adding richer streak
@@ -887,15 +891,20 @@ mobile keeps a compact emblem. Optional first Stage starts collapsed, and the
 first-run hint explicitly says that name and Goal are enough. Existing Skill
 edits preserve checklist and all existing appearance/RoadMap values.
 
-### Tutorial v3
+### Tutorial v4
 
-Tutorial presentation now distinguishes real-control spotlight, conceptual
-Coach Card, and inline guidance. Target waits are wall-clock bounded rather
-than frame-count bounded. RoadMap navigation hides the old overlay until the
-real canvas is laid out; Profile guidance runs inside the real Profile page;
-Minimum Action uses a dedicated real control or a Coach Card fallback. Core
-completion is non-blocking and auto-dismisses. No fake domain data or rewards
-are introduced.
+The short Core remains interactive, but the optional replay is now one
+read-only session through the real Act, RoadMap, Statistics, Trophies, and
+Profile surfaces. It shows overall progress, uses one host, removes nested
+tutorial dialogs, hides the old card while routes/workspaces change, and enters
+the next card only after destination plus semantic-anchor readiness.
+
+Desktop placement evaluates all four target sides and reserved regions; mobile
+uses a stable bottom coach card. Minimum Action is included only when a real
+target exists. Missing Stage/summary controls follow declared skip, parent,
+coach, or safe-end policy instead of creating an arbitrary centered popup.
+Replay does not reset Welcome/history or mutate Skills, Tasks, XP, History,
+rewards, RoadMap, Goals, or settings.
 
 Physical Android overscroll/glow review, TalkBack ordering, high-refresh
 transition profiling, and outdoor light-canvas contrast remain manual gates.

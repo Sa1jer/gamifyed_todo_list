@@ -1,6 +1,6 @@
 # Mobile Accessibility, Motion, And Usability QA
 
-Updated: 2026-08-27
+Updated: 2026-08-28
 
 ## Automated Coverage
 
@@ -30,16 +30,21 @@ Updated: 2026-08-27
 - Welcome is covered at `360`, `393`, `430`, `700`, and desktop widths in dark
   and light themes, including `1.3x`/`2.0x` text scale and reduced motion. Its
   route/CTA semantics remain explicit and decorative path art is excluded.
-- Core tutorial regression coverage verifies Skill -> Quest -> first useful
-  action without automatic Task completion or XP. Optional modules are started,
-  skipped, and replayed independently.
-- Tutorial target readiness is mounted/layout based with a `1200ms` wall-clock
-  bound, not a frame-count timeout. Missing controls fall back to a dismissible
-  Coach Card, and there is no fixed two-second transition timer.
-- Tutorial panels accept desktop `Escape`, use focusable semantics, reduce
-  Coach Card scrim strength, and remove translation when reduced motion is on.
-- Core completion is a compact live-region banner that auto-dismisses without
-  a required fourth action and grants no reward.
+- Tutorial v4 Core regression coverage verifies Skill -> Quest -> next useful
+  action without automatic Task completion or XP. Full and topic replay plans
+  remain independent from historical completion and domain data.
+- One GuidedTourHost follows semantic anchors on real Act, RoadMap, Statistics,
+  Trophies, and Profile surfaces. Desktop placement exercises all four sides
+  and collision-safe docking; mobile uses a SafeArea-aware bottom coach card.
+- Target readiness has a `1200ms` wall-clock bound and lifecycle cancellation,
+  not a frame-count timeout. Optional missing controls use explicit
+  skip/parent/coach/end policy; no fixed two-second transition timer remains.
+- Tutorial panels accept desktop `Escape`; mobile real Statistics navigation
+  verifies system Back pauses/closes the temporary tour surface and leaves the
+  app usable. In-flight route/anchor waits are disposal-safe.
+- Host controls remain reachable at `2.0x` text. Semantics announce one overall
+  step context and title, and reduced motion removes translation without
+  changing transition order.
 - Mobile RoadMap owns one hard-clipped graph viewport; cards, root labels, and
   active glow cannot paint through fixed header or bottom navigation.
 - Profile fixed-hero/one-body-scroll coverage includes mobile and short desktop
@@ -102,9 +107,9 @@ refresh rate, and whether any interaction exceeds the frame budget.
 - [ ] Fling the mobile RoadMap repeatedly to absolute top/bottom at `360`,
   `393`, and `430dp`; confirm active glow and labels stay inside its clipped
   viewport in both themes.
-- [ ] Run every Tutorial v3 presentation mode with TalkBack/VoiceOver; verify
-  coach focus, spotlight copy, inline Profile/Skill guidance, `Escape`, skip,
-  and the auto-dismissing Core live region.
+- [ ] Run Tutorial v4 Core, full replay, and each topic with TalkBack/VoiceOver;
+  verify spoken progress/title order, coach focus, real-surface anchors, mobile
+  Back, skip, Training Center continuation, and Core completion choices.
 
 ## Five-Scenario Usability Script — Pending Physical Run
 
@@ -129,9 +134,9 @@ refresh rate, and whether any interaction exceeds the frame budget.
   snapshot transition.
 - Revisit RoadMap branch disclosure and long labels only from physical-device
   evidence; do not rewrite `RoadmapEngine` or graph semantics in a polish batch.
-- Run Welcome plus every optional tutorial module with TalkBack/VoiceOver at
-  `1.0x`, `1.3x`, and `2.0x`; automated semantics do not prove comfortable
-  spoken order on a physical device.
+- Run Welcome, Core, full replay, and every optional tutorial module with
+  TalkBack/VoiceOver at `1.0x`, `1.3x`, and `2.0x`; automated semantics do not
+  prove comfortable spoken order on a physical device.
 
 ## Desktop Runtime Boundary
 

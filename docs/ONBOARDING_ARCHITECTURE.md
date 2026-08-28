@@ -1,6 +1,6 @@
 # Welcome And Tutorial Architecture
 
-Last updated: 2026-08-27
+Last updated: 2026-08-28
 
 ## Product Boundary
 
@@ -8,135 +8,177 @@ First-run guidance has three deliberately separate layers:
 
 1. **Welcome** explains the product promise and local-data boundary before the
    application shell appears.
-2. **Core tutorial** teaches only `Навык -> Квест -> первое полезное действие`.
-3. **Optional modules** explain Act, RoadMap, Growth, Trophies, and Profile on
-   demand. Completing or skipping one optional module never starts another.
+2. **Interactive Core** teaches only `Навык -> Квест -> следующее действие`.
+3. **Guided Product Tour** is an optional, read-only presentation session that
+   walks through the real Act, RoadMap, Statistics, Trophies, and Profile
+   surfaces. Any topic can also be replayed independently.
 
-Welcome and tutorials do not create sample Skills or Tasks, complete a Task,
-grant XP, or alter Goal, RoadMap, reward, history, or Inbox semantics. The Core
-final step is an acknowledgement: the user can complete a real action later.
+Welcome and replay never create sample data, complete a Task, grant XP, open a
+reward, or alter Goal, RoadMap, History, or settings. Core may create a real
+Skill and Quest only when the user saves their normal creation forms. Its last
+step is an acknowledgement, not an automatic completion.
 
-## Startup Order
+## Startup And First Run
 
 ```text
 application start
   -> StorageService load
   -> PersistenceGate
        -> load failure: recovery UI
-       -> successful load: AppState decides Welcome visibility
+       -> successful load: Welcome decision
             -> unseen fresh install: Welcome
             -> existing install or Welcome seen: application shell
+                 -> first relevant Core step
 ```
 
-Recovery always wins. Welcome is never rendered while startup data is failed or
-unresolved. Pressing `Начать` saves the device-local Welcome marker and starts
-the first relevant Core step without changing domain data.
+Recovery always wins. Welcome is never shown while persisted data is failed or
+unresolved. `Начать` stores the device-local Welcome marker and continues into
+Core without creating domain data.
 
-## State And Compatibility
+Core contains exactly three user-facing steps:
 
-- `welcomeSeen` is a device-local preference owned by `StorageService`. It is
-  intentionally outside `StorageSnapshot`, Hive domain payloads, and future
-  account/cloud conflict state.
-- `onboardingSeen` and `TutorialProgress` keep their existing persisted shape
-  for backward compatibility.
-- A saved install with existing profile/domain/tutorial evidence is treated as
-  already welcomed, so an upgrade never forces the new Welcome screen on an
-  established user.
-- Legacy Core step IDs remain readable. Progress that already reached the old
-  XP/RoadMap/Statistics continuation is normalized to completed Core v2 rather
-  than restarting the user.
-- Resetting or replaying tutorials does not reset Welcome. Debug/fresh-state
-  tools may explicitly reset both when they intentionally simulate a new
-  install.
+1. Create the first Skill through the real Skill form.
+2. Create the first Quest through the real Quest form.
+3. Identify the next useful action; completion and XP are not required.
+
+Cancelling either form does not advance. After Core, the user chooses
+`Показать остальное` or `Начать пользоваться`; the longer tour is never forced.
+
+## Persisted History And Session Runtime
+
+`TutorialProgress` remains the persisted compatibility/history authority. It
+answers which modules and steps were seen and retains active first-run progress
+for restart compatibility. Its storage shape and legacy IDs are unchanged.
+
+`GuidedTourSession` is presentation-only runtime state. It owns a plan, current
+index, and the phases `presenting`, `leaving`, `navigating`,
+`waitingForAnchor`, `entering`, `paused`, and `completed`. It owns no Hive data,
+domain models, `BuildContext`, navigation routes, or timers.
+
+A full replay is built from `GuidedTourPlan.fullProductTour`; it never uses
+historical `firstIncompleteStep` selection. Therefore previously completed
+chapters are still replayed, while completed history remains intact. Restarting
+the tour restarts only the in-memory session and never reopens Welcome.
 
 ## Ownership
 
 | Area | Owner | Responsibility |
 |---|---|---|
-| Static module and step copy | `lib/tutorial/tutorial_catalog.dart` | Framework-free tutorial knowledge and legacy Core IDs. |
-| Progression and normalization | `lib/tutorial/tutorial_coordinator.dart` | Pure compatibility, next-step, and default-Core policy. |
-| Welcome copy | `lib/tutorial/welcome_copy.dart` | Central product copy without widget dependencies. |
-| Welcome presentation | `lib/widgets/welcome_page.dart` | Responsive, accessible full-screen route and future action slots. |
-| Target readiness | `lib/widgets/tutorial/tutorial_target_readiness.dart` | Shared mounted/layout probe with a wall-clock deadline and safe fallback. |
-| Runtime sequencing | `lib/widgets/main_page/first_run_tutorial.dart` | Session-only phases, target presentation, focus, motion, and fallback mode. |
-| Navigation binding | `lib/widgets/main_page/shell.dart` | Opens real workspaces/dialogs and advances only after the destination target is laid out. |
-| Runtime facade | `lib/app_state.dart` | Public commands, current progress, persistence scheduling, and one final notification. |
-| Profile module picker | `lib/widgets/profile_dialog.dart` | Compact replay/start/skip entry point for each module. |
+| Persisted compatibility | `TutorialProgress`, `TutorialCoordinator`, `TutorialCatalog` | Existing module/step identities, normalization, and first-run history. |
+| Pure tour plan | `guided_tour_plan.dart` | Ordered Core/full/topic plans, destinations, semantic anchors, and missing-target policy. |
+| Pure session | `guided_tour_session.dart` | Session index and transition state without Flutter or domain dependencies. |
+| Session presentation | `guided_tour_session_controller.dart` | One listenable session plus a narrow active-anchor signal. |
+| App bridge | `guided_tour_app_coordinator.dart` | Scalar persisted-state sync and explicit first-run callbacks; no AppState import. |
+| Navigation | `guided_tour_navigation_coordinator.dart` | Leave, navigate, wait, enter ordering and safe disposal. |
+| Temporary routes | `guided_tour_surface_controller.dart` | Mobile/Profile route readiness, manual close, Back, and cleanup. |
+| Semantic targets | `tutorial_anchor_registry.dart` | Stable anchor keys, live geometry, bounded readiness, and cancellation. |
+| One visual host | `guided_tour_host.dart` | Spotlight, one coach card, focus, keyboard, semantics, and motion. |
+| Training Center | `tutorial_training_center.dart` | Full replay, genuine full-tour continuation/restart, and topic replay. |
+| Product routing | `main_page/shell.dart` | Binds abstract destinations to the normal desktop/mobile product surfaces. |
 
-The files in `lib/tutorial/` must not import Flutter, widgets, AppState, or
-persistence. UI navigation and `GlobalKey` targets remain presentation-owned.
+Files in `lib/tutorial/` remain framework-free and must not import Flutter,
+widgets, AppState, or persistence. Presentation coordinators do not mutate
+domain data directly; Core mutations are explicit callbacks to normal product
+forms, and replay has no mutation callback.
 
-## Tutorial V3 Runtime
+## Real-Surface Navigation
 
-The session-only runtime has explicit phases: `idle`, `transitioning`,
-`waitingForTarget`, `presenting`, `completing`, and `completed`. Only
-`TutorialProgress` is persisted. Runtime phases never create another tutorial
-state model and remain safe for legacy v2 progress.
-
-Target readiness uses `TutorialTargetProbe`: mounted `RenderBox` state is
-checked on layout events and short periodic probes, while a `1200ms` wall-clock
-deadline bounds the wait. The deadline is not a visual delay and does not count
-frames, so 60 Hz and high-refresh displays receive the same readiness window.
-An unavailable target becomes a dismissible Coach Card instead of trapping the
-user.
-
-Navigation follows this order:
+Every navigation step follows one sequence:
 
 ```text
-CTA -> transitioning -> open real destination -> wait for laid-out target
-    -> commit old step -> wait/present next step
+presenting -> leaving -> navigate real product surface
+  -> wait for route/workspace readiness -> wait for semantic anchor
+  -> entering -> presenting
 ```
 
-The RoadMap chapter hides the old overlay while its workspace changes. The
-Profile chapter opens the real Profile surface and completes from inline
-guidance inside it. No arbitrary two-second delay or one-frame progression
-callback owns navigation.
+No tutorial card is visible while the destination changes. Desktop Statistics
+and Trophies use their normal workspaces. Mobile uses the same secondary pages
+as ordinary navigation. Profile uses the real profile surface and ends beside
+its Training Center. Tutorial-specific Statistics/Rewards dialogs and nested
+tutorial overlays were removed.
 
-Tutorial v3 uses three presentation modes:
+The `GuidedTourSurfaceController` distinguishes a user closing a temporary
+route from a route replaced by tutorial navigation. Mobile system Back and
+desktop close pause a resumable full tour and release route references. All
+in-flight destination and anchor waits are cancellation-safe after disposal.
 
-- `spotlight`: a real, current control such as `+ Навык`, `+ Квест`, or an
-  available desktop `Минимальный шаг`;
-- `coachCard`: a concept without a reliable control, including Minimum Action
-  when current data has no such action;
-- `inlineGuidance`: guidance inside real creation/Profile surfaces.
+## Semantic Anchors And Missing Targets
 
-Active spotlight geometry is re-read after every real rendered frame, so
-scrolling and resizing cannot leave a stale rectangle. Coach Cards use a light
-scrim and avoid the spotlight `saveLayer`. `Escape` dismisses tutorial UI on
-desktop. Reduced motion removes translation and uses the stable final state.
+The plan names intent (`navRoadmap`, `statisticsSummary`, `profileTraining`),
+not widget hierarchy. Product widgets register the matching real control or
+content region. The registry re-reads rendered geometry after layout, scroll,
+resize, and route changes; dynamic active keys are limited to the current
+anchor so repeated list controls do not share a `GlobalKey`.
 
-After the third Core acknowledgement, persisted Core progress is already
-complete. A compact session-only banner says that optional topics are available
-in Profile, dismisses automatically, and never requires a fourth continuation
-action. It grants no XP, trophy, chest, or reward.
+Each step declares an explicit missing-target policy:
 
-## Responsive And Accessibility Contract
+- `skip`: omit an optional data-dependent detail such as Minimum Action;
+- `useParentAnchor`: use a nearby stable product region;
+- `coachCard`: explain a concept without pretending a control exists;
+- `endChapterSafely`: stop an unusable navigation chapter without trapping the
+  user.
 
-- Welcome is scroll-safe at `360`, `393`, `430`, `700`, and desktop widths.
-- Primary actions remain reachable at `1.0x`, `1.3x`, and `2.0x` text scale.
-- The route and CTA have explicit semantics; decorative path art is excluded.
-- Dark is the polished target and light uses the existing usable semantic
-  tokens.
-- Optional tutorial content remains dismissible when a target is unavailable.
-- The Core completion banner is a live region but does not block the app.
-- Coach/spotlight panels receive keyboard focus and support `Escape`.
+Readiness uses a `1200ms` wall-clock bound and lifecycle cancellation. It is not
+a fixed visual delay or frame-count timeout.
 
-## Future Slots
+## Placement And Presentation
 
-`WelcomePage` accepts optional header and secondary actions so a future locale
-or account flow can be added without rebuilding the first-run composition.
-Those controls are not rendered until localization or authentication actually
-exists. No account, cloud, or locale state is introduced by this implementation.
+There is one root `GuidedTourHost` and at most one explanation card. Desktop
+placement evaluates right, left, bottom, and top around the target, rejects
+target/reserved-region collisions where possible, then chooses a safe dock.
+Mobile uses a stable SafeArea-aware bottom coach presentation above navigation.
+Missing targets use their declared policy rather than an arbitrary centered
+card.
 
-## Verification
+The highlight is a restrained outline/scrim over the real product; it does not
+repaint the target into a fake orange state. A transparent modal barrier blocks
+confusing background actions while the current explanation is visible.
 
-Automated coverage characterizes fresh/existing installs, persistence across
-restart, recovery precedence, legacy progress normalization, Core data/XP
-isolation, automatic non-blocking Core completion, independent optional
-modules, wall-clock target readiness, RoadMap transition ordering, real Profile
-inline completion, actual/fallback Minimum Action targeting, `Escape`,
-responsive Welcome layout, reduced motion, and profile module selection.
+## Accessibility And Motion
 
-Manual release QA should still verify Welcome and every tutorial module on a
-real narrow Android device, desktop resizing, TalkBack/VoiceOver traversal,
-keyboard focus, `2.0x` text scale, and dark/light themes.
+- The card reports one progress context (`шаг X из Y`) and its title once.
+- Primary, previous, and close controls remain reachable at `200%` text.
+- Desktop `Escape` pauses/exits cleanly; mobile Back closes a temporary surface
+  or pauses the tour without leaving a dead overlay.
+- Focus moves to the current card and returns to normal product navigation when
+  it leaves.
+- Reduced motion removes positional travel while preserving state order.
+- Safe-area and bottom-navigation reservations remain part of placement.
+
+## Compatibility
+
+- `welcomeSeen`, `onboardingSeen`, and the `TutorialProgress` schema are
+  unchanged.
+- Established installs are never forced through Welcome.
+- Legacy Core IDs still normalize through `TutorialCoordinator`; progress
+  already beyond the short Core is treated as completed Core.
+- Stale or removed module/step IDs resolve to a safe known step/end state.
+- Reset/replay from Profile does not clear Welcome, completion history, Skills,
+  Tasks, XP, RoadMap, rewards, or History.
+
+## Why Tutorial V3 Felt Disconnected
+
+V3 split sequencing among a root overlay, dialog-specific tutorial flags, and
+inline hints. Generic fallback cards were often detached from visible controls;
+Statistics and Trophies opened tutorial-only dialogs on desktop; navigation
+could advance into the next explanation before the new surface visually
+settled; and chapter/total progress was not consistently visible. V4 replaces
+those parallel owners with one session plan, one host, semantic anchors, and a
+single navigation coordinator over real surfaces.
+
+## Rejected Designs
+
+The architecture explicitly rejects tutorial-only Skills/Tasks, tutorial XP or
+rewards, reopening Welcome for replay, clearing real tutorial history, one
+forced giant onboarding, fake Statistics/Trophies screens, fixed-delay or
+frame-count synchronization, placement based only on target Y, arbitrary
+centered fallback cards, and multiple tutorial overlays at once.
+
+## Verification Boundary
+
+Automated coverage verifies plans, history/runtime separation, replay data
+isolation, navigation order, missing-target handling, collision placement,
+scroll tracking, route Back, disposal, large text, reduced motion, Training
+Center actions, and MainPage rebuild isolation. Native macOS/Windows focus,
+window resize, light/dark visual polish, and physical Android TalkBack/Back at
+large text remain release QA gates; they must not be claimed from widget tests.

@@ -49,6 +49,8 @@ and non-punitive return.
     signal policy, architecture boundary, and rollback.
 15. [Momentum validation diary](MOMENTUM_VALIDATION_DIARY.md) - manual factual,
     clarity, pressure, and Next Action competition checks.
+16. [Tutorial v4 guided tour](TUTORIAL_V4_GUIDED_TOUR.md) - implemented
+    first-run/replay boundary, real-surface navigation, and safety contract.
 
 ## Current implementation status
 

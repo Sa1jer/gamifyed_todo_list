@@ -1,6 +1,6 @@
 # DESIGN / Product And UI Notes
 
-Last updated: 2026-08-27
+Last updated: 2026-08-28
 
 This file records design direction, product guardrails, and UI decisions. Update it after every meaningful product/UI change so implementation stays aligned with the app's intended mental model.
 
@@ -225,22 +225,35 @@ Tutorial system:
 - Core contains only three real steps: create a Skill, create a Quest, and
   understand the first useful action. It never completes the Quest or grants XP
   on the user's behalf.
-- The final Core acknowledgement is a small session-only completion message;
-  it does not auto-start another module.
-- `Действовать`, `Дорожная карта`, `Рост`, `Трофеи`, and `Профиль` are optional,
-  independently startable topics in the profile learning center.
-- Target readiness follows mounted/layout frames with a bounded fallback, not
-  a fixed wall-clock delay. Reduced motion makes transitions immediate.
-- Creation dialogs keep their existing inline guidance; onboarding does not
-  introduce nested spotlights, fake data, cloud/auth, or another persistence
-  model.
+- Core completion offers `Показать остальное` and `Начать пользоваться`; the
+  full product tour never starts by force.
+- Tutorial v4 is one session with visible total progress and one coach card. It
+  walks through the real Act, RoadMap, Statistics, Trophies, and Profile
+  surfaces instead of opening tutorial-only replicas.
+- Full replay and topic replay are read-only for domain data. They do not reset
+  Welcome/history, seed examples, create/complete quests, grant XP/rewards, or
+  modify RoadMap, Goals, settings, or History.
+- Semantic anchors identify the actual product control or summary. Desktop
+  cards choose a collision-safe side; mobile uses a stable SafeArea-aware
+  bottom coach card. A missing target follows an explicit skip/parent/coach/end
+  policy rather than appearing arbitrarily in the center.
+- Navigation follows `leave -> real destination -> readiness -> anchor ->
+  enter`. No tutorial card remains visible during a route/workspace transition.
+- `Действовать`, `Дорожная карта`, `Рост`, `Трофеи`, and `Профиль` remain
+  independently replayable in the Profile Training Center. Only a paused full
+  tour offers `Продолжить обучение`; topic replay cannot masquerade as it.
+- Target readiness uses a bounded wall-clock deadline plus lifecycle
+  cancellation, not a fixed visual delay or frame-count timeout. Reduced motion
+  preserves state order without translation.
 - Legacy step/module IDs remain readable and normalize safely. See
   `docs/ONBOARDING_ARCHITECTURE.md` for ownership and compatibility details.
 
 Future tutorial polish:
 
-- Validate target positioning on Android widths and reduce copy where it feels repetitive.
-- Keep replay optional and quiet; do not turn onboarding into a mandatory wizard.
+- Validate native target positioning, spoken focus order, Back/Escape, and
+  light/dark polish on physical Android plus macOS/Windows resize paths.
+- Keep replay optional and quiet; do not turn onboarding into a mandatory
+  wizard or add fake tutorial progress/rewards.
 
 ## Skill Creation Direction
 
