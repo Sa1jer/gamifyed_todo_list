@@ -50,7 +50,8 @@ This file tracks the active implementation roadmap and completed project work. U
 - [x] Make desktop Skill Creator content-driven and compact, replace the primary icon grid with a curated wrap, and move the full catalog into a bounded categorized dialog with short-window `2.0x` coverage.
 - [x] Remove the desktop sidebar hover DecorationTween and centralize hover ownership in one stable pointer region; automated light/dark pointer tests show no false exit or geometry change across stationary frames and parent rebuilds.
 - [x] Introduce Tutorial v3 runtime phases, spotlight/Coach/inline modes, wall-clock target readiness, real Profile teaching, dedicated Minimum Action targeting, readiness-gated RoadMap navigation, and non-blocking Core completion without fake data or rewards.
-- [ ] Perform native macOS/Windows pointer QA for the corrected light sidebar hover, popup overlay transfer, keyboard traversal, and RoadMap resize while a tutorial spotlight is active; automated tests cannot prove compositor stability.
+- [x] Verify the corrected light/dark sidebar hover, transformed vertical RoadMap labels and Goal alignment, compact Skill Creator, and categorized full icon picker in a native macOS release session.
+- [ ] Perform native Windows pointer QA plus popup overlay transfer, keyboard traversal, and RoadMap resize while a tutorial spotlight is active; automated tests and the macOS pass cannot prove those remaining platform paths.
 - [ ] Perform physical Android QA for RoadMap top/bottom fling clipping at `360/393/430dp`, Profile inertia boundaries, Skill Creator keyboard/Back, Tutorial v3 TalkBack order, and `2.0x` font/display size.
 - [ ] Capture profile-mode frame timings for long RoadMap scrolling, Profile body scrolling, Skill icon expansion, and Tutorial spotlight movement before making performance claims.
 

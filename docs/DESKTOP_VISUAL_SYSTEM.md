@@ -1,6 +1,6 @@
 # Desktop Visual System
 
-Last updated: 2026-08-27
+Last updated: 2026-08-28
 
 ## Scope
 
@@ -47,15 +47,18 @@ pointer, intra-row movement, parent-refresh, active, light, and dark scenarios;
 no false exit was observed. The remaining suspect path was the implicit
 decoration tween itself. Navigation now has one opaque `MouseRegion`, fixed
 Material/Ink geometry, and an immediate `DecoratedBox`; focus retains a visible
-border and active remains stronger than hover. Native compositor confirmation
-on macOS and Windows is still pending and is not claimed by these tests.
+border and active remains stronger than hover. A native macOS release pass kept
+the light and dark hover surfaces stable with the pointer stationary for more
+than two seconds. Windows compositor confirmation remains pending.
 
 Desktop Skill Creator is content-driven up to `88%` of the viewport. A compact
 identity preview sits beside Name and Goal, the primary appearance block uses a
 twelve-icon wrap plus color dots, and `Все иконки` opens a bounded categorized
 dialog whose grid is built only while open. The optional first Stage remains a
 collapsed disclosure; short-window and `2.0x` text tests verify scrolling and a
-stable action footer.
+stable action footer. The same macOS release pass confirmed the compact dialog,
+the categorized 60-icon picker, alternating vertical labels, and the aligned
+Goal/Skill endpoint in the transformed RoadMap scene.
 
 ## Responsive Boundary
 
