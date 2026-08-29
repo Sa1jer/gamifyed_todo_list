@@ -222,7 +222,7 @@ class _WeeklyKeyResultRow extends StatelessWidget {
                 height: 18,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: result.isDone ? color : Colors.transparent,
+                  color: color.withValues(alpha: result.isDone ? 1 : 0),
                   border: Border.all(
                     color: result.isDone ? color : sub.withAlpha(150),
                     width: 1.6,

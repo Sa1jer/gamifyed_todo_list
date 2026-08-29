@@ -580,7 +580,7 @@ class _InboxTaskRow extends StatelessWidget {
               height: 21,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: task.isDone ? color : Colors.transparent,
+                color: color.withValues(alpha: task.isDone ? 1 : 0),
                 border: Border.all(
                   color: task.isDone ? color : sub.withAlpha(150),
                   width: 2,

@@ -183,11 +183,13 @@ class _TaskTileState extends State<TaskTile> {
                               : sub.withAlpha(145),
                           width: 2,
                         ),
-                        color: task.isDone
-                            ? widget.skillColor
-                            : _hovered
-                            ? widget.skillColor.withAlpha(18)
-                            : Colors.transparent,
+                        color: widget.skillColor.withValues(
+                          alpha: task.isDone
+                              ? 1
+                              : _hovered
+                              ? 18 / 255
+                              : 0,
+                        ),
                       ),
                       child: task.isDone
                           ? const Icon(

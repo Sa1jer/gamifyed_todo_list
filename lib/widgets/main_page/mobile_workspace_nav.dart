@@ -66,12 +66,13 @@ class _MobileWorkspaceNav extends StatelessWidget {
                             vertical: 7,
                           ),
                           decoration: BoxDecoration(
-                            color: item == mode
-                                ? (item == WorkspaceMode.act
-                                          ? _MobileJournalTokens.amber
-                                          : _MobileJournalTokens.violet)
-                                      .withAlpha(isDark ? 40 : 28)
-                                : Colors.transparent,
+                            color:
+                                (item == WorkspaceMode.act
+                                        ? _MobileJournalTokens.amber
+                                        : _MobileJournalTokens.violet)
+                                    .withAlpha(
+                                      item == mode ? (isDark ? 40 : 28) : 0,
+                                    ),
                             borderRadius: BorderRadius.circular(18),
                           ),
                           child: Column(

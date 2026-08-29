@@ -72,7 +72,7 @@ class _DesktopQuestRowState extends State<DesktopQuestRow> {
             padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
             decoration: BoxDecoration(
               color: done
-                  ? tokens.successGreen.withValues(alpha: 0.045)
+                  ? tokens.successGreenGraphic.withValues(alpha: 0.045)
                   : _hovered
                   ? tokens.raisedSurface
                   : tokens.cardSurface,
@@ -81,7 +81,7 @@ class _DesktopQuestRowState extends State<DesktopQuestRow> {
               ),
               border: Border.all(
                 color: done
-                    ? tokens.successGreen.withValues(alpha: 0.18)
+                    ? tokens.successGreenGraphic.withValues(alpha: 0.18)
                     : _hovered
                     ? widget.skill.color.withValues(alpha: 0.22)
                     : tokens.outline,
@@ -102,7 +102,9 @@ class _DesktopQuestRowState extends State<DesktopQuestRow> {
                   key: widget.completionTutorialKey,
                   child: _DesktopQuestCheck(
                     done: done,
-                    color: done ? tokens.successGreen : widget.skill.color,
+                    color: done
+                        ? tokens.successGreenGraphic
+                        : widget.skill.color,
                     onTap: (origin) {
                       if (done) {
                         widget.state.uncompleteTask(task.id);
@@ -306,7 +308,7 @@ class _DesktopQuestCheckState extends State<_DesktopQuestCheck> {
             height: 31,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: widget.done ? widget.color : Colors.transparent,
+              color: widget.color.withValues(alpha: widget.done ? 1 : 0),
               border: Border.all(
                 color: widget.color.withValues(alpha: 0.75),
                 width: 2,
@@ -424,14 +426,16 @@ class _DesktopRewardPill extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: tokens.rewardGold.withValues(alpha: 0.09),
+          color: tokens.rewardGoldGraphic.withValues(alpha: 0.09),
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: tokens.rewardGold.withValues(alpha: 0.3)),
+          border: Border.all(
+            color: tokens.rewardGoldGraphic.withValues(alpha: 0.3),
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.bolt_rounded, color: tokens.rewardGold, size: 13),
+            Icon(Icons.bolt_rounded, color: tokens.rewardGoldGraphic, size: 13),
             const SizedBox(width: 4),
             Text(
               '+$value XP',

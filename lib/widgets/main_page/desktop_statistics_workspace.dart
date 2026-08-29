@@ -189,7 +189,7 @@ class _DesktopStatisticsMainContent extends StatelessWidget {
             children: [
               _DesktopStatisticsLinkCard(
                 tokens: tokens,
-                color: tokens.streakAmber,
+                color: tokens.streakAmberGraphic,
                 icon: Icons.celebration_outlined,
                 title: 'Победы дня',
                 subtitle:
@@ -198,7 +198,7 @@ class _DesktopStatisticsMainContent extends StatelessWidget {
               ),
               _DesktopStatisticsLinkCard(
                 tokens: tokens,
-                color: tokens.successGreen,
+                color: tokens.successGreenGraphic,
                 icon: Icons.calendar_view_week_outlined,
                 title: 'Неделя',
                 subtitle: '${week.totalXp} XP · ${week.completedTasks} квестов',
@@ -424,7 +424,7 @@ class _DesktopStatisticsRail extends StatelessWidget {
         tokens: tokens,
         title: 'Журнал XP',
         icon: Icons.receipt_long_outlined,
-        color: tokens.successGreen,
+        color: tokens.successGreenGraphic,
         onTap: () => onOpen(_DesktopStatisticsDetail.xpLog),
       ),
       const SizedBox(height: 16),
@@ -438,7 +438,7 @@ class _DesktopStatisticsRail extends StatelessWidget {
         tokens: tokens,
         title: 'Достижения',
         icon: Icons.workspace_premium_outlined,
-        color: tokens.rewardGold,
+        color: tokens.rewardGoldGraphic,
         onTap: () => onOpen(_DesktopStatisticsDetail.achievements),
       ),
       _DesktopRailLink(
@@ -472,13 +472,13 @@ class _DesktopStatisticsDetailPage extends StatelessWidget {
       _DesktopStatisticsDetail.daily => (
         'Победы дня',
         Icons.celebration_outlined,
-        tokens.streakAmber,
+        tokens.streakAmberGraphic,
         'Квесты, закрытые сегодня',
       ),
       _DesktopStatisticsDetail.weekly => (
         'Неделя',
         Icons.calendar_view_week,
-        tokens.successGreen,
+        tokens.successGreenGraphic,
         'Квесты, закрытые за последние семь дней',
       ),
       _DesktopStatisticsDetail.timeline => (
@@ -502,13 +502,13 @@ class _DesktopStatisticsDetailPage extends StatelessWidget {
       _DesktopStatisticsDetail.xpLog => (
         'Журнал XP',
         Icons.receipt_long_outlined,
-        tokens.successGreen,
+        tokens.successGreenGraphic,
         'Опыт, начисленный за каждый закрытый квест',
       ),
       _DesktopStatisticsDetail.achievements => (
         'Достижения',
         Icons.workspace_premium_outlined,
-        tokens.rewardGold,
+        tokens.rewardGoldGraphic,
         'Что открыто и что осталось',
       ),
       _DesktopStatisticsDetail.resistance => (

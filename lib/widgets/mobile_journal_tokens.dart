@@ -132,8 +132,11 @@ abstract final class MobileJournalTokens {
   static Color rewardGoldBorder(bool isDark) =>
       isDark ? rewardGold.withAlpha(88) : const Color(0xFFC68A16);
 
+  /// Чернильное золото для светлой темы: #FFB020 на почти белом даёт ~1.9:1.
+  /// Прежний #7A4D00 читался коричневым; #8A6000 — максимальная насыщенность
+  /// при 4.62:1 на золотой пилюле #FFE7B5 и 5.59:1 на белом.
   static Color rewardGoldForeground(bool isDark) =>
-      isDark ? rewardGold : const Color(0xFF7A4D00);
+      isDark ? rewardGold : const Color(0xFF8A6000);
 
   static Color skillAccentSoft(Color skillColor, bool isDark) =>
       skillColor.withAlpha(isDark ? 24 : 22);
@@ -210,6 +213,11 @@ class CompletionToastColors {
 
   Color rewardSoft({required bool isDark}) =>
       rewardColor.withAlpha(isDark ? 32 : 24);
+
+  /// Цвет иконки и числа XP в тосте. На светлой теме сам [rewardColor]
+  /// нечитаем поверх почти белого пузыря.
+  Color rewardInk({required bool isDark}) =>
+      isDark ? rewardColor : MobileJournalTokens.rewardGoldForeground(false);
 }
 
 class MobileSkillFocusSurface extends StatelessWidget {

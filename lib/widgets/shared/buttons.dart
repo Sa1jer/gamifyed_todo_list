@@ -207,9 +207,7 @@ class _HoverIconBtnState extends State<HoverIconBtn> {
             curve: kMotionCurve,
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: _hovered || _pressed
-                  ? widget.color.withAlpha(24)
-                  : Colors.transparent,
+              color: widget.color.withAlpha(_hovered || _pressed ? 24 : 0),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(widget.icon, color: widget.color, size: 20),

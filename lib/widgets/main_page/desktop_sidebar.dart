@@ -648,18 +648,20 @@ class _DesktopSkillRowState extends State<_DesktopSkillRow> {
                 constraints: const BoxConstraints(minHeight: 72),
                 padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
                 decoration: BoxDecoration(
+                  // Через Colors.transparent (прозрачный ЧЁРНЫЙ) анимировать
+                  // нельзя: AnimatedContainer лерпит каналы, и на светлой теме
+                  // середина перехода — серый. Отсюда мерцание при наведении.
+                  // Прозрачность берём от целевого цвета.
                   color: selected
                       ? skill.color.withValues(alpha: 0.11)
-                      : _hovered
-                      ? tokens.raisedSurface
-                      : Colors.transparent,
+                      : tokens.raisedSurface.withValues(
+                          alpha: _hovered ? 1 : 0,
+                        ),
                   borderRadius: BorderRadius.circular(
                     DesktopJournalTokens.skillRadius,
                   ),
                   border: Border.all(
-                    color: selected
-                        ? skill.color.withValues(alpha: 0.42)
-                        : Colors.transparent,
+                    color: skill.color.withValues(alpha: selected ? 0.42 : 0),
                   ),
                 ),
                 child: Stack(

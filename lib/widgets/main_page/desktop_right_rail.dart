@@ -346,7 +346,7 @@ class _FocusTaskState extends State<_FocusTask> {
                   )
                 : task.isDone
                 ? Color.alphaBlend(
-                    tokens.successGreen.withValues(alpha: 0.045),
+                    tokens.successGreenGraphic.withValues(alpha: 0.045),
                     tokens.cardSurface,
                   )
                 : tokens.cardSurface,
@@ -355,7 +355,7 @@ class _FocusTaskState extends State<_FocusTask> {
               color: active
                   ? color.withValues(alpha: 0.34)
                   : task.isDone
-                  ? tokens.successGreen.withValues(alpha: 0.18)
+                  ? tokens.successGreenGraphic.withValues(alpha: 0.18)
                   : tokens.outline,
             ),
           ),
@@ -444,11 +444,13 @@ class _FocusTaskState extends State<_FocusTask> {
                         margin: const EdgeInsets.only(top: 1),
                         decoration: BoxDecoration(
                           color: task.isDone
-                              ? tokens.successGreen
+                              ? tokens.successGreenGraphic
                               : color.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: task.isDone ? tokens.successGreen : color,
+                            color: task.isDone
+                                ? tokens.successGreenGraphic
+                                : color,
                           ),
                         ),
                         child: task.isDone

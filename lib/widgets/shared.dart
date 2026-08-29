@@ -769,7 +769,7 @@ class _XPBubbleState extends State<XPBubble>
                     child: Icon(
                       _content.icon,
                       key: const ValueKey('xp-bubble-reward-icon'),
-                      color: widget.colors.rewardColor,
+                      color: widget.colors.rewardInk(isDark: isDark),
                       size: 18,
                     ),
                   ),
@@ -807,7 +807,7 @@ class _XPBubbleState extends State<XPBubble>
                         _XPBubbleRewardLine(
                           content: _content,
                           textColor: sub,
-                          rewardColor: widget.colors.rewardColor,
+                          rewardColor: widget.colors.rewardInk(isDark: isDark),
                           bonusColor: MobileJournalTokens.inbox,
                         ),
                       ],

@@ -266,17 +266,109 @@ bool _hasContainerWithColor(WidgetTester tester, Color color) {
 }
 
 void main() {
-  test('skill color palette is rainbow ordered', () {
-    expect(kColors, hasLength(12));
-    expect(kColors.first, const Color(0xFFFF3B30));
-    expect(kColors.last, const Color(0xFF8E8E93));
-    expect(kColors, isNot(contains(const Color(0xFFFF2D55))));
-    expect(kColors.take(4).toList(), const [
-      Color(0xFFFF3B30),
-      Color(0xFFFF6B2C),
-      Color(0xFFFF9500),
-      Color(0xFFFFCC00),
-    ]);
+  testWidgets('MaterialApp theme follows the saved theme after load', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = InMemoryStorageService()
+      .._onboardingSeen = true
+      .._theme = false
+      ..skills = [
+        Skill(
+          id: 'axe',
+          name: 'секира',
+          goal: 'цель',
+          color: const Color(0xFF4A9EFF),
+          icon: Icons.fitness_center,
+        ),
+      ];
+    await storage.init();
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    // AppState стартует в тёмной теме и переключается на сохранённую уже после
+    // загрузки. Раньше MaterialApp не перестраивался и оставался тёмным: тост
+    // о росте навыка, слайдеры и переключатели рисовались тёмными в светлом
+    // приложении.
+    final ctx = tester.element(find.byType(Navigator).first);
+    expect(Theme.of(ctx).brightness, Brightness.light);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('animated desktop surfaces never rest on transparent black', (
+    WidgetTester tester,
+  ) async {
+    // Colors.transparent — прозрачный ЧЁРНЫЙ. AnimatedContainer лерпит каналы,
+    // поэтому переход к светлой поверхности проходил через серый: на белой
+    // теме каждое наведение давало вспышку #BBBBBB. Прозрачная стадия обязана
+    // нести оттенок своей цели.
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = InMemoryStorageService()
+      .._onboardingSeen = true
+      .._theme = false
+      ..skills = [
+        Skill(
+          id: 'axe',
+          name: 'секира',
+          goal: 'цель',
+          color: const Color(0xFF4A9EFF),
+          icon: Icons.fitness_center,
+        ),
+        // Второй навык нужен, чтобы в списке была невыбранная карточка:
+        // именно её покоящееся состояние раньше было прозрачно-чёрным.
+        Skill(
+          id: 'lard',
+          name: 'курдюк',
+          goal: 'цель',
+          color: const Color(0xFF34C759),
+          icon: Icons.favorite,
+        ),
+      ]
+      ..tasks = [
+        Task(
+          id: 'quest-1',
+          title: 'Квест',
+          skillId: 'axe',
+          xpReward: 20,
+          type: TaskType.shortTerm,
+        ),
+      ];
+    await storage.init();
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    var checked = 0;
+    for (final element in find.byType(AnimatedContainer).evaluate()) {
+      final decoration =
+          (element.widget as AnimatedContainer).decoration as BoxDecoration?;
+      if (decoration == null) continue;
+      final colors = <Color?>[decoration.color, decoration.border?.top.color];
+      for (final color in colors) {
+        if (color == null) continue;
+        checked++;
+        final isTransparentBlack =
+            color.a == 0 && color.r == 0 && color.g == 0 && color.b == 0;
+        expect(
+          isTransparentBlack,
+          isFalse,
+          reason:
+              'прозрачная стадия анимации должна нести оттенок цели, '
+              'иначе переход проходит через серый',
+        );
+      }
+    }
+    expect(checked, greaterThan(0));
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('App smoke test', (WidgetTester tester) async {

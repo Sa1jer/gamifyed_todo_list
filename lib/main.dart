@@ -62,6 +62,16 @@ class _RPGAppState extends State<RPGApp>
   late AppState _state;
   final _repaintKey = GlobalKey();
 
+  /// Яркость, из которой собран текущий [MaterialApp.theme].
+  ///
+  /// [AppState] стартует в тёмной теме и переключается на сохранённую уже
+  /// после асинхронной загрузки. Без подписки этот виджет не перестраивался,
+  /// и `MaterialApp.theme` оставался тёмным при светлом приложении: всё, что
+  /// получает `isDark` параметром, рисовалось светлым, а всё, что читает
+  /// `Theme.of(context)` — тост о росте навыка, слайдеры, переключатели,
+  /// умолчания диалогов — оставалось тёмным.
+  late bool _themeIsDark;
+
   late AnimationController _revealCtrl;
   late Animation<double> _revealAnim;
   ui.Image? _overlayImage;
@@ -73,6 +83,8 @@ class _RPGAppState extends State<RPGApp>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _state = AppState(storage: widget.storage, seedDefaults: false);
+    _themeIsDark = _state.isDark;
+    _state.addListener(_syncAppTheme);
     _revealCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 620),
@@ -96,9 +108,15 @@ class _RPGAppState extends State<RPGApp>
     await _state.retryLoadSavedData();
   }
 
+  void _syncAppTheme() {
+    if (!mounted || _state.isDark == _themeIsDark) return;
+    setState(() => _themeIsDark = _state.isDark);
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _state.removeListener(_syncAppTheme);
     _overlayImage?.dispose();
     _overlayImage = null;
     _state.dispose();
@@ -232,7 +250,7 @@ class _RPGAppState extends State<RPGApp>
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: _buildTheme(_state.isDark),
+      theme: _buildTheme(_themeIsDark),
       home: AppStateProvider(
         state: _state,
         child: _AppContent(

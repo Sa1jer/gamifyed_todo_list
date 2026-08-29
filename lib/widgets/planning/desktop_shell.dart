@@ -204,11 +204,13 @@ class _PlanningSkillTileState extends State<_PlanningSkillTile> {
           curve: kMotionCurve,
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: selected
-                ? color.withAlpha(isDark ? 22 : 18)
-                : _hovered
-                ? color.withAlpha(isDark ? 12 : 10)
-                : Colors.transparent,
+            color: color.withAlpha(
+              selected
+                  ? (isDark ? 22 : 18)
+                  : _hovered
+                  ? (isDark ? 12 : 10)
+                  : 0,
+            ),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: selected ? color.withAlpha(140) : borderColor(isDark),

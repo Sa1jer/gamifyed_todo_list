@@ -338,9 +338,9 @@ class _MobileFocusTaskTileState extends State<MobileFocusTaskTile> {
                       height: 27,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: task.isDone
-                            ? widget.skillColor
-                            : Colors.transparent,
+                        color: widget.skillColor.withValues(
+                          alpha: task.isDone ? 1 : 0,
+                        ),
                         border: Border.all(
                           color: task.isDone
                               ? widget.skillColor

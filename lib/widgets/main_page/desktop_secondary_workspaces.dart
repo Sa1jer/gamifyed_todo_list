@@ -131,7 +131,7 @@ class _DesktopRewardsWorkspaceState extends State<_DesktopRewardsWorkspace> {
     return _DesktopPageScaffold(
       tokens: tokens,
       icon: Icons.emoji_events_outlined,
-      color: tokens.rewardGold,
+      color: tokens.rewardGoldGraphic,
       title: 'Трофеи после действий',
       subtitle: 'Награды появляются после заметных действий и рубежей пути.',
       child: Column(
@@ -175,7 +175,7 @@ class _DesktopRewardsWorkspaceState extends State<_DesktopRewardsWorkspace> {
                 key: const ValueKey('desktop-rewards-effects'),
                 tokens: tokens,
                 icon: Icons.bolt_rounded,
-                color: tokens.successGreen,
+                color: tokens.successGreenGraphic,
                 title: 'Эффекты',
                 count: buffs.length,
                 child: buffs.isEmpty
@@ -194,7 +194,7 @@ class _DesktopRewardsWorkspaceState extends State<_DesktopRewardsWorkspace> {
                               (buff) => Chip(
                                 avatar: Icon(
                                   Icons.auto_awesome,
-                                  color: tokens.successGreen,
+                                  color: tokens.successGreenGraphic,
                                   size: 17,
                                 ),
                                 label: Text(buff.title),
@@ -212,7 +212,7 @@ class _DesktopRewardsWorkspaceState extends State<_DesktopRewardsWorkspace> {
               key: const ValueKey('desktop-rewards-chests'),
               tokens: tokens,
               icon: Icons.inventory_2_outlined,
-              color: tokens.rewardGold,
+              color: tokens.rewardGoldGraphic,
               title: 'Новые сундуки',
               count: chests.length,
               child: chests.isEmpty
@@ -274,7 +274,7 @@ class _DesktopRewardsWorkspaceState extends State<_DesktopRewardsWorkspace> {
                 _DesktopTrophyHowToCard(
                   tokens: tokens,
                   icon: Icons.bolt_rounded,
-                  color: tokens.streakAmber,
+                  color: tokens.streakAmberGraphic,
                   title: 'Сильный день',
                   description:
                       'Закрой 5 квестов за день, чтобы получить сундук дисциплины.',
@@ -282,7 +282,7 @@ class _DesktopRewardsWorkspaceState extends State<_DesktopRewardsWorkspace> {
                 _DesktopTrophyHowToCard(
                   tokens: tokens,
                   icon: Icons.local_fire_department_outlined,
-                  color: tokens.rewardGold,
+                  color: tokens.rewardGoldGraphic,
                   title: 'Серия дней',
                   description:
                       'Удерживай повторяющийся квест 7 или 30 дней для редких сундуков.',
@@ -743,12 +743,12 @@ class _DesktopRewardChestCard extends StatelessWidget {
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: tokens.rewardGold.withValues(alpha: 0.12),
+              color: tokens.rewardGoldGraphic.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
               Icons.redeem_rounded,
-              color: tokens.rewardGold,
+              color: tokens.rewardGoldGraphic,
               size: 20,
             ),
           ),

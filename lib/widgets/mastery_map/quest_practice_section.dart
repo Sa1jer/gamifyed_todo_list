@@ -374,7 +374,7 @@ class MasteryQuestToggleCircle extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: done ? activeColor : Colors.transparent,
+        color: activeColor.withValues(alpha: done ? 1 : 0),
         border: Border.all(color: activeColor, width: 2),
         boxShadow: done
             ? [
