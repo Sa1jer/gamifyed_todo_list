@@ -48,7 +48,7 @@ class TaskFormController extends ChangeNotifier {
        ),
        subtask = TextEditingController(),
        minimumActionFocusNode = FocusNode(),
-       xp = existing?.xpReward ?? 20,
+       xp = existing?.xpReward ?? 100,
        type = existing?.type ?? TaskType.shortTerm,
        frequency = existing?.repeatFrequency ?? RepeatFrequency.daily,
        priority = existing?.priority ?? Priority.medium,
