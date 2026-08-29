@@ -254,4 +254,70 @@ void main() {
     );
     expect(after.top, closeTo(before.top - 100, 1));
   });
+
+  testWidgets('card and spotlight stay inside the viewport after resize', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(900, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final controller = GuidedTourSessionController();
+    final anchors = TutorialAnchorRegistry();
+    addTearDown(controller.dispose);
+    addTearDown(anchors.dispose);
+    controller.startModuleReplay(
+      TutorialModuleIds.core,
+      hasMinimumAction: false,
+      hasRoadmapPractice: false,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Stack(
+            children: [
+              Positioned(
+                top: 110,
+                right: 24,
+                child: TutorialAnchorTarget(
+                  registry: anchors,
+                  id: TutorialAnchorId.actNextAction,
+                  child: const SizedBox(width: 120, height: 52),
+                ),
+              ),
+              GuidedTourHost(
+                controller: controller,
+                anchors: anchors,
+                isDark: false,
+                reducedMotion: true,
+                mobile: false,
+                onPrimary: (_) => controller.advance(),
+                onPrevious: (_) => controller.previous(),
+                onDismiss: (_) => controller.pause(),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 60));
+
+    tester.view.physicalSize = const Size(520, 700);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 60));
+
+    final card = tester.getRect(find.byKey(const ValueKey('guided-tour-card')));
+    final highlight = tester.getRect(
+      find.byKey(const ValueKey('guided-tour-highlight')),
+    );
+    expect(card.left, greaterThanOrEqualTo(0));
+    expect(card.right, lessThanOrEqualTo(520));
+    expect(card.top, greaterThanOrEqualTo(0));
+    expect(card.bottom, lessThanOrEqualTo(700));
+    expect(highlight.left, greaterThanOrEqualTo(0));
+    expect(highlight.right, lessThanOrEqualTo(520));
+    expect(tester.takeException(), isNull);
+  });
 }

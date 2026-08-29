@@ -3101,6 +3101,58 @@ void main() {
     },
   );
 
+  testWidgets('Profile keeps tutorial replay connected after a theme change', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = InMemoryStorageService().._onboardingSeen = true;
+    await storage.init();
+    await tester.pumpWidget(
+      RPGApp(storage: storage, captureFrameForTesting: () async => null),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    await tester.tap(find.text('Your Name').first);
+    await tester.pumpAndSettle();
+
+    final profile = find.byType(ProfileDialog);
+    await tester.ensureVisible(find.text('Тёмная тема'));
+    await tester.pump();
+    await tester.tap(
+      find.descendant(of: profile, matching: find.byType(Switch)).first,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('profile-training-center-entry')),
+    );
+    await tester.pump();
+    await tester.tap(
+      find.byKey(const ValueKey('profile-training-center-entry')),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('tutorial-topic-roadmap')),
+    );
+    await tester.tap(find.byKey(const ValueKey('tutorial-topic-roadmap')));
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 1250));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('guided-tour-card')), findsOneWidget);
+    expect(storage._tutorialProgress!.activeModuleId, isNull);
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+
   testWidgets('Profile tutorial opens the real surface and completes inline', (
     WidgetTester tester,
   ) async {
