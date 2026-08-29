@@ -201,6 +201,11 @@ class DesktopSidebar extends StatelessWidget {
                                   }
                                   if (mode == WorkspaceMode.mastery) {
                                     onOpenRoadmap(skill);
+                                  } else if (mode != WorkspaceMode.act) {
+                                    // Со вторичных экранов клик по навыку
+                                    // раньше только менял выбор и никуда не
+                                    // вёл: экран оставался прежним.
+                                    onModeChanged(WorkspaceMode.act);
                                   }
                                 },
                                 onEdit: () => onEditSkill(skill),
@@ -216,6 +221,11 @@ class DesktopSidebar extends StatelessWidget {
                 key: inboxKey,
                 state: state,
                 tokens: tokens,
+                onOpen: () {
+                  if (mode != WorkspaceMode.act) {
+                    onModeChanged(WorkspaceMode.act);
+                  }
+                },
               ),
               Divider(height: 1, color: tokens.subtleOutline),
               Padding(
@@ -839,11 +849,13 @@ class _DesktopSkillRowState extends State<_DesktopSkillRow> {
 class _DesktopInboxShortcut extends StatelessWidget {
   final AppState state;
   final DesktopJournalTokens tokens;
+  final VoidCallback onOpen;
 
   const _DesktopInboxShortcut({
     super.key,
     required this.state,
     required this.tokens,
+    required this.onOpen,
   });
 
   @override
@@ -861,6 +873,7 @@ class _DesktopInboxShortcut extends StatelessWidget {
           if (state.selectedSkillId != kInboxSkillId) {
             state.selectSkill(kInboxSkillId);
           }
+          onOpen();
         },
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

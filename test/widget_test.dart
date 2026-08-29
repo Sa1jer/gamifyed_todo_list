@@ -371,6 +371,108 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('secondary workspaces return to Act on skill and inbox taps', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = InMemoryStorageService()
+      .._onboardingSeen = true
+      ..skills = [
+        Skill(
+          id: 'axe',
+          name: 'секира',
+          goal: 'цель',
+          color: const Color(0xFF4A9EFF),
+          icon: Icons.fitness_center,
+        ),
+      ];
+    await storage.init();
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    Future<void> openTrophies() async {
+      await tester.tap(find.byKey(const ValueKey('desktop-nav-trophies')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('desktop-trophies-in-progress')),
+        findsOneWidget,
+      );
+    }
+
+    // Клик по навыку из «Трофеев» раньше только менял выбор, экран не менялся.
+    await openTrophies();
+    await tester.tap(find.byKey(const ValueKey('desktop-skill-surface-axe')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('desktop-trophies-in-progress')),
+      findsNothing,
+    );
+
+    // То же для «Задачника».
+    await openTrophies();
+    await tester.tap(find.byKey(const ValueKey('desktop-inbox-shortcut')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('desktop-trophies-in-progress')),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('right rail hides in the Inbox and returns when leaving it', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = InMemoryStorageService()
+      .._onboardingSeen = true
+      ..skills = [
+        Skill(
+          id: 'axe',
+          name: 'секира',
+          goal: 'цель',
+          color: const Color(0xFF4A9EFF),
+          icon: Icons.fitness_center,
+        ),
+      ];
+    await storage.init();
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    const rail = ValueKey('desktop-right-rail-region');
+    expect(find.byKey(rail), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('desktop-inbox-shortcut')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(rail), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('desktop-skill-surface-axe')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(rail), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+  test('skill color palette is rainbow ordered', () {
+    expect(kColors, hasLength(12));
+    expect(kColors.first, const Color(0xFFFF3B30));
+    expect(kColors.last, const Color(0xFF8E8E93));
+    expect(kColors, isNot(contains(const Color(0xFFFF2D55))));
+    expect(kColors.take(4).toList(), const [
+      Color(0xFFFF3B30),
+      Color(0xFFFF6B2C),
+      Color(0xFFFF9500),
+      Color(0xFFFFCC00),
+    ]);
+  });
+
   testWidgets('App smoke test', (WidgetTester tester) async {
     tester.view.physicalSize = const Size(1400, 900);
     tester.view.devicePixelRatio = 1;

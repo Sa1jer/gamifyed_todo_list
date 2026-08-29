@@ -183,23 +183,59 @@ class _InboxPanelState extends State<InboxPanel> {
                             FilledButton.icon(
                               key: const ValueKey('desktop-inbox-add'),
                               onPressed: () => _addInboxTask(state),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: accent.withAlpha(
-                                  isDark ? 38 : 32,
+                              // Ховер ведёт сам фон кнопки, а не ink-слой
+                              // Material: тот проявляется 200 мс и на светлой
+                              // теме поверх полупрозрачной заливки почти не
+                              // читается — отклик выглядел запоздалым.
+                              style: ButtonStyle(
+                                animationDuration: kMotionFast,
+                                overlayColor: const WidgetStatePropertyAll(
+                                  Colors.transparent,
                                 ),
-                                foregroundColor: isDark
-                                    ? const Color(0xFF67E991)
-                                    : const Color(0xFF116C34),
-                                minimumSize: const Size(148, 38),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
+                                foregroundColor: WidgetStatePropertyAll(
+                                  isDark
+                                      ? const Color(0xFF67E991)
+                                      : const Color(0xFF0E5A2B),
                                 ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  side: BorderSide(
-                                    color: accent.withAlpha(105),
-                                  ),
+                                minimumSize: const WidgetStatePropertyAll(
+                                  Size(148, 38),
                                 ),
+                                padding: const WidgetStatePropertyAll(
+                                  EdgeInsets.symmetric(horizontal: 14),
+                                ),
+                                backgroundColor:
+                                    WidgetStateProperty.resolveWith((states) {
+                                      if (states.contains(
+                                        WidgetState.pressed,
+                                      )) {
+                                        return accent.withAlpha(
+                                          isDark ? 92 : 78,
+                                        );
+                                      }
+                                      if (states.contains(
+                                        WidgetState.hovered,
+                                      )) {
+                                        return accent.withAlpha(
+                                          isDark ? 66 : 56,
+                                        );
+                                      }
+                                      return accent.withAlpha(isDark ? 38 : 32);
+                                    }),
+                                shape: WidgetStateProperty.resolveWith((
+                                  states,
+                                ) {
+                                  final active =
+                                      states.contains(WidgetState.hovered) ||
+                                      states.contains(WidgetState.pressed);
+                                  return RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    side: BorderSide(
+                                      color: accent.withAlpha(
+                                        active ? 190 : 105,
+                                      ),
+                                    ),
+                                  );
+                                }),
                               ),
                               icon: const Icon(Icons.add_rounded, size: 17),
                               label: const Text('Быстрая задача'),

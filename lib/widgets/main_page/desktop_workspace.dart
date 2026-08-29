@@ -91,6 +91,11 @@ class DesktopWorkspaceShell extends StatelessWidget {
     final tokens = DesktopJournalTokens.resolve(state.isDark);
     final selected = state.selectedSkill;
     final actMode = mode == WorkspaceMode.act;
+
+    // «Задачник» — бытовые задачи вне навыков, и правый рельс «Фокус на
+    // сегодня» ему нечего показывать: он считает фокус по квестам навыка.
+    // Прячем рельс на время Задачника и возвращаем при выходе из него.
+    final inboxMode = actMode && selected?.id == kInboxSkillId;
     final effectiveSkill = mode == WorkspaceMode.mastery
         ? selected?.id == kInboxSkillId
               ? null
@@ -166,7 +171,7 @@ class DesktopWorkspaceShell extends StatelessWidget {
                       ),
               ),
             ),
-            if (actMode && metrics.showRightRail) ...[
+            if (actMode && !inboxMode && metrics.showRightRail) ...[
               VerticalDivider(width: 1, thickness: 1, color: tokens.outline),
               KeyedSubtree(
                 key: const ValueKey('desktop-right-rail-region'),
