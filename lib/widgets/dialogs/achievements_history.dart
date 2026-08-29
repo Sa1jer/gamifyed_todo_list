@@ -29,7 +29,7 @@ class AchievementsDialog extends StatelessWidget {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(22, 20, 16, 14),
+              padding: const EdgeInsets.fromLTRB(24, 24, 16, 16),
               child: Row(
                 children: [
                   const Icon(
@@ -37,7 +37,7 @@ class AchievementsDialog extends StatelessWidget {
                     color: Color(0xFFFFCC00),
                     size: 22,
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 12),
                   Text(
                     'Достижения',
                     style: TextStyle(
@@ -97,11 +97,11 @@ class _AchievementCard extends StatelessWidget {
     return GestureDetector(
       onTap: () => _showDetails(context),
       child: Container(
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: unlocked
               ? def.color.withAlpha(18)
-              : (isDark ? const Color(0xFF13131A) : const Color(0xFFF5F5F7)),
+              : dialogFieldSurface(isDark),
           borderRadius: BorderRadius.circular(12),
           border: unlocked
               ? Border.all(color: def.color.withAlpha(60))
@@ -177,7 +177,7 @@ class _AchievementCard extends StatelessWidget {
         backgroundColor: surface(isDark),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: Container(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(24),
           width: 300,
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -214,13 +214,13 @@ class _AchievementCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
-                  vertical: 6,
+                  vertical: 8,
                 ),
                 decoration: BoxDecoration(
                   color: unlocked
                       ? const Color(0xFF34C759).withAlpha(25)
                       : const Color(0xFF8E8E93).withAlpha(25),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
                   unlocked ? 'Разблокировано!' : 'Заблокировано',
@@ -268,7 +268,7 @@ class HistoryDialog extends StatelessWidget {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(22, 20, 16, 14),
+              padding: const EdgeInsets.fromLTRB(24, 24, 16, 16),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -332,8 +332,8 @@ class HistoryDialog extends StatelessWidget {
                     )
                   : ListView.builder(
                       padding: const EdgeInsets.symmetric(
-                        vertical: 10,
-                        horizontal: 14,
+                        vertical: 12,
+                        horizontal: 16,
                       ),
                       itemCount: history.length,
                       itemBuilder: (_, i) =>
@@ -366,8 +366,8 @@ class _HistoryCard extends StatelessWidget {
         : const Color(0xFFFF3B30).withAlpha(60);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: accentBg,
         borderRadius: BorderRadius.circular(12),
@@ -410,11 +410,11 @@ class _HistoryCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Row(
             children: [
               Icon(e.skillIcon, color: c, size: 13),
-              const SizedBox(width: 5),
+              const SizedBox(width: 4),
               Text('Навык: ', style: TextStyle(color: sub, fontSize: 12)),
               Text(
                 e.skillName,
@@ -426,7 +426,7 @@ class _HistoryCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Text(
             e.isCompletion ? '+${e.xp} XP' : '-${e.xp} XP',
             style: TextStyle(

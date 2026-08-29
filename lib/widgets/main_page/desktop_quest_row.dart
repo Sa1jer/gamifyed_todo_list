@@ -69,7 +69,7 @@ class _DesktopQuestRowState extends State<DesktopQuestRow> {
             duration: DesktopJournalTokens.fastMotion,
             curve: DesktopJournalTokens.motionCurve,
             constraints: const BoxConstraints(minHeight: 72),
-            padding: const EdgeInsets.fromLTRB(14, 11, 10, 11),
+            padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
             decoration: BoxDecoration(
               color: done
                   ? tokens.successGreen.withValues(alpha: 0.045)
@@ -112,7 +112,7 @@ class _DesktopQuestRowState extends State<DesktopQuestRow> {
                     },
                   ),
                 ),
-                const SizedBox(width: 13),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -131,7 +131,7 @@ class _DesktopQuestRowState extends State<DesktopQuestRow> {
                         ),
                       ),
                       if (task.description.trim().isNotEmpty) ...[
-                        const SizedBox(height: 3),
+                        const SizedBox(height: 4),
                         Text(
                           task.description,
                           maxLines: 2,
@@ -144,7 +144,7 @@ class _DesktopQuestRowState extends State<DesktopQuestRow> {
                           ),
                         ),
                       ],
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 8),
                       Wrap(
                         spacing: 6,
                         runSpacing: 4,
@@ -165,7 +165,7 @@ class _DesktopQuestRowState extends State<DesktopQuestRow> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 _DesktopRewardPill(value: reward, tokens: tokens),
                 const SizedBox(width: 4),
                 AnimatedOpacity(
@@ -175,9 +175,15 @@ class _DesktopQuestRowState extends State<DesktopQuestRow> {
                   child: IgnorePointer(
                     ignoring: !actionsVisible,
                     child: SizedBox(
-                      width: 34,
+                      width: 36,
+                      height: 36,
                       child: PopupMenuButton<_DesktopTaskMenuAction>(
                         tooltip: 'Действия с квестом ${task.title}',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 36,
+                          minHeight: 36,
+                        ),
                         icon: Icon(
                           Icons.more_vert_rounded,
                           color: tokens.mutedText,
@@ -325,10 +331,10 @@ class _DesktopTypeBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(99),
+        borderRadius: BorderRadius.circular(999),
         border: Border.all(color: color.withValues(alpha: 0.24)),
       ),
       child: Text(
@@ -389,9 +395,9 @@ class _DesktopMiniActionState extends State<_DesktopMiniAction> {
       ),
       onTapCancel: () => _origin = null,
       onTap: _completeTap,
-      borderRadius: BorderRadius.circular(99),
+      borderRadius: BorderRadius.circular(999),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         child: Text(
           widget.label,
           style: TextStyle(
@@ -416,10 +422,10 @@ class _DesktopRewardPill extends StatelessWidget {
     return Semantics(
       label: 'Награда $value XP',
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: tokens.rewardGold.withValues(alpha: 0.09),
-          borderRadius: BorderRadius.circular(99),
+          borderRadius: BorderRadius.circular(999),
           border: Border.all(color: tokens.rewardGold.withValues(alpha: 0.3)),
         ),
         child: Row(

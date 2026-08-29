@@ -94,7 +94,7 @@ class _DesktopStatisticsOverview extends StatelessWidget {
               mainSkillIdentity: mainSkillIdentity,
             ),
           ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 24),
           LayoutBuilder(
             builder: (context, constraints) {
               final showRail = constraints.maxWidth >= 940;
@@ -108,7 +108,7 @@ class _DesktopStatisticsOverview extends StatelessWidget {
                 return Column(
                   children: [
                     main,
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 16),
                     _DesktopStatisticsRail(
                       state: state,
                       tokens: tokens,
@@ -122,7 +122,7 @@ class _DesktopStatisticsOverview extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(child: main),
-                  const SizedBox(width: 22),
+                  const SizedBox(width: 24),
                   SizedBox(
                     width: 280,
                     child: _DesktopStatisticsRail(
@@ -176,7 +176,7 @@ class _DesktopStatisticsMainContent extends StatelessWidget {
           title: 'История роста',
           subtitle: 'Сначала то, что уже получилось и стало частью пути.',
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         LayoutBuilder(
           builder: (context, constraints) => GridView.count(
             key: const ValueKey('desktop-statistics-growth-history'),
@@ -222,14 +222,14 @@ class _DesktopStatisticsMainContent extends StatelessWidget {
           title: 'Цели и путь',
           subtitle: 'Где ты сейчас по навыкам и какой этап двигается дальше.',
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         _DesktopSectionCard(
           tokens: tokens,
           child: Column(
             children: state.roadmapSkills.isEmpty
                 ? [
                     Padding(
-                      padding: const EdgeInsets.all(18),
+                      padding: const EdgeInsets.all(16),
                       child: _DesktopEmptyMessage(
                         tokens: tokens,
                         icon: Icons.route_outlined,
@@ -255,7 +255,7 @@ class _DesktopStatisticsMainContent extends StatelessWidget {
           title: 'Что продолжить',
           subtitle: 'Один мягкий ориентир из уже сделанного.',
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         if (courseNudge != null)
           _DesktopCourseNudgeCard(
             nudge: courseNudge,
@@ -268,7 +268,7 @@ class _DesktopStatisticsMainContent extends StatelessWidget {
           _DesktopSectionCard(
             tokens: tokens,
             child: Padding(
-              padding: const EdgeInsets.all(18),
+              padding: const EdgeInsets.all(16),
               child: Text(
                 'Закрой первый квест, чтобы история начала подсказывать следующий шаг.',
                 style: TextStyle(color: tokens.mutedText),
@@ -333,7 +333,7 @@ class _DesktopCourseNudgeCard extends StatelessWidget {
                     letterSpacing: 0.5,
                   ),
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 4),
                 Text(
                   nudge.title,
                   style: TextStyle(
@@ -342,7 +342,7 @@ class _DesktopCourseNudgeCard extends StatelessWidget {
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 4),
                 Text(
                   nudge.reason,
                   maxLines: 2,
@@ -427,7 +427,7 @@ class _DesktopStatisticsRail extends StatelessWidget {
         color: tokens.successGreen,
         onTap: () => onOpen(_DesktopStatisticsDetail.xpLog),
       ),
-      const SizedBox(height: 14),
+      const SizedBox(height: 16),
       _DesktopSectionLabel(
         tokens: tokens,
         title: 'Трофеи и события',
@@ -473,41 +473,49 @@ class _DesktopStatisticsDetailPage extends StatelessWidget {
         'Победы дня',
         Icons.celebration_outlined,
         tokens.streakAmber,
+        'Квесты, закрытые сегодня',
       ),
       _DesktopStatisticsDetail.weekly => (
         'Неделя',
         Icons.calendar_view_week,
         tokens.successGreen,
+        'Квесты, закрытые за последние семь дней',
       ),
       _DesktopStatisticsDetail.timeline => (
         'Летопись',
         Icons.auto_stories_outlined,
         const Color(0xFFB84DFF),
+        'Все закрытые квесты по датам',
       ),
       _DesktopStatisticsDetail.growth => (
         'Срез роста',
         Icons.trending_up,
         tokens.semanticBlue,
+        'Уровень и пройденные этапы по каждому навыку',
       ),
       _DesktopStatisticsDetail.calendar => (
         'Календарь квестов',
         Icons.calendar_month_outlined,
         const Color(0xFFB84DFF),
+        'Сколько квестов закрыто в каждый день',
       ),
       _DesktopStatisticsDetail.xpLog => (
         'Журнал XP',
         Icons.receipt_long_outlined,
         tokens.successGreen,
+        'Опыт, начисленный за каждый закрытый квест',
       ),
       _DesktopStatisticsDetail.achievements => (
         'Достижения',
         Icons.workspace_premium_outlined,
         tokens.rewardGold,
+        'Что открыто и что осталось',
       ),
       _DesktopStatisticsDetail.resistance => (
         'Сопротивление',
         Icons.shield_outlined,
         tokens.danger,
+        'События, которые требуют отдельного усилия',
       ),
     };
     return _DesktopPageScaffold(
@@ -515,7 +523,7 @@ class _DesktopStatisticsDetailPage extends StatelessWidget {
       icon: meta.$2,
       color: meta.$3,
       title: meta.$1,
-      subtitle: 'Детальный разбор внутри единого desktop workspace.',
+      subtitle: meta.$4,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -567,7 +575,7 @@ class _DesktopStatisticsDetailPage extends StatelessWidget {
         return _DesktopSectionCard(
           tokens: tokens,
           child: Padding(
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.all(16),
             child: _DesktopEmptyMessage(
               tokens: tokens,
               icon: Icons.shield_outlined,
@@ -633,7 +641,7 @@ class _DesktopStatisticsDetailPage extends StatelessWidget {
       return _DesktopSectionCard(
         tokens: tokens,
         child: Padding(
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(16),
           child: _DesktopEmptyMessage(
             tokens: tokens,
             icon: Icons.history_rounded,
@@ -701,7 +709,7 @@ class _DesktopSectionLabel extends StatelessWidget {
           fontWeight: FontWeight.w900,
         ),
       ),
-      const SizedBox(height: 3),
+      const SizedBox(height: 4),
       Text(
         subtitle,
         style: TextStyle(
@@ -739,7 +747,7 @@ class _DesktopStatisticsLinkCard extends StatelessWidget {
     borderRadius: 14,
     onTap: onTap,
     child: Padding(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       child: Row(
         children: [
           Container(
@@ -747,11 +755,11 @@ class _DesktopStatisticsLinkCard extends StatelessWidget {
             height: 38,
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: color, size: 19),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -766,7 +774,7 @@ class _DesktopStatisticsLinkCard extends StatelessWidget {
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 4),
                 Text(
                   subtitle,
                   maxLines: 2,
@@ -794,7 +802,7 @@ class _DesktopStatisticsSkillProgress extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+    padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
     child: Row(
       children: [
         Container(
@@ -802,11 +810,11 @@ class _DesktopStatisticsSkillProgress extends StatelessWidget {
           height: 34,
           decoration: BoxDecoration(
             color: skill.color.withValues(alpha: 0.13),
-            borderRadius: BorderRadius.circular(9),
+            borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(skill.icon, color: skill.color, size: 18),
         ),
-        const SizedBox(width: 11),
+        const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -833,15 +841,15 @@ class _DesktopStatisticsSkillProgress extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 7),
+              const SizedBox(height: 8),
               DesktopProgressBar(
                 value: skill.treeProgress,
                 color: skill.color,
                 background: skill.color.withValues(alpha: 0.12),
-                height: 6,
+                height: DesktopScale.barHeight,
               ),
               if (skill.goal.trim().isNotEmpty) ...[
-                const SizedBox(height: 5),
+                const SizedBox(height: 4),
                 Text(
                   skill.goal,
                   maxLines: 1,
@@ -876,10 +884,10 @@ class _DesktopContinuationCard extends StatelessWidget {
         )
         .firstOrNull;
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: skill.color.withValues(alpha: 0.055),
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: skill.color.withValues(alpha: 0.22)),
       ),
       child: Row(
@@ -889,7 +897,7 @@ class _DesktopContinuationCard extends StatelessWidget {
             height: 42,
             decoration: BoxDecoration(
               color: skill.color.withValues(alpha: 0.13),
-              borderRadius: BorderRadius.circular(11),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(skill.icon, color: skill.color),
           ),
@@ -906,14 +914,14 @@ class _DesktopContinuationCard extends StatelessWidget {
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 4),
                 Text(
                   stage == null
                       ? 'Добавь этап пути'
                       : 'Активный этап: ${stage.title}',
                   style: TextStyle(color: tokens.mutedText),
                 ),
-                const SizedBox(height: 5),
+                const SizedBox(height: 4),
                 Text(
                   '$weekXp XP на неделе',
                   style: TextStyle(
@@ -954,11 +962,11 @@ class _DesktopRailLink extends StatelessWidget {
       borderRadius: 12,
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.all(11),
+        padding: const EdgeInsets.all(12),
         child: Row(
           children: [
             Icon(icon, color: color, size: 18),
-            const SizedBox(width: 9),
+            const SizedBox(width: 8),
             Expanded(
               child: Text(
                 title,
@@ -1017,10 +1025,10 @@ class _DesktopDetailCard extends StatelessWidget {
   });
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(14),
+    padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
       color: tokens.cardSurface,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(16),
       border: Border.all(color: color.withValues(alpha: 0.2)),
     ),
     child: Row(
@@ -1030,11 +1038,11 @@ class _DesktopDetailCard extends StatelessWidget {
           height: 38,
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(icon, color: color, size: 19),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 12),
         Expanded(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -1049,7 +1057,7 @@ class _DesktopDetailCard extends StatelessWidget {
                   fontWeight: FontWeight.w900,
                 ),
               ),
-              const SizedBox(height: 3),
+              const SizedBox(height: 4),
               Text(
                 subtitle,
                 maxLines: 2,

@@ -72,6 +72,21 @@ Color subtext(bool d) => d ? const Color(0xFF8E8E93) : const Color(0xFF555560);
 Color borderColor(bool d) =>
     d ? const Color(0xFF2A2A35) : const Color(0xFFD8D8E4);
 
+/// Поверхности диалогов.
+///
+/// Раньше каждая точка применения повторяла собственную пару «тёмный/светлый»
+/// хардкодом: девять вариантов фона поля, пять вариантов приподнятого чипа и
+/// четыре почти одинаковых фона карточки. Разница в один-два шага яркости не
+/// несла смысла, а хардкод рядом с токенами уже приводил к поверхностям без
+/// тёмного варианта.
+Color dialogFieldSurface(bool d) =>
+    d ? const Color(0xFF13131A) : const Color(0xFFF5F5F7);
+Color dialogRaisedSurface(bool d) =>
+    d ? const Color(0xFF23232D) : const Color(0xFFF0F0F5);
+Color dialogCardSurface(bool d) => d ? const Color(0xFF181820) : Colors.white;
+Color dialogBadgeSurface(bool d) =>
+    d ? const Color(0xFF0D0D12) : const Color(0xFFF7F8FC);
+
 /// Compatibility bridge for persisted ARGB values.
 ///
 /// Persistence codecs stay Flutter-independent while the persisted numeric

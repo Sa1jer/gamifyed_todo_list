@@ -1,6 +1,6 @@
 # TODO / Living Backlog
 
-Last updated: 2026-08-28
+Last updated: 2026-08-29
 
 This file tracks the active implementation roadmap and completed project work. Update it after every meaningful code or design change.
 
@@ -188,6 +188,9 @@ before it enters an implementation brief.
 - [x] Replace persistent row action glyphs with stable hover/focus ellipsis menus and simplify the first-quest empty state.
 - [x] Add the semantic `AppTypography`/`AppTextRoles` foundation, nested-theme fallback, and adaptive-content tests for desktop focus, sidebar and RoadMap template surfaces.
 - [x] Rebuild the selected desktop skill header into one centred icon/content/action row: real goal follows the level, XP and plain-text total quest count share one leading axis, and compact widths reflow without restoring legacy positioning.
+- [x] Desktop audit wave 1 (mechanical): introduce `DesktopScale` (radius `8/12/16/999`, border `1/2`, bar `6`, spacing `4/8/12/16/24/32`, min hit target `32`) and snap desktop widgets, RoadMap and dialogs onto it; remove the duplicate content padding on secondary workspaces; replace the `sectionGap + 10` gap with an explicit `sectionGapLarge`; replace the developer-facing detail subtitle with per-screen content subtitles; raise the sidebar skill card to fit three rows; lift locked-stage grey to WCAG AA on light; collapse dialog surface hardcodes into `dialogFieldSurface`/`dialogRaisedSurface`/`dialogCardSurface`/`dialogBadgeSurface`.
+- [ ] Desktop audit wave 2 (RoadMap geometry): stage diameter `56`, label `>= 12`, progress badge below the orb, camera bounds from real nodes, locked-stage distance ramp, colored mastered connections, vertical axis direction, one-sided labels. Blocked on nothing; see `TASKS.md`.
+- [ ] Desktop audit waves 3-4 (colour roles, text roles, screen consolidation, tutorial reduction): require owner product decisions; see `AUDIT.md` P0-02/03/05 and P1-06/08/09/10.
 - [ ] Revisit Smarter Quest product model, value proposition, and UX before re-enabling its creation/edit controls.
 - [ ] Continue reducing remaining hardcoded `fontSize` values by subsystem; keep canvas-geometry labels as explicit exceptions until RoadMap painter metrics move to tokens.
 - [ ] Add screenshot-based native typography QA for Windows/macOS at `100%/125%/150%` scale and `200%` text size.

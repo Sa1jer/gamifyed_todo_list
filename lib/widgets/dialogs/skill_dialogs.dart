@@ -24,7 +24,7 @@ class NextRoadmapPromptDialog extends StatelessWidget {
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 460),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -81,7 +81,7 @@ class NextRoadmapPromptDialog extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 16),
               Wrap(
                 alignment: WrapAlignment.end,
                 spacing: 10,
@@ -153,9 +153,7 @@ class _NextGoalDialogState extends State<NextGoalDialog> {
   Widget build(BuildContext context) {
     final isDark = widget.isDark;
     final background = surface(isDark);
-    final fieldBackground = isDark
-        ? const Color(0xFF13131A)
-        : const Color(0xFFF5F5F7);
+    final fieldBackground = dialogFieldSurface(isDark);
     final text = textColor(isDark);
     final secondary = subtext(isDark);
     final border = borderColor(isDark);
@@ -167,7 +165,7 @@ class _NextGoalDialogState extends State<NextGoalDialog> {
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 460),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(24),
           child: Form(
             key: _formKey,
             child: Column(
@@ -197,7 +195,7 @@ class _NextGoalDialogState extends State<NextGoalDialog> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 16),
                 Text(
                   'Текущая цель',
                   style: TextStyle(
@@ -206,7 +204,7 @@ class _NextGoalDialogState extends State<NextGoalDialog> {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(height: 5),
+                const SizedBox(height: 4),
                 Text(
                   widget.currentGoal.trim().isEmpty
                       ? 'Цель не была описана'
@@ -219,7 +217,7 @@ class _NextGoalDialogState extends State<NextGoalDialog> {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 16),
                 TextFormField(
                   key: const ValueKey('next-goal-field'),
                   controller: _goalController,
@@ -234,19 +232,22 @@ class _NextGoalDialogState extends State<NextGoalDialog> {
                     filled: true,
                     fillColor: fieldBackground,
                     enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(color: border),
                     ),
                     focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: widget.color, width: 1.4),
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: widget.color,
+                        width: DesktopScale.borderThick,
+                      ),
                     ),
                     errorBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                       borderSide: const BorderSide(color: Color(0xFFFF453A)),
                     ),
                     focusedErrorBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                       borderSide: const BorderSide(color: Color(0xFFFF453A)),
                     ),
                   ),
@@ -260,7 +261,7 @@ class _NextGoalDialogState extends State<NextGoalDialog> {
                   },
                   onFieldSubmitted: (_) => _save(),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 Text(
                   'Текущая цель сохранится в истории. Этапы и квесты не будут удалены.',
                   style: TextStyle(
@@ -270,7 +271,7 @@ class _NextGoalDialogState extends State<NextGoalDialog> {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 16),
                 Wrap(
                   alignment: WrapAlignment.end,
                   spacing: 10,
@@ -560,9 +561,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
         : surface(isDark);
     final fBg = widget.fullScreen
         ? MobileJournalTokens.questRow(isDark)
-        : isDark
-        ? const Color(0xFF13131A)
-        : const Color(0xFFF5F5F7);
+        : dialogFieldSurface(isDark);
     final txt = textColor(isDark);
     final sub = subtext(isDark);
     final bdr = borderColor(isDark);
@@ -607,7 +606,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
     final form = SingleChildScrollView(
       key: const ValueKey('add-skill-form-scroll'),
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      padding: EdgeInsets.all(MediaQuery.sizeOf(context).width < 600 ? 18 : 24),
+      padding: EdgeInsets.all(MediaQuery.sizeOf(context).width < 600 ? 16 : 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -624,17 +623,17 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
               subtitle: '',
               isDark: isDark,
             ),
-            const SizedBox(height: 9),
+            const SizedBox(height: 8),
             nameField,
             if (_nameError != null) ...[
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               SkillCreatorNameError(message: _nameError!),
             ],
-            const SizedBox(height: 18),
+            const SizedBox(height: 16),
             MobileSkillFormSection(title: 'Цель', subtitle: '', isDark: isDark),
-            const SizedBox(height: 9),
+            const SizedBox(height: 8),
             goalField,
-            const SizedBox(height: 7),
+            const SizedBox(height: 8),
             Text(
               'Можно уточнить цель позже — она не обязана быть идеальной с первого раза.',
               style: TextStyle(
@@ -656,7 +655,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
                 children: [
                   nameField,
                   if (_nameError != null) ...[
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 8),
                     SkillCreatorNameError(message: _nameError!),
                   ],
                   const SizedBox(height: 12),
@@ -665,7 +664,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
               ),
             ),
           ],
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           if (widget.showFirstRunHints && widget.existing == null) ...[
             FirstRunDialogHint(
               text:
@@ -673,7 +672,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
               color: _color,
               isDark: isDark,
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
           ],
           if (widget.fullScreen) ...[
             MobileSkillFormSection(
@@ -691,7 +690,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
                 fontWeight: FontWeight.w900,
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
           ],
           Row(
             children: [
@@ -713,7 +712,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
                   foregroundColor: _color,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
-                    vertical: 5,
+                    vertical: 4,
                   ),
                   visualDensity: VisualDensity.compact,
                 ),
@@ -751,7 +750,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
                 children: SkillIconCategory.values.map((category) {
                   final selected = category == _iconCategory;
                   return Padding(
-                    padding: const EdgeInsets.only(right: 6),
+                    padding: const EdgeInsets.only(right: 8),
                     child: ChoiceChip(
                       key: ValueKey('skill-icon-category-${category.name}'),
                       selected: selected,
@@ -781,7 +780,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
               height: 158,
               decoration: BoxDecoration(
                 color: fBg,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: bdr),
               ),
               child: GridView.builder(
@@ -831,7 +830,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
                 );
               }).toList(),
             ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
 
           SubLbl('Цвет', sub),
           const SizedBox(height: 8),
@@ -882,7 +881,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
                 );
               }).toList(),
             ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
 
           if (widget.existing == null) ...[
             _OptionalFirstStageSection(
@@ -897,7 +896,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
               onToggle: () =>
                   setState(() => _firstStageExpanded = !_firstStageExpanded),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
           ],
 
           const SizedBox(height: 8),
@@ -934,7 +933,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
                 foregroundColor: Colors.white,
                 minimumSize: const Size.fromHeight(52),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
+                  borderRadius: BorderRadius.circular(16),
                 ),
               ),
               icon: Icon(
@@ -974,14 +973,14 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 16, 14),
+              padding: const EdgeInsets.fromLTRB(24, 24, 16, 16),
               child: DlgHeader(title: title, txtColor: txt),
             ),
             Divider(height: 1, color: bdr),
             Flexible(child: form),
             Divider(height: 1, color: bdr),
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 14, 24, 18),
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
               child: Align(
                 alignment: Alignment.centerRight,
                 child: DlgActions(
@@ -1088,8 +1087,8 @@ class _OptionalFirstStageSection extends StatelessWidget {
     return Container(
       key: const ValueKey('skill-first-stage-section'),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF13131A) : const Color(0xFFF7F8FA),
-        borderRadius: BorderRadius.circular(14),
+        color: dialogFieldSurface(isDark),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: borderColor),
       ),
       child: Column(
@@ -1101,16 +1100,16 @@ class _OptionalFirstStageSection extends StatelessWidget {
             child: InkWell(
               key: const ValueKey('skill-first-stage-disclosure'),
               onTap: onToggle,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(16),
               child: Padding(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
+                  horizontal: 16,
                   vertical: 12,
                 ),
                 child: Row(
                   children: [
                     Icon(Icons.route_rounded, color: color, size: 19),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1155,7 +1154,7 @@ class _OptionalFirstStageSection extends StatelessWidget {
                 : CrossFadeState.showFirst,
             firstChild: const SizedBox(width: double.infinity),
             secondChild: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1168,7 +1167,7 @@ class _OptionalFirstStageSection extends StatelessWidget {
                     bdr: borderColor,
                     fieldKey: const ValueKey('add-skill-first-stage-field'),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   Text(
                     'Например: «Основа» или «Первая неделя практики».',
                     style: TextStyle(

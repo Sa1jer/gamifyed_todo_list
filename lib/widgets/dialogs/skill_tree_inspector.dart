@@ -36,11 +36,11 @@ class SkillTreeNodeInspector extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF111118) : Colors.white,
+        color: dialogCardSurface(isDark),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: bdr),
       ),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       child: selectedNode == null
           ? _EmptyNodeInspector(
               isDark: isDark,
@@ -87,7 +87,7 @@ class _EmptyNodeInspector extends StatelessWidget {
             fontWeight: FontWeight.w900,
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         Text(
           'Этап — это ступень навыка. Создавайте квесты для этапа, выполняйте их и фиксируйте освоение.',
           style: TextStyle(
@@ -163,7 +163,7 @@ class _SelectedNodeInspector extends StatelessWidget {
               ),
               child: Icon(_statusIcon(status), color: statusColor, size: 19),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -196,7 +196,7 @@ class _SelectedNodeInspector extends StatelessWidget {
             style: TextStyle(color: sub, fontSize: 12.5, height: 1.35),
           ),
         ],
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
         _NodeProgressPanel(
           isDark: isDark,
           color: statusColor,
@@ -221,7 +221,7 @@ class _SelectedNodeInspector extends StatelessWidget {
               ),
           ],
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
         Text(
           'Квесты этапа',
           style: TextStyle(
@@ -247,7 +247,7 @@ class _SelectedNodeInspector extends StatelessWidget {
                 )
               : ListView.separated(
                   itemCount: linkedTasks.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 7),
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
                   itemBuilder: (_, index) => _InspectorQuestRow(
                     task: linkedTasks[index],
                     isDark: isDark,
@@ -285,7 +285,7 @@ class _SelectedNodeInspector extends StatelessWidget {
                 onTap: onMaster ?? () {},
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
             PressFeedback(
               scale: 0.94,
               tooltip: 'Удалить этап',
@@ -324,7 +324,7 @@ class _NodeProgressPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final clamped = math.min(completed, target);
     return Container(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: color.withAlpha(12),
         borderRadius: BorderRadius.circular(12),
@@ -336,7 +336,7 @@ class _NodeProgressPanel extends StatelessWidget {
           Row(
             children: [
               Icon(Icons.flag, color: color, size: 16),
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   'Прогресс освоения',
@@ -384,10 +384,10 @@ class _InspectorQuestRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final sub = subtext(isDark);
     return Container(
-      padding: const EdgeInsets.all(9),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF181820) : const Color(0xFFF5F5F8),
-        borderRadius: BorderRadius.circular(10),
+        color: dialogFieldSurface(isDark),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: borderColor(isDark)),
       ),
       child: Row(
@@ -447,7 +447,7 @@ class _MasterNodeButton extends StatelessWidget {
       curve: kMotionCurve,
       opacity: enabled ? 1 : 0.45,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: color,
           borderRadius: BorderRadius.circular(8),
@@ -507,12 +507,12 @@ class SkillTreeEmptyState extends StatelessWidget {
             'Карта мастерства пока пустая',
             style: TextStyle(color: sub, fontWeight: FontWeight.w600),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Text(
             'Начните с этапов: “Основы”, “Практика”, “Первый проект”.',
             style: TextStyle(color: sub.withAlpha(170), fontSize: 12),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           SmallBtn(
             label: 'Добавить этап',
             icon: Icons.add,

@@ -28,8 +28,8 @@ class _MasteryMapHero extends StatelessWidget {
     final showFullscreen = !mobile;
     final content = Padding(
       padding: EdgeInsets.symmetric(
-        horizontal: mobile ? 12 : 18,
-        vertical: mobile ? 9 : 14,
+        horizontal: mobile ? 12 : DesktopScale.space16,
+        vertical: mobile ? 9 : DesktopScale.space16,
       ),
       child: Row(
         children: [
@@ -60,9 +60,9 @@ class _MasteryMapHero extends StatelessWidget {
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 4),
                 Text(
-                  'Карта показывает путь навыка: этапы, связи и следующий шаг мастерства. Квесты здесь — практика для этапов.',
+                  'Этапы навыка и следующий шаг пути',
                   maxLines: mobile ? 1 : 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -98,7 +98,7 @@ class _MasteryMapHero extends StatelessWidget {
         key: const ValueKey('roadmap-mobile-hero'),
         decoration: BoxDecoration(
           color: surface(isDark),
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(16),
         ),
         child: content,
       );
@@ -107,7 +107,7 @@ class _MasteryMapHero extends StatelessWidget {
       key: const ValueKey('desktop-roadmap-toolbar'),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF11121A) : const Color(0xFFFFFFFF),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: color.withValues(alpha: 0.22)),
       ),
       child: Padding(
@@ -162,10 +162,10 @@ class _RoadmapLayoutToggle extends StatelessWidget {
     return Semantics(
       label: 'Ориентация RoadMap',
       child: Container(
-        padding: const EdgeInsets.all(3),
+        padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
           color: isDark ? Colors.white.withAlpha(8) : Colors.black.withAlpha(5),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(color: borderColor(isDark)),
         ),
         child: Row(
@@ -223,7 +223,7 @@ class _RoadmapLayoutButton extends StatelessWidget {
         selected: selected,
         label: tooltip,
         child: InkWell(
-          borderRadius: BorderRadius.circular(7),
+          borderRadius: BorderRadius.circular(8),
           onTap: onTap,
           child: AnimatedContainer(
             duration: kMotionFast,
@@ -232,7 +232,7 @@ class _RoadmapLayoutButton extends StatelessWidget {
             height: 32,
             decoration: BoxDecoration(
               color: selected ? color.withAlpha(isDark ? 38 : 24) : null,
-              borderRadius: BorderRadius.circular(7),
+              borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
               icon,
@@ -397,7 +397,7 @@ class _MasteryMapBody extends StatelessWidget {
             child: Column(
               children: [
                 SizedBox(height: canvasHeight, child: canvas),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 _MasteryMobileSelectionSummary(
                   state: state,
                   isDark: isDark,
@@ -434,7 +434,7 @@ class _MasteryMapBody extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(child: canvas),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
             SizedBox(
               key: const ValueKey('desktop-roadmap-context-rail'),
               width: fullscreen ? 380 : 340,

@@ -104,16 +104,16 @@ class _OrbMasteryMapPainter extends CustomPainter {
   }) {
     final start = _edgePoint(from, to, fromRadius);
     final end = _edgePoint(to, from, toRadius);
-    final color = _roadmapStageStatusColor(skill, status);
+    final color = _roadmapStageStatusColor(skill, status, isDark: isDark);
     final alpha = switch (status) {
       SkillTreeNodeStatus.locked => layout.compactVisuals ? 35 : 50,
       SkillTreeNodeStatus.active => layout.compactVisuals ? 118 : 140,
       SkillTreeNodeStatus.mastered => layout.compactVisuals ? 96 : 118,
     };
     final width = switch (status) {
-      SkillTreeNodeStatus.locked => 1.45,
-      SkillTreeNodeStatus.active => 2.4,
-      SkillTreeNodeStatus.mastered => 2.05,
+      SkillTreeNodeStatus.locked => DesktopScale.borderThin,
+      SkillTreeNodeStatus.active => DesktopScale.borderThick,
+      SkillTreeNodeStatus.mastered => DesktopScale.borderThick,
     };
     final path = _roadConnectionPath(start, end, layout.verticalAxisProgress);
     final glowPaint = Paint()
@@ -190,17 +190,17 @@ class _MasteryVectorGridPainter extends CustomPainter {
     final minorPaint = Paint()
       ..color = gridColor.withAlpha(isDark ? 13 : 10)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 0.7
+      ..strokeWidth = DesktopScale.borderThin
       ..isAntiAlias = true;
     final majorPaint = Paint()
       ..color = gridColor.withAlpha(isDark ? 39 : 26)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.15
+      ..strokeWidth = DesktopScale.borderThin
       ..isAntiAlias = true;
     final crossPaint = Paint()
       ..color = gridColor.withAlpha(isDark ? 112 : 68)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.25
+      ..strokeWidth = DesktopScale.borderThin
       ..strokeCap = StrokeCap.round
       ..isAntiAlias = true;
     final dotPaint = Paint()

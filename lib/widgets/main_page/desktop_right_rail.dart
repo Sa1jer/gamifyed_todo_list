@@ -52,7 +52,7 @@ class DesktopRightRail extends StatelessWidget {
       child: Scrollbar(
         child: ListView(
           key: const ValueKey('desktop-right-rail-scroll'),
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
+          padding: const EdgeInsets.fromLTRB(16, 24, 16, 32),
           children: [
             _RailHeading(
               icon: Icons.adjust_rounded,
@@ -93,7 +93,7 @@ class DesktopRightRail extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -102,7 +102,7 @@ class DesktopRightRail extends StatelessWidget {
                           '$completedCount/$totalCount',
                           style: roles.statValue.copyWith(color: tokens.text),
                         ),
-                        const SizedBox(height: 3),
+                        const SizedBox(height: 4),
                         Text(
                           'квестов выполнено',
                           style: roles.compactMetadata.copyWith(
@@ -115,7 +115,7 @@ class DesktopRightRail extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             Divider(height: 1, color: tokens.subtleOutline),
             const SizedBox(height: 16),
             if (focusTasks.isEmpty)
@@ -135,28 +135,28 @@ class DesktopRightRail extends StatelessWidget {
                       ),
                     ),
                   ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 16),
             Divider(height: 1, color: tokens.subtleOutline),
-            const SizedBox(height: 18),
+            const SizedBox(height: 16),
             Text(
               'ЗА НЕДЕЛЮ',
               key: const ValueKey('desktop-weekly-section-title'),
               style: roles.sectionEyebrow.copyWith(color: tokens.mutedText),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             _WeeklyBars(
               values: weekly,
               maxValue: maxWeekly,
               todayIndex: today.weekday - 1,
               tokens: tokens,
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             Divider(
               key: const ValueKey('desktop-weekly-xp-divider'),
               height: 1,
               color: tokens.subtleOutline,
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             Text(
               'XP ПО НАВЫКАМ',
               key: const ValueKey('desktop-skill-xp-section-title'),
@@ -168,7 +168,7 @@ class DesktopRightRail extends StatelessWidget {
             else
               ...skills.map(
                 (skill) => Padding(
-                  padding: const EdgeInsets.only(bottom: 9),
+                  padding: const EdgeInsets.only(bottom: 8),
                   child: Semantics(
                     label: '${skill.name}, ${skill.xp} XP текущего уровня',
                     child: Row(
@@ -234,11 +234,11 @@ class _RailHeading extends StatelessWidget {
           height: 30,
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(9),
+            borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, color: color, size: 17),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 12),
         Expanded(
           child: Text(
             title,
@@ -337,7 +337,7 @@ class _FocusTaskState extends State<_FocusTask> {
               : const Duration(milliseconds: 110),
           curve: DesktopJournalTokens.motionCurve,
           constraints: const BoxConstraints(minHeight: 54),
-          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           decoration: BoxDecoration(
             color: active
                 ? Color.alphaBlend(
@@ -390,7 +390,7 @@ class _FocusTaskState extends State<_FocusTask> {
                       shape: BoxShape.circle,
                     ),
                   ),
-                  const SizedBox(width: 5),
+                  const SizedBox(width: 4),
                   Flexible(
                     child: Text(
                       skill?.name ?? 'Навык',
@@ -461,7 +461,7 @@ class _FocusTaskState extends State<_FocusTask> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 9),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -536,7 +536,7 @@ class _WeeklyBars extends StatelessWidget {
             final isToday = index == todayIndex;
             return Expanded(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
@@ -551,11 +551,11 @@ class _WeeklyBars extends StatelessWidget {
                           color: isToday
                               ? tokens.profilePurple
                               : tokens.profilePurple.withValues(alpha: 0.43),
-                          borderRadius: BorderRadius.circular(99),
+                          borderRadius: BorderRadius.circular(999),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 7),
+                    const SizedBox(height: 8),
                     Text(
                       labels[index],
                       style: context.appTextTheme.labelSmall?.copyWith(

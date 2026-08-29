@@ -150,13 +150,9 @@ class _SkillOrbButtonState extends State<_SkillOrbButton> {
                             color: widget.selected
                                 ? Colors.white
                                 : widget.skill.color,
-                            width: widget.roadFocus
-                                ? widget.compactVisuals
-                                      ? 2.2
-                                      : 3.4
-                                : widget.selected
-                                ? 3
-                                : 2,
+                            width: widget.roadFocus || widget.selected
+                                ? DesktopScale.borderThick
+                                : DesktopScale.borderThin,
                           ),
                           boxShadow: [
                             BoxShadow(
@@ -333,12 +329,12 @@ class _SkillOrbProgressPainter extends CustomPainter {
     final base = Paint()
       ..color = (isDark ? Colors.white : Colors.black).withAlpha(24)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3
+      ..strokeWidth = DesktopScale.borderThick
       ..strokeCap = StrokeCap.round;
     final active = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.2
+      ..strokeWidth = DesktopScale.borderThick
       ..strokeCap = StrokeCap.round;
     canvas.drawCircle(center, radius, base);
     canvas.drawArc(
@@ -366,7 +362,7 @@ class _SelectSkillHint extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: surface(isDark).withAlpha(isDark ? 105 : 145),
         borderRadius: BorderRadius.circular(12),
@@ -433,7 +429,11 @@ class _MapNodeButtonState extends State<_MapNodeButton> {
   @override
   Widget build(BuildContext context) {
     final status = widget.skill.treeNodeStatus(widget.node);
-    final statusColor = _roadmapStageStatusColor(widget.skill, status);
+    final statusColor = _roadmapStageStatusColor(
+      widget.skill,
+      status,
+      isDark: widget.isDark,
+    );
     final completed = widget.state.completedTasksForTreeNode(
       widget.skill.id,
       widget.node.id,
@@ -518,7 +518,7 @@ class _MapNodeButtonState extends State<_MapNodeButton> {
                       bottom: -10,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 7,
+                          horizontal: 8,
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
@@ -526,7 +526,10 @@ class _MapNodeButtonState extends State<_MapNodeButton> {
                               ? const Color(0xFF0D0D12)
                               : const Color(0xFFF7F8FC),
                           borderRadius: BorderRadius.circular(999),
-                          border: Border.all(color: statusColor, width: 1.5),
+                          border: Border.all(
+                            color: statusColor,
+                            width: DesktopScale.borderThin,
+                          ),
                         ),
                         child: Text(
                           '${math.min(completed, target)}/$target',
@@ -647,7 +650,7 @@ class _VerticalRoadmapStageLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final status = skill.treeNodeStatus(node);
-    final statusColor = _roadmapStageStatusColor(skill, status);
+    final statusColor = _roadmapStageStatusColor(skill, status, isDark: isDark);
     final completed = state.completedTasksForTreeNode(skill.id, node.id);
     final target = node.questTarget;
     final onLeft = side == VerticalRoadmapLabelSide.left;
@@ -690,7 +693,7 @@ class _VerticalRoadmapStageLabel extends StatelessWidget {
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                const SizedBox(height: 5),
+                const SizedBox(height: 4),
                 Text(
                   metadata,
                   maxLines: 1,
@@ -808,7 +811,7 @@ class _RoadmapInsertStageButtonState extends State<_RoadmapInsertStageButton> {
                         : Colors.white,
                     border: Border.all(
                       color: widget.color.withAlpha(190),
-                      width: 1.5,
+                      width: DesktopScale.borderThick,
                     ),
                     boxShadow: [
                       BoxShadow(

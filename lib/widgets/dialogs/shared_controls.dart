@@ -58,7 +58,7 @@ class _IconChoiceButtonState extends State<_IconChoiceButton> {
       decoration: BoxDecoration(
         color: fillColor,
         borderRadius: BorderRadius.circular(widget.mobile ? 13 : 8),
-        border: Border.all(color: outlineColor, width: 1.4),
+        border: Border.all(color: outlineColor, width: DesktopScale.borderThin),
         boxShadow: selected && widget.mobile
             ? [BoxShadow(color: widget.color.withAlpha(42), blurRadius: 10)]
             : null,
@@ -93,7 +93,7 @@ class _IconChoiceButtonState extends State<_IconChoiceButton> {
                   ? Column(
                       children: [
                         Expanded(child: iconTile),
-                        const SizedBox(height: 3),
+                        const SizedBox(height: 4),
                         Text(
                           widget.displayLabel ?? widget.semanticsLabel,
                           maxLines: 1,
@@ -194,11 +194,11 @@ class _ColorChoiceButtonState extends State<_ColorChoiceButton> {
                 curve: kMotionCurve,
                 width: size,
                 height: size,
-                padding: const EdgeInsets.all(3),
+                padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
                   shape: widget.mobile ? BoxShape.rectangle : BoxShape.circle,
                   borderRadius: widget.mobile
-                      ? BorderRadius.circular(13)
+                      ? BorderRadius.circular(12)
                       : null,
                   border: Border.all(
                     color: ringColor,
@@ -218,7 +218,7 @@ class _ColorChoiceButtonState extends State<_ColorChoiceButton> {
                     color: widget.color,
                     shape: widget.mobile ? BoxShape.rectangle : BoxShape.circle,
                     borderRadius: widget.mobile
-                        ? BorderRadius.circular(9)
+                        ? BorderRadius.circular(8)
                         : null,
                   ),
                 ),
@@ -277,7 +277,7 @@ class FirstRunDialogHint extends StatelessWidget {
     return Container(
       key: const ValueKey('first-run-dialog-hint'),
       width: double.infinity,
-      padding: const EdgeInsets.all(11),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: color.withAlpha(isDark ? 24 : 16),
         borderRadius: BorderRadius.circular(12),
@@ -287,7 +287,7 @@ class FirstRunDialogHint extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(Icons.auto_awesome, color: color, size: 17),
-          const SizedBox(width: 9),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               text,

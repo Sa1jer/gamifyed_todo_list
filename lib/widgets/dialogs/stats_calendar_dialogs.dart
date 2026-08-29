@@ -21,7 +21,7 @@ class StatsDialog extends StatelessWidget {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(22, 20, 16, 14),
+              padding: const EdgeInsets.fromLTRB(24, 24, 16, 16),
               child: Row(
                 children: [
                   const Icon(
@@ -29,7 +29,7 @@ class StatsDialog extends StatelessWidget {
                     color: Color(0xFF4A9EFF),
                     size: 22,
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 12),
                   Text(
                     'Срез роста',
                     style: TextStyle(
@@ -51,7 +51,7 @@ class StatsDialog extends StatelessWidget {
             Container(height: 1, color: bdr),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(24),
                 child: Column(
                   children: [
                     _buildGrowthSnapshot(state, isDark, txt, sub),
@@ -103,13 +103,13 @@ class StatsDialog extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 24),
                     _buildXpTrendChart(state, isDark, txt, sub),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 24),
                     _buildSkillProgressChart(state, isDark, txt, sub),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 24),
                     _buildSkillStats(state, isDark, txt, sub),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 24),
                     _buildTodayStats(state, isDark, txt, sub),
                   ],
                 ),
@@ -127,10 +127,10 @@ class StatsDialog extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFF4A9EFF).withAlpha(12),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFF4A9EFF).withAlpha(38)),
       ),
       child: Row(
@@ -192,7 +192,7 @@ class StatsDialog extends StatelessWidget {
             fontSize: 14,
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         ...s.skills.map((sk) {
           final skillTasks = s.tasks
               .where((t) => t.isSkillTask && t.skillId == sk.id)
@@ -205,7 +205,7 @@ class StatsDialog extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: sk.color.withAlpha(12),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(color: sk.color.withAlpha(40)),
             ),
             child: Column(
@@ -231,15 +231,15 @@ class StatsDialog extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 Row(
                   children: [
                     Expanded(
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(3),
+                        borderRadius: BorderRadius.circular(999),
                         child: LinearProgressIndicator(
                           value: percent / 100,
-                          minHeight: 6,
+                          minHeight: DesktopScale.barHeight,
                           backgroundColor: sk.color.withAlpha(30),
                           valueColor: AlwaysStoppedAnimation(sk.color),
                         ),
@@ -452,7 +452,7 @@ class StatsDialog extends StatelessWidget {
                       return const SizedBox.shrink();
                     }
                     return Padding(
-                      padding: const EdgeInsets.only(top: 6),
+                      padding: const EdgeInsets.only(top: 8),
                       child: Text(
                         points[index].shortName,
                         overflow: TextOverflow.ellipsis,
@@ -507,9 +507,9 @@ class StatsDialog extends StatelessWidget {
             fontSize: 14,
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         Container(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: const Color(0xFF4A9EFF).withAlpha(12),
             borderRadius: BorderRadius.circular(12),
@@ -597,10 +597,10 @@ class _ChartPanel extends StatelessWidget {
     final sub = subtext(isDark);
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: color.withAlpha(10),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: color.withAlpha(36)),
       ),
       child: Column(
@@ -624,7 +624,7 @@ class _ChartPanel extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(subtitle, style: TextStyle(color: sub, fontSize: 12)),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           child,
         ],
       ),
@@ -693,7 +693,7 @@ class _StatCard extends StatelessWidget {
     final txt = textColor(isDark);
     final sub = subtext(isDark);
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: color.withAlpha(15),
         borderRadius: BorderRadius.circular(12),
@@ -705,7 +705,7 @@ class _StatCard extends StatelessWidget {
           Row(
             children: [
               Icon(icon, color: color, size: 18),
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   title,
@@ -716,7 +716,7 @@ class _StatCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Text(
             value,
             style: TextStyle(
@@ -800,7 +800,7 @@ class _CalendarDialogState extends State<CalendarDialog> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(22, 20, 16, 14),
+              padding: const EdgeInsets.fromLTRB(24, 24, 16, 16),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -809,7 +809,7 @@ class _CalendarDialogState extends State<CalendarDialog> {
                     color: Color(0xFF4A9EFF),
                     size: 22,
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1062,7 +1062,7 @@ class _CalendarDialogState extends State<CalendarDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: Row(
               children: [
                 Text(
@@ -1106,7 +1106,7 @@ class _CalendarDialogState extends State<CalendarDialog> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
-                              vertical: 6,
+                              vertical: 8,
                             ),
                             child: Row(
                               children: [

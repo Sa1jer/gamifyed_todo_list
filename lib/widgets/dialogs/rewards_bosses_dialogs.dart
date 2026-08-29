@@ -61,7 +61,7 @@ class _RewardsDialogState extends State<RewardsDialog> {
           Column(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(22, 20, 16, 14),
+                padding: const EdgeInsets.fromLTRB(24, 24, 16, 16),
                 child: Row(
                   children: [
                     const Icon(
@@ -69,7 +69,7 @@ class _RewardsDialogState extends State<RewardsDialog> {
                       color: Color(0xFFFFCC00),
                       size: 22,
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         'Трофеи после действий',
@@ -94,7 +94,7 @@ class _RewardsDialogState extends State<RewardsDialog> {
               Container(height: 1, color: bdr),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(18),
+                  padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -118,7 +118,7 @@ class _RewardsDialogState extends State<RewardsDialog> {
 
     return Dialog(
       backgroundColor: bg,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: content,
     );
@@ -146,7 +146,7 @@ class _RewardsDialogState extends State<RewardsDialog> {
         children: [
           ListView(
             key: const ValueKey('mobile-rewards-scroll'),
-            padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
             children: _buildRewardSections(
               context: context,
               isDark: isDark,
@@ -186,7 +186,7 @@ class _RewardsDialogState extends State<RewardsDialog> {
       ),
       MotionExpandable(
         expanded: _lastReveal != null,
-        collapsedChild: const SizedBox(height: 18),
+        collapsedChild: const SizedBox(height: 16),
         expandedChild: _lastReveal == null
             ? const SizedBox.shrink()
             : Padding(
@@ -206,7 +206,7 @@ class _RewardsDialogState extends State<RewardsDialog> {
           fontWeight: FontWeight.w900,
         ),
       ),
-      const SizedBox(height: 10),
+      const SizedBox(height: 12),
       MotionFadeSlideSwitcher(
         child: unopened.isEmpty
             ? RewardsEmptyState(
@@ -273,7 +273,7 @@ class _RewardsDialogState extends State<RewardsDialog> {
             TaskBadge(label: '${buffs.length}', color: const Color(0xFF34C759)),
           ],
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         MotionFadeSlideSwitcher(
           child: buffs.isEmpty
               ? RewardsEmptyState(

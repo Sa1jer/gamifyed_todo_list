@@ -98,8 +98,8 @@ class _RewardRevealNoticeState extends State<RewardRevealNotice>
           ),
           Container(
             width: double.infinity,
-            margin: const EdgeInsets.only(bottom: 18),
-            padding: const EdgeInsets.all(14),
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: reveal.color.withAlpha(widget.isDark ? 20 : 15),
               borderRadius: BorderRadius.circular(16),
@@ -134,7 +134,7 @@ class _RewardRevealNoticeState extends State<RewardRevealNotice>
                           fontWeight: FontWeight.w900,
                         ),
                       ),
-                      const SizedBox(height: 3),
+                      const SizedBox(height: 4),
                       Text(
                         reveal.message,
                         style: TextStyle(
@@ -145,7 +145,7 @@ class _RewardRevealNoticeState extends State<RewardRevealNotice>
                       ),
                       if (reveal.buffTitle != null ||
                           reveal.bonusPercent != null) ...[
-                        const SizedBox(height: 5),
+                        const SizedBox(height: 4),
                         Text(
                           [
                             if (reveal.buffTitle != null) reveal.buffTitle!,
@@ -188,8 +188,8 @@ class RewardChestCard extends StatelessWidget {
     final rarityColor = rewardRarityColor[chest.rarity]!;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: rarityColor.withAlpha(14),
         borderRadius: BorderRadius.circular(12),
@@ -236,7 +236,7 @@ class RewardChestCard extends StatelessWidget {
                   style: TextStyle(color: sub, fontSize: 11.5, height: 1.3),
                 ),
                 if (skill != null) ...[
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   TaskBadge(
                     icon: skill!.icon,
                     label: skill!.name,
@@ -246,7 +246,7 @@ class RewardChestCard extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           SmallBtn(
             label: 'Открыть',
             icon: Icons.auto_awesome,
@@ -283,8 +283,8 @@ class ActiveBuffCard extends StatelessWidget {
         : 'до ${expiresAt.hour.toString().padLeft(2, '0')}:${expiresAt.minute.toString().padLeft(2, '0')}';
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: accent.withAlpha(14),
         borderRadius: BorderRadius.circular(12),
@@ -300,11 +300,11 @@ class ActiveBuffCard extends StatelessWidget {
                 height: 36,
                 decoration: BoxDecoration(
                   color: accent.withAlpha(24),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(Icons.bolt, color: accent, size: 18),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -386,16 +386,16 @@ class RewardsEmptyState extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: (isDark ? const Color(0xFF13131A) : const Color(0xFFF5F5F7)),
+        color: dialogFieldSurface(isDark),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: borderColor(isDark)),
       ),
       child: Column(
         children: [
           Icon(icon, color: sub, size: 30),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           Text(
             title,
             style: TextStyle(

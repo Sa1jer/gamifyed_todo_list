@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400..700,0..1,0" rel="stylesheet">
+<style>
+:root{
+  --bg:#F5F6FA; --sidebar:#FBFBFD; --main:#F8F9FC; --rail:#FBFBFD; --card:#FFFFFF; --raised:#F0F2F8;
+  --outline:#D9DCE7; --subtle:#E8EAF1; --text:#181923; --muted:#6F7282;
+  --purple:#6D55E8; --gold:#B47700; --green:#168B4A; --blue:#1268C7; --amber:#B76500; --danger:#D83651;
+  --canvas:#F4F5F8;
+  --field:#F4F5FA; --chip:#F7F8FC; --sheet:#FFFFFF; --formfield:#F5F5F7; --formchip:#F0F0F5;
+  --hairline:rgba(0,0,0,.02); --dim:#8E8E93;
+  --mjBg:#F4EFE5; --mjSurface:#FFFBF3; --mjOutline:#CFC5B5; --mjText:#211D1A; --mjMuted:#6D655D;
+  --rewardBg:#FFE7B5; --rewardBorder:#C68A16; --rewardFg:#7A4D00; --rewardTrack:rgba(122,77,0,.16);
+}
+:root[data-theme="dark"]{
+  --bg:#090A11; --sidebar:#0C0D15; --main:#090A11; --rail:#0B0C14; --card:#11121A; --raised:#151620;
+  --outline:#292B38; --subtle:#1C1E29; --text:#F3F1F8; --muted:#9491A4;
+  --purple:#765BFF; --gold:#FFC21A; --green:#2ED36F; --blue:#2D8CFF; --amber:#FF8A1F; --danger:#FF315B;
+  --canvas:#050507;
+  --field:#151620; --chip:#11121A; --sheet:#11121A; --formfield:#151620; --formchip:#1C1E29;
+  --hairline:rgba(255,255,255,.03); --dim:#9491A4;
+  --mjBg:#090A11; --mjSurface:#12131D; --mjOutline:#2B2D3B; --mjText:#F5F2FA; --mjMuted:#9895A7;
+  --rewardBg:rgba(255,176,32,.09); --rewardBorder:rgba(255,176,32,.345); --rewardFg:#FFB020; --rewardTrack:rgba(255,176,32,.16);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#e9e9ee;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;}
+a{color:#6D55E8;text-decoration:none}
+a:hover{color:#4a35c4}
+.ms{font-family:'Material Symbols Rounded';font-weight:400;font-style:normal;line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;word-wrap:normal;direction:ltr;font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24;}
+.msо{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;}
+</style>
+</helmet>
+
+<section style="padding:56px 64px 96px;display:flex;flex-direction:column;gap:40px;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif">
+  <div style="display:flex;align-items:baseline;gap:14px">
+    <span style="font-size:13px;font-weight:800;letter-spacing:.08em;color:#6D55E8;border:1px solid #6D55E8;border-radius:999px;padding:5px 12px">1a</span>
+    <span style="font-size:22px;font-weight:800;color:#1a1a22">Реконструкция из кода · Десктоп 1440×900</span>
+    <span style="font-size:13px;color:#6b6b78">v1.3.64 · токены DesktopJournalTokens</span>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <div style="font-size:14px;font-weight:800;color:#3a3a46;letter-spacing:.02em">Экран «Действовать» (Сейчас) — заполненное состояние</div>
+    <div data-screen-label="Act 1440" style="width:1440px;height:900px;overflow:hidden;background:var(--bg);display:flex;border:1px solid #d5d5dd;border-radius:6px;box-shadow:0 20px 60px rgba(20,20,40,.12);color:var(--text)">
+
+      <!-- ── SIDEBAR 248 ── -->
+      <div style="width:248px;flex:0 0 248px;background:var(--sidebar);display:flex;flex-direction:column">
+        <div style="min-height:64px;padding:0 16px;display:flex;align-items:center;gap:10px">
+          <div style="width:34px;height:34px;border-radius:10px;background:var(--purple);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:19px;color:#fff">bolt</span></div>
+          <div style="font-size:15.5px;font-weight:900;color:var(--text);line-height:1.22">RPG To-Do</div>
+        </div>
+        <div style="height:1px;background:var(--subtle)"></div>
+
+        <div style="padding:16px 16px 14px;display:flex;flex-direction:column">
+          <div style="display:flex;align-items:center;gap:11px">
+            <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,color-mix(in srgb,var(--purple) 82%,transparent),var(--purple));display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#fff">А</div>
+            <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;align-items:flex-start">
+              <div style="font-size:14.5px;font-weight:900;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">Артём</div>
+              <div style="padding:4px 8px;border-radius:99px;background:color-mix(in srgb,var(--purple) 12%,transparent);border:1px solid color-mix(in srgb,var(--purple) 40%,transparent);font-size:10.5px;font-weight:900;color:var(--purple)">Ур. 6</div>
+            </div>
+          </div>
+          <div style="height:14px"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span style="font-size:10.5px;font-weight:700;color:var(--muted)">Опыт персонажа</span>
+            <span style="font-size:10.5px;font-weight:900;color:var(--purple)">1240/2000</span>
+          </div>
+          <div style="height:6px"></div>
+          <div style="height:7px;border-radius:3.5px;background:color-mix(in srgb,var(--purple) 15%,transparent);overflow:hidden"><div style="width:62%;height:100%;background:var(--purple)"></div></div>
+        </div>
+        <div style="height:1px;background:var(--subtle)"></div>
+
+        <div style="padding:12px 12px 10px;display:flex;flex-direction:column;gap:4px">
+          <div style="min-height:42px;border-radius:12px;background:color-mix(in srgb,var(--purple) 16%,transparent);border:1px solid color-mix(in srgb,var(--purple) 42%,transparent);padding:8px 12px;display:flex;align-items:center;gap:11px">
+            <span class="ms" style="font-size:19px;color:var(--purple)">bolt</span>
+            <span style="flex:1;font-size:13px;font-weight:800;color:var(--text)">Действовать</span>
+            <span style="width:6px;height:6px;border-radius:50%;background:var(--purple)"></span>
+          </div>
+          <div style="min-height:42px;border-radius:12px;border:1px solid transparent;padding:8px 12px;display:flex;align-items:center;gap:11px">
+            <span class="ms" style="font-size:19px;color:var(--muted)">account_tree</span>
+            <span style="flex:1;font-size:13px;font-weight:700;color:var(--muted)">Карта</span>
+          </div>
+          <div style="min-height:42px;border-radius:12px;border:1px solid transparent;padding:8px 12px;display:flex;align-items:center;gap:11px">
+            <span class="ms msо" style="font-size:19px;color:var(--muted)">emoji_events</span>
+            <span style="flex:1;font-size:13px;font-weight:700;color:var(--muted)">Трофеи</span>
+          </div>
+          <div style="min-height:42px;border-radius:12px;border:1px solid transparent;padding:8px 12px;display:flex;align-items:center;gap:11px">
+            <span class="ms" style="font-size:19px;color:var(--muted)">query_stats</span>
+            <span style="flex:1;font-size:13px;font-weight:700;color:var(--muted)">Статистика</span>
+          </div>
+        </div>
+        <div style="height:1px;background:var(--subtle)"></div>
+
+        <div style="padding:12px 12px 7px 16px;display:flex;align-items:center;gap:8px">
+          <span style="flex:1;font-size:10.5px;font-weight:900;letter-spacing:.7px;color:var(--muted)">НАВЫКИ</span>
+          <div style="height:34px;padding:0 9px;border-radius:10px;border:1px solid color-mix(in srgb,var(--purple) 35%,transparent);display:flex;align-items:center;gap:6px;color:var(--purple);white-space:nowrap;flex:0 0 auto">
+            <span class="ms" style="font-size:15px">add</span><span style="font-size:10.5px;font-weight:900">Навык</span>
+          </div>
+        </div>
+
+        <div style="flex:1;min-height:0;padding:2px 10px 8px;display:flex;flex-direction:column;gap:5px;overflow:hidden">
+          <div style="min-height:62px;padding:7px 7px 7px 10px;border-radius:13px;background:color-mix(in srgb,#4A9EFF 11%,transparent);border:1px solid color-mix(in srgb,#4A9EFF 42%,transparent);display:flex;align-items:center;position:relative">
+            <div style="display:flex;align-items:center;gap:9px;flex:1;min-width:0;padding-right:76px">
+              <div style="width:36px;height:36px;flex:0 0 36px;border-radius:10px;background:color-mix(in srgb,#4A9EFF 14%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:19px;color:#4A9EFF">code</span></div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13.5px;font-weight:900;line-height:1.08;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Программирование</div>
+                <div style="height:3px"></div>
+                <div style="font-size:11px;font-weight:700;line-height:1;color:#4A9EFF">Ур. 7 · 3 кв.</div>
+                <div style="height:5px"></div>
+                <div style="height:4px;border-radius:2px;background:color-mix(in srgb,#4A9EFF 12%,transparent);overflow:hidden"><div style="width:72%;height:100%;background:#4A9EFF"></div></div>
+              </div>
+            </div>
+            <div style="position:absolute;right:0;display:flex;align-items:center">
+              <div style="width:38px;height:44px;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:16px;color:#4A9EFF">route</span></div>
+              <div style="width:38px;height:44px;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:17px;color:var(--muted)">more_vert</span></div>
+            </div>
+          </div>
+
+          <div style="min-height:62px;padding:7px 7px 7px 10px;border-radius:13px;border:1px solid transparent;display:flex;align-items:center">
+            <div style="display:flex;align-items:center;gap:9px;flex:1;min-width:0;padding-right:76px">
+              <div style="width:36px;height:36px;flex:0 0 36px;border-radius:10px;background:color-mix(in srgb,#34C759 14%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:19px;color:#34C759">language</span></div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13.5px;font-weight:900;line-height:1.08;color:var(--text)">Английский</div>
+                <div style="height:3px"></div>
+                <div style="font-size:11px;font-weight:700;line-height:1;color:var(--muted)">Ур. 4 · 2 кв.</div>
+                <div style="height:5px"></div>
+                <div style="height:4px;border-radius:2px;background:color-mix(in srgb,#34C759 12%,transparent);overflow:hidden"><div style="width:38%;height:100%;background:#34C759"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <div style="min-height:62px;padding:7px 7px 7px 10px;border-radius:13px;border:1px solid transparent;display:flex;align-items:center">
+            <div style="display:flex;align-items:center;gap:9px;flex:1;min-width:0;padding-right:76px">
+              <div style="width:36px;height:36px;flex:0 0 36px;border-radius:10px;background:color-mix(in srgb,#FF9500 14%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:19px;color:#FF9500">fitness_center</span></div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13.5px;font-weight:900;line-height:1.08;color:var(--text)">Тренировки</div>
+                <div style="height:3px"></div>
+                <div style="font-size:11px;font-weight:700;line-height:1;color:var(--muted)">Ур. 5 · 1 кв.</div>
+                <div style="height:5px"></div>
+                <div style="height:4px;border-radius:2px;background:color-mix(in srgb,#FF9500 12%,transparent);overflow:hidden"><div style="width:54%;height:100%;background:#FF9500"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <div style="min-height:62px;padding:7px 7px 7px 10px;border-radius:13px;border:1px solid transparent;display:flex;align-items:center">
+            <div style="display:flex;align-items:center;gap:9px;flex:1;min-width:0;padding-right:76px">
+              <div style="width:36px;height:36px;flex:0 0 36px;border-radius:10px;background:color-mix(in srgb,#AF52DE 14%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:19px;color:#AF52DE">menu_book</span></div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13.5px;font-weight:900;line-height:1.08;color:var(--text)">Чтение</div>
+                <div style="height:3px"></div>
+                <div style="font-size:11px;font-weight:700;line-height:1;color:var(--muted)">Ур. 3 · 2 кв.</div>
+                <div style="height:5px"></div>
+                <div style="height:4px;border-radius:2px;background:color-mix(in srgb,#AF52DE 12%,transparent);overflow:hidden"><div style="width:21%;height:100%;background:#AF52DE"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="padding:0 10px 8px">
+          <div style="border-radius:12px;background:color-mix(in srgb,#22C55E 8%,transparent);border:1px solid color-mix(in srgb,#22C55E 22%,transparent);padding:9px 10px;display:flex;align-items:center;gap:9px">
+            <span class="ms" style="font-size:18px;color:#2ED36F">inbox</span>
+            <span style="flex:1;font-size:13px;font-weight:800;color:var(--text)">Задачник</span>
+            <span style="font-size:11px;font-weight:900;color:#2ED36F">4</span>
+          </div>
+        </div>
+        <div style="height:1px;background:var(--subtle)"></div>
+        <div style="padding:2px 10px">
+          <div style="min-height:36px;border-radius:12px;padding:8px 12px;display:flex;align-items:center;gap:11px">
+            <span class="ms msо" style="font-size:19px;color:var(--muted)">settings</span>
+            <span style="flex:1;font-size:13px;font-weight:700;color:var(--muted)">Настройки</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="width:1px;background:var(--outline)"></div>
+
+      <!-- ── MAIN ── -->
+      <div style="flex:1;min-width:0;background:var(--main);padding:22px 22px 32px;overflow:hidden;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:28px;height:28px;border-radius:8px;background:color-mix(in srgb,var(--amber) 13%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:17px;color:var(--amber)">bolt</span></div>
+          <div style="flex:1;font-size:18px;font-weight:900;line-height:1.2;color:var(--text)">Действовать сегодня</div>
+        </div>
+        <div style="height:18px"></div>
+
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+          <div style="padding:12px 14px;border-radius:15px;background:color-mix(in srgb,var(--green) 5.5%,transparent);border:1px solid color-mix(in srgb,var(--green) 20%,transparent);display:flex;align-items:center;gap:11px">
+            <div style="width:38px;height:38px;flex:0 0 38px;border-radius:10px;background:color-mix(in srgb,var(--green) 12%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:19px;color:var(--green)">check</span></div>
+            <div><div style="font-size:18px;font-weight:900;color:var(--text)">3</div><div style="height:2px"></div><div style="font-size:10.5px;font-weight:700;color:var(--muted)">Выполнено</div></div>
+          </div>
+          <div style="padding:12px 14px;border-radius:15px;background:color-mix(in srgb,var(--gold) 5.5%,transparent);border:1px solid color-mix(in srgb,var(--gold) 20%,transparent);display:flex;align-items:center;gap:11px">
+            <div style="width:38px;height:38px;flex:0 0 38px;border-radius:10px;background:color-mix(in srgb,var(--gold) 12%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:19px;color:var(--gold)">bolt</span></div>
+            <div><div style="font-size:18px;font-weight:900;color:var(--text)">+180</div><div style="height:2px"></div><div style="font-size:10.5px;font-weight:700;color:var(--muted)">XP сегодня</div></div>
+          </div>
+          <div style="padding:12px 14px;border-radius:15px;background:color-mix(in srgb,var(--blue) 5.5%,transparent);border:1px solid color-mix(in srgb,var(--blue) 20%,transparent);display:flex;align-items:center;gap:11px">
+            <div style="width:38px;height:38px;flex:0 0 38px;border-radius:10px;background:color-mix(in srgb,var(--blue) 12%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:19px;color:var(--blue)">radio_button_unchecked</span></div>
+            <div><div style="font-size:18px;font-weight:900;color:var(--text)">8</div><div style="height:2px"></div><div style="font-size:10.5px;font-weight:700;color:var(--muted)">Активных</div></div>
+          </div>
+          <div style="padding:12px 14px;border-radius:15px;background:color-mix(in srgb,var(--amber) 5.5%,transparent);border:1px solid color-mix(in srgb,var(--amber) 20%,transparent);display:flex;align-items:center;gap:11px">
+            <div style="width:38px;height:38px;flex:0 0 38px;border-radius:10px;background:color-mix(in srgb,var(--amber) 12%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms msо" style="font-size:19px;color:var(--amber)">local_fire_department</span></div>
+            <div><div style="font-size:18px;font-weight:900;color:var(--text)">12 дн.</div><div style="height:2px"></div><div style="font-size:10.5px;font-weight:700;color:var(--muted)">Серия</div></div>
+          </div>
+        </div>
+
+        <div style="height:18px"></div>
+        <div style="padding:13px 16px;border-radius:14px;background:color-mix(in srgb,var(--blue) 5%,transparent);border:1px solid color-mix(in srgb,var(--blue) 20%,transparent);display:flex;align-items:flex-start;gap:11px">
+          <div style="width:36px;height:36px;flex:0 0 36px;border-radius:11px;background:color-mix(in srgb,var(--blue) 12%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:20px;color:var(--blue)">trending_up</span></div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:800;line-height:1.38;color:var(--text)">Движение уже есть</div>
+            <div style="height:2px"></div>
+            <div style="font-size:11.5px;font-weight:600;line-height:1.3;color:var(--muted)">До завершения этапа «Асинхронность и изоляты» остался один квест.</div>
+          </div>
+        </div>
+
+        <div style="height:28px"></div>
+
+        <!-- selected skill header -->
+        <div style="padding:16px 20px;border-radius:16px;background:color-mix(in srgb,#4A9EFF 4.5%,transparent);border:1px solid color-mix(in srgb,#4A9EFF 24%,transparent);box-shadow:0 0 18px color-mix(in srgb,#4A9EFF 3.5%,transparent);display:flex;align-items:center;gap:18px">
+          <div style="width:76px;height:76px;flex:0 0 76px;position:relative;border-radius:50%;background:conic-gradient(#4A9EFF 0 72%,color-mix(in srgb,#4A9EFF 12%,transparent) 0);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 4px));mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 4px))"></div>
+          <div style="margin-left:-94px;width:76px;height:76px;flex:0 0 76px;display:flex;align-items:center;justify-content:center;position:relative"><span class="ms" style="font-size:30px;color:#4A9EFF">code</span></div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="font-size:20px;font-weight:900;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Программирование</div>
+              <div style="padding:4px 8px;border-radius:99px;background:color-mix(in srgb,#4A9EFF 12%,transparent);border:1px solid color-mix(in srgb,#4A9EFF 40%,transparent);font-size:10.5px;font-weight:900;color:#4A9EFF;white-space:nowrap">Ур. 7</div>
+              <div style="width:4px"></div>
+              <div style="font-size:13px;font-weight:600;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Собрать pet-проект и выложить в стор</div>
+            </div>
+            <div style="height:8px"></div>
+            <div style="display:flex;align-items:center;gap:12px">
+              <div style="flex:1;height:7px;border-radius:3.5px;background:var(--raised);overflow:hidden"><div style="width:72%;height:100%;background:#4A9EFF"></div></div>
+              <span style="font-size:11.5px;font-weight:700;color:var(--muted);white-space:nowrap">1450 / 2000 XP</span>
+            </div>
+            <div style="height:6px"></div>
+            <div style="font-size:11.5px;font-weight:700;color:var(--muted)">Всего квестов: 5</div>
+          </div>
+          <div style="width:176px;flex:0 0 176px;display:flex;justify-content:flex-start">
+            <div style="min-width:136px;height:42px;padding:0 16px;border-radius:12px;background:#4A9EFF;color:#fff;display:flex;align-items:center;justify-content:center;gap:8px">
+              <span class="ms" style="font-size:18px">add</span><span style="font-size:12px;font-weight:900">Новый квест</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="height:24px"></div>
+        <div style="font-size:11.5px;font-weight:900;letter-spacing:.55px;color:var(--muted)">АКТИВНЫЕ · 3</div>
+        <div style="height:10px"></div>
+
+        <div style="display:flex;flex-direction:column;gap:9px">
+          <div style="min-height:72px;padding:11px 10px 11px 14px;border-radius:13px;background:var(--card);border:1px solid var(--outline);box-shadow:0 0 12px color-mix(in srgb,#4A9EFF 2%,transparent);display:flex;align-items:center;gap:13px">
+            <div style="width:31px;height:31px;flex:0 0 31px;border-radius:50%;border:2px solid color-mix(in srgb,#4A9EFF 75%,transparent)"></div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:14px;font-weight:800;line-height:1.2;color:var(--text)">Прочитать главу про изоляты</div>
+              <div style="height:6px"></div>
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="padding:3px 7px;border-radius:99px;background:color-mix(in srgb,#34C759 12%,transparent);border:1px solid color-mix(in srgb,#34C759 24%,transparent);font-size:9.5px;font-weight:800;color:#34C759">Разово</span>
+                <span style="padding:3px 7px;font-size:9.5px;font-weight:800;color:#4A9EFF">Минимальный шаг</span>
+              </div>
+            </div>
+            <div style="padding:7px 10px;border-radius:99px;background:color-mix(in srgb,var(--gold) 9%,transparent);border:1px solid color-mix(in srgb,var(--gold) 30%,transparent);display:flex;align-items:center;gap:4px">
+              <span class="ms" style="font-size:13px;color:var(--gold)">bolt</span><span style="font-size:13px;font-weight:900;color:var(--gold)">+60 XP</span>
+            </div>
+            <div style="width:38px"></div>
+          </div>
+
+          <div style="min-height:72px;padding:11px 10px 11px 14px;border-radius:13px;background:var(--raised);border:1px solid color-mix(in srgb,#4A9EFF 22%,transparent);display:flex;align-items:center;gap:13px">
+            <div style="width:31px;height:31px;flex:0 0 31px;border-radius:50%;border:2px solid color-mix(in srgb,#4A9EFF 75%,transparent)"></div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:14px;font-weight:800;line-height:1.2;color:var(--text)">Час рефакторинга AppState</div>
+              <div style="height:3px"></div>
+              <div style="font-size:11.5px;font-weight:600;line-height:1.25;color:var(--muted)">Разбить god-object по одному ответственному за раз</div>
+              <div style="height:6px"></div>
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="padding:3px 7px;border-radius:99px;background:color-mix(in srgb,#FF9500 12%,transparent);border:1px solid color-mix(in srgb,#FF9500 24%,transparent);font-size:9.5px;font-weight:800;color:#FF9500">Проект</span>
+              </div>
+            </div>
+            <div style="padding:7px 10px;border-radius:99px;background:color-mix(in srgb,var(--gold) 9%,transparent);border:1px solid color-mix(in srgb,var(--gold) 30%,transparent);display:flex;align-items:center;gap:4px">
+              <span class="ms" style="font-size:13px;color:var(--gold)">bolt</span><span style="font-size:13px;font-weight:900;color:var(--gold)">+120 XP</span>
+            </div>
+            <div style="width:34px;display:flex;justify-content:center"><span class="ms" style="font-size:19px;color:var(--muted)">more_vert</span></div>
+          </div>
+
+          <div style="min-height:72px;padding:11px 10px 11px 14px;border-radius:13px;background:var(--card);border:1px solid var(--outline);box-shadow:0 0 12px color-mix(in srgb,#4A9EFF 2%,transparent);display:flex;align-items:center;gap:13px">
+            <div style="width:31px;height:31px;flex:0 0 31px;border-radius:50%;border:2px solid color-mix(in srgb,#4A9EFF 75%,transparent)"></div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:14px;font-weight:800;line-height:1.2;color:var(--text)">Коммит каждый день</div>
+              <div style="height:6px"></div>
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="padding:3px 7px;border-radius:99px;background:color-mix(in srgb,#4A9EFF 12%,transparent);border:1px solid color-mix(in srgb,#4A9EFF 24%,transparent);font-size:9.5px;font-weight:800;color:#4A9EFF">Привычка</span>
+                <span style="padding:3px 7px;font-size:9.5px;font-weight:800;color:#4A9EFF">Минимальный шаг</span>
+              </div>
+            </div>
+            <div style="padding:7px 10px;border-radius:99px;background:color-mix(in srgb,var(--gold) 9%,transparent);border:1px solid color-mix(in srgb,var(--gold) 30%,transparent);display:flex;align-items:center;gap:4px">
+              <span class="ms" style="font-size:13px;color:var(--gold)">bolt</span><span style="font-size:13px;font-weight:900;color:var(--gold)">+120 XP</span>
+            </div>
+            <div style="width:38px"></div>
+          </div>
+        </div>
+
+        <div style="height:18px"></div>
+        <div style="font-size:11.5px;font-weight:900;letter-spacing:.55px;color:var(--muted)">ВЫПОЛНЕНО · 2</div>
+        <div style="height:10px"></div>
+        <div style="display:flex;flex-direction:column;gap:9px">
+          <div style="min-height:72px;padding:11px 10px 11px 14px;border-radius:13px;background:color-mix(in srgb,var(--green) 4.5%,transparent);border:1px solid color-mix(in srgb,var(--green) 18%,transparent);display:flex;align-items:center;gap:13px">
+            <div style="width:31px;height:31px;flex:0 0 31px;border-radius:50%;background:var(--green);border:2px solid color-mix(in srgb,var(--green) 75%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:18px;color:#fff">check</span></div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:14px;font-weight:800;line-height:1.2;color:var(--muted);text-decoration:line-through">Настроить CI на GitHub Actions</div>
+              <div style="height:6px"></div>
+              <div style="display:flex;gap:6px"><span style="padding:3px 7px;border-radius:99px;background:color-mix(in srgb,#FF9500 12%,transparent);border:1px solid color-mix(in srgb,#FF9500 24%,transparent);font-size:9.5px;font-weight:800;color:#FF9500">Проект</span></div>
+            </div>
+            <div style="padding:7px 10px;border-radius:99px;background:color-mix(in srgb,var(--gold) 9%,transparent);border:1px solid color-mix(in srgb,var(--gold) 30%,transparent);display:flex;align-items:center;gap:4px">
+              <span class="ms" style="font-size:13px;color:var(--gold)">bolt</span><span style="font-size:13px;font-weight:900;color:var(--gold)">+90 XP</span>
+            </div>
+            <div style="width:38px"></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="width:1px;background:var(--outline)"></div>
+
+      <!-- ── RIGHT RAIL 260 ── -->
+      <div style="width:260px;flex:0 0 260px;background:var(--rail);padding:20px 16px 28px;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:30px;height:30px;border-radius:9px;background:color-mix(in srgb,var(--purple) 12%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:17px;color:var(--purple)">adjust</span></div>
+          <div style="flex:1;font-size:15.5px;font-weight:900;color:var(--text)">Фокус на сегодня</div>
+        </div>
+        <div style="height:16px"></div>
+        <div style="display:flex;align-items:center;gap:14px">
+          <div style="width:68px;height:68px;flex:0 0 68px;position:relative">
+            <div style="position:absolute;inset:0;border-radius:50%;background:conic-gradient(var(--purple) 0 43%,color-mix(in srgb,var(--purple) 13%,transparent) 0);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 5px),#000 calc(100% - 5px));mask:radial-gradient(farthest-side,transparent calc(100% - 5px),#000 calc(100% - 5px))"></div>
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:15.5px;font-weight:900;color:var(--text)">43%</div>
+          </div>
+          <div>
+            <div style="font-size:18px;font-weight:900;color:var(--text)">3/7</div>
+            <div style="height:3px"></div>
+            <div style="font-size:11px;font-weight:700;color:var(--muted)">квестов выполнено</div>
+          </div>
+        </div>
+        <div style="height:20px"></div><div style="height:1px;background:var(--subtle)"></div><div style="height:16px"></div>
+
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="min-height:54px;padding:10px 11px;border-radius:12px;background:color-mix(in srgb,var(--green) 4.5%,var(--card));border:1px solid color-mix(in srgb,var(--green) 18%,transparent);display:flex;align-items:flex-start;gap:9px">
+            <div style="width:26px;height:26px;flex:0 0 26px;margin-top:1px;border-radius:50%;background:var(--green);border:1px solid var(--green);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:15px;color:#fff">check</span></div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13.5px;font-weight:800;color:var(--muted);text-decoration:line-through;line-height:1.22">Настроить CI на GitHub Actions</div>
+              <div style="height:4px"></div>
+              <div style="display:flex;align-items:center;gap:5px"><span style="width:5px;height:5px;border-radius:50%;background:#4A9EFF"></span><span style="font-size:11px;font-weight:700;color:var(--muted)">Программирование</span></div>
+            </div>
+            <div style="min-width:32px;text-align:right;font-size:13px;font-weight:900;color:var(--green)">+90</div>
+          </div>
+
+          <div style="min-height:54px;padding:10px 11px;border-radius:12px;background:var(--card);border:1px solid var(--outline);display:flex;align-items:flex-start;gap:9px">
+            <div style="width:26px;height:26px;flex:0 0 26px;margin-top:1px;border-radius:50%;background:color-mix(in srgb,#4A9EFF 10%,transparent);border:1px solid #4A9EFF"></div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13.5px;font-weight:800;color:var(--text);line-height:1.22">Прочитать главу про изоляты</div>
+              <div style="height:4px"></div>
+              <div style="display:flex;align-items:center;gap:5px"><span style="width:5px;height:5px;border-radius:50%;background:#4A9EFF"></span><span style="font-size:11px;font-weight:700;color:var(--muted)">Программирование</span></div>
+            </div>
+            <div style="min-width:32px;text-align:right;font-size:13px;font-weight:900;color:var(--gold)">+60</div>
+          </div>
+
+          <div style="min-height:54px;padding:10px 11px;border-radius:12px;background:var(--card);border:1px solid var(--outline);display:flex;align-items:flex-start;gap:9px">
+            <div style="width:26px;height:26px;flex:0 0 26px;margin-top:1px;border-radius:50%;background:color-mix(in srgb,#4A9EFF 10%,transparent);border:1px solid #4A9EFF"></div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13.5px;font-weight:800;color:var(--text);line-height:1.22">Час рефакторинга AppState</div>
+              <div style="height:4px"></div>
+              <div style="display:flex;align-items:center;gap:5px"><span style="width:5px;height:5px;border-radius:50%;background:#4A9EFF"></span><span style="font-size:11px;font-weight:700;color:var(--muted)">Программирование</span></div>
+            </div>
+            <div style="min-width:32px;text-align:right;font-size:13px;font-weight:900;color:var(--gold)">+120</div>
+          </div>
+
+          <div style="min-height:54px;padding:10px 11px;border-radius:12px;background:var(--card);border:1px solid var(--outline);display:flex;align-items:flex-start;gap:9px">
+            <div style="width:26px;height:26px;flex:0 0 26px;margin-top:1px;border-radius:50%;background:color-mix(in srgb,#34C759 10%,transparent);border:1px solid #34C759"></div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13.5px;font-weight:800;color:var(--text);line-height:1.22">15 минут аудирования</div>
+              <div style="height:4px"></div>
+              <div style="display:flex;align-items:center;gap:5px"><span style="width:5px;height:5px;border-radius:50%;background:#34C759"></span><span style="font-size:11px;font-weight:700;color:var(--muted)">Английский</span></div>
+            </div>
+            <div style="min-width:32px;text-align:right;font-size:13px;font-weight:900;color:var(--gold)">+40</div>
+          </div>
+        </div>
+
+        <div style="height:18px"></div><div style="height:1px;background:var(--subtle)"></div><div style="height:18px"></div>
+        <div style="font-size:10.5px;font-weight:900;letter-spacing:.7px;color:var(--muted)">ЗА НЕДЕЛЮ</div>
+        <div style="height:10px"></div>
+        <div style="height:66px;display:flex;align-items:flex-end;gap:0">
+          <div style="flex:1;padding:0 3px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end"><div style="width:8px;height:23px;border-radius:99px;background:color-mix(in srgb,var(--purple) 43%,transparent)"></div><div style="height:7px"></div><div style="font-size:10.5px;font-weight:700;color:var(--muted)">Пн</div></div>
+          <div style="flex:1;padding:0 3px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end"><div style="width:8px;height:39px;border-radius:99px;background:color-mix(in srgb,var(--purple) 43%,transparent)"></div><div style="height:7px"></div><div style="font-size:10.5px;font-weight:700;color:var(--muted)">Вт</div></div>
+          <div style="flex:1;padding:0 3px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end"><div style="width:8px;height:15px;border-radius:99px;background:color-mix(in srgb,var(--purple) 43%,transparent)"></div><div style="height:7px"></div><div style="font-size:10.5px;font-weight:700;color:var(--muted)">Ср</div></div>
+          <div style="flex:1;padding:0 3px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end"><div style="width:8px;height:31px;border-radius:99px;background:var(--purple)"></div><div style="height:7px"></div><div style="font-size:10.5px;font-weight:900;color:var(--purple)">Чт</div></div>
+          <div style="flex:1;padding:0 3px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end"><div style="width:8px;height:7px;border-radius:99px;background:color-mix(in srgb,var(--purple) 43%,transparent)"></div><div style="height:7px"></div><div style="font-size:10.5px;font-weight:700;color:var(--muted)">Пт</div></div>
+          <div style="flex:1;padding:0 3px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end"><div style="width:8px;height:7px;border-radius:99px;background:color-mix(in srgb,var(--purple) 43%,transparent)"></div><div style="height:7px"></div><div style="font-size:10.5px;font-weight:700;color:var(--muted)">Сб</div></div>
+          <div style="flex:1;padding:0 3px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end"><div style="width:8px;height:7px;border-radius:99px;background:color-mix(in srgb,var(--purple) 43%,transparent)"></div><div style="height:7px"></div><div style="font-size:10.5px;font-weight:700;color:var(--muted)">Вс</div></div>
+        </div>
+
+        <div style="height:20px"></div><div style="height:1px;background:var(--subtle)"></div><div style="height:20px"></div>
+        <div style="font-size:10.5px;font-weight:900;letter-spacing:.7px;color:var(--muted)">XP ПО НАВЫКАМ</div>
+        <div style="height:12px"></div>
+        <div style="display:flex;flex-direction:column;gap:9px">
+          <div style="display:flex;align-items:center;gap:8px"><span style="width:7px;height:7px;border-radius:50%;background:#4A9EFF"></span><span style="flex:1;font-size:11.5px;font-weight:700;color:var(--muted)">Программирование</span><span style="font-size:11px;font-weight:900;color:#4A9EFF">1450</span></div>
+          <div style="display:flex;align-items:center;gap:8px"><span style="width:7px;height:7px;border-radius:50%;background:#34C759"></span><span style="flex:1;font-size:11.5px;font-weight:700;color:var(--muted)">Английский</span><span style="font-size:11px;font-weight:900;color:#34C759">760</span></div>
+          <div style="display:flex;align-items:center;gap:8px"><span style="width:7px;height:7px;border-radius:50%;background:#FF9500"></span><span style="flex:1;font-size:11.5px;font-weight:700;color:var(--muted)">Тренировки</span><span style="font-size:11px;font-weight:900;color:#FF9500">1080</span></div>
+          <div style="display:flex;align-items:center;gap:8px"><span style="width:7px;height:7px;border-radius:50%;background:#AF52DE"></span><span style="flex:1;font-size:11.5px;font-weight:700;color:var(--muted)">Чтение</span><span style="font-size:11px;font-weight:900;color:#AF52DE">210</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <div style="font-size:14px;font-weight:800;color:#3a3a46">Экран «Карта» (RoadMap, горизонтальная ось, выбран этап)</div>
+    <div data-screen-label="RoadMap 1440" style="width:1440px;height:900px;overflow:hidden;background:var(--bg);display:flex;border:1px solid #d5d5dd;border-radius:6px;box-shadow:0 20px 60px rgba(20,20,40,.12);color:var(--text)">
+
+      <div style="width:248px;flex:0 0 248px;background:var(--sidebar);display:flex;flex-direction:column">
+        <div style="min-height:64px;padding:0 16px;display:flex;align-items:center;gap:10px">
+          <div style="width:34px;height:34px;border-radius:10px;background:var(--purple);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:19px;color:#fff">bolt</span></div>
+          <div style="font-size:15.5px;font-weight:900">RPG To-Do</div>
+        </div>
+        <div style="height:1px;background:var(--subtle)"></div>
+        <div style="padding:16px 16px 14px">
+          <div style="display:flex;align-items:center;gap:11px">
+            <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,color-mix(in srgb,var(--purple) 82%,transparent),var(--purple));display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#fff">А</div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:5px;align-items:flex-start">
+              <div style="font-size:14.5px;font-weight:900">Артём</div>
+              <div style="padding:4px 8px;border-radius:99px;background:color-mix(in srgb,var(--purple) 12%,transparent);border:1px solid color-mix(in srgb,var(--purple) 40%,transparent);font-size:10.5px;font-weight:900;color:var(--purple)">Ур. 6</div>
+            </div>
+          </div>
+          <div style="height:14px"></div>
+          <div style="display:flex;justify-content:space-between"><span style="font-size:10.5px;font-weight:700;color:var(--muted)">Опыт персонажа</span><span style="font-size:10.5px;font-weight:900;color:var(--purple)">1240/2000</span></div>
+          <div style="height:6px"></div>
+          <div style="height:7px;border-radius:3.5px;background:color-mix(in srgb,var(--purple) 15%,transparent);overflow:hidden"><div style="width:62%;height:100%;background:var(--purple)"></div></div>
+        </div>
+        <div style="height:1px;background:var(--subtle)"></div>
+        <div style="padding:12px 12px 10px;display:flex;flex-direction:column;gap:4px">
+          <div style="min-height:42px;border-radius:12px;border:1px solid transparent;padding:8px 12px;display:flex;align-items:center;gap:11px"><span class="ms" style="font-size:19px;color:var(--muted)">bolt</span><span style="flex:1;font-size:13px;font-weight:700;color:var(--muted)">Действовать</span></div>
+          <div style="min-height:42px;border-radius:12px;background:color-mix(in srgb,var(--purple) 16%,transparent);border:1px solid color-mix(in srgb,var(--purple) 42%,transparent);padding:8px 12px;display:flex;align-items:center;gap:11px"><span class="ms" style="font-size:19px;color:var(--purple)">account_tree</span><span style="flex:1;font-size:13px;font-weight:800;color:var(--text)">Карта</span><span style="width:6px;height:6px;border-radius:50%;background:var(--purple)"></span></div>
+          <div style="min-height:42px;border-radius:12px;border:1px solid transparent;padding:8px 12px;display:flex;align-items:center;gap:11px"><span class="ms msо" style="font-size:19px;color:var(--muted)">emoji_events</span><span style="flex:1;font-size:13px;font-weight:700;color:var(--muted)">Трофеи</span></div>
+          <div style="min-height:42px;border-radius:12px;border:1px solid transparent;padding:8px 12px;display:flex;align-items:center;gap:11px"><span class="ms" style="font-size:19px;color:var(--muted)">query_stats</span><span style="flex:1;font-size:13px;font-weight:700;color:var(--muted)">Статистика</span></div>
+        </div>
+        <div style="height:1px;background:var(--subtle)"></div>
+        <div style="padding:12px 12px 7px 16px;display:flex;align-items:center;gap:8px">
+          <span style="flex:1;font-size:10.5px;font-weight:900;letter-spacing:.7px;color:var(--muted)">НАВЫКИ</span>
+          <div style="height:34px;padding:0 9px;border-radius:10px;border:1px solid color-mix(in srgb,var(--purple) 35%,transparent);display:flex;align-items:center;gap:6px;color:var(--purple);white-space:nowrap;flex:0 0 auto"><span class="ms" style="font-size:15px">add</span><span style="font-size:10.5px;font-weight:900">Навык</span></div>
+        </div>
+        <div style="flex:1;min-height:0;padding:2px 10px 8px;display:flex;flex-direction:column;gap:5px;overflow:hidden">
+          <div style="min-height:62px;padding:7px 7px 7px 10px;border-radius:13px;background:color-mix(in srgb,#4A9EFF 11%,transparent);border:1px solid color-mix(in srgb,#4A9EFF 42%,transparent);display:flex;align-items:center">
+            <div style="display:flex;align-items:center;gap:9px;flex:1;min-width:0;padding-right:76px">
+              <div style="width:36px;height:36px;flex:0 0 36px;border-radius:10px;background:color-mix(in srgb,#4A9EFF 14%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:19px;color:#4A9EFF">code</span></div>
+              <div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:900;line-height:1.08;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Программирование</div><div style="height:3px"></div><div style="font-size:11px;font-weight:700;line-height:1;color:#4A9EFF">Ур. 7 · 3 кв.</div><div style="height:5px"></div><div style="height:4px;border-radius:2px;background:color-mix(in srgb,#4A9EFF 12%,transparent);overflow:hidden"><div style="width:72%;height:100%;background:#4A9EFF"></div></div></div>
+            </div>
+          </div>
+          <div style="min-height:62px;padding:7px 7px 7px 10px;border-radius:13px;display:flex;align-items:center">
+            <div style="display:flex;align-items:center;gap:9px;flex:1;min-width:0;padding-right:76px">
+              <div style="width:36px;height:36px;flex:0 0 36px;border-radius:10px;background:color-mix(in srgb,#34C759 14%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:19px;color:#34C759">language</span></div>
+              <div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:900;line-height:1.08">Английский</div><div style="height:3px"></div><div style="font-size:11px;font-weight:700;line-height:1;color:var(--muted)">Ур. 4 · 2 кв.</div><div style="height:5px"></div><div style="height:4px;border-radius:2px;background:color-mix(in srgb,#34C759 12%,transparent);overflow:hidden"><div style="width:38%;height:100%;background:#34C759"></div></div></div>
+            </div>
+          </div>
+          <div style="min-height:62px;padding:7px 7px 7px 10px;border-radius:13px;display:flex;align-items:center">
+            <div style="display:flex;align-items:center;gap:9px;flex:1;min-width:0;padding-right:76px">
+              <div style="width:36px;height:36px;flex:0 0 36px;border-radius:10px;background:color-mix(in srgb,#FF9500 14%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:19px;color:#FF9500">fitness_center</span></div>
+              <div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:900;line-height:1.08">Тренировки</div><div style="height:3px"></div><div style="font-size:11px;font-weight:700;line-height:1;color:var(--muted)">Ур. 5 · 1 кв.</div><div style="height:5px"></div><div style="height:4px;border-radius:2px;background:color-mix(in srgb,#FF9500 12%,transparent);overflow:hidden"><div style="width:54%;height:100%;background:#FF9500"></div></div></div>
+            </div>
+          </div>
+          <div style="min-height:62px;padding:7px 7px 7px 10px;border-radius:13px;display:flex;align-items:center">
+            <div style="display:flex;align-items:center;gap:9px;flex:1;min-width:0;padding-right:76px">
+              <div style="width:36px;height:36px;flex:0 0 36px;border-radius:10px;background:color-mix(in srgb,#AF52DE 14%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:19px;color:#AF52DE">menu_book</span></div>
+              <div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:900;line-height:1.08">Чтение</div><div style="height:3px"></div><div style="font-size:11px;font-weight:700;line-height:1;color:var(--muted)">Ур. 3 · 2 кв.</div><div style="height:5px"></div><div style="height:4px;border-radius:2px;background:color-mix(in srgb,#AF52DE 12%,transparent);overflow:hidden"><div style="width:21%;height:100%;background:#AF52DE"></div></div></div>
+            </div>
+          </div>
+        </div>
+        <div style="padding:0 10px 8px">
+          <div style="border-radius:12px;background:color-mix(in srgb,#22C55E 8%,transparent);border:1px solid color-mix(in srgb,#22C55E 22%,transparent);padding:9px 10px;display:flex;align-items:center;gap:9px"><span class="ms" style="font-size:18px;color:#2ED36F">inbox</span><span style="flex:1;font-size:13px;font-weight:800">Задачник</span><span style="font-size:11px;font-weight:900;color:#2ED36F">4</span></div>
+        </div>
+        <div style="height:1px;background:var(--subtle)"></div>
+        <div style="padding:2px 10px"><div style="min-height:36px;border-radius:12px;padding:8px 12px;display:flex;align-items:center;gap:11px"><span class="ms msо" style="font-size:19px;color:var(--muted)">settings</span><span style="flex:1;font-size:13px;font-weight:700;color:var(--muted)">Настройки</span></div></div>
+      </div>
+
+      <div style="width:1px;background:var(--outline)"></div>
+
+      <div style="flex:1;min-width:0;background:var(--bg);padding:22px;display:flex;flex-direction:column">
+        <!-- hero toolbar -->
+        <div style="border-radius:14px;background:var(--card);border:1px solid color-mix(in srgb,#4A9EFF 22%,transparent);padding:0 4px;display:flex;align-items:center">
+          <div style="flex:1;padding:14px 18px;display:flex;align-items:center;gap:12px">
+            <div style="width:42px;height:42px;flex:0 0 42px;border-radius:12px;background:color-mix(in srgb,#4A9EFF 9.4%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:23px;color:#4A9EFF">account_tree</span></div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:18px;font-weight:900;color:var(--text)">Дорожная карта</div>
+              <div style="height:3px"></div>
+              <div style="font-size:12.5px;font-weight:600;color:var(--muted)">Карта показывает путь навыка: этапы, связи и следующий шаг мастерства. Квесты здесь — практика для этапов.</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="padding:3px;border-radius:10px;background:var(--hairline);border:1px solid var(--outline);display:flex;gap:0">
+                <div style="width:34px;height:32px;border-radius:7px;background:color-mix(in srgb,#4A9EFF 9.4%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms msо" style="font-size:18px;color:#4A9EFF">view_stream</span></div>
+                <div style="width:34px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center"><span class="ms msо" style="font-size:18px;color:var(--muted)">view_week</span></div>
+              </div>
+              <div style="padding:7px 12px;border-radius:8px;background:#4A9EFF;display:flex;align-items:center;gap:4px"><span class="ms msо" style="font-size:15px;color:#fff">open_in_full</span><span style="font-size:13px;font-weight:600;color:#fff">Развернуть</span></div>
+            </div>
+          </div>
+          <div style="padding:8px 10px;border-radius:999px;background:color-mix(in srgb,var(--card) 93%,transparent);border:1px solid color-mix(in srgb,#4A9EFF 39%,transparent);display:flex;align-items:center;gap:6px;box-shadow:0 0 14px color-mix(in srgb,#4A9EFF 7%,transparent)"><span class="ms msо" style="font-size:15px;color:#4A9EFF">center_focus_strong</span><span style="font-size:11.5px;font-weight:900;color:#4A9EFF">Центр</span></div>
+          <div style="width:8px"></div>
+          <div style="padding:8px 10px;border-radius:999px;background:color-mix(in srgb,var(--card) 93%,transparent);border:1px solid color-mix(in srgb,#4A9EFF 39%,transparent);display:flex;align-items:center;gap:6px"><span class="ms msо" style="font-size:15px;color:#4A9EFF">layers</span><span style="font-size:11.5px;font-weight:900;color:#4A9EFF">Шаблоны</span></div>
+          <div style="width:8px"></div>
+        </div>
+
+        <div style="height:10px"></div>
+
+        <div style="flex:1;min-height:0;display:flex;gap:10px">
+          <!-- canvas -->
+          <div style="flex:1;min-width:0;position:relative;overflow:hidden;border-radius:14px;border:1px solid var(--outline);background:var(--canvas)">
+            <div style="position:absolute;inset:0;background-image:linear-gradient(to right,rgba(100,116,139,.04) 1px,transparent 1px),linear-gradient(to bottom,rgba(100,116,139,.04) 1px,transparent 1px),linear-gradient(to right,rgba(100,116,139,.10) 1px,transparent 1px),linear-gradient(to bottom,rgba(100,116,139,.10) 1px,transparent 1px);background-size:42px 42px,42px 42px,210px 210px,210px 210px"></div>
+            <div style="position:absolute;inset:0;background-image:radial-gradient(circle,rgba(100,116,139,.2) 1.1px,transparent 1.2px);background-size:210px 210px;background-position:105px 105px"></div>
+
+            <div style="position:absolute;left:0;top:0;width:1246px;height:776px;transform:translate(-229.5px,113.1px) scale(0.828);transform-origin:0 0">
+              <!-- glow -->
+              <div style="position:absolute;left:698px;top:88px;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,#4A9EFF 12%,transparent) 0%,transparent 70%)"></div>
+              <!-- roads -->
+              <svg width="1246" height="776" style="position:absolute;left:0;top:0;overflow:visible">
+                <path d="M 487 388 C 537 388 570 388 583 388" stroke="#34C759" stroke-opacity="0.46" stroke-width="2.05" fill="none" stroke-linecap="round"></path>
+                <path d="M 657 388 C 707 388 740 388 753 388" stroke="#4A9EFF" stroke-opacity="0.55" stroke-width="2.4" fill="none" stroke-linecap="round"></path>
+                <path d="M 833 388 C 883 388 890 388 936 388" stroke="#8E8E93" stroke-opacity="0.2" stroke-width="1.45" fill="none" stroke-linecap="round"></path>
+              </svg>
+
+              <!-- goal anchor -->
+              <div style="position:absolute;left:828px;top:190px;width:340px;padding:16px 20px 18px;border-radius:21px;background:color-mix(in srgb,var(--card) 93%,transparent);border:1px solid color-mix(in srgb,#4A9EFF 21%,transparent);box-shadow:0 13px 26px color-mix(in srgb,#4A9EFF 8%,transparent);text-align:center">
+                <div style="display:flex;align-items:center;justify-content:center;gap:8px"><span class="ms" style="font-size:17px;color:#4A9EFF">flag</span><span style="font-size:13.5px;font-weight:900;color:#4A9EFF;letter-spacing:.2px">Цель пути</span></div>
+                <div style="height:9px"></div>
+                <div style="font-size:15.5px;font-weight:900;line-height:1.15;color:var(--text)">Собрать pet-проект и выложить в стор</div>
+              </div>
+
+              <!-- skill orb (focused) -->
+              <div style="position:absolute;left:866px;top:313.5px;width:264px;height:204px;display:flex;flex-direction:column;align-items:center">
+                <div style="width:149px;height:149px;position:relative">
+                  <div style="position:absolute;left:-6px;top:-6px;width:161px;height:161px;border-radius:50%;background:conic-gradient(#4A9EFF 0 55%,rgba(0,0,0,.09) 0);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 3px));mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 3px))"></div>
+                  <div style="position:absolute;inset:0;border-radius:50%;background:color-mix(in srgb,#4A9EFF 11%,transparent);border:3.4px solid #4A9EFF;box-shadow:0 0 32px color-mix(in srgb,#4A9EFF 36%,transparent)"></div>
+                  <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;transform:translateY(-8px)"><span class="ms" style="font-size:52px;color:#4A9EFF">code</span></div>
+                  <div style="position:absolute;left:0;right:0;bottom:24px;text-align:center;font-size:32px;font-weight:900;line-height:1;color:#4A9EFF;text-shadow:0 0 8px rgba(0,0,0,.3)">7</div>
+                  <div style="position:absolute;left:50%;transform:translateX(-50%);bottom:11px;width:56px;height:5px;border-radius:999px;background:rgba(0,0,0,.11);overflow:hidden"><div style="width:72%;height:100%;background:#4A9EFF"></div></div>
+                </div>
+                <div style="height:9px"></div>
+                <div style="width:190px;height:46px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:20px;font-weight:900;line-height:1.05;color:var(--text)">Программирование</div>
+              </div>
+
+              <!-- stage 1: mastered, target 3 (d 74) -->
+              <div style="position:absolute;left:362px;top:334.5px;width:176px;height:164px;display:flex;flex-direction:column;align-items:center;justify-content:center">
+                <div style="width:74px;height:74px;position:relative;border-radius:50%;background:color-mix(in srgb,#34C759 9.4%,transparent);border:2px solid #34C759">
+                  <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:31px;color:#34C759">workspace_premium</span></div>
+                  <div style="position:absolute;left:50%;transform:translateX(-50%);bottom:-10px;padding:2px 7px;border-radius:999px;background:var(--chip);border:1.5px solid #34C759;font-size:10.5px;font-weight:900;color:#34C759;white-space:nowrap">3/3</div>
+                </div>
+                <div style="height:13px"></div>
+                <div style="width:156px;height:44px;text-align:center;font-size:16px;font-weight:600;line-height:1.05;color:var(--text)">Основы Dart</div>
+              </div>
+
+              <!-- stage 2: active + selected, target 3 (d 74) -->
+              <div style="position:absolute;left:532px;top:334.5px;width:176px;height:164px;display:flex;flex-direction:column;align-items:center;justify-content:center">
+                <div style="width:74px;height:74px;position:relative;border-radius:50%;background:color-mix(in srgb,#4A9EFF 9.4%,transparent);border:3px solid #fff;box-shadow:0 0 26px color-mix(in srgb,#4A9EFF 41%,transparent)">
+                  <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:31px;color:#4A9EFF">bolt</span></div>
+                  <div style="position:absolute;left:50%;transform:translateX(-50%);bottom:-10px;padding:2px 7px;border-radius:999px;background:var(--chip);border:1.5px solid #4A9EFF;font-size:10.5px;font-weight:900;color:#4A9EFF;white-space:nowrap">2/3</div>
+                </div>
+                <div style="height:13px"></div>
+                <div style="width:156px;height:44px;text-align:center;font-size:16px;font-weight:600;line-height:1.05;color:var(--text)">Асинхронность и изоляты</div>
+              </div>
+
+              <!-- stage 3: locked, target 5 (d 86) -->
+              <div style="position:absolute;left:702px;top:334.5px;width:176px;height:164px;display:flex;flex-direction:column;align-items:center;justify-content:center">
+                <div style="width:86px;height:86px;position:relative;border-radius:50%;background:color-mix(in srgb,var(--card) 90%,transparent);border:2px solid var(--dim)">
+                  <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:36px;color:var(--dim)">lock</span></div>
+                  <div style="position:absolute;left:50%;transform:translateX(-50%);bottom:-10px;padding:2px 7px;border-radius:999px;background:var(--chip);border:1.5px solid var(--dim);font-size:10.5px;font-weight:900;color:var(--dim);white-space:nowrap">0/5</div>
+                </div>
+                <div style="height:13px"></div>
+                <div style="width:156px;height:44px;text-align:center;font-size:16px;font-weight:600;line-height:1.05;color:var(--text)">Публикация в стор</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- inspector 340 -->
+          <div style="width:340px;flex:0 0 340px;border-radius:16px;background:var(--card);border:1px solid color-mix(in srgb,#4A9EFF 28%,transparent);box-shadow:0 0 18px color-mix(in srgb,#4A9EFF 2.5%,transparent);padding:14px;overflow:hidden;display:flex;flex-direction:column">
+            <div style="display:flex;align-items:flex-start;gap:10px">
+              <div style="width:42px;height:42px;flex:0 0 42px;border-radius:13px;background:color-mix(in srgb,#4A9EFF 10%,transparent);border:1px solid color-mix(in srgb,#4A9EFF 31%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:22px;color:#4A9EFF">bolt</span></div>
+              <div style="flex:1;min-width:0">
+                <div style="display:flex;align-items:center;gap:6px">
+                  <div style="font-size:18px;font-weight:900;line-height:1.08;color:var(--text)">Асинхронность и изоляты</div>
+                  <div style="width:28px;height:28px;flex:0 0 28px;border-radius:9px;background:color-mix(in srgb,#4A9EFF 7%,transparent);border:1px solid color-mix(in srgb,#4A9EFF 23%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:15px;color:#4A9EFF">edit</span></div>
+                </div>
+                <div style="height:3px"></div>
+                <div style="font-size:11.5px;font-weight:700;color:var(--muted)">Активно</div>
+              </div>
+              <div style="flex:0 0 auto;padding:3px 7px;border-radius:6px;background:color-mix(in srgb,#FFCC00 10%,transparent);display:flex;align-items:center;gap:3px;white-space:nowrap"><span class="ms" style="font-size:10px;color:#FFCC00">auto_awesome</span><span style="font-size:11px;font-weight:600;color:#FFCC00">+30 XP</span></div>
+            </div>
+
+            <div style="height:12px"></div>
+            <div style="font-size:12.5px;line-height:1.35;color:var(--muted)">Понять Future, Stream и когда выносить работу в изолят.</div>
+
+            <div style="height:14px"></div>
+            <div style="padding:11px;border-radius:12px;background:color-mix(in srgb,#4A9EFF 4.7%,transparent);border:1px solid color-mix(in srgb,#4A9EFF 17.6%,transparent)">
+              <div style="display:flex;align-items:center">
+                <div style="flex:1;font-size:12.5px;font-weight:800;color:var(--text)">Практика для освоения</div>
+                <span class="ms" style="font-size:16px;color:#4A9EFF">edit</span>
+                <div style="width:5px"></div>
+                <div style="font-size:12px;font-weight:900;color:#4A9EFF">2 / 3</div>
+              </div>
+              <div style="height:8px"></div>
+              <div style="height:6px;border-radius:3px;background:color-mix(in srgb,#4A9EFF 14%,transparent);overflow:hidden"><div style="width:66.7%;height:100%;background:#4A9EFF"></div></div>
+              <div style="height:7px"></div>
+              <div style="font-size:11px;font-weight:600;line-height:1.25;color:var(--muted)">Практика — закрытый квест этого этапа. Наберите нужное количество, чтобы освоить этап.</div>
+            </div>
+
+            <div style="height:14px"></div>
+            <div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:7px">
+              <div style="padding:8px 10px;border-radius:10px;background:var(--field);border:1px solid var(--outline);display:flex;align-items:center;gap:8px">
+                <div style="width:18px;height:18px;flex:0 0 18px;border-radius:50%;border:2px solid #4A9EFF"></div>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:13.5px;font-weight:900;line-height:1.12;color:var(--text)">Прочитать главу про изоляты</div>
+                  <div style="height:4px"></div>
+                  <div style="font-size:11px;font-weight:600;color:var(--muted)">Разово · Обычный · минимум есть</div>
+                </div>
+                <div style="padding:5px 8px;border-radius:999px;background:color-mix(in srgb,#4A9EFF 9.4%,transparent);border:1px solid color-mix(in srgb,#4A9EFF 31%,transparent);display:flex;align-items:center;gap:3px;white-space:nowrap"><span class="ms" style="font-size:13px;color:#4A9EFF">bolt</span><span style="font-size:10.2px;font-weight:900;color:#4A9EFF">Минимум</span></div>
+                <div style="font-size:13px;font-weight:900;color:#4A9EFF;white-space:nowrap">+60 XP</div>
+                <span class="ms msо" style="font-size:18px;color:var(--muted)">edit</span>
+                <span class="ms msо" style="font-size:18px;color:var(--muted)">delete</span>
+              </div>
+              <div style="padding:8px 10px;border-radius:10px;background:color-mix(in srgb,var(--card) 69%,transparent);border:1px solid color-mix(in srgb,#34C759 16%,transparent);display:flex;align-items:center;gap:8px">
+                <div style="width:18px;height:18px;flex:0 0 18px;border-radius:50%;background:#34C759;border:2px solid #34C759;display:flex;align-items:center;justify-content:center;box-shadow:0 0 10px color-mix(in srgb,#34C759 20%,transparent)"><span class="ms" style="font-size:10px;color:#fff">check</span></div>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:13.5px;font-weight:900;line-height:1.12;color:var(--muted);text-decoration:line-through">Написать пример с Isolate.run</div>
+                  <div style="height:4px"></div>
+                  <div style="font-size:11px;font-weight:600;color:var(--muted)">Завершено</div>
+                </div>
+                <div style="font-size:13px;font-weight:900;color:var(--muted);white-space:nowrap">+80 XP</div>
+                <span class="ms msо" style="font-size:18px;color:var(--muted)">edit</span>
+                <span class="ms msо" style="font-size:18px;color:var(--muted)">delete</span>
+              </div>
+            </div>
+
+            <div style="height:12px"></div>
+            <div style="display:flex"><div style="padding:7px 12px;border-radius:8px;background:#4A9EFF;display:flex;align-items:center;gap:4px"><span class="ms" style="font-size:15px;color:#fff">add_task</span><span style="font-size:13px;font-weight:600;color:#fff">Создать квест</span></div></div>
+            <div style="height:8px"></div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="flex:1;padding:8px 10px;border-radius:8px;background:#4A9EFF;opacity:.45;display:flex;align-items:center;justify-content:center;gap:4px"><span class="ms" style="font-size:14px;color:#fff">workspace_premium</span><span style="font-size:12px;font-weight:800;color:#fff">Освоить</span></div>
+              <span class="ms msо" style="font-size:21px;color:var(--muted)">delete</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <div style="font-size:14px;font-weight:800;color:#3a3a46">Welcome — первый запуск (палитра MobileJournalTokens, а не десктопная)</div>
+    <div data-screen-label="Welcome 1440" style="width:1440px;height:900px;overflow:hidden;border:1px solid #d5d5dd;border-radius:6px;box-shadow:0 20px 60px rgba(20,20,40,.12);background:var(--mjBg);position:relative;display:flex;align-items:center;justify-content:center">
+      <div style="position:absolute;inset:0;background:radial-gradient(circle at 86% 19%,rgba(117,98,255,.15),transparent 62%)"></div>
+      <div style="width:760px;border-radius:36px;background:color-mix(in srgb,var(--mjSurface) 97%,transparent);border:1px solid var(--mjOutline);box-shadow:0 18px 36px rgba(0,0,0,.08);padding:42px 54px 46px;display:flex;flex-direction:column;align-items:center;position:relative">
+        <svg width="190" height="82" style="display:block">
+          <path d="M 18 66 C 57 86 104.5 2 172 17" stroke="rgba(117,98,255,.42)" stroke-width="3" fill="none" stroke-linecap="round"></path>
+          <circle cx="18" cy="66" r="7" fill="#7562FF"></circle>
+          <circle cx="95" cy="39.4" r="7" fill="#7562FF"></circle>
+          <circle cx="172" cy="17" r="10" fill="#FF8A1F"></circle>
+        </svg>
+        <div style="height:30px"></div>
+        <div style="font-size:44px;font-weight:900;line-height:1.05;color:var(--mjText);text-align:center">Добро пожаловать</div>
+        <div style="height:12px"></div>
+        <div style="font-size:25px;font-weight:800;line-height:1.2;color:var(--mjText);text-align:center">Преврати намерение в понятный путь</div>
+        <div style="height:28px"></div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:8px">
+          <span style="font-size:14px;font-weight:800;color:var(--mjMuted)">Навык</span>
+          <span class="ms" style="font-size:16px;color:var(--mjMuted)">arrow_forward</span>
+          <span style="font-size:14px;font-weight:800;color:var(--mjMuted)">Путь</span>
+          <span class="ms" style="font-size:16px;color:var(--mjMuted)">arrow_forward</span>
+          <span style="font-size:14px;font-weight:800;color:#FF8A1F">Следующий шаг</span>
+        </div>
+        <div style="height:28px"></div>
+        <div style="font-size:17px;font-weight:600;line-height:1.45;color:var(--mjMuted);text-align:center">Не нужно планировать всё сразу. Начни с одного направления — приложение поможет увидеть следующий шаг.</div>
+        <div style="height:34px"></div>
+        <div style="width:280px;height:54px;border-radius:18px;background:#7562FF;display:flex;align-items:center;justify-content:center;gap:8px">
+          <span class="ms" style="font-size:22px;color:#fff">arrow_forward</span><span style="font-size:17px;font-weight:900;color:#fff">Начать</span>
+        </div>
+        <div style="height:18px"></div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:7px">
+          <span class="ms" style="font-size:16px;color:var(--mjMuted)">smartphone</span><span style="font-size:12.5px;font-weight:600;color:var(--mjMuted)">Данные хранятся на этом устройстве</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <div style="font-size:14px;font-weight:800;color:#3a3a46">Обучение — шаг 1 из 3 (spotlight на кнопке «Навык», пустое состояние)</div>
+    <div data-screen-label="Tutorial 1440" style="width:1440px;height:900px;overflow:hidden;background:var(--bg);position:relative;border:1px solid #d5d5dd;border-radius:6px;box-shadow:0 20px 60px rgba(20,20,40,.12);color:var(--text)">
+      <div style="position:absolute;inset:0;display:flex">
+        <div style="width:248px;flex:0 0 248px;background:var(--sidebar);display:flex;flex-direction:column">
+          <div style="min-height:64px;padding:0 16px;display:flex;align-items:center;gap:10px">
+            <div style="width:34px;height:34px;border-radius:10px;background:var(--purple);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:19px;color:#fff">bolt</span></div>
+            <div style="font-size:15.5px;font-weight:900">RPG To-Do</div>
+          </div>
+          <div style="height:1px;background:var(--subtle)"></div>
+          <div style="padding:16px 16px 14px">
+            <div style="display:flex;align-items:center;gap:11px">
+              <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,color-mix(in srgb,var(--purple) 82%,transparent),var(--purple));display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#fff">Г</div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:5px;align-items:flex-start">
+                <div style="font-size:14.5px;font-weight:900">Герой</div>
+                <div style="padding:4px 8px;border-radius:99px;background:color-mix(in srgb,var(--purple) 12%,transparent);border:1px solid color-mix(in srgb,var(--purple) 40%,transparent);font-size:10.5px;font-weight:900;color:var(--purple)">Ур. 1</div>
+              </div>
+            </div>
+            <div style="height:14px"></div>
+            <div style="display:flex;justify-content:space-between"><span style="font-size:10.5px;font-weight:700;color:var(--muted)">Опыт персонажа</span><span style="font-size:10.5px;font-weight:900;color:var(--purple)">0/1000</span></div>
+            <div style="height:6px"></div>
+            <div style="height:7px;border-radius:3.5px;background:color-mix(in srgb,var(--purple) 15%,transparent)"></div>
+          </div>
+          <div style="height:1px;background:var(--subtle)"></div>
+          <div style="padding:12px 12px 10px;display:flex;flex-direction:column;gap:4px">
+            <div style="min-height:42px;border-radius:12px;background:color-mix(in srgb,var(--purple) 16%,transparent);border:1px solid color-mix(in srgb,var(--purple) 42%,transparent);padding:8px 12px;display:flex;align-items:center;gap:11px"><span class="ms" style="font-size:19px;color:var(--purple)">bolt</span><span style="flex:1;font-size:13px;font-weight:800">Действовать</span><span style="width:6px;height:6px;border-radius:50%;background:var(--purple)"></span></div>
+            <div style="min-height:42px;border-radius:12px;padding:8px 12px;display:flex;align-items:center;gap:11px"><span class="ms" style="font-size:19px;color:var(--muted)">account_tree</span><span style="flex:1;font-size:13px;font-weight:700;color:var(--muted)">Карта</span></div>
+            <div style="min-height:42px;border-radius:12px;padding:8px 12px;display:flex;align-items:center;gap:11px"><span class="ms msо" style="font-size:19px;color:var(--muted)">emoji_events</span><span style="flex:1;font-size:13px;font-weight:700;color:var(--muted)">Трофеи</span></div>
+            <div style="min-height:42px;border-radius:12px;padding:8px 12px;display:flex;align-items:center;gap:11px"><span class="ms" style="font-size:19px;color:var(--muted)">query_stats</span><span style="flex:1;font-size:13px;font-weight:700;color:var(--muted)">Статистика</span></div>
+          </div>
+          <div style="height:1px;background:var(--subtle)"></div>
+          <div style="padding:12px 12px 7px 16px;display:flex;align-items:center;gap:8px">
+            <span style="flex:1;font-size:10.5px;font-weight:900;letter-spacing:.7px;color:var(--muted)">НАВЫКИ</span>
+            <div style="height:34px;padding:0 9px;border-radius:10px;border:1px solid color-mix(in srgb,var(--purple) 35%,transparent);display:flex;align-items:center;gap:6px;color:var(--purple);white-space:nowrap;flex:0 0 auto"><span class="ms" style="font-size:15px">add</span><span style="font-size:10.5px;font-weight:900">Навык</span></div>
+          </div>
+          <div style="flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:16px">
+            <div style="display:flex;flex-direction:column;align-items:center">
+              <span class="ms" style="font-size:24px;color:var(--muted)">bolt</span>
+              <div style="height:8px"></div>
+              <div style="font-size:11.5px;font-weight:800;text-align:center;color:var(--text)">Создай первый навык</div>
+              <div style="height:8px"></div>
+              <div style="height:34px;padding:0 9px;border-radius:10px;border:1px solid color-mix(in srgb,var(--purple) 35%,transparent);display:flex;align-items:center;gap:6px;color:var(--purple);white-space:nowrap;flex:0 0 auto"><span class="ms" style="font-size:15px">add</span><span style="font-size:10.5px;font-weight:900">Навык</span></div>
+            </div>
+          </div>
+          <div style="padding:0 10px 8px">
+            <div style="border-radius:12px;background:color-mix(in srgb,#22C55E 8%,transparent);border:1px solid color-mix(in srgb,#22C55E 22%,transparent);padding:9px 10px;display:flex;align-items:center;gap:9px"><span class="ms" style="font-size:18px;color:#2ED36F">inbox</span><span style="flex:1;font-size:13px;font-weight:800">Задачник</span><span style="font-size:11px;font-weight:900;color:#2ED36F">0</span></div>
+          </div>
+          <div style="height:1px;background:var(--subtle)"></div>
+          <div style="padding:2px 10px"><div style="min-height:36px;border-radius:12px;padding:8px 12px;display:flex;align-items:center;gap:11px"><span class="ms msо" style="font-size:19px;color:var(--muted)">settings</span><span style="flex:1;font-size:13px;font-weight:700;color:var(--muted)">Настройки</span></div></div>
+        </div>
+        <div style="width:1px;background:var(--outline)"></div>
+        <div style="flex:1;min-width:0;background:var(--main);padding:22px 22px 32px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:28px;height:28px;border-radius:8px;background:color-mix(in srgb,var(--amber) 13%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:17px;color:var(--amber)">bolt</span></div>
+            <div style="flex:1;font-size:18px;font-weight:900">Действовать сегодня</div>
+          </div>
+          <div style="height:18px"></div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+            <div style="padding:12px 14px;border-radius:15px;background:color-mix(in srgb,var(--green) 5.5%,transparent);border:1px solid color-mix(in srgb,var(--green) 20%,transparent);display:flex;align-items:center;gap:11px"><div style="width:38px;height:38px;flex:0 0 38px;border-radius:10px;background:color-mix(in srgb,var(--green) 12%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:19px;color:var(--green)">check</span></div><div><div style="font-size:18px;font-weight:900">0</div><div style="height:2px"></div><div style="font-size:10.5px;font-weight:700;color:var(--muted)">Выполнено</div></div></div>
+            <div style="padding:12px 14px;border-radius:15px;background:color-mix(in srgb,var(--gold) 5.5%,transparent);border:1px solid color-mix(in srgb,var(--gold) 20%,transparent);display:flex;align-items:center;gap:11px"><div style="width:38px;height:38px;flex:0 0 38px;border-radius:10px;background:color-mix(in srgb,var(--gold) 12%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:19px;color:var(--gold)">bolt</span></div><div><div style="font-size:18px;font-weight:900">+0</div><div style="height:2px"></div><div style="font-size:10.5px;font-weight:700;color:var(--muted)">XP сегодня</div></div></div>
+            <div style="padding:12px 14px;border-radius:15px;background:color-mix(in srgb,var(--blue) 5.5%,transparent);border:1px solid color-mix(in srgb,var(--blue) 20%,transparent);display:flex;align-items:center;gap:11px"><div style="width:38px;height:38px;flex:0 0 38px;border-radius:10px;background:color-mix(in srgb,var(--blue) 12%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:19px;color:var(--blue)">radio_button_unchecked</span></div><div><div style="font-size:18px;font-weight:900">0</div><div style="height:2px"></div><div style="font-size:10.5px;font-weight:700;color:var(--muted)">Активных</div></div></div>
+            <div style="padding:12px 14px;border-radius:15px;background:color-mix(in srgb,var(--amber) 5.5%,transparent);border:1px solid color-mix(in srgb,var(--amber) 20%,transparent);display:flex;align-items:center;gap:11px"><div style="width:38px;height:38px;flex:0 0 38px;border-radius:10px;background:color-mix(in srgb,var(--amber) 12%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms msо" style="font-size:19px;color:var(--amber)">local_fire_department</span></div><div><div style="font-size:18px;font-weight:900">0 дн.</div><div style="height:2px"></div><div style="font-size:10.5px;font-weight:700;color:var(--muted)">Серия</div></div></div>
+          </div>
+          <div style="height:28px"></div>
+          <div style="padding:14px 16px;border-radius:13px;background:var(--card);border:1px solid var(--outline);display:flex;align-items:center;gap:12px">
+            <div style="flex:1;font-size:12px;font-weight:600;color:var(--muted)">Создай первый навык, чтобы начать путь.</div>
+            <div style="height:34px;padding:0 9px;border-radius:10px;border:1px solid color-mix(in srgb,var(--purple) 35%,transparent);display:flex;align-items:center;gap:6px;color:var(--purple);white-space:nowrap;flex:0 0 auto"><span class="ms" style="font-size:15px">add</span><span style="font-size:10.5px;font-weight:900">Создать навык</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- spotlight scrim: four rects around target (149,391)-(244,441) -->
+      <div style="position:absolute;left:0;top:0;right:0;height:391px;background:rgba(0,0,0,.36)"></div>
+      <div style="position:absolute;left:0;top:441px;right:0;bottom:0;background:rgba(0,0,0,.36)"></div>
+      <div style="position:absolute;left:0;top:391px;width:149px;height:50px;background:rgba(0,0,0,.36)"></div>
+      <div style="position:absolute;left:244px;top:391px;right:0;height:50px;background:rgba(0,0,0,.36)"></div>
+      <div style="position:absolute;left:150px;top:392px;width:93px;height:48px;border-radius:14px;border:2px solid #FF9500;box-shadow:0 0 14px rgba(255,149,0,.2)"></div>
+
+      <div style="position:absolute;left:276px;top:352px;width:390px;background:var(--sheet);border-radius:20px;border:1px solid rgba(0,0,0,.08);box-shadow:0 12px 32px rgba(0,0,0,.15);padding:18px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="ms" style="font-size:17px;color:#FF9500">auto_awesome</span>
+          <span style="flex:1;font-size:11px;font-weight:900;letter-spacing:.7px;color:#FF9500">ОБУЧЕНИЕ · 1 ИЗ 3</span>
+          <span class="ms" style="font-size:19px;color:var(--muted)">close</span>
+        </div>
+        <div style="height:8px"></div>
+        <div style="height:3px;border-radius:2px;background:rgba(255,149,0,.09);overflow:hidden"><div style="width:33.3%;height:100%;background:#FF9500"></div></div>
+        <div style="height:14px"></div>
+        <div style="font-size:19px;font-weight:900;color:var(--text)">Первый навык</div>
+        <div style="height:8px"></div>
+        <div style="font-size:13.5px;font-weight:600;line-height:1.4;color:var(--muted)">Навык — направление, в котором ты хочешь двигаться. Для начала достаточно названия и цели.</div>
+        <div style="height:16px"></div>
+        <div style="display:flex;justify-content:flex-end">
+          <div style="height:40px;padding:0 20px;border-radius:20px;background:#FF9500;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#fff">Создать навык</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <div style="font-size:14px;font-weight:800;color:#3a3a46">Экран «Статистика» (История роста)</div>
+    <div data-screen-label="Stats 1440" style="width:1440px;height:900px;overflow:hidden;background:var(--bg);display:flex;border:1px solid #d5d5dd;border-radius:6px;box-shadow:0 20px 60px rgba(20,20,40,.12);color:var(--text)">
+      <div style="width:248px;flex:0 0 248px;background:var(--sidebar);display:flex;flex-direction:column">
+        <div style="min-height:64px;padding:0 16px;display:flex;align-items:center;gap:10px">
+          <div style="width:34px;height:34px;border-radius:10px;background:var(--purple);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:19px;color:#fff">bolt</span></div>
+          <div style="font-size:15.5px;font-weight:900">RPG To-Do</div>
+        </div>
+        <div style="height:1px;background:var(--subtle)"></div>
+        <div style="padding:16px 16px 14px">
+          <div style="display:flex;align-items:center;gap:11px">
+            <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,color-mix(in srgb,var(--purple) 82%,transparent),var(--purple));display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#fff">А</div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:5px;align-items:flex-start">
+              <div style="font-size:14.5px;font-weight:900">Артём</div>
+              <div style="padding:4px 8px;border-radius:99px;background:color-mix(in srgb,var(--purple) 12%,transparent);border:1px solid color-mix(in srgb,var(--purple) 40%,transparent);font-size:10.5px;font-weight:900;color:var(--purple);white-space:nowrap">Ур. 6</div>
+            </div>
+          </div>
+          <div style="height:14px"></div>
+          <div style="display:flex;justify-content:space-between"><span style="font-size:10.5px;font-weight:700;color:var(--muted)">Опыт персонажа</span><span style="font-size:10.5px;font-weight:900;color:var(--purple)">1240/2000</span></div>
+          <div style="height:6px"></div>
+          <div style="height:7px;border-radius:3.5px;background:color-mix(in srgb,var(--purple) 15%,transparent);overflow:hidden"><div style="width:62%;height:100%;background:var(--purple)"></div></div>
+        </div>
+        <div style="height:1px;background:var(--subtle)"></div>
+        <div style="padding:12px 12px 10px;display:flex;flex-direction:column;gap:4px">
+          <div style="min-height:42px;border-radius:12px;padding:8px 12px;display:flex;align-items:center;gap:11px"><span class="ms" style="font-size:19px;color:var(--muted)">bolt</span><span style="flex:1;font-size:13px;font-weight:700;color:var(--muted)">Действовать</span></div>
+          <div style="min-height:42px;border-radius:12px;padding:8px 12px;display:flex;align-items:center;gap:11px"><span class="ms" style="font-size:19px;color:var(--muted)">account_tree</span><span style="flex:1;font-size:13px;font-weight:700;color:var(--muted)">Карта</span></div>
+          <div style="min-height:42px;border-radius:12px;padding:8px 12px;display:flex;align-items:center;gap:11px"><span class="ms msо" style="font-size:19px;color:var(--muted)">emoji_events</span><span style="flex:1;font-size:13px;font-weight:700;color:var(--muted)">Трофеи</span></div>
+          <div style="min-height:42px;border-radius:12px;background:color-mix(in srgb,var(--purple) 16%,transparent);border:1px solid color-mix(in srgb,var(--purple) 42%,transparent);padding:8px 12px;display:flex;align-items:center;gap:11px"><span class="ms" style="font-size:19px;color:var(--purple)">query_stats</span><span style="flex:1;font-size:13px;font-weight:800">Статистика</span><span style="width:6px;height:6px;border-radius:50%;background:var(--purple)"></span></div>
+        </div>
+        <div style="height:1px;background:var(--subtle)"></div>
+        <div style="padding:12px 12px 7px 16px;display:flex;align-items:center;gap:8px">
+          <span style="flex:1;font-size:10.5px;font-weight:900;letter-spacing:.7px;color:var(--muted)">НАВЫКИ</span>
+          <div style="height:34px;padding:0 9px;border-radius:10px;border:1px solid color-mix(in srgb,var(--purple) 35%,transparent);display:flex;align-items:center;gap:6px;color:var(--purple);white-space:nowrap;flex:0 0 auto"><span class="ms" style="font-size:15px">add</span><span style="font-size:10.5px;font-weight:900">Навык</span></div>
+        </div>
+        <div style="flex:1;min-height:0;padding:2px 10px 8px;display:flex;flex-direction:column;gap:5px;overflow:hidden">
+          <div style="min-height:62px;padding:7px 7px 7px 10px;border-radius:13px;background:color-mix(in srgb,#4A9EFF 11%,transparent);border:1px solid color-mix(in srgb,#4A9EFF 42%,transparent);display:flex;align-items:center">
+            <div style="display:flex;align-items:center;gap:9px;flex:1;min-width:0;padding-right:76px">
+              <div style="width:36px;height:36px;flex:0 0 36px;border-radius:10px;background:color-mix(in srgb,#4A9EFF 14%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:19px;color:#4A9EFF">code</span></div>
+              <div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:900;line-height:1.08;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Программирование</div><div style="height:3px"></div><div style="font-size:11px;font-weight:700;line-height:1;color:#4A9EFF">Ур. 7 · 3 кв.</div><div style="height:5px"></div><div style="height:4px;border-radius:2px;background:color-mix(in srgb,#4A9EFF 12%,transparent);overflow:hidden"><div style="width:72%;height:100%;background:#4A9EFF"></div></div></div>
+            </div>
+          </div>
+          <div style="min-height:62px;padding:7px 7px 7px 10px;border-radius:13px;display:flex;align-items:center">
+            <div style="display:flex;align-items:center;gap:9px;flex:1;min-width:0;padding-right:76px">
+              <div style="width:36px;height:36px;flex:0 0 36px;border-radius:10px;background:color-mix(in srgb,#34C759 14%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:19px;color:#34C759">language</span></div>
+              <div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:900;line-height:1.08">Английский</div><div style="height:3px"></div><div style="font-size:11px;font-weight:700;line-height:1;color:var(--muted)">Ур. 4 · 2 кв.</div><div style="height:5px"></div><div style="height:4px;border-radius:2px;background:color-mix(in srgb,#34C759 12%,transparent);overflow:hidden"><div style="width:38%;height:100%;background:#34C759"></div></div></div>
+            </div>
+          </div>
+          <div style="min-height:62px;padding:7px 7px 7px 10px;border-radius:13px;display:flex;align-items:center">
+            <div style="display:flex;align-items:center;gap:9px;flex:1;min-width:0;padding-right:76px">
+              <div style="width:36px;height:36px;flex:0 0 36px;border-radius:10px;background:color-mix(in srgb,#FF9500 14%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:19px;color:#FF9500">fitness_center</span></div>
+              <div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:900;line-height:1.08">Тренировки</div><div style="height:3px"></div><div style="font-size:11px;font-weight:700;line-height:1;color:var(--muted)">Ур. 5 · 1 кв.</div><div style="height:5px"></div><div style="height:4px;border-radius:2px;background:color-mix(in srgb,#FF9500 12%,transparent);overflow:hidden"><div style="width:54%;height:100%;background:#FF9500"></div></div></div>
+            </div>
+          </div>
+          <div style="min-height:62px;padding:7px 7px 7px 10px;border-radius:13px;display:flex;align-items:center">
+            <div style="display:flex;align-items:center;gap:9px;flex:1;min-width:0;padding-right:76px">
+              <div style="width:36px;height:36px;flex:0 0 36px;border-radius:10px;background:color-mix(in srgb,#AF52DE 14%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:19px;color:#AF52DE">menu_book</span></div>
+              <div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:900;line-height:1.08">Чтение</div><div style="height:3px"></div><div style="font-size:11px;font-weight:700;line-height:1;color:var(--muted)">Ур. 3 · 2 кв.</div><div style="height:5px"></div><div style="height:4px;border-radius:2px;background:color-mix(in srgb,#AF52DE 12%,transparent);overflow:hidden"><div style="width:21%;height:100%;background:#AF52DE"></div></div></div>
+            </div>
+          </div>
+        </div>
+        <div style="padding:0 10px 8px">
+          <div style="border-radius:12px;background:color-mix(in srgb,#22C55E 8%,transparent);border:1px solid color-mix(in srgb,#22C55E 22%,transparent);padding:9px 10px;display:flex;align-items:center;gap:9px"><span class="ms" style="font-size:18px;color:#2ED36F">inbox</span><span style="flex:1;font-size:13px;font-weight:800">Задачник</span><span style="font-size:11px;font-weight:900;color:#2ED36F">4</span></div>
+        </div>
+        <div style="height:1px;background:var(--subtle)"></div>
+        <div style="padding:2px 10px"><div style="min-height:36px;border-radius:12px;padding:8px 12px;display:flex;align-items:center;gap:11px"><span class="ms msо" style="font-size:19px;color:var(--muted)">settings</span><span style="flex:1;font-size:13px;font-weight:700;color:var(--muted)">Настройки</span></div></div>
+      </div>
+      <div style="width:1px;background:var(--outline)"></div>
+
+      <div style="flex:1;min-width:0;background:var(--bg);padding:22px;overflow:hidden">
+        <div style="height:100%;background:var(--main);overflow:hidden">
+          <div style="padding:26px 28px 14px;display:flex;align-items:center;gap:14px">
+            <div style="width:44px;height:44px;flex:0 0 44px;border-radius:13px;background:color-mix(in srgb,var(--purple) 13%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:23px;color:var(--purple)">auto_stories</span></div>
+            <div style="flex:1">
+              <div style="font-size:21px;font-weight:900">История роста</div>
+              <div style="height:3px"></div>
+              <div style="font-size:12.5px;font-weight:600;color:var(--muted)">Что получилось, какой навык вырос и что продолжить.</div>
+            </div>
+          </div>
+          <div style="padding:8px 28px 32px">
+            <div style="display:flex;gap:10px">
+              <div style="flex:1;padding:11px 14px;border-radius:12px;background:color-mix(in srgb,var(--amber) 5%,transparent);border:1px solid color-mix(in srgb,var(--amber) 15%,transparent);display:flex;align-items:center;gap:8px"><span class="ms msо" style="font-size:17px;color:var(--amber)">today</span><span style="font-size:13px;font-weight:700;color:var(--muted)">Сегодня:&nbsp;</span><span style="flex:1;font-size:13px;font-weight:900;color:var(--amber)">180 XP</span></div>
+              <div style="flex:1;padding:11px 14px;border-radius:12px;background:color-mix(in srgb,var(--green) 5%,transparent);border:1px solid color-mix(in srgb,var(--green) 15%,transparent);display:flex;align-items:center;gap:8px"><span class="ms" style="font-size:17px;color:var(--green)">trending_up</span><span style="font-size:13px;font-weight:700;color:var(--muted)">Неделя:&nbsp;</span><span style="flex:1;font-size:13px;font-weight:900;color:var(--green)">940 XP</span></div>
+              <div style="flex:1;padding:11px 14px;border-radius:12px;background:color-mix(in srgb,#4A9EFF 5%,transparent);border:1px solid color-mix(in srgb,#4A9EFF 15%,transparent);display:flex;align-items:center;gap:8px"><span class="ms" style="font-size:17px;color:#4A9EFF">code</span><span style="font-size:13px;font-weight:700;color:var(--muted)">Главный навык:&nbsp;</span><span style="flex:1;font-size:13px;font-weight:900;color:#4A9EFF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Программирование · 520 XP</span></div>
+            </div>
+
+            <div style="height:22px"></div>
+            <div style="display:flex;gap:22px;align-items:flex-start">
+              <div style="flex:1;min-width:0">
+                <div style="font-size:15px;font-weight:900">История роста</div>
+                <div style="height:3px"></div>
+                <div style="font-size:11.5px;font-weight:600;color:var(--muted)">Сначала то, что уже получилось и стало частью пути.</div>
+                <div style="height:10px"></div>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+                  <div style="border-radius:14px;background:var(--card);border:1px solid color-mix(in srgb,var(--amber) 18%,transparent);padding:14px;display:flex;align-items:center;gap:10px">
+                    <div style="width:38px;height:38px;flex:0 0 38px;border-radius:10px;background:color-mix(in srgb,var(--amber) 12%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms msо" style="font-size:19px;color:var(--amber)">celebration</span></div>
+                    <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:900">Победы дня</div><div style="height:3px"></div><div style="font-size:10.5px;color:var(--muted)">180 XP · 3 квестов</div></div>
+                    <span class="ms" style="font-size:20px;color:var(--muted)">chevron_right</span>
+                  </div>
+                  <div style="border-radius:14px;background:var(--card);border:1px solid color-mix(in srgb,var(--green) 18%,transparent);padding:14px;display:flex;align-items:center;gap:10px">
+                    <div style="width:38px;height:38px;flex:0 0 38px;border-radius:10px;background:color-mix(in srgb,var(--green) 12%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms msо" style="font-size:19px;color:var(--green)">calendar_view_week</span></div>
+                    <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:900">Неделя</div><div style="height:3px"></div><div style="font-size:10.5px;color:var(--muted)">940 XP · 14 квестов</div></div>
+                    <span class="ms" style="font-size:20px;color:var(--muted)">chevron_right</span>
+                  </div>
+                  <div style="border-radius:14px;background:var(--card);border:1px solid color-mix(in srgb,#B84DFF 18%,transparent);padding:14px;display:flex;align-items:center;gap:10px">
+                    <div style="width:38px;height:38px;flex:0 0 38px;border-radius:10px;background:color-mix(in srgb,#B84DFF 12%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms msо" style="font-size:19px;color:#B84DFF">auto_stories</span></div>
+                    <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:900">Летопись</div><div style="height:3px"></div><div style="font-size:10.5px;color:var(--muted)">86 побед · ур. 6</div></div>
+                    <span class="ms" style="font-size:20px;color:var(--muted)">chevron_right</span>
+                  </div>
+                </div>
+
+                <div style="height:24px"></div>
+                <div style="font-size:15px;font-weight:900">Цели и путь</div>
+                <div style="height:3px"></div>
+                <div style="font-size:11.5px;font-weight:600;color:var(--muted)">Где ты сейчас по навыкам и какой этап двигается дальше.</div>
+                <div style="height:10px"></div>
+                <div style="border-radius:16px;background:var(--card);border:1px solid var(--outline);overflow:hidden">
+                  <div style="padding:12px 14px;display:flex;align-items:center;gap:11px">
+                    <div style="width:34px;height:34px;flex:0 0 34px;border-radius:9px;background:color-mix(in srgb,#4A9EFF 13%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:18px;color:#4A9EFF">code</span></div>
+                    <div style="flex:1;min-width:0">
+                      <div style="display:flex;align-items:center"><div style="flex:1;font-size:13px;font-weight:800">Программирование</div><div style="font-size:13px;font-weight:900;color:#4A9EFF">33%</div></div>
+                      <div style="height:7px"></div>
+                      <div style="height:6px;border-radius:3px;background:color-mix(in srgb,#4A9EFF 12%,transparent);overflow:hidden"><div style="width:33%;height:100%;background:#4A9EFF"></div></div>
+                      <div style="height:5px"></div>
+                      <div style="font-size:10.5px;color:var(--muted)">Собрать pet-проект и выложить в стор</div>
+                    </div>
+                  </div>
+                  <div style="padding:12px 14px;display:flex;align-items:center;gap:11px">
+                    <div style="width:34px;height:34px;flex:0 0 34px;border-radius:9px;background:color-mix(in srgb,#34C759 13%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:18px;color:#34C759">language</span></div>
+                    <div style="flex:1;min-width:0">
+                      <div style="display:flex;align-items:center"><div style="flex:1;font-size:13px;font-weight:800">Английский</div><div style="font-size:13px;font-weight:900;color:#34C759">50%</div></div>
+                      <div style="height:7px"></div>
+                      <div style="height:6px;border-radius:3px;background:color-mix(in srgb,#34C759 12%,transparent);overflow:hidden"><div style="width:50%;height:100%;background:#34C759"></div></div>
+                      <div style="height:5px"></div>
+                      <div style="font-size:10.5px;color:var(--muted)">Свободно говорить на созвонах</div>
+                    </div>
+                  </div>
+                  <div style="padding:12px 14px;display:flex;align-items:center;gap:11px">
+                    <div style="width:34px;height:34px;flex:0 0 34px;border-radius:9px;background:color-mix(in srgb,#FF9500 13%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:18px;color:#FF9500">fitness_center</span></div>
+                    <div style="flex:1;min-width:0">
+                      <div style="display:flex;align-items:center"><div style="flex:1;font-size:13px;font-weight:800">Тренировки</div><div style="font-size:13px;font-weight:900;color:#FF9500">0%</div></div>
+                      <div style="height:7px"></div>
+                      <div style="height:6px;border-radius:3px;background:color-mix(in srgb,#FF9500 12%,transparent)"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="height:24px"></div>
+                <div style="font-size:15px;font-weight:900">Что продолжить</div>
+                <div style="height:3px"></div>
+                <div style="font-size:11.5px;font-weight:600;color:var(--muted)">Один мягкий ориентир из уже сделанного.</div>
+                <div style="height:10px"></div>
+                <div style="padding:18px;border-radius:15px;background:color-mix(in srgb,#4A9EFF 5.5%,transparent);border:1px solid color-mix(in srgb,#4A9EFF 22%,transparent);display:flex;align-items:center;gap:12px">
+                  <div style="width:42px;height:42px;flex:0 0 42px;border-radius:11px;background:color-mix(in srgb,#4A9EFF 13%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:24px;color:#4A9EFF">code</span></div>
+                  <div style="flex:1">
+                    <div style="font-size:15px;font-weight:900">Продолжить Программирование</div>
+                    <div style="height:3px"></div>
+                    <div style="font-size:13px;color:var(--muted)">Активный этап: Асинхронность и изоляты</div>
+                    <div style="height:5px"></div>
+                    <div style="font-size:13px;font-weight:900;color:#4A9EFF">520 XP на неделе</div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="width:280px;flex:0 0 280px">
+                <div style="border-radius:16px;background:var(--card);border:1px solid var(--outline);padding:16px">
+                  <div style="font-size:10.5px;font-weight:900;letter-spacing:.7px;color:var(--muted)">XP ЗА НЕДЕЛЮ</div>
+                  <div style="height:14px"></div>
+                  <div style="height:96px;display:flex;align-items:flex-end">
+                    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end"><div style="width:9px;height:41px;border-radius:5px;background:color-mix(in srgb,var(--purple) 85%,transparent)"></div><div style="height:7px"></div><div style="font-size:9.5px;color:var(--muted)">Пн</div></div>
+                    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end"><div style="width:9px;height:63px;border-radius:5px;background:color-mix(in srgb,var(--purple) 85%,transparent)"></div><div style="height:7px"></div><div style="font-size:9.5px;color:var(--muted)">Вт</div></div>
+                    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end"><div style="width:9px;height:24px;border-radius:5px;background:color-mix(in srgb,var(--purple) 85%,transparent)"></div><div style="height:7px"></div><div style="font-size:9.5px;color:var(--muted)">Ср</div></div>
+                    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end"><div style="width:9px;height:52px;border-radius:5px;background:color-mix(in srgb,var(--purple) 85%,transparent)"></div><div style="height:7px"></div><div style="font-size:9.5px;color:var(--muted)">Чт</div></div>
+                    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end"><div style="width:9px;height:8px;border-radius:5px;background:color-mix(in srgb,var(--purple) 25%,transparent)"></div><div style="height:7px"></div><div style="font-size:9.5px;color:var(--muted)">Пт</div></div>
+                    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end"><div style="width:9px;height:8px;border-radius:5px;background:color-mix(in srgb,var(--purple) 25%,transparent)"></div><div style="height:7px"></div><div style="font-size:9.5px;color:var(--muted)">Сб</div></div>
+                    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end"><div style="width:9px;height:8px;border-radius:5px;background:color-mix(in srgb,var(--purple) 25%,transparent)"></div><div style="height:7px"></div><div style="font-size:9.5px;color:var(--muted)">Вс</div></div>
+                  </div>
+                  <div style="height:24px"></div>
+                  <div style="height:1px;background:var(--subtle)"></div>
+                  <div style="height:24px"></div>
+                  <div style="font-size:10.5px;font-weight:900;letter-spacing:.7px;color:var(--muted)">XP ПО НАВЫКАМ</div>
+                  <div style="height:12px"></div>
+                  <div style="display:flex;flex-direction:column;gap:9px">
+                    <div style="display:flex;align-items:center;gap:8px"><span style="width:7px;height:7px;border-radius:50%;background:#4A9EFF"></span><span style="flex:1;font-size:11.5px;font-weight:700">Программирование</span><span style="font-size:13px;font-weight:900;color:#4A9EFF">520</span></div>
+                    <div style="display:flex;align-items:center;gap:8px"><span style="width:7px;height:7px;border-radius:50%;background:#34C759"></span><span style="flex:1;font-size:11.5px;font-weight:700">Английский</span><span style="font-size:13px;font-weight:900;color:#34C759">240</span></div>
+                    <div style="display:flex;align-items:center;gap:8px"><span style="width:7px;height:7px;border-radius:50%;background:#FF9500"></span><span style="flex:1;font-size:11.5px;font-weight:700">Тренировки</span><span style="font-size:13px;font-weight:900;color:#FF9500">180</span></div>
+                    <div style="display:flex;align-items:center;gap:8px"><span style="width:7px;height:7px;border-radius:50%;background:#AF52DE"></span><span style="flex:1;font-size:11.5px;font-weight:700">Чтение</span><span style="font-size:13px;font-weight:900;color:#AF52DE">0</span></div>
+                  </div>
+                </div>
+                <div style="height:16px"></div>
+                <div style="font-size:15px;font-weight:900">Разобраться глубже</div>
+                <div style="height:3px"></div>
+                <div style="font-size:11.5px;font-weight:600;color:var(--muted)">Детали и журналы.</div>
+                <div style="height:8px"></div>
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <div style="border-radius:12px;background:var(--card);border:1px solid color-mix(in srgb,var(--blue) 16%,transparent);padding:11px;display:flex;align-items:center;gap:9px"><span class="ms" style="font-size:18px;color:var(--blue)">trending_up</span><span style="flex:1;font-size:11.5px;font-weight:800">Срез роста</span><span class="ms" style="font-size:17px;color:var(--muted)">chevron_right</span></div>
+                  <div style="border-radius:12px;background:var(--card);border:1px solid color-mix(in srgb,#B84DFF 16%,transparent);padding:11px;display:flex;align-items:center;gap:9px"><span class="ms msо" style="font-size:18px;color:#B84DFF">calendar_month</span><span style="flex:1;font-size:11.5px;font-weight:800">Календарь квестов</span><span class="ms" style="font-size:17px;color:var(--muted)">chevron_right</span></div>
+                  <div style="border-radius:12px;background:var(--card);border:1px solid color-mix(in srgb,var(--green) 16%,transparent);padding:11px;display:flex;align-items:center;gap:9px"><span class="ms msо" style="font-size:18px;color:var(--green)">receipt_long</span><span style="flex:1;font-size:11.5px;font-weight:800">Журнал XP</span><span class="ms" style="font-size:17px;color:var(--muted)">chevron_right</span></div>
+                </div>
+                <div style="height:14px"></div>
+                <div style="font-size:15px;font-weight:900">Трофеи и события</div>
+                <div style="height:3px"></div>
+                <div style="font-size:11.5px;font-weight:600;color:var(--muted)">Рубежи и сопротивление.</div>
+                <div style="height:8px"></div>
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <div style="border-radius:12px;background:var(--card);border:1px solid color-mix(in srgb,var(--gold) 16%,transparent);padding:11px;display:flex;align-items:center;gap:9px"><span class="ms msо" style="font-size:18px;color:var(--gold)">workspace_premium</span><span style="flex:1;font-size:11.5px;font-weight:800">Достижения</span><span class="ms" style="font-size:17px;color:var(--muted)">chevron_right</span></div>
+                  <div style="border-radius:12px;background:var(--card);border:1px solid color-mix(in srgb,var(--danger) 16%,transparent);padding:11px;display:flex;align-items:center;gap:9px"><span class="ms msо" style="font-size:18px;color:var(--danger)">shield</span><span style="flex:1;font-size:11.5px;font-weight:800">Сопротивление</span><span class="ms" style="font-size:17px;color:var(--muted)">chevron_right</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <div style="font-size:14px;font-weight:800;color:#3a3a46">Экран «Трофеи» — пустые коллекции при непустом аккаунте</div>
+    <div data-screen-label="Trophies 1440" style="width:1440px;height:900px;overflow:hidden;background:var(--bg);display:flex;border:1px solid #d5d5dd;border-radius:6px;box-shadow:0 20px 60px rgba(20,20,40,.12);color:var(--text)">
+      <div style="width:248px;flex:0 0 248px;background:var(--sidebar);border-right:1px solid var(--outline);display:flex;flex-direction:column">
+        <div style="min-height:64px;padding:0 16px;display:flex;align-items:center;gap:10px">
+          <div style="width:34px;height:34px;border-radius:10px;background:var(--purple);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:19px;color:#fff">bolt</span></div>
+          <div style="font-size:15.5px;font-weight:900">RPG To-Do</div>
+        </div>
+        <div style="height:1px;background:var(--subtle)"></div>
+        <div style="padding:16px 16px 14px">
+          <div style="display:flex;align-items:center;gap:11px">
+            <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,color-mix(in srgb,var(--purple) 82%,transparent),var(--purple));display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#fff">А</div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:5px;align-items:flex-start">
+              <div style="font-size:14.5px;font-weight:900">Артём</div>
+              <div style="padding:4px 8px;border-radius:99px;background:color-mix(in srgb,var(--purple) 12%,transparent);border:1px solid color-mix(in srgb,var(--purple) 40%,transparent);font-size:10.5px;font-weight:900;color:var(--purple);white-space:nowrap">Ур. 6</div>
+            </div>
+          </div>
+          <div style="height:14px"></div>
+          <div style="display:flex;justify-content:space-between"><span style="font-size:10.5px;font-weight:700;color:var(--muted)">Опыт персонажа</span><span style="font-size:10.5px;font-weight:900;color:var(--purple)">1240/2000</span></div>
+          <div style="height:6px"></div>
+          <div style="height:7px;border-radius:3.5px;background:color-mix(in srgb,var(--purple) 15%,transparent);overflow:hidden"><div style="width:62%;height:100%;background:var(--purple)"></div></div>
+        </div>
+        <div style="height:1px;background:var(--subtle)"></div>
+        <div style="padding:12px 12px 10px;display:flex;flex-direction:column;gap:4px">
+          <div style="min-height:42px;border-radius:12px;padding:8px 12px;display:flex;align-items:center;gap:11px"><span class="ms" style="font-size:19px;color:var(--muted)">bolt</span><span style="flex:1;font-size:13px;font-weight:700;color:var(--muted)">Действовать</span></div>
+          <div style="min-height:42px;border-radius:12px;padding:8px 12px;display:flex;align-items:center;gap:11px"><span class="ms" style="font-size:19px;color:var(--muted)">account_tree</span><span style="flex:1;font-size:13px;font-weight:700;color:var(--muted)">Карта</span></div>
+          <div style="min-height:42px;border-radius:12px;background:color-mix(in srgb,var(--purple) 16%,transparent);border:1px solid color-mix(in srgb,var(--purple) 42%,transparent);padding:8px 12px;display:flex;align-items:center;gap:11px"><span class="ms msо" style="font-size:19px;color:var(--purple)">emoji_events</span><span style="flex:1;font-size:13px;font-weight:800">Трофеи</span><span style="width:6px;height:6px;border-radius:50%;background:var(--purple)"></span></div>
+          <div style="min-height:42px;border-radius:12px;padding:8px 12px;display:flex;align-items:center;gap:11px"><span class="ms" style="font-size:19px;color:var(--muted)">query_stats</span><span style="flex:1;font-size:13px;font-weight:700;color:var(--muted)">Статистика</span></div>
+        </div>
+        <div style="flex:1"></div>
+        <div style="height:1px;background:var(--subtle)"></div>
+        <div style="padding:2px 10px"><div style="min-height:36px;border-radius:12px;padding:8px 12px;display:flex;align-items:center;gap:11px"><span class="ms msо" style="font-size:19px;color:var(--muted)">settings</span><span style="flex:1;font-size:13px;font-weight:700;color:var(--muted)">Настройки</span></div></div>
+      </div>
+
+      <div style="flex:1;min-width:0;background:var(--bg);padding:22px;overflow:hidden">
+        <div style="height:100%;background:var(--main);overflow:hidden">
+          <div style="padding:26px 28px 14px;display:flex;align-items:center;gap:14px">
+            <div style="width:44px;height:44px;flex:0 0 44px;border-radius:13px;background:color-mix(in srgb,var(--gold) 13%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms msо" style="font-size:23px;color:var(--gold)">emoji_events</span></div>
+            <div style="flex:1">
+              <div style="font-size:21px;font-weight:900">Трофеи после действий</div>
+              <div style="height:3px"></div>
+              <div style="font-size:12.5px;font-weight:600;color:var(--muted)">Награды появляются после заметных действий и рубежей пути.</div>
+            </div>
+          </div>
+          <div style="padding:8px 28px 32px">
+            <div style="font-size:12px;font-weight:900;letter-spacing:.7px;color:var(--muted)">В ПРОЦЕССЕ</div>
+            <div style="height:10px"></div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+              <div style="padding:14px;border-radius:14px;background:color-mix(in srgb,var(--amber) 5.5%,transparent);border:1px solid color-mix(in srgb,var(--amber) 22%,transparent)">
+                <div style="display:flex;align-items:center;gap:8px"><span class="ms msо" style="font-size:19px;color:var(--amber)">local_fire_department</span><span style="flex:1;font-size:13px;font-weight:900">Серия 7 дней</span><span style="font-size:13px;font-weight:900;color:var(--amber)">86%</span></div>
+                <div style="height:5px"></div>
+                <div style="font-size:10.5px;color:var(--muted)">6/7 · Повторяющиеся квесты подряд</div>
+                <div style="height:9px"></div>
+                <div style="height:6px;border-radius:3px;background:color-mix(in srgb,var(--amber) 12%,transparent);overflow:hidden"><div style="width:86%;height:100%;background:var(--amber)"></div></div>
+              </div>
+              <div style="padding:14px;border-radius:14px;background:color-mix(in srgb,var(--gold) 5.5%,transparent);border:1px solid color-mix(in srgb,var(--gold) 22%,transparent)">
+                <div style="display:flex;align-items:center;gap:8px"><span class="ms" style="font-size:19px;color:var(--gold)">trending_up</span><span style="flex:1;font-size:13px;font-weight:900">Первый рубеж</span><span style="font-size:13px;font-weight:900;color:var(--gold)">100%</span></div>
+                <div style="height:5px"></div>
+                <div style="font-size:10.5px;color:var(--muted)">5/5 · Достигнуть 5 уровня персонажа</div>
+                <div style="height:9px"></div>
+                <div style="height:6px;border-radius:3px;background:color-mix(in srgb,var(--gold) 12%,transparent);overflow:hidden"><div style="width:100%;height:100%;background:var(--gold)"></div></div>
+              </div>
+              <div style="padding:14px;border-radius:14px;background:color-mix(in srgb,var(--danger) 5.5%,transparent);border:1px solid color-mix(in srgb,var(--danger) 22%,transparent)">
+                <div style="display:flex;align-items:center;gap:8px"><span class="ms" style="font-size:19px;color:var(--danger)">bolt</span><span style="flex:1;font-size:13px;font-weight:900">Сильный день</span><span style="font-size:13px;font-weight:900;color:var(--danger)">60%</span></div>
+                <div style="height:5px"></div>
+                <div style="font-size:10.5px;color:var(--muted)">3/5 · Закрыть 5 квестов за один день</div>
+                <div style="height:9px"></div>
+                <div style="height:6px;border-radius:3px;background:color-mix(in srgb,var(--danger) 12%,transparent);overflow:hidden"><div style="width:60%;height:100%;background:var(--danger)"></div></div>
+              </div>
+            </div>
+
+            <div style="height:22px"></div>
+            <div style="border-radius:16px;background:var(--card);border:1px solid var(--outline);padding:18px">
+              <div style="display:flex;align-items:center;gap:10px">
+                <span class="ms" style="font-size:20px;color:var(--green)">bolt</span>
+                <div style="flex:1;font-size:15.5px;font-weight:900">Эффекты</div>
+                <div style="padding:3px 9px;border-radius:99px;background:color-mix(in srgb,var(--green) 12%,transparent);border:1px solid color-mix(in srgb,var(--green) 30%,transparent);font-size:11px;font-weight:900;color:var(--green)">0</div>
+              </div>
+              <div style="height:12px"></div>
+              <div style="min-height:142px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px 16px">
+                <span class="ms msо" style="font-size:32px;color:var(--muted)">bolt</span>
+                <div style="height:10px"></div>
+                <div style="font-size:16px;font-weight:900">Нет эффектов</div>
+                <div style="height:5px"></div>
+                <div style="font-size:13px;line-height:1.4;color:var(--muted);text-align:center">Открой сундук, и здесь появится временное усиление.</div>
+              </div>
+            </div>
+
+            <div style="height:22px"></div>
+            <div style="border-radius:16px;background:var(--card);border:1px solid var(--outline);padding:18px">
+              <div style="display:flex;align-items:center;gap:10px">
+                <span class="ms msо" style="font-size:20px;color:var(--gold)">inventory_2</span>
+                <div style="flex:1;font-size:15.5px;font-weight:900">Новые сундуки</div>
+                <div style="padding:3px 9px;border-radius:99px;background:color-mix(in srgb,var(--gold) 12%,transparent);border:1px solid color-mix(in srgb,var(--gold) 30%,transparent);font-size:11px;font-weight:900;color:var(--gold)">0</div>
+              </div>
+              <div style="height:12px"></div>
+              <div style="min-height:142px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px 16px">
+                <span class="ms msо" style="font-size:32px;color:var(--muted)">inventory_2</span>
+                <div style="height:10px"></div>
+                <div style="font-size:16px;font-weight:900">Пока нет сундуков</div>
+                <div style="height:5px"></div>
+                <div style="font-size:13px;line-height:1.4;color:var(--muted);text-align:center">Закрой сильный день, удержи серию или пройди событие сопротивления.</div>
+              </div>
+            </div>
+
+            <div style="height:24px"></div>
+            <div style="font-size:12px;font-weight:900;letter-spacing:.7px;color:var(--muted)">КАК ПОЛУЧИТЬ ТРОФЕИ</div>
+            <div style="height:10px"></div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+              <div style="padding:14px;border-radius:14px;background:var(--card);border:1px solid color-mix(in srgb,var(--amber) 18%,transparent);display:flex;align-items:center;gap:10px">
+                <div style="width:38px;height:38px;flex:0 0 38px;border-radius:10px;background:color-mix(in srgb,var(--amber) 12%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:19px;color:var(--amber)">bolt</span></div>
+                <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:900">Сильный день</div><div style="height:4px"></div><div style="font-size:10.5px;line-height:1.25;color:var(--muted)">Закрой 5 квестов за день, чтобы получить сундук дисциплины.</div></div>
+              </div>
+              <div style="padding:14px;border-radius:14px;background:var(--card);border:1px solid color-mix(in srgb,var(--gold) 18%,transparent);display:flex;align-items:center;gap:10px">
+                <div style="width:38px;height:38px;flex:0 0 38px;border-radius:10px;background:color-mix(in srgb,var(--gold) 12%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms msо" style="font-size:19px;color:var(--gold)">local_fire_department</span></div>
+                <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:900">Серия дней</div><div style="height:4px"></div><div style="font-size:10.5px;line-height:1.25;color:var(--muted)">Удерживай повторяющийся квест 7 или 30 дней для редких сундуков.</div></div>
+              </div>
+              <div style="padding:14px;border-radius:14px;background:var(--card);border:1px solid color-mix(in srgb,var(--danger) 18%,transparent);display:flex;align-items:center;gap:10px">
+                <div style="width:38px;height:38px;flex:0 0 38px;border-radius:10px;background:color-mix(in srgb,var(--danger) 12%,transparent);display:flex;align-items:center;justify-content:center"><span class="ms msо" style="font-size:19px;color:var(--danger)">shield</span></div>
+                <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:900">Победа над сопротивлением</div><div style="height:4px"></div><div style="font-size:10.5px;line-height:1.25;color:var(--muted)">Заверши активное событие сопротивления, чтобы открыть трофей.</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <div style="font-size:14px;font-weight:800;color:#3a3a46">Диалог «Профиль» (460×680) — фиксированный hero + скролл</div>
+    <div data-screen-label="Profile dialog" style="width:1440px;height:900px;overflow:hidden;position:relative;background:var(--main);border:1px solid #d5d5dd;border-radius:6px;box-shadow:0 20px 60px rgba(20,20,40,.12);color:var(--text);display:flex;align-items:center;justify-content:center">
+      <div style="position:absolute;inset:0;background:rgba(0,0,0,.54)"></div>
+      <div style="position:relative;width:460px;height:680px;border-radius:20px;overflow:hidden;background:var(--card);display:flex;flex-direction:column">
+        <div style="background:var(--chip);border-bottom:1px solid var(--outline)">
+          <div style="position:relative;height:202px">
+            <div style="height:160px;background:linear-gradient(135deg,#4A9EFF,#8B5CF6);position:relative">
+              <div style="position:absolute;inset:0;background:rgba(0,0,0,.157);display:flex;align-items:center;justify-content:center"><span class="ms msо" style="font-size:28px;color:rgba(255,255,255,.47)">add_a_photo</span></div>
+              <div style="position:absolute;top:12px;right:12px;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.47);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:16px;color:#fff">close</span></div>
+            </div>
+            <div style="position:absolute;left:24px;bottom:0;width:80px;height:80px">
+              <div style="width:80px;height:80px;border-radius:50%;border:3px solid var(--card);background:linear-gradient(135deg,#4A9EFF,#8B5CF6);display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:#fff">А</div>
+              <div style="position:absolute;right:0;bottom:0;width:24px;height:24px;border-radius:50%;background:#4A9EFF;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:13px;color:#fff">edit</span></div>
+            </div>
+          </div>
+          <div style="padding:10px 24px 16px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="flex:1;font-size:22px;font-weight:700">Артём</div>
+              <span class="ms msо" style="font-size:18px;color:var(--muted)">edit</span>
+            </div>
+            <div style="height:7px"></div>
+            <div style="display:inline-flex;padding:2px 8px;border-radius:10px;background:rgba(74,158,255,.12);border:1px solid rgba(74,158,255,.31);font-size:11px;font-weight:600;color:#4A9EFF">Ур. 6</div>
+            <div style="height:12px"></div>
+            <div style="display:flex;align-items:center;gap:16px">
+              <span style="font-size:13px;color:var(--muted)">Опыт</span>
+              <div style="flex:1;height:8px;border-radius:4px;background:rgba(74,158,255,.14);overflow:hidden"><div style="width:62%;height:100%;background:#4A9EFF"></div></div>
+              <span style="font-size:12px;color:var(--muted)">1240 / 2000</span>
+            </div>
+            <div style="height:8px"></div>
+            <div style="font-size:12px;line-height:1.25;color:var(--muted)">До уровня 7: 760 XP.</div>
+          </div>
+        </div>
+        <div style="flex:1;min-height:0;padding:16px 24px 24px;overflow:hidden">
+          <div style="display:flex;align-items:center"><span style="font-size:13px;color:var(--muted)">Всего опыта</span><span style="flex:1"></span><span style="font-size:15px;font-weight:700">18 420</span></div>
+          <div style="height:4px"></div>
+          <div style="font-size:13px;color:var(--muted)">Изучаю 4 навыка</div>
+          <div style="height:10px"></div>
+          <div style="padding:10px 12px;border-radius:10px;background:var(--formfield);border:1px solid var(--outline);display:flex;align-items:center;gap:10px">
+            <span class="ms msо" style="font-size:17px;color:#B84DFF">auto_stories</span>
+            <div style="flex:1"><div style="font-size:13px;font-weight:800">Летопись персонажа</div><div style="height:2px"></div><div style="font-size:11.5px;color:var(--muted)">86 побед · путь с 12 июня</div></div>
+            <span class="ms" style="font-size:18px;color:var(--muted)">chevron_right</span>
+          </div>
+          <div style="height:16px"></div><div style="height:1px;background:var(--outline)"></div><div style="height:14px"></div>
+          <div style="font-size:12px;font-weight:600;color:var(--muted)">Интерфейс</div>
+          <div style="height:10px"></div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="padding:10px 12px;border-radius:10px;background:var(--formfield);border:1px solid var(--outline);display:flex;align-items:center;gap:10px">
+              <span class="ms msо" style="font-size:17px;color:var(--muted)">dark_mode</span>
+              <div style="flex:1"><div style="font-size:13px;font-weight:800">Тёмная тема</div><div style="height:2px"></div><div style="font-size:11.5px;color:var(--muted)">Переключается сразу и сохраняется на устройстве.</div></div>
+              <div style="width:44px;height:24px;border-radius:12px;background:color-mix(in srgb,var(--dim) 42%,transparent);position:relative"><div style="position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3)"></div></div>
+            </div>
+            <div style="padding:10px 12px;border-radius:10px;background:var(--formfield);border:1px solid var(--outline);display:flex;align-items:center;gap:10px">
+              <span class="ms msо" style="font-size:17px;color:var(--muted)">volume_up</span>
+              <div style="flex:1"><div style="font-size:13px;font-weight:800">Звуки интерфейса</div><div style="height:2px"></div><div style="font-size:11.5px;color:var(--muted)">Отклик на действия, XP и награды.</div></div>
+              <div style="width:44px;height:24px;border-radius:12px;background:#4A9EFF;position:relative"><div style="position:absolute;right:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3)"></div></div>
+            </div>
+            <div style="padding:10px 12px;border-radius:10px;background:var(--formfield);border:1px solid var(--outline);display:flex;align-items:center;gap:10px">
+              <span class="ms" style="font-size:17px;color:#FF9500">auto_awesome</span>
+              <div style="flex:1"><div style="font-size:13px;font-weight:800">Обучение</div><div style="height:2px"></div><div style="font-size:11.5px;color:var(--muted)">Полный тур и отдельные темы всегда доступны здесь.</div></div>
+              <span class="ms" style="font-size:18px;color:var(--muted)">chevron_right</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <div style="font-size:14px;font-weight:800;color:#3a3a46">Диалог «Новый навык» (800 шириной)</div>
+    <div data-screen-label="Skill dialog" style="width:1440px;height:900px;overflow:hidden;position:relative;background:var(--main);border:1px solid #d5d5dd;border-radius:6px;box-shadow:0 20px 60px rgba(20,20,40,.12);color:var(--text);display:flex;align-items:center;justify-content:center">
+      <div style="position:absolute;inset:0;background:rgba(0,0,0,.54)"></div>
+      <div style="position:relative;width:800px;max-height:792px;border-radius:16px;background:var(--card);display:flex;flex-direction:column;overflow:hidden">
+        <div style="padding:20px 16px 14px 24px;display:flex;align-items:center"><div style="flex:1;font-size:18px;font-weight:700">Новый навык</div><span class="ms" style="font-size:22px;color:#8E8E93">close</span></div>
+        <div style="height:1px;background:var(--outline)"></div>
+        <div style="padding:24px;overflow:hidden">
+          <div style="display:flex;align-items:flex-start;gap:18px">
+            <div style="width:224px;flex:0 0 224px;min-height:96px;padding:14px;border-radius:16px;background:rgba(74,158,255,.055);border:1px solid rgba(74,158,255,.29);display:flex;align-items:flex-start;gap:12px">
+              <div style="width:54px;height:54px;flex:0 0 54px;border-radius:16px;background:rgba(74,158,255,.094);border:1.4px solid rgba(74,158,255,.47);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:26px;color:#4A9EFF">code</span></div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:14.5px;font-weight:900;line-height:1.12">Программирование</div>
+                <div style="height:4px"></div>
+                <div style="font-size:10.5px;font-weight:600;line-height:1.2;color:var(--muted)">Собрать pet-проект и выложить в стор</div>
+              </div>
+            </div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12px;font-weight:600;color:var(--muted)">Название навыка</div>
+              <div style="height:6px"></div>
+              <div style="border-radius:8px;background:var(--formfield);border:1px solid var(--outline);padding:10px 12px;font-size:14px">Программирование</div>
+              <div style="height:12px"></div>
+              <div style="font-size:12px;font-weight:600;color:var(--muted)">Цель</div>
+              <div style="height:6px"></div>
+              <div style="border-radius:8px;background:var(--formfield);border:1px solid var(--outline);padding:10px 12px;font-size:14px;min-height:62px">Собрать pet-проект и выложить в стор</div>
+            </div>
+          </div>
+
+          <div style="height:14px"></div>
+          <div style="font-size:15px;font-weight:900">Оформление</div>
+          <div style="height:10px"></div>
+          <div style="display:flex;align-items:center">
+            <div style="font-size:12px;font-weight:600;color:var(--muted)">Иконка</div>
+            <div style="flex:1"></div>
+            <div style="padding:5px 8px;display:flex;align-items:center;gap:6px;color:#4A9EFF"><span class="ms" style="font-size:17px">apps</span><span style="font-size:14px;font-weight:800">Все иконки</span></div>
+          </div>
+          <div style="height:8px"></div>
+          <div style="display:flex;flex-wrap:wrap;gap:7px">
+            <div style="width:42px;height:42px;border-radius:8px;background:rgba(74,158,255,.18);border:1.4px solid rgba(74,158,255,.65);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:18px;color:#4A9EFF">code</span></div>
+            <div style="width:42px;height:42px;border-radius:8px;border:1.4px solid transparent;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:18px;color:var(--muted)">fitness_center</span></div>
+            <div style="width:42px;height:42px;border-radius:8px;border:1.4px solid transparent;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:18px;color:var(--muted)">menu_book</span></div>
+            <div style="width:42px;height:42px;border-radius:8px;border:1.4px solid transparent;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:18px;color:var(--muted)">language</span></div>
+            <div style="width:42px;height:42px;border-radius:8px;border:1.4px solid transparent;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:18px;color:var(--muted)">music_note</span></div>
+            <div style="width:42px;height:42px;border-radius:8px;border:1.4px solid transparent;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:18px;color:var(--muted)">palette</span></div>
+            <div style="width:42px;height:42px;border-radius:8px;border:1.4px solid transparent;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:18px;color:var(--muted)">science</span></div>
+            <div style="width:42px;height:42px;border-radius:8px;border:1.4px solid transparent;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:18px;color:var(--muted)">directions_run</span></div>
+            <div style="width:42px;height:42px;border-radius:8px;border:1.4px solid transparent;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:18px;color:var(--muted)">psychology</span></div>
+            <div style="width:42px;height:42px;border-radius:8px;border:1.4px solid transparent;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:18px;color:var(--muted)">attach_money</span></div>
+            <div style="width:42px;height:42px;border-radius:8px;border:1.4px solid transparent;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:18px;color:var(--muted)">business_center</span></div>
+            <div style="width:42px;height:42px;border-radius:8px;border:1.4px solid transparent;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:18px;color:var(--muted)">school</span></div>
+          </div>
+          <div style="height:14px"></div>
+          <div style="font-size:12px;font-weight:600;color:var(--muted)">Цвет</div>
+          <div style="height:8px"></div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <div style="width:28px;height:28px;border-radius:50%;padding:3px;border:1px solid transparent"><div style="width:100%;height:100%;border-radius:50%;background:#FF3B30"></div></div>
+            <div style="width:28px;height:28px;border-radius:50%;padding:3px;border:1px solid transparent"><div style="width:100%;height:100%;border-radius:50%;background:#FF6B2C"></div></div>
+            <div style="width:28px;height:28px;border-radius:50%;padding:3px;border:1px solid transparent"><div style="width:100%;height:100%;border-radius:50%;background:#FF9500"></div></div>
+            <div style="width:28px;height:28px;border-radius:50%;padding:3px;border:1px solid transparent"><div style="width:100%;height:100%;border-radius:50%;background:#FFCC00"></div></div>
+            <div style="width:28px;height:28px;border-radius:50%;padding:3px;border:1px solid transparent"><div style="width:100%;height:100%;border-radius:50%;background:#B8E986"></div></div>
+            <div style="width:28px;height:28px;border-radius:50%;padding:3px;border:1px solid transparent"><div style="width:100%;height:100%;border-radius:50%;background:#34C759"></div></div>
+            <div style="width:28px;height:28px;border-radius:50%;padding:3px;border:1px solid transparent"><div style="width:100%;height:100%;border-radius:50%;background:#00C7BE"></div></div>
+            <div style="width:28px;height:28px;border-radius:50%;padding:3px;border:1px solid transparent"><div style="width:100%;height:100%;border-radius:50%;background:#5AC8FA"></div></div>
+            <div style="width:28px;height:28px;border-radius:50%;padding:3px;border:2px solid #3b7ecc;box-shadow:0 0 10px rgba(74,158,255,.35)"><div style="width:100%;height:100%;border-radius:50%;background:#4A9EFF"></div></div>
+            <div style="width:28px;height:28px;border-radius:50%;padding:3px;border:1px solid transparent"><div style="width:100%;height:100%;border-radius:50%;background:#5856D6"></div></div>
+            <div style="width:28px;height:28px;border-radius:50%;padding:3px;border:1px solid transparent"><div style="width:100%;height:100%;border-radius:50%;background:#AF52DE"></div></div>
+            <div style="width:28px;height:28px;border-radius:50%;padding:3px;border:1px solid transparent"><div style="width:100%;height:100%;border-radius:50%;background:#8E8E93"></div></div>
+          </div>
+          <div style="height:14px"></div>
+          <div style="border-radius:12px;background:var(--formfield);border:1px solid var(--outline);padding:12px;display:flex;align-items:center;gap:10px">
+            <span class="ms msо" style="font-size:17px;color:#4A9EFF">flag</span>
+            <div style="flex:1"><div style="font-size:13px;font-weight:800">Первый этап дорожной карты · необязательно</div><div style="height:2px"></div><div style="font-size:11.5px;color:var(--muted)">Можно создать навык сейчас и построить путь позже.</div></div>
+            <span class="ms" style="font-size:22px;color:var(--muted)">expand_more</span>
+          </div>
+        </div>
+        <div style="height:1px;background:var(--outline)"></div>
+        <div style="padding:14px 24px 18px;display:flex;justify-content:flex-end;gap:10px">
+          <div style="padding:10px 18px;border-radius:10px;background:rgba(158,158,158,.18);font-size:14px;font-weight:600;color:#9e9e9e">Отмена</div>
+          <div style="padding:10px 18px;border-radius:10px;background:#4A9EFF;font-size:14px;font-weight:600;color:#fff">Создать</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <div style="font-size:14px;font-weight:800;color:#3a3a46">Диалог «Новый квест» (720×780) — «Настройки квеста» раскрыты</div>
+    <div data-screen-label="Task dialog" style="width:1440px;height:900px;overflow:hidden;position:relative;background:var(--main);border:1px solid #d5d5dd;border-radius:6px;box-shadow:0 20px 60px rgba(20,20,40,.12);color:var(--text);display:flex;align-items:center;justify-content:center">
+      <div style="position:absolute;inset:0;background:rgba(0,0,0,.54)"></div>
+      <div style="position:relative;width:720px;height:780px;border-radius:16px;background:var(--card);display:flex;flex-direction:column;overflow:hidden">
+        <div style="padding:20px 16px 14px 24px;display:flex;align-items:center"><div style="flex:1;font-size:18px;font-weight:700">Новый квест</div><span class="ms" style="font-size:22px;color:#8E8E93">close</span></div>
+        <div style="height:1px;background:var(--outline)"></div>
+        <div style="flex:1;min-height:0;padding:24px;overflow:hidden">
+          <div style="padding:9px 12px;border-radius:10px;background:rgba(74,158,255,.035);border:1px solid rgba(74,158,255,.19);display:flex;align-items:center;gap:9px">
+            <div style="width:30px;height:30px;flex:0 0 30px;border-radius:9px;background:rgba(74,158,255,.094);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:16px;color:#4A9EFF">account_tree</span></div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12.8px;font-weight:900">Этап дорожной карты: Асинхронность и изоляты</div>
+              <div style="font-size:11px;font-weight:600;line-height:1.2;color:var(--muted)">Квест можно привязать к текущей ступени RoadMap.</div>
+            </div>
+          </div>
+          <div style="height:14px"></div>
+          <div style="font-size:12px;font-weight:600;color:var(--muted)">Название квеста</div>
+          <div style="height:6px"></div>
+          <div style="border-radius:8px;background:var(--formfield);border:1px solid var(--outline);padding:10px 12px;font-size:14px">Прочитать главу про изоляты</div>
+          <div style="height:16px"></div>
+          <div style="font-size:12px;font-weight:600;color:var(--muted)">Описание · необязательно</div>
+          <div style="height:6px"></div>
+          <div style="border-radius:8px;background:var(--formfield);border:1px solid var(--outline);padding:10px 12px;font-size:13px;color:var(--muted);min-height:48px">Что важно помнить про этот квест?</div>
+          <div style="height:16px"></div>
+          <div style="padding:10px;border-radius:10px;background:var(--sheet);border:1px solid color-mix(in srgb,var(--outline) 70%,transparent)">
+            <div style="display:flex;align-items:center">
+              <div style="font-size:12px;font-weight:600;color:var(--muted)">XP за квест</div>
+              <div style="flex:1"></div>
+              <div style="padding:3px 10px;border-radius:8px;background:var(--rewardBg);border:1px solid var(--rewardBorder);font-size:13px;font-weight:700;color:var(--rewardFg);white-space:nowrap">60 XP</div>
+            </div>
+            <div style="height:12px"></div>
+            <div style="position:relative;height:20px;display:flex;align-items:center">
+              <div style="height:4px;border-radius:2px;background:var(--rewardTrack);width:100%;overflow:hidden"><div style="width:10.2%;height:100%;background:var(--rewardFg)"></div></div>
+              <div style="position:absolute;left:10.2%;width:20px;height:20px;border-radius:50%;background:var(--rewardFg);transform:translateX(-50%)"></div>
+            </div>
+          </div>
+          <div style="height:16px"></div>
+          <div style="padding:12px;border-radius:12px;background:var(--formfield);border:1px solid var(--outline)">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="ms" style="font-size:17px;color:#4A9EFF">tune</span>
+              <div style="flex:1;font-size:13px;font-weight:800">Настройки квеста</div>
+              <span class="ms" style="font-size:22px;color:var(--muted)">expand_less</span>
+            </div>
+            <div style="height:12px"></div>
+            <div style="padding:12px;border-radius:12px;background:var(--sheet);border:1px solid var(--outline)">
+              <div style="display:flex;align-items:flex-start;gap:8px">
+                <span class="ms msо" style="font-size:16px;color:#4A9EFF">route</span>
+                <div style="flex:1"><div style="font-size:13px;font-weight:800">Поведение квеста</div><div style="height:2px"></div><div style="font-size:11.5px;color:var(--muted)">Тип, ритм и напоминание</div></div>
+              </div>
+              <div style="height:10px"></div>
+              <div style="font-size:12px;font-weight:600;color:var(--muted)">Тип квеста</div>
+              <div style="height:8px"></div>
+              <div style="display:flex;flex-wrap:wrap;gap:7px">
+                <div style="padding:6px 10px;border-radius:999px;background:var(--formchip);border:1px solid var(--outline);font-size:13px;color:var(--muted);white-space:nowrap">Привычка</div>
+                <div style="padding:6px 10px;border-radius:999px;background:rgba(52,199,89,.14);border:1px solid #34C759;font-size:13px;font-weight:700;color:#34C759;white-space:nowrap">Разово</div>
+                <div style="padding:6px 10px;border-radius:999px;background:var(--formchip);border:1px solid var(--outline);font-size:13px;color:var(--muted);white-space:nowrap">Проект</div>
+                <div style="padding:6px 10px;border-radius:999px;background:var(--formchip);border:1px solid var(--outline);font-size:13px;color:var(--muted);white-space:nowrap">Большая цель</div>
+              </div>
+            </div>
+            <div style="height:10px"></div>
+            <div style="padding:12px;border-radius:12px;background:var(--formfield);border:1px solid var(--outline)">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span class="ms msо" style="font-size:17px;color:#4A9EFF">bolt</span>
+                <div style="flex:1"><div style="font-size:13px;font-weight:700">Минимальный шаг</div><div style="height:2px"></div><div style="font-size:11.5px;color:var(--muted)">Лёгкий вход, если квест кажется тяжёлым</div></div>
+                <div style="width:44px;height:24px;border-radius:12px;background:color-mix(in srgb,var(--dim) 42%,transparent);position:relative"><div style="position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3)"></div></div>
+              </div>
+            </div>
+            <div style="height:10px"></div>
+            <div style="padding:12px;border-radius:12px;background:var(--sheet);border:1px solid var(--outline);display:flex;align-items:center;gap:8px">
+              <span class="ms" style="font-size:16px;color:#4A9EFF">account_tree</span>
+              <div style="flex:1"><div style="font-size:13px;font-weight:800">Этап в дорожной карте</div><div style="height:2px"></div><div style="font-size:11.5px;color:var(--muted)">Асинхронность и изоляты</div></div>
+              <span class="ms" style="font-size:22px;color:var(--muted)">expand_more</span>
+            </div>
+          </div>
+        </div>
+        <div style="height:1px;background:var(--outline)"></div>
+        <div style="padding:14px 24px 18px;display:flex;justify-content:flex-end;gap:10px">
+          <div style="padding:10px 18px;border-radius:10px;background:rgba(158,158,158,.18);font-size:14px;font-weight:600;color:#9e9e9e">Отмена</div>
+          <div style="padding:10px 18px;border-radius:10px;background:#4A9EFF;font-size:14px;font-weight:600;color:#fff">Создать</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;darkTheme&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  componentDidMount() { this._applyTheme(); }
+  componentDidUpdate() { this._applyTheme(); }
+  _applyTheme() {
+    const dark = this.props.darkTheme ?? false;
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  }
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

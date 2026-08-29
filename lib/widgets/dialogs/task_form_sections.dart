@@ -25,10 +25,10 @@ class TaskStageContextCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: accent.withAlpha(isDark ? 14 : 9),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: accent.withAlpha(48)),
       ),
       child: Row(
@@ -38,11 +38,11 @@ class TaskStageContextCard extends StatelessWidget {
             height: 30,
             decoration: BoxDecoration(
               color: accent.withAlpha(24),
-              borderRadius: BorderRadius.circular(9),
+              borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(Icons.account_tree, color: accent, size: 16),
           ),
-          const SizedBox(width: 9),
+          const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -101,10 +101,10 @@ class TaskStageSuggestionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF17171F) : const Color(0xFFFFFFFF),
-        borderRadius: BorderRadius.circular(10),
+        color: dialogCardSurface(isDark),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: borderColor.withAlpha(180)),
       ),
       child: Row(
@@ -225,7 +225,7 @@ class TaskMinimumActionSection extends StatelessWidget {
           MotionExpandable(
             expanded: enabled,
             expandedChild: Padding(
-              padding: const EdgeInsets.only(top: 10),
+              padding: const EdgeInsets.only(top: 12),
               child: TextField(
                 controller: controller,
                 focusNode: focusNode,
@@ -240,7 +240,7 @@ class TaskMinimumActionSection extends StatelessWidget {
                   fillColor: surface(isDark),
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 12,
-                    vertical: 10,
+                    vertical: 12,
                   ),
                   border: _inputBorder(borderColor),
                   enabledBorder: _inputBorder(borderColor),
@@ -255,7 +255,7 @@ class TaskMinimumActionSection extends StatelessWidget {
   }
 
   OutlineInputBorder _inputBorder(Color color) => OutlineInputBorder(
-    borderRadius: BorderRadius.circular(10),
+    borderRadius: BorderRadius.circular(12),
     borderSide: BorderSide(color: color),
   );
 }
@@ -288,10 +288,10 @@ class TaskXpSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final rewardColor = MobileJournalTokens.rewardGoldForeground(isDark);
     return Container(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF181820) : const Color(0xFFFFFFFF),
-        borderRadius: BorderRadius.circular(10),
+        color: dialogCardSurface(isDark),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: borderColor.withAlpha(180)),
       ),
       child: Column(
@@ -307,8 +307,8 @@ class TaskXpSection extends StatelessWidget {
                 onTap: () => _editXp(context, rewardColor),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 3,
+                    horizontal: 12,
+                    vertical: 4,
                   ),
                   decoration: BoxDecoration(
                     color: MobileJournalTokens.rewardGoldBackground(isDark),
@@ -345,8 +345,8 @@ class TaskXpSection extends StatelessWidget {
                 ? Container(
                     margin: const EdgeInsets.only(top: 2),
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 7,
+                      horizontal: 12,
+                      vertical: 8,
                     ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFF9500).withAlpha(20),
@@ -362,7 +362,7 @@ class TaskXpSection extends StatelessWidget {
                           color: Color(0xFFFF9500),
                           size: 15,
                         ),
-                        const SizedBox(width: 7),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             'Не рекомендуется: лимит для «$taskTypeLabel» — $softCap XP.',

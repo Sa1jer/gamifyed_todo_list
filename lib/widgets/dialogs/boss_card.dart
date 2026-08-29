@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models.dart';
 import '../../utils.dart';
+import '../desktop_journal_tokens.dart';
 
 /// Presentation for one resistance event. Mutation ownership stays with the
 /// dialog/AppState boundary through [onDelete].
@@ -30,7 +31,7 @@ class BossResistanceCard extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: boss.isDefeated
             ? const Color(0xFF34C759).withAlpha(15)
@@ -95,15 +96,15 @@ class BossResistanceCard extends StatelessWidget {
             ],
           ),
           if (!boss.isDefeated) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(999),
                     child: LinearProgressIndicator(
                       value: boss.hpPercent,
-                      minHeight: 8,
+                      minHeight: DesktopScale.barHeight,
                       backgroundColor: accent.withAlpha(30),
                       valueColor: AlwaysStoppedAnimation(accent),
                     ),
@@ -120,7 +121,7 @@ class BossResistanceCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             Wrap(
               spacing: 6,
               runSpacing: 6,
@@ -193,10 +194,10 @@ class _BossPhaseBadge extends StatelessWidget {
         ? const Color(0xFFFF3B30)
         : accent;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withAlpha(25),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
         defeated ? 'Побеждён' : snapshot.phaseLabel,

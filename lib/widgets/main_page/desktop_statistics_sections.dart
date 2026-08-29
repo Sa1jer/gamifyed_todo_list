@@ -34,7 +34,7 @@ class DesktopStatisticsSummaryStrip extends StatelessWidget {
           tokens.streakAmber,
         ),
       ),
-      const SizedBox(width: 10),
+      const SizedBox(width: 12),
       Expanded(
         child: _summary(
           Icons.trending_up,
@@ -43,7 +43,7 @@ class DesktopStatisticsSummaryStrip extends StatelessWidget {
           tokens.successGreen,
         ),
       ),
-      const SizedBox(width: 10),
+      const SizedBox(width: 12),
       Expanded(
         child: _summary(
           mainSkillIdentity?.icon ?? Icons.star_outline,
@@ -59,7 +59,7 @@ class DesktopStatisticsSummaryStrip extends StatelessWidget {
 
   Widget _summary(IconData icon, String label, String value, Color color) =>
       Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(12),
@@ -115,7 +115,7 @@ class DesktopStatisticsAnalyticsPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _label('XP ЗА НЕДЕЛЮ'),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           _DesktopStatisticsWeekBars(week: week, tokens: tokens),
           const SizedBox(height: 24),
           Divider(color: tokens.subtleOutline, height: 1),
@@ -127,7 +127,7 @@ class DesktopStatisticsAnalyticsPanel extends StatelessWidget {
           else
             ...skills.map(
               (skill) => Padding(
-                padding: const EdgeInsets.only(bottom: 9),
+                padding: const EdgeInsets.only(bottom: 8),
                 child: Row(
                   children: [
                     Container(
@@ -208,10 +208,10 @@ class _DesktopStatisticsWeekBars extends StatelessWidget {
                       color: tokens.profilePurple.withValues(
                         alpha: dailyXp[index] == 0 ? 0.25 : 0.85,
                       ),
-                      borderRadius: BorderRadius.circular(5),
+                      borderRadius: BorderRadius.circular(999),
                     ),
                   ),
-                  const SizedBox(height: 7),
+                  const SizedBox(height: 8),
                   Text(
                     labels[index],
                     style: TextStyle(color: tokens.mutedText, fontSize: 9.5),

@@ -171,15 +171,31 @@ double _roadmapLabelTextHeight({
   return measuredHeight;
 }
 
-Color _roadmapStageStatusColor(Skill skill, SkillTreeNodeStatus status) {
+/// Нейтральный серый для закрытых этапов.
+///
+/// `#8E8E93` из [skillTreeNodeStatusColor] даёт на светлом холсте карты
+/// контраст ~2.9:1 — ниже WCAG AA. Тёмная тема остаётся на исходном цвете,
+/// светлая получает вариант с контрастом выше 4.5:1.
+const _roadmapNeutralStageDark = Color(0xFF8E8E93);
+const _roadmapNeutralStageLight = Color(0xFF6B6B73);
+
+Color _roadmapNeutralStageColor(bool isDark) =>
+    isDark ? _roadmapNeutralStageDark : _roadmapNeutralStageLight;
+
+/// [isDark] по умолчанию `true`, чтобы мобильные вызовы сохранили прежний
+/// цвет: правка ограничена desktop-веткой.
+Color _roadmapStageStatusColor(
+  Skill skill,
+  SkillTreeNodeStatus status, {
+  bool isDark = true,
+}) {
   return switch (status) {
     SkillTreeNodeStatus.active => skill.color,
     SkillTreeNodeStatus.mastered =>
       skill.color == const Color(0xFF34C759)
-          ? const Color(0xFF8E8E93)
+          ? _roadmapNeutralStageColor(isDark)
           : skillTreeNodeStatusColor[SkillTreeNodeStatus.mastered]!,
-    SkillTreeNodeStatus.locked =>
-      skillTreeNodeStatusColor[SkillTreeNodeStatus.locked]!,
+    SkillTreeNodeStatus.locked => _roadmapNeutralStageColor(isDark),
   };
 }
 

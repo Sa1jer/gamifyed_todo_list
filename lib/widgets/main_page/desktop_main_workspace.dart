@@ -114,7 +114,7 @@ class DesktopMainWorkspace extends StatelessWidget {
                 size: 17,
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(
                 'Действовать сегодня',
@@ -128,7 +128,7 @@ class DesktopMainWorkspace extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 16),
         LayoutBuilder(
           builder: (context, constraints) {
             final columns = constraints.maxWidth >= 690 ? 4 : 2;
@@ -198,7 +198,7 @@ class DesktopMainWorkspace extends StatelessWidget {
           builder: (context, constraints) {
             final padding = EdgeInsets.fromLTRB(
               metrics.mainPadding,
-              22,
+              24,
               metrics.mainPadding,
               32,
             );
@@ -240,7 +240,7 @@ class DesktopMainWorkspace extends StatelessWidget {
                   ],
                   SizedBox(height: metrics.sectionGap + 10),
                   header,
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 16),
                   Expanded(
                     child: LayoutBuilder(
                       builder: (context, workspaceConstraints) => Center(
@@ -271,7 +271,7 @@ class DesktopMainWorkspace extends StatelessWidget {
           key: const ValueKey('desktop-main-scroll'),
           padding: EdgeInsets.fromLTRB(
             metrics.mainPadding,
-            22,
+            24,
             metrics.mainPadding,
             32,
           ),
@@ -326,7 +326,7 @@ class DesktopMainWorkspace extends StatelessWidget {
                             count: active.length,
                             tokens: tokens,
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 12),
                           if (active.isEmpty)
                             Text(
                               'Активных квестов пока нет.',
@@ -337,7 +337,7 @@ class DesktopMainWorkspace extends StatelessWidget {
                             ),
                           ...active.map(
                             (task) => Padding(
-                              padding: const EdgeInsets.only(bottom: 9),
+                              padding: const EdgeInsets.only(bottom: 8),
                               child: DesktopQuestRow(
                                 key: ValueKey('desktop-active-task-${task.id}'),
                                 state: state,
@@ -358,13 +358,13 @@ class DesktopMainWorkspace extends StatelessWidget {
                               ),
                             ),
                           ),
-                          const SizedBox(height: 18),
+                          const SizedBox(height: 16),
                           _DesktopQuestSectionTitle(
                             label: 'ВЫПОЛНЕНО',
                             count: completed.length,
                             tokens: tokens,
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 12),
                           if (completed.isEmpty)
                             Text(
                               'Завершённые квесты появятся здесь.',
@@ -376,7 +376,7 @@ class DesktopMainWorkspace extends StatelessWidget {
                             ),
                           ...completed.map(
                             (task) => Padding(
-                              padding: const EdgeInsets.only(bottom: 9),
+                              padding: const EdgeInsets.only(bottom: 8),
                               child: DesktopQuestRow(
                                 key: ValueKey(
                                   'desktop-completed-task-${task.id}',
@@ -446,10 +446,12 @@ class _DesktopStatCard extends StatelessWidget {
       label: '$label: $value',
       child: Container(
         padding: EdgeInsets.symmetric(
-          horizontal: 14,
+          horizontal: 16,
           // Compact stat cards have a bounded row height. Reclaim a little
           // vertical room before enlarged text would overflow that contract.
-          vertical: textScale >= 1.2 ? 10 : 12,
+          vertical: textScale >= 1.2
+              ? DesktopScale.space8
+              : DesktopScale.space12,
         ),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.055),
@@ -463,11 +465,11 @@ class _DesktopStatCard extends StatelessWidget {
               height: 38,
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: color, size: 19),
             ),
-            const SizedBox(width: 11),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -546,8 +548,8 @@ class _DesktopFirstQuestEmpty extends StatelessWidget {
         maxWidth: 720,
       ),
       padding: EdgeInsets.symmetric(
-        horizontal: largeText ? 26 : 32,
-        vertical: largeText ? 20 : 24,
+        horizontal: largeText ? DesktopScale.space24 : DesktopScale.space32,
+        vertical: largeText ? DesktopScale.space16 : DesktopScale.space24,
       ),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.035),
@@ -570,7 +572,7 @@ class _DesktopFirstQuestEmpty extends StatelessWidget {
               fontWeight: FontWeight.w900,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Text(
             'Начни с небольшого действия, которое поможет двигаться к цели.',
             maxLines: largeText ? 3 : 2,
@@ -624,7 +626,7 @@ class _DesktopInlineEmpty extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: BoxDecoration(
         color: tokens.cardSurface,
         borderRadius: BorderRadius.circular(DesktopJournalTokens.taskRadius),

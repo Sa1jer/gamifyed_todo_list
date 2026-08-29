@@ -116,9 +116,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
         : surface(isDark);
     final fBg = widget.fullScreen
         ? MobileJournalTokens.questRow(isDark)
-        : isDark
-        ? const Color(0xFF13131A)
-        : const Color(0xFFF5F5F7);
+        : dialogFieldSurface(isDark);
     final txt = textColor(isDark);
     final sub = subtext(isDark);
     final bdr = borderColor(isDark);
@@ -133,7 +131,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     final form = SingleChildScrollView(
       key: const ValueKey('add-task-form-scroll'),
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      padding: EdgeInsets.all(MediaQuery.sizeOf(context).width < 600 ? 18 : 24),
+      padding: EdgeInsets.all(MediaQuery.sizeOf(context).width < 600 ? 16 : 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -146,7 +144,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
               accent: c,
               isDark: isDark,
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
           ] else if (_suggestedStage case final stage?) ...[
             TaskStageSuggestionCard(
               stage: stage,
@@ -160,7 +158,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                 _form.advancedExpanded = true;
               }),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
           ],
           DlgField(
             label: 'Название квеста',
@@ -176,7 +174,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
             },
           ),
           if (_titleError != null) ...[
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             Text(
               _titleError!,
               key: const ValueKey('add-task-title-error'),
@@ -224,7 +222,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
           ),
           const SizedBox(height: 16),
           _buildAdvancedSection(fBg, txt, sub, bdr, c, isDark),
-          const SizedBox(height: 22),
+          const SizedBox(height: 24),
         ],
       ),
     );
@@ -262,14 +260,14 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 16, 14),
+              padding: const EdgeInsets.fromLTRB(24, 24, 16, 16),
               child: DlgHeader(title: title, txtColor: txt),
             ),
             Divider(height: 1, color: bdr),
             Expanded(child: form),
             Divider(height: 1, color: bdr),
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 14, 24, 18),
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
               child: Align(
                 alignment: Alignment.centerRight,
                 child: DlgActions(
@@ -313,10 +311,10 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     required Widget child,
   }) {
     return Container(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF181820) : const Color(0xFFFFFFFF),
-        borderRadius: BorderRadius.circular(10),
+        color: dialogCardSurface(isDark),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: bdr.withAlpha(180)),
       ),
       child: child,
@@ -359,7 +357,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildBehaviorSection(fBg, txt, sub, bdr, color, isDark),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 12),
                   TaskMinimumActionSection(
                     enabled: _form.minimumActionEnabled,
                     controller: _form.minimumAction,
@@ -374,10 +372,10 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                         setState(() => _form.minimumActionEnabled = value),
                     onTextChanged: (_) => setState(() {}),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 12),
                   if (widget.skill?.treeNodes.isNotEmpty ?? false) ...[
                     _buildTreeNodeSection(fBg, txt, sub, bdr, color, isDark),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
                   ],
                   if (_form.showBigQuestTools) ...[
                     _buildTextListEditor(
@@ -394,7 +392,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                         () => _form.subtasksExpanded = !_form.subtasksExpanded,
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
                   ],
                 ],
               ),
@@ -445,7 +443,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           SubLbl('Тип квеста', sub),
           const SizedBox(height: 8),
           Wrap(
@@ -457,14 +455,12 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                 label: typeLabel[type]!,
                 color: typeColor[type]!,
                 selected: selected,
-                backgroundColor: isDark
-                    ? const Color(0xFF23232D)
-                    : const Color(0xFFF0F0F5),
+                backgroundColor: dialogRaisedSurface(isDark),
                 borderColor: bdr,
                 inactiveTextColor: sub,
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
+                  horizontal: 12,
+                  vertical: 8,
                 ),
                 radius: 999,
                 selectedWeight: FontWeight.w700,
@@ -496,14 +492,12 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                             label: freqLabel[freq]!,
                             color: color,
                             selected: selected,
-                            backgroundColor: isDark
-                                ? const Color(0xFF23232D)
-                                : const Color(0xFFF0F0F5),
+                            backgroundColor: dialogRaisedSurface(isDark),
                             borderColor: bdr,
                             inactiveTextColor: sub,
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 6,
+                              horizontal: 12,
+                              vertical: 8,
                             ),
                             radius: 999,
                             selectedWeight: FontWeight.w700,
@@ -515,7 +509,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                   MotionExpandable(
                     expanded: _form.frequency == RepeatFrequency.custom,
                     expandedChild: Padding(
-                      padding: const EdgeInsets.only(top: 10),
+                      padding: const EdgeInsets.only(top: 12),
                       child: Row(
                         children: [
                           Text(
@@ -567,10 +561,10 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
           ),
           const SizedBox(height: 12),
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: fBg,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(color: bdr.withAlpha(170)),
             ),
             child: Column(
@@ -611,7 +605,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                       onTap: _pickNotificationTime,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
+                          horizontal: 12,
                           vertical: 8,
                         ),
                         decoration: BoxDecoration(
@@ -658,10 +652,10 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     final selectedNodeId = selectedNodeExists ? _form.treeNodeId : null;
 
     return Container(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF181820) : const Color(0xFFFFFFFF),
-        borderRadius: BorderRadius.circular(10),
+        color: dialogCardSurface(isDark),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: bdr.withAlpha(180)),
       ),
       child: Column(
@@ -693,7 +687,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
               ),
             ],
           ),
-          const SizedBox(height: 9),
+          const SizedBox(height: 8),
           Wrap(
             spacing: 7,
             runSpacing: 7,
@@ -702,14 +696,12 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                 label: 'Без этапа',
                 color: const Color(0xFF8E8E93),
                 selected: selectedNodeId == null,
-                backgroundColor: isDark
-                    ? const Color(0xFF23232D)
-                    : const Color(0xFFF0F0F5),
+                backgroundColor: dialogRaisedSurface(isDark),
                 borderColor: bdr,
                 inactiveTextColor: sub,
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
+                  horizontal: 12,
+                  vertical: 8,
                 ),
                 radius: 999,
                 selectedWeight: FontWeight.w700,
@@ -723,14 +715,12 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                   label: node.title,
                   color: nodeColor,
                   selected: selectedNodeId == node.id,
-                  backgroundColor: isDark
-                      ? const Color(0xFF23232D)
-                      : const Color(0xFFF0F0F5),
+                  backgroundColor: dialogRaisedSurface(isDark),
                   borderColor: bdr,
                   inactiveTextColor: sub,
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
+                    horizontal: 12,
+                    vertical: 8,
                   ),
                   radius: 999,
                   selectedWeight: FontWeight.w700,
@@ -789,7 +779,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
             ],
             AnimatedRotation(
               turns: expanded ? 0.5 : 0,
@@ -817,10 +807,10 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     String prefix = '',
   }) {
     return Container(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: bdr.withAlpha(160)),
       ),
       child: Column(
@@ -840,7 +830,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
           MotionExpandable(
             expanded: expanded,
             expandedChild: Padding(
-              padding: const EdgeInsets.only(top: 10),
+              padding: const EdgeInsets.only(top: 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -856,7 +846,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
-                              vertical: 5,
+                              vertical: 4,
                             ),
                             decoration: BoxDecoration(
                               color: color.withAlpha(22),
@@ -870,7 +860,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                                   '$prefix${entry.value}',
                                   style: TextStyle(color: txt, fontSize: 12),
                                 ),
-                                const SizedBox(width: 6),
+                                const SizedBox(width: 8),
                                 Tooltip(
                                   message: 'Удалить элемент списка',
                                   child: GestureDetector(

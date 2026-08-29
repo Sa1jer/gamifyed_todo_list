@@ -1,11 +1,46 @@
 import 'package:flutter/material.dart';
 
+/// Единственные разрешённые значения геометрии в desktop-ветке.
+///
+/// Любое значение вне этих шкал — дефект: разница в 1–2 px не несёт смысла,
+/// но создаёт ощущение неровного интерфейса. Мобильная ветка живёт по своим
+/// правилам и сюда не смотрит.
+abstract final class DesktopScale {
+  /// Радиусы: `8 / 12 / 16` и пилюля.
+  static const double radiusS = 8;
+  static const double radiusM = 12;
+  static const double radiusL = 16;
+  static const double radiusPill = 999;
+
+  /// Границы: только `1 / 2`.
+  static const double borderThin = 1;
+  static const double borderThick = 2;
+
+  /// Высота полосы прогресса — одна на весь desktop.
+  static const double barHeight = 6;
+
+  /// Отступы: `4 / 8 / 12 / 16 / 24 / 32`.
+  static const double space4 = 4;
+  static const double space8 = 8;
+  static const double space12 = 12;
+  static const double space16 = 16;
+  static const double space24 = 24;
+  static const double space32 = 32;
+
+  /// Минимальная зона нажатия для иконочных действий.
+  static const double minHitTarget = 32;
+}
+
 @immutable
 class DesktopResponsiveMetrics {
   final double sidebarWidth;
   final double railWidth;
   final double mainPadding;
   final double sectionGap;
+
+  /// Разрыв между крупными блоками экрана. Раньше считался как
+  /// `sectionGap + 10` и уводил отступы за пределы шкалы.
+  final double sectionGapLarge;
   final bool showRightRail;
 
   const DesktopResponsiveMetrics({
@@ -13,6 +48,7 @@ class DesktopResponsiveMetrics {
     required this.railWidth,
     required this.mainPadding,
     required this.sectionGap,
+    required this.sectionGapLarge,
     required this.showRightRail,
   });
 
@@ -25,8 +61,9 @@ class DesktopResponsiveMetrics {
       return const DesktopResponsiveMetrics(
         sidebarWidth: 232,
         railWidth: 0,
-        mainPadding: 14,
-        sectionGap: 12,
+        mainPadding: DesktopScale.space12,
+        sectionGap: DesktopScale.space12,
+        sectionGapLarge: DesktopScale.space16,
         showRightRail: false,
       );
     }
@@ -34,8 +71,9 @@ class DesktopResponsiveMetrics {
       return const DesktopResponsiveMetrics(
         sidebarWidth: 232,
         railWidth: 236,
-        mainPadding: 16,
-        sectionGap: 14,
+        mainPadding: DesktopScale.space16,
+        sectionGap: DesktopScale.space12,
+        sectionGapLarge: DesktopScale.space16,
         showRightRail: true,
       );
     }
@@ -43,16 +81,18 @@ class DesktopResponsiveMetrics {
       return const DesktopResponsiveMetrics(
         sidebarWidth: 248,
         railWidth: 260,
-        mainPadding: 22,
-        sectionGap: 18,
+        mainPadding: DesktopScale.space24,
+        sectionGap: DesktopScale.space16,
+        sectionGapLarge: DesktopScale.space24,
         showRightRail: true,
       );
     }
     return const DesktopResponsiveMetrics(
       sidebarWidth: 264,
       railWidth: 288,
-      mainPadding: 28,
-      sectionGap: 20,
+      mainPadding: DesktopScale.space32,
+      sectionGap: DesktopScale.space24,
+      sectionGapLarge: DesktopScale.space32,
       showRightRail: true,
     );
   }
@@ -141,10 +181,10 @@ class DesktopJournalTokens {
   static const Duration standardMotion = Duration(milliseconds: 220);
   static const Curve motionCurve = Curves.easeOutCubic;
 
-  static const double navRadius = 12;
-  static const double skillRadius = 13;
-  static const double statRadius = 15;
-  static const double taskRadius = 13;
+  static const double navRadius = DesktopScale.radiusM;
+  static const double skillRadius = DesktopScale.radiusM;
+  static const double statRadius = DesktopScale.radiusL;
+  static const double taskRadius = DesktopScale.radiusM;
 
   // Shared desktop header geometry. Keep the selected-skill panel aligned
   // with the same density system as the rest of the three-panel workspace.

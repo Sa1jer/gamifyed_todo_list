@@ -116,7 +116,7 @@ class DesktopSelectedSkillHeader extends StatelessWidget {
           value: skill.progress,
           color: skill.color,
           background: tokens.raisedSurface,
-          height: 7,
+          height: DesktopScale.barHeight,
           level: skill.level,
         ),
       );
@@ -136,7 +136,7 @@ class DesktopSelectedSkillHeader extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   SizedBox(width: double.infinity, child: progressTrack),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   value,
                 ],
               )
@@ -221,7 +221,7 @@ class DesktopSelectedSkillHeader extends StatelessWidget {
                     height: DesktopJournalTokens.selectedSkillHeaderRowGap,
                   ),
                   progressRow(stackValue: stackXpValue),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   questCount(),
                 ],
               ),
@@ -290,7 +290,7 @@ class DesktopLevelPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(99),
+        borderRadius: BorderRadius.circular(999),
         border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Text(

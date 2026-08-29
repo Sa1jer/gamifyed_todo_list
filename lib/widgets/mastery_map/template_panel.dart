@@ -132,7 +132,7 @@ class _RoadmapGoalAnchor extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: surface(isDark).withAlpha(isDark ? 210 : 238),
-          borderRadius: BorderRadius.circular(21),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: skill.color.withAlpha(isDark ? 70 : 54)),
           boxShadow: [
             BoxShadow(
@@ -147,7 +147,7 @@ class _RoadmapGoalAnchor extends StatelessWidget {
             _roadmapGoalAnchorHorizontalPadding,
             16,
             _roadmapGoalAnchorHorizontalPadding,
-            18,
+            16,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -173,7 +173,7 @@ class _RoadmapGoalAnchor extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 9),
+              const SizedBox(height: 8),
               Text(
                 goal,
                 maxLines: 2,
@@ -237,7 +237,7 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
     final color = widget.skill.color;
     final config = _currentConfig;
     final content = Padding(
-      padding: EdgeInsets.all(widget.sheetMode ? 18 : 16),
+      padding: EdgeInsets.all(widget.sheetMode ? 18 : DesktopScale.space16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -279,7 +279,7 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
               ),
             ],
           ),
-          const SizedBox(height: 9),
+          const SizedBox(height: 8),
           LayoutBuilder(
             builder: (context, constraints) {
               final textScale = MediaQuery.textScalerOf(context).scale(1);
@@ -358,7 +358,7 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
               );
             },
           ),
-          const SizedBox(height: 9),
+          const SizedBox(height: 8),
           _RoadmapCounterControl(
             isDark: isDark,
             color: color,
@@ -378,7 +378,7 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
             child: _template == RoadmapTemplate.custom
                 ? Padding(
                     key: const ValueKey('custom-path-count'),
-                    padding: const EdgeInsets.only(top: 7),
+                    padding: const EdgeInsets.only(top: 8),
                     child: _RoadmapCounterControl(
                       isDark: isDark,
                       color: color,
@@ -395,10 +395,10 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
                 : const SizedBox(key: ValueKey('fixed-path-count')),
           ),
           if (config.canOverloadFocus) ...[
-            const SizedBox(height: 7),
+            const SizedBox(height: 8),
             _RoadmapTemplateWarning(isDark: isDark),
           ],
-          const SizedBox(height: 9),
+          const SizedBox(height: 8),
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -409,7 +409,7 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
                   onTap: () => widget.onApply(_currentConfig),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 11,
+                      horizontal: 12,
                       vertical: 8,
                     ),
                     decoration: BoxDecoration(
@@ -449,7 +449,7 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
                 scale: 0.94,
                 onTap: widget.onHide,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(0, 7, 0, 2),
+                  padding: const EdgeInsets.fromLTRB(0, 8, 0, 2),
                   child: Text(
                     widget.sheetMode ? 'Закрыть' : 'Скрыть',
                     style: TextStyle(
@@ -517,7 +517,7 @@ class _RoadmapTemplateChoice extends StatelessWidget {
       child: AnimatedContainer(
         duration: kMotionStandard,
         curve: kMotionCurve,
-        padding: const EdgeInsets.all(9),
+        padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: selected
               ? color.withValues(alpha: 0.13)
@@ -568,7 +568,7 @@ class _RoadmapTemplateChoice extends StatelessWidget {
                     color: selected ? color : subtext(isDark),
                     size: 20,
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -623,10 +623,10 @@ class _RoadmapCounterControl extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: BoxDecoration(
         color: surface(isDark).withAlpha(isDark ? 170 : 235),
-        borderRadius: BorderRadius.circular(11),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: borderColor(isDark)),
       ),
       child: LayoutBuilder(
@@ -683,7 +683,7 @@ class _RoadmapCounterControl extends StatelessWidget {
           if (stackControls) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [labelWidget, const SizedBox(height: 6), controls],
+              children: [labelWidget, const SizedBox(height: 8), controls],
             );
           }
           return Row(
@@ -723,7 +723,7 @@ class _RoadmapCounterButton extends StatelessWidget {
       height: 25,
       decoration: BoxDecoration(
         color: active ? color.withAlpha(28) : surface(isDark),
-        borderRadius: BorderRadius.circular(9),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: active ? color.withAlpha(150) : borderColor(isDark),
         ),
@@ -764,7 +764,7 @@ class _RoadmapTemplateWarning extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Icon(Icons.warning_amber_rounded, color: color, size: 16),
-          const SizedBox(width: 7),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               'Больше 5 дорог может перегрузить систему квестами и вниманием.',
@@ -804,7 +804,7 @@ class _MapCanvasAction extends StatelessWidget {
       tooltip: label,
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: surface(isDark).withAlpha(isDark ? 225 : 238),
           borderRadius: BorderRadius.circular(999),
@@ -817,7 +817,7 @@ class _MapCanvasAction extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, color: color, size: 15),
-            const SizedBox(width: 6),
+            const SizedBox(width: 8),
             Text(
               label,
               style: TextStyle(

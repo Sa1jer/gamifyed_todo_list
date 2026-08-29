@@ -42,10 +42,10 @@ class _MasteryCollapsibleQuestSectionState
           scale: 0.99,
           onTap: () => setState(() => _expanded = !_expanded),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               color: widget.color.withAlpha(widget.isDark ? 18 : 12),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(color: widget.color.withAlpha(42)),
             ),
             child: Row(
@@ -55,7 +55,7 @@ class _MasteryCollapsibleQuestSectionState
                   color: widget.color,
                   size: 16,
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     widget.title,
@@ -70,7 +70,7 @@ class _MasteryCollapsibleQuestSectionState
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 7,
+                    horizontal: 8,
                     vertical: 2,
                   ),
                   decoration: BoxDecoration(
@@ -160,7 +160,7 @@ class MasteryStagePracticeQuestList extends StatelessWidget {
       children: [
         for (final task in activeTasks)
           Padding(
-            padding: const EdgeInsets.only(bottom: 7),
+            padding: const EdgeInsets.only(bottom: 8),
             child: _MasteryInspectorQuestRow(
               task: task,
               isDark: isDark,
@@ -173,10 +173,10 @@ class MasteryStagePracticeQuestList extends StatelessWidget {
             ),
           ),
         if (activeTasks.isNotEmpty && completedTasks.isNotEmpty)
-          const SizedBox(height: 7),
+          const SizedBox(height: 8),
         for (final task in completedTasks)
           Padding(
-            padding: const EdgeInsets.only(bottom: 7),
+            padding: const EdgeInsets.only(bottom: 8),
             child: _MasteryInspectorQuestRow(
               task: task,
               isDark: isDark,
@@ -235,12 +235,12 @@ class _MasteryInspectorQuestRow extends StatelessWidget {
     return AnimatedContainer(
       duration: kMotionStandard,
       curve: kMotionCurve,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: BoxDecoration(
         color: muted || done
             ? surface(isDark).withAlpha(isDark ? 112 : 176)
             : (isDark ? const Color(0xFF14141C) : const Color(0xFFF4F5FA)),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: done ? rowColor.withAlpha(42) : borderColor(isDark),
         ),
@@ -331,7 +331,7 @@ class _MasteryInspectorQuestRow extends StatelessWidget {
                 onTap: onEdit,
                 child: Icon(Icons.edit_outlined, color: sub, size: 18),
               ),
-              const SizedBox(width: 7),
+              const SizedBox(width: 8),
               PressFeedback(
                 key: ValueKey('roadmap-delete-task-${task.id}'),
                 scale: 0.9,
@@ -421,7 +421,7 @@ class MasteryRoadmapMinimumButton extends StatelessWidget {
       tooltip: 'Сделать минимальный шаг',
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           color: color.withAlpha(isDark ? 34 : 24),
           borderRadius: BorderRadius.circular(999),
@@ -431,7 +431,7 @@ class MasteryRoadmapMinimumButton extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.bolt_rounded, color: color, size: 13),
-            const SizedBox(width: 3),
+            const SizedBox(width: 4),
             Text(
               'Минимум',
               style: TextStyle(

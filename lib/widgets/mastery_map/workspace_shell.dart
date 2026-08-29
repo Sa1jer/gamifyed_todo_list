@@ -268,7 +268,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
               : () => _desktopCanvasKey.currentState?.showTemplates(),
           onFullscreen: () => _openFullscreen(context, selection),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         Expanded(child: buildMapBody()),
       ],
     );
@@ -610,7 +610,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
                       : const Color(0xFFF0F2F8),
                   child: SafeArea(
                     child: Padding(
-                      padding: const EdgeInsets.all(14),
+                      padding: const EdgeInsets.all(16),
                       child: Column(
                         children: [
                           Row(
@@ -619,7 +619,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
                                 Icons.account_tree,
                                 color: Color(0xFF4A9EFF),
                               ),
-                              const SizedBox(width: 10),
+                              const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
                                   'RoadMap',
@@ -787,14 +787,14 @@ class _AdaptiveRoadmapEmptyState extends StatelessWidget {
                 child: Container(
                   key: ValueKey('roadmap-empty-$variant'),
                   padding: EdgeInsets.symmetric(
-                    horizontal: large ? 28 : 18,
-                    vertical: large ? 26 : 18,
+                    horizontal: large ? 32 : 16,
+                    vertical: large ? 24 : 16,
                   ),
                   decoration: BoxDecoration(
                     color: const Color(
                       0xFF765BFF,
                     ).withValues(alpha: isDark ? 0.055 : 0.04),
-                    borderRadius: BorderRadius.circular(large ? 22 : 18),
+                    borderRadius: BorderRadius.circular(DesktopScale.radiusL),
                     border: Border.all(
                       color: const Color(
                         0xFF765BFF,
@@ -811,7 +811,9 @@ class _AdaptiveRoadmapEmptyState extends StatelessWidget {
                           color: const Color(
                             0xFF765BFF,
                           ).withValues(alpha: isDark ? 0.14 : 0.1),
-                          borderRadius: BorderRadius.circular(iconBox * 0.3),
+                          borderRadius: BorderRadius.circular(
+                            DesktopScale.radiusM,
+                          ),
                         ),
                         child: Icon(
                           Icons.account_tree_outlined,
@@ -828,7 +830,7 @@ class _AdaptiveRoadmapEmptyState extends StatelessWidget {
                           fontWeight: FontWeight.w900,
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 8),
                       Text(
                         'Сначала создай первый навык в «Сейчас»: карта покажет этапы, когда появится путь.',
                         textAlign: TextAlign.center,
@@ -969,13 +971,13 @@ class _RoadmapStageEditorDialogState extends State<_RoadmapStageEditorDialog> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 460, maxHeight: 720),
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(22),
+            padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 DlgHeader(title: 'Редактировать этап', txtColor: txt),
-                const SizedBox(height: 14),
+                const SizedBox(height: 16),
                 DlgField(
                   label: 'Название этапа',
                   fieldKey: const ValueKey('roadmap-stage-title-field'),
@@ -1005,7 +1007,7 @@ class _RoadmapStageEditorDialogState extends State<_RoadmapStageEditorDialog> {
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: widget.color.withAlpha(isDark ? 18 : 12),
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: widget.color.withAlpha(42)),
                   ),
                   child: Row(
@@ -1093,7 +1095,7 @@ class _RoadmapStageEditorDialogState extends State<_RoadmapStageEditorDialog> {
                   onChanged: (value) =>
                       setState(() => _xpReward = value.round()),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 16),
                 DlgActions(
                   onCancel: () => unawaited(_requestClose()),
                   onSave: _save,

@@ -27,9 +27,9 @@ class DesktopCompactButton extends StatelessWidget {
       style: TextButton.styleFrom(
         foregroundColor: color,
         minimumSize: const Size(40, 34),
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(12),
           side: BorderSide(color: color.withValues(alpha: 0.35)),
         ),
       ),

@@ -25,7 +25,7 @@ class DialogChoiceChip extends StatefulWidget {
     required this.borderColor,
     required this.inactiveTextColor,
     required this.onTap,
-    this.padding = const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+    this.padding = const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     this.radius = 8,
     this.selectedWeight = FontWeight.w700,
   });

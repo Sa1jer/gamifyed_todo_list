@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../app_state.dart';
 import '../../utils.dart';
+import '../desktop_journal_tokens.dart';
 import '../mobile_journal_tokens.dart';
 import '../shared/motion_controls.dart';
 
@@ -83,7 +84,7 @@ class _DesktopSkillIconPickerDialogState
       key: const ValueKey('desktop-skill-icon-picker'),
       backgroundColor: surface(widget.isDark),
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ConstrainedBox(
         constraints: BoxConstraints(
           maxWidth: 640,
@@ -92,7 +93,7 @@ class _DesktopSkillIconPickerDialogState
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(22, 18, 12, 12),
+              padding: const EdgeInsets.fromLTRB(24, 16, 12, 12),
               child: Row(
                 children: [
                   Expanded(
@@ -115,7 +116,7 @@ class _DesktopSkillIconPickerDialogState
             ),
             Divider(height: 1, color: outline),
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 12),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Wrap(
@@ -151,7 +152,7 @@ class _DesktopSkillIconPickerDialogState
             Expanded(
               child: GridView.builder(
                 key: const ValueKey('skill-full-icon-grid'),
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 8,
                   mainAxisSpacing: 8,
@@ -230,7 +231,7 @@ class DesktopSkillIdentityPreview extends StatelessWidget {
           key: const ValueKey('desktop-skill-live-preview'),
           width: 224,
           constraints: const BoxConstraints(minHeight: 96),
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: color.withAlpha(isDark ? 24 : 14),
             borderRadius: BorderRadius.circular(16),
@@ -246,7 +247,10 @@ class DesktopSkillIdentityPreview extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: color.withAlpha(isDark ? 34 : 24),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: color.withAlpha(120), width: 1.4),
+                  border: Border.all(
+                    color: color.withAlpha(120),
+                    width: DesktopScale.borderThin,
+                  ),
                 ),
                 child: Icon(icon, color: color, size: 26),
               ),
@@ -287,7 +291,7 @@ class DesktopSkillIdentityPreview extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(width: 18),
+        const SizedBox(width: 16),
         Expanded(child: child),
       ],
     );
@@ -328,7 +332,7 @@ class MobileSkillEmblemPreview extends StatelessWidget {
             height: 112,
             decoration: BoxDecoration(
               color: color.withAlpha(isDark ? 24 : 16),
-              borderRadius: BorderRadius.circular(34),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(color: color.withAlpha(150), width: 2),
               boxShadow: [
                 BoxShadow(

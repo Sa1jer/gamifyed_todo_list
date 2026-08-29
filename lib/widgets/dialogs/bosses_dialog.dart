@@ -24,7 +24,7 @@ class _BossesDialogState extends State<BossesDialog> {
     final txt = textColor(isDark);
     final sub = subtext(isDark);
     final bdr = borderColor(isDark);
-    final fBg = isDark ? const Color(0xFF13131A) : const Color(0xFFF5F5F7);
+    final fBg = dialogFieldSurface(isDark);
 
     return Dialog(
       backgroundColor: bg,
@@ -35,11 +35,11 @@ class _BossesDialogState extends State<BossesDialog> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(22, 20, 16, 14),
+              padding: const EdgeInsets.fromLTRB(24, 24, 16, 16),
               child: Row(
                 children: [
                   const Icon(Icons.shield, color: Color(0xFFFF2D55), size: 22),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 12),
                   Text(
                     'События сопротивления',
                     style: TextStyle(
@@ -70,7 +70,7 @@ class _BossesDialogState extends State<BossesDialog> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
-                      vertical: 10,
+                      vertical: 12,
                     ),
                     child: Row(
                       children: [
@@ -89,7 +89,7 @@ class _BossesDialogState extends State<BossesDialog> {
               ),
               expandedChild: Container(
                 margin: const EdgeInsets.all(12),
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: fBg,
                   borderRadius: BorderRadius.circular(12),
@@ -130,12 +130,12 @@ class _BossesDialogState extends State<BossesDialog> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
                     Text(
                       'Сопротивление — это образ препятствия на пути навыка. Оно слабеет от выполненных квестов, лёгких стартов и общего прогресса, но не требует отдельного управления каждый день.',
                       style: TextStyle(color: sub, fontSize: 12, height: 1.4),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
                     Row(
                       children: [
                         _buildTip(Icons.local_fire_department, 'Серия', sub),
@@ -178,7 +178,7 @@ class _BossesDialogState extends State<BossesDialog> {
                       )
                     : ListView.builder(
                         key: const ValueKey('bosses-list'),
-                        padding: const EdgeInsets.all(14),
+                        padding: const EdgeInsets.all(16),
                         itemCount: widget.state.bosses.length,
                         itemBuilder: (_, i) {
                           final boss = widget.state.bosses[i];
@@ -202,7 +202,7 @@ class _BossesDialogState extends State<BossesDialog> {
             ),
             Container(height: 1, color: bdr),
             Padding(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
                   Expanded(
@@ -291,7 +291,7 @@ class _AddBossDialogState extends State<_AddBossDialog> {
   Widget build(BuildContext context) {
     final isDark = widget.isDark;
     final bg = surface(isDark);
-    final fBg = isDark ? const Color(0xFF13131A) : const Color(0xFFF5F5F7);
+    final fBg = dialogFieldSurface(isDark);
     final txt = textColor(isDark);
     final sub = subtext(isDark);
     final bdr = borderColor(isDark);
@@ -321,7 +321,7 @@ class _AddBossDialogState extends State<_AddBossDialog> {
                 sub: sub,
                 bdr: bdr,
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
               SubLbl('Навык', sub),
               const SizedBox(height: 8),
               Container(
@@ -361,15 +361,15 @@ class _AddBossDialogState extends State<_AddBossDialog> {
                   ),
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
               Row(
                 children: [
                   SubLbl('Базовый порог серии', sub),
                   const Spacer(),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 3,
+                      horizontal: 12,
+                      vertical: 4,
                     ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFF2D55).withAlpha(30),

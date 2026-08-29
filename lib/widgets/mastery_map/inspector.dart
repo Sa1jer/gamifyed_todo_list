@@ -25,7 +25,7 @@ class _PracticeTargetStepButton extends StatelessWidget {
       height: 32,
       decoration: BoxDecoration(
         color: enabled ? color.withAlpha(26) : surface(isDark),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: enabled ? color.withAlpha(135) : borderColor(isDark),
         ),
@@ -83,7 +83,7 @@ class _MasteryMapInspector extends StatelessWidget {
         isDark: isDark,
         color: const Color(0xFF765BFF),
         child: Padding(
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(16),
           child: _EmptyMapInspector(
             state: state,
             isDark: isDark,
@@ -101,7 +101,7 @@ class _MasteryMapInspector extends StatelessWidget {
         isDark: isDark,
         color: const Color(0xFF765BFF),
         child: Padding(
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(16),
           child: _EmptyMapInspector(
             state: state,
             isDark: isDark,
@@ -123,7 +123,7 @@ class _MasteryMapInspector extends StatelessWidget {
       isDark: isDark,
       color: skill.color,
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(16),
         child: switch (currentSelection.type) {
           _MasterySelectionType.quest when task != null =>
             _QuestPracticeInspector(
@@ -231,14 +231,14 @@ class _EmptyMapInspector extends StatelessWidget {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: state.roadmapSkills.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 7),
+            separatorBuilder: (_, _) => const SizedBox(height: 8),
             itemBuilder: (context, index) {
               final skill = state.roadmapSkills[index];
               return PressFeedback(
                 scale: 0.98,
                 onTap: () => onSelectSkill(skill),
                 child: Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: isDark
                         ? const Color(0xFF14141C)
@@ -410,7 +410,7 @@ class _SkillInspector extends StatelessWidget {
             },
           ),
           if (skill.treeNodes.length > 1) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             SmallBtn(
               label: 'Порядок этапов',
               icon: Icons.swap_vert,
@@ -422,7 +422,7 @@ class _SkillInspector extends StatelessWidget {
               ),
             ),
           ],
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           if (hasFreeTasks || stageGroups.isEmpty) ...[
             Text(
               hasFreeTasks ? 'Квесты без этапа' : 'Квесты навыка',
@@ -447,7 +447,7 @@ class _SkillInspector extends StatelessWidget {
             ),
           ],
           if (stageGroups.isNotEmpty) ...[
-            if (hasFreeTasks) const SizedBox(height: 14),
+            if (hasFreeTasks) const SizedBox(height: 16),
             for (final group in stageGroups) ...[
               MasteryCollapsibleQuestSection(
                 isDark: isDark,
@@ -468,7 +468,7 @@ class _SkillInspector extends StatelessWidget {
                   onDeleteQuest: onDeleteQuest,
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
             ],
           ],
         ],
@@ -494,7 +494,7 @@ class _InspectorMiniMetric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(right: 14),
+    padding: const EdgeInsets.only(right: 16),
     child: Column(
       crossAxisAlignment: alignEnd
           ? CrossAxisAlignment.end
@@ -510,7 +510,7 @@ class _InspectorMiniMetric extends StatelessWidget {
             fontWeight: FontWeight.w800,
           ),
         ),
-        const SizedBox(height: 3),
+        const SizedBox(height: 4),
         Text(
           value,
           maxLines: 1,
@@ -574,7 +574,7 @@ class _NodeInspector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final status = skill.treeNodeStatus(node);
-    final statusColor = _roadmapStageStatusColor(skill, status);
+    final statusColor = _roadmapStageStatusColor(skill, status, isDark: isDark);
     final completed = state.completedTasksForTreeNode(skill.id, node.id);
     final target = node.questTarget;
     final linkedTasks = state.tasksForTreeNode(skill.id, node.id);
@@ -614,7 +614,7 @@ class _NodeInspector extends StatelessWidget {
             style: TextStyle(color: sub, fontSize: 12.5, height: 1.35),
           ),
         ],
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
         _MetricCard(
           isDark: isDark,
           color: statusColor,
@@ -625,7 +625,7 @@ class _NodeInspector extends StatelessWidget {
               'Практика — закрытый квест этого этапа. Наберите нужное количество, чтобы освоить этап.',
           onEdit: onRename,
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
         Expanded(
           child: KeyedSubtree(
             key: practiceTutorialKey,
@@ -666,12 +666,16 @@ class _NodeInspector extends StatelessWidget {
                 onTap: onMaster,
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
             PressFeedback(
               scale: 0.94,
               tooltip: 'Удалить этап',
               onTap: onDelete,
-              child: Icon(Icons.delete_outline, color: sub, size: 21),
+              child: SizedBox(
+                width: DesktopScale.minHitTarget,
+                height: DesktopScale.minHitTarget,
+                child: Icon(Icons.delete_outline, color: sub, size: 21),
+              ),
             ),
           ],
         ),
@@ -735,7 +739,7 @@ class _QuestPracticeInspector extends StatelessWidget {
         if (task.hasMinimumAction) ...[
           const SizedBox(height: 12),
           Container(
-            padding: const EdgeInsets.all(11),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: const Color(0xFFFF9500).withAlpha(18),
               borderRadius: BorderRadius.circular(12),
@@ -797,7 +801,7 @@ class _QuestPracticeInspector extends StatelessWidget {
                 onTap: onEdit,
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
             PressFeedback(
               scale: 0.94,
               tooltip: 'Удалить квест',
@@ -805,7 +809,11 @@ class _QuestPracticeInspector extends StatelessWidget {
                 AppFeedback.destructive();
                 onDelete();
               },
-              child: Icon(Icons.delete_outline, color: sub, size: 22),
+              child: SizedBox(
+                width: DesktopScale.minHitTarget,
+                height: DesktopScale.minHitTarget,
+                child: Icon(Icons.delete_outline, color: sub, size: 22),
+              ),
             ),
           ],
         ),
@@ -842,12 +850,12 @@ class _InspectorTitle extends StatelessWidget {
           height: 42,
           decoration: BoxDecoration(
             color: color.withAlpha(26),
-            borderRadius: BorderRadius.circular(13),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(color: color.withAlpha(80)),
           ),
           child: Icon(icon, color: color, size: 22),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -868,12 +876,12 @@ class _InspectorTitle extends StatelessWidget {
                     ),
                   ),
                   if (titleAction != null) ...[
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 8),
                     titleAction!,
                   ],
                 ],
               ),
-              const SizedBox(height: 3),
+              const SizedBox(height: 4),
               Text(
                 subtitle,
                 maxLines: 2,
@@ -886,7 +894,7 @@ class _InspectorTitle extends StatelessWidget {
             ],
           ),
         ),
-        if (trailing != null) ...[const SizedBox(width: 10), trailing!],
+        if (trailing != null) ...[const SizedBox(width: 12), trailing!],
       ],
     );
   }
@@ -906,12 +914,12 @@ class _StageRenameIcon extends StatelessWidget {
         scale: 0.9,
         onTap: onTap,
         child: Container(
-          width: 28,
-          height: 28,
+          width: DesktopScale.minHitTarget,
+          height: DesktopScale.minHitTarget,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: color.withAlpha(18),
-            borderRadius: BorderRadius.circular(9),
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(color: color.withAlpha(58)),
           ),
           child: Icon(Icons.edit_rounded, color: color, size: 15),
@@ -943,7 +951,7 @@ class _MetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(11),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: color.withAlpha(12),
         borderRadius: BorderRadius.circular(12),
@@ -964,14 +972,18 @@ class _MetricCard extends StatelessWidget {
                 ),
               ),
               if (onEdit != null) ...[
-                const SizedBox(width: 6),
+                const SizedBox(width: 8),
                 PressFeedback(
                   scale: 0.9,
                   onTap: onEdit!,
-                  child: Icon(Icons.edit, color: color, size: 16),
+                  child: SizedBox(
+                    width: DesktopScale.minHitTarget,
+                    height: DesktopScale.minHitTarget,
+                    child: Icon(Icons.edit, color: color, size: 16),
+                  ),
                 ),
               ],
-              const SizedBox(width: 5),
+              const SizedBox(width: 4),
               Text(
                 value,
                 style: TextStyle(
@@ -985,7 +997,7 @@ class _MetricCard extends StatelessWidget {
           const SizedBox(height: 8),
           XPBar(progress: progress.clamp(0.0, 1.0), color: color, height: 6),
           if (helperText != null) ...[
-            const SizedBox(height: 7),
+            const SizedBox(height: 8),
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
@@ -1034,7 +1046,7 @@ class _MasterNodeAction extends StatelessWidget {
       opacity: enabled ? 1 : 0.45,
       child: Container(
         alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: color,
           borderRadius: BorderRadius.circular(8),

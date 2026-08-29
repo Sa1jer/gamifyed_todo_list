@@ -9,6 +9,7 @@ import '../app_state.dart';
 import '../feedback_service.dart';
 import '../models.dart';
 import '../utils.dart';
+import 'desktop_journal_tokens.dart';
 import 'shared.dart';
 import 'mobile_journal_tokens.dart';
 import 'mobile_secondary_page.dart';

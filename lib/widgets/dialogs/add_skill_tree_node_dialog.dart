@@ -46,7 +46,7 @@ class _AddSkillTreeNodeDialogState extends State<AddSkillTreeNodeDialog> {
   Widget build(BuildContext context) {
     final isDark = widget.isDark;
     final bg = surface(isDark);
-    final fBg = isDark ? const Color(0xFF13131A) : const Color(0xFFF5F5F7);
+    final fBg = dialogFieldSurface(isDark);
     final txt = textColor(isDark);
     final sub = subtext(isDark);
     final bdr = borderColor(isDark);
@@ -68,10 +68,10 @@ class _AddSkillTreeNodeDialogState extends State<AddSkillTreeNodeDialog> {
               if (widget.parentNode != null) ...[
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: color.withAlpha(14),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: color.withAlpha(45)),
                   ),
                   child: Row(
@@ -113,7 +113,7 @@ class _AddSkillTreeNodeDialogState extends State<AddSkillTreeNodeDialog> {
                 bdr: bdr,
                 min: 2,
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
               Row(
                 children: [
                   SubLbl('XP за освоение', sub),
@@ -195,7 +195,7 @@ class _AddSkillTreeNodeDialogState extends State<AddSkillTreeNodeDialog> {
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               Text(
                 'Размер определяет, сколько связанных квестов нужно завершить перед освоением этапа.',
                 style: TextStyle(
@@ -205,7 +205,7 @@ class _AddSkillTreeNodeDialogState extends State<AddSkillTreeNodeDialog> {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
               DlgActions(onCancel: () => Navigator.pop(context), onSave: _save),
             ],
           ),
@@ -226,9 +226,7 @@ class _AddSkillTreeNodeDialogState extends State<AddSkillTreeNodeDialog> {
       label: '$label · $value',
       color: color,
       selected: _requiredQuestCompletions == value,
-      backgroundColor: isDark
-          ? const Color(0xFF23232D)
-          : const Color(0xFFF0F0F5),
+      backgroundColor: dialogRaisedSurface(isDark),
       borderColor: bdr,
       inactiveTextColor: sub,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

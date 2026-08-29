@@ -44,3 +44,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Пакет аудита десктопа: скриншоты хранятся локально (16 МБ)
+/screenshots/

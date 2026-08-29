@@ -68,21 +68,21 @@ class _RoadmapStageOrderDialogState extends State<_RoadmapStageOrderDialog> {
 
     return Dialog(
       backgroundColor: surface(isDark),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ConstrainedBox(
         constraints: BoxConstraints(
           maxWidth: 560,
           maxHeight: width < 760 ? 680 : 720,
         ),
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               DlgHeader(title: 'Порядок этапов', txtColor: textColor(isDark)),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               Text(
                 'Меняйте порядок только внутри одной дороги. Связанные задачи, прогресс и XP сохранятся.',
                 style: TextStyle(
@@ -108,7 +108,7 @@ class _RoadmapStageOrderDialogState extends State<_RoadmapStageOrderDialog> {
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: color.withAlpha(isDark ? 14 : 9),
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: borderColor(isDark)),
                       ),
                       child: Column(
@@ -136,7 +136,7 @@ class _RoadmapStageOrderDialogState extends State<_RoadmapStageOrderDialog> {
                           const SizedBox(height: 8),
                           for (var index = 0; index < path.length; index++)
                             Padding(
-                              padding: const EdgeInsets.only(bottom: 6),
+                              padding: const EdgeInsets.only(bottom: 8),
                               child: _RoadmapStageOrderRow(
                                 key: ValueKey('stage-order-${path[index]}'),
                                 title: nodesById[path[index]]?.title ?? 'Этап',
@@ -199,10 +199,10 @@ class _RoadmapStageOrderRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(10, 7, 6, 7),
+      padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
       decoration: BoxDecoration(
         color: surface(isDark),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: borderColor(isDark)),
       ),
       child: Row(
@@ -211,7 +211,7 @@ class _RoadmapStageOrderRow extends StatelessWidget {
             '${index + 1}',
             style: TextStyle(color: color, fontWeight: FontWeight.w900),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               title,

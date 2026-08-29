@@ -1387,8 +1387,9 @@ void main() {
       const metrics = DesktopResponsiveMetrics(
         sidebarWidth: 248,
         railWidth: 260,
-        mainPadding: 22,
-        sectionGap: 18,
+        mainPadding: DesktopScale.space24,
+        sectionGap: DesktopScale.space16,
+        sectionGapLarge: DesktopScale.space24,
         showRightRail: true,
       );
       final notices = <RewardNoticeData>[

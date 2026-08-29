@@ -86,9 +86,9 @@ class DesktopSidebar extends StatelessWidget {
               Padding(
                 padding: EdgeInsets.fromLTRB(
                   12,
-                  compactHeight ? 6 : 12,
+                  compactHeight ? 8 : 12,
                   12,
-                  compactHeight ? 5 : 10,
+                  compactHeight ? 4 : 12,
                 ),
                 child: Column(
                   children: [
@@ -144,9 +144,9 @@ class DesktopSidebar extends StatelessWidget {
               Padding(
                 padding: EdgeInsets.fromLTRB(
                   16,
-                  compactHeight ? 7 : 12,
+                  compactHeight ? 8 : 12,
                   12,
-                  compactHeight ? 4 : 7,
+                  compactHeight ? 4 : 8,
                 ),
                 child: Row(
                   children: [
@@ -176,7 +176,7 @@ class DesktopSidebar extends StatelessWidget {
                     ? _DesktopSidebarEmpty(tokens: tokens, onAdd: onAddSkill)
                     : ReorderableListView.builder(
                         key: const ValueKey('desktop-skill-list'),
-                        padding: const EdgeInsets.fromLTRB(10, 2, 10, 8),
+                        padding: const EdgeInsets.fromLTRB(12, 2, 12, 8),
                         buildDefaultDragHandles: false,
                         itemCount: skills.length,
                         onReorderItem: state.reorderSkills,
@@ -184,7 +184,7 @@ class DesktopSidebar extends StatelessWidget {
                           final skill = skills[index];
                           return Padding(
                             key: ValueKey('desktop-skill-reorder-${skill.id}'),
-                            padding: const EdgeInsets.only(bottom: 5),
+                            padding: const EdgeInsets.only(bottom: 4),
                             child: ReorderableDelayedDragStartListener(
                               index: index,
                               child: _DesktopSkillRow(
@@ -220,7 +220,7 @@ class DesktopSidebar extends StatelessWidget {
               Divider(height: 1, color: tokens.subtleOutline),
               Padding(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
+                  horizontal: 12,
                   vertical: 2,
                 ),
                 child: _DesktopNavItem(
@@ -263,7 +263,9 @@ class _DesktopBrand extends StatelessWidget {
         child: ConstrainedBox(
           constraints: BoxConstraints(minHeight: compact ? 52 : 64),
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: compact ? 14 : 16),
+            padding: EdgeInsets.symmetric(
+              horizontal: compact ? DesktopScale.space12 : DesktopScale.space16,
+            ),
             child: Row(
               children: [
                 Container(
@@ -271,7 +273,7 @@ class _DesktopBrand extends StatelessWidget {
                   height: compact ? 30 : 34,
                   decoration: BoxDecoration(
                     color: tokens.profilePurple,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
                     Icons.bolt_rounded,
@@ -279,7 +281,7 @@ class _DesktopBrand extends StatelessWidget {
                     size: compact ? 17 : 19,
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     'RPG To-Do',
@@ -331,9 +333,9 @@ class _DesktopProfileSummary extends StatelessWidget {
           child: Padding(
             padding: EdgeInsets.fromLTRB(
               16,
-              compact ? 10 : 16,
+              compact ? 12 : 16,
               16,
-              compact ? 9 : 14,
+              compact ? 8 : 16,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -376,7 +378,7 @@ class _DesktopProfileSummary extends StatelessWidget {
                             )
                           : null,
                     ),
-                    const SizedBox(width: 11),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -403,7 +405,7 @@ class _DesktopProfileSummary extends StatelessWidget {
                   ],
                 ),
                 if (!compact) ...[
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 16),
                   Row(
                     children: [
                       Expanded(
@@ -426,12 +428,12 @@ class _DesktopProfileSummary extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   DesktopProgressBar(
                     value: profile.progress,
                     color: tokens.profilePurple,
                     background: tokens.profilePurple.withValues(alpha: 0.15),
-                    height: 7,
+                    height: DesktopScale.barHeight,
                   ),
                 ],
               ],
@@ -537,7 +539,7 @@ class _DesktopNavItemState extends State<_DesktopNavItem> {
                               : tokens.mutedText,
                           size: 19,
                         ),
-                        const SizedBox(width: 11),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: Text(
                             widget.label,
@@ -640,8 +642,11 @@ class _DesktopSkillRowState extends State<_DesktopSkillRow> {
                 key: ValueKey('desktop-skill-surface-${skill.id}'),
                 duration: DesktopJournalTokens.fastMotion,
                 curve: DesktopJournalTokens.motionCurve,
-                constraints: const BoxConstraints(minHeight: 62),
-                padding: const EdgeInsets.fromLTRB(10, 7, 7, 7),
+                // Три строки (название, «Ур. N · N кв.», полоса прогресса)
+                // не помещались в 62 px: метаданные обрезались по нижнему
+                // краю, а полоса упиралась в границу карточки.
+                constraints: const BoxConstraints(minHeight: 72),
+                padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
                 decoration: BoxDecoration(
                   color: selected
                       ? skill.color.withValues(alpha: 0.11)
@@ -670,7 +675,7 @@ class _DesktopSkillRowState extends State<_DesktopSkillRow> {
                             height: 36,
                             decoration: BoxDecoration(
                               color: skill.color.withValues(alpha: 0.14),
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             child: Icon(
                               skill.icon,
@@ -678,7 +683,7 @@ class _DesktopSkillRowState extends State<_DesktopSkillRow> {
                               size: 19,
                             ),
                           ),
-                          const SizedBox(width: 9),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -690,11 +695,10 @@ class _DesktopSkillRowState extends State<_DesktopSkillRow> {
                                   overflow: TextOverflow.ellipsis,
                                   style: textTheme.titleSmall?.copyWith(
                                     color: tokens.text,
-                                    height: 1.08,
                                     fontWeight: FontWeight.w900,
                                   ),
                                 ),
-                                const SizedBox(height: 3),
+                                const SizedBox(height: 4),
                                 Text(
                                   'Ур. ${skill.level} · ${widget.activeCount} кв.',
                                   maxLines: 1,
@@ -703,17 +707,16 @@ class _DesktopSkillRowState extends State<_DesktopSkillRow> {
                                     color: selected
                                         ? skill.color
                                         : tokens.mutedText,
-                                    height: 1,
                                   ),
                                 ),
-                                const SizedBox(height: 5),
+                                const SizedBox(height: 4),
                                 DesktopProgressBar(
                                   value: skill.progress,
                                   color: skill.color,
                                   background: skill.color.withValues(
                                     alpha: 0.12,
                                   ),
-                                  height: 4,
+                                  height: DesktopScale.barHeight,
                                 ),
                               ],
                             ),
@@ -846,7 +849,7 @@ class _DesktopInboxShortcut extends StatelessWidget {
     final active = state.inboxTasks.where((task) => !task.isDone).length;
     return Padding(
       key: const ValueKey('desktop-inbox-shortcut'),
-      padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
       child: DesktopInteractiveSurface(
         borderRadius: 12,
         baseColor: const Color(0xFF22C55E).withValues(alpha: 0.08),
@@ -858,7 +861,7 @@ class _DesktopInboxShortcut extends StatelessWidget {
           }
         },
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
             children: [
               const Icon(
@@ -866,7 +869,7 @@ class _DesktopInboxShortcut extends StatelessWidget {
                 color: Color(0xFF2ED36F),
                 size: 18,
               ),
-              const SizedBox(width: 9),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   'Задачник',

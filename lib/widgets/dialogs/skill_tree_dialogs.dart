@@ -53,11 +53,11 @@ class _SkillTreeDialogState extends State<SkillTreeDialog> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(22, 20, 16, 14),
+              padding: const EdgeInsets.fromLTRB(24, 24, 16, 16),
               child: Row(
                 children: [
                   Icon(Icons.account_tree, color: skill.color, size: 22),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       'Карта мастерства: ${skill.name}',
@@ -76,7 +76,7 @@ class _SkillTreeDialogState extends State<SkillTreeDialog> {
                     tooltip: 'Создать первый этап карты',
                     onTap: () => _showAddNode(context, skill),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 12),
                   PressFeedback(
                     scale: 0.94,
                     tooltip: 'Закрыть карту мастерства',
@@ -88,7 +88,7 @@ class _SkillTreeDialogState extends State<SkillTreeDialog> {
             ),
             Container(height: 1, color: bdr),
             Padding(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(16),
               child: _SkillTreeIntro(isDark: isDark, color: skill.color),
             ),
             Expanded(
@@ -105,7 +105,7 @@ class _SkillTreeDialogState extends State<SkillTreeDialog> {
                         children: [
                           Expanded(
                             child: Padding(
-                              padding: const EdgeInsets.fromLTRB(14, 0, 8, 14),
+                              padding: const EdgeInsets.fromLTRB(16, 0, 8, 16),
                               child: _MasteryTreeCanvas(
                                 state: widget.state,
                                 skill: skill,
@@ -119,7 +119,7 @@ class _SkillTreeDialogState extends State<SkillTreeDialog> {
                           SizedBox(
                             width: 300,
                             child: Padding(
-                              padding: const EdgeInsets.fromLTRB(4, 0, 14, 14),
+                              padding: const EdgeInsets.fromLTRB(4, 0, 16, 16),
                               child: SkillTreeNodeInspector(
                                 state: widget.state,
                                 skill: skill,
@@ -313,7 +313,7 @@ class _MasteryTreeCanvas extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bdr = borderColor(isDark);
-    final bg = isDark ? const Color(0xFF0D0D12) : const Color(0xFFF7F8FC);
+    final bg = dialogBadgeSurface(isDark);
 
     return Container(
       decoration: BoxDecoration(
@@ -556,7 +556,7 @@ class _MasteryMapNode extends StatelessWidget {
       <= 3 => 62.0,
       _ => 70.0,
     };
-    final nodeFill = isDark ? const Color(0xFF151923) : Colors.white;
+    final nodeFill = dialogCardSurface(isDark);
     final icon = switch (status) {
       SkillTreeNodeStatus.locked => Icons.lock,
       SkillTreeNodeStatus.active => Icons.bolt_rounded,
@@ -602,15 +602,16 @@ class _MasteryMapNode extends StatelessWidget {
                   bottom: -9,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 7,
+                      horizontal: 8,
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: isDark
-                          ? const Color(0xFF0D0D12)
-                          : const Color(0xFFF7F8FC),
+                      color: dialogBadgeSurface(isDark),
                       borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: statusColor, width: 1.5),
+                      border: Border.all(
+                        color: statusColor,
+                        width: DesktopScale.borderThin,
+                      ),
                     ),
                     child: Text(
                       '${math.min(completed, target)}/$target',
@@ -625,7 +626,7 @@ class _MasteryMapNode extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 13),
+          const SizedBox(height: 12),
           Text(
             node.title,
             maxLines: 2,
@@ -655,7 +656,7 @@ class _TreeLegend extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: surface(isDark).withAlpha(isDark ? 220 : 235),
         borderRadius: BorderRadius.circular(12),
@@ -665,9 +666,9 @@ class _TreeLegend extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           _LegendDot(label: 'закрыто', color: const Color(0xFF8E8E93)),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           _LegendDot(label: 'активно', color: color),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           const _LegendDot(label: 'освоено', color: Color(0xFF34C759)),
         ],
       ),
@@ -691,7 +692,7 @@ class _LegendDot extends StatelessWidget {
           height: 8,
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
-        const SizedBox(width: 5),
+        const SizedBox(width: 4),
         Text(
           label,
           style: TextStyle(

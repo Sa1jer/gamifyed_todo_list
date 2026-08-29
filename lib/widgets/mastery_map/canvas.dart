@@ -231,10 +231,10 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
           ),
           decoration: BoxDecoration(
             color: surface(isDark),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
           ),
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(14, 8, 14, 18),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
             child: _RoadmapTemplatePanel(
               key: const ValueKey('roadmap-template-panel'),
               skill: skill,
@@ -306,7 +306,9 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
       key: ValueKey('roadmap-canvas-${widget.layoutAxis.name}'),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(mobilePresentation ? 18 : 14),
+        borderRadius: BorderRadius.circular(
+          mobilePresentation ? 18 : DesktopScale.radiusL,
+        ),
         border: Border.all(
           color: mobilePresentation
               ? borderColor(isDark).withAlpha(70)

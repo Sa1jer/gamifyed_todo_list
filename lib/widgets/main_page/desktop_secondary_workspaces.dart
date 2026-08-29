@@ -25,8 +25,11 @@ class _DesktopPageScaffold extends StatelessWidget {
         key: ValueKey('desktop-page-$title'),
         primary: false,
         slivers: [
+          // Внешний отступ рабочей области задаёт DesktopWorkspace через
+          // metrics.mainPadding. Второй горизонтальный отступ здесь уводил
+          // «Статистику» и «Трофеи» на другую шкалу, чем «Действовать».
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(28, 26, 28, 14),
+            padding: const EdgeInsets.only(bottom: DesktopScale.space16),
             sliver: SliverToBoxAdapter(
               child: Row(
                 children: [
@@ -35,11 +38,11 @@ class _DesktopPageScaffold extends StatelessWidget {
                     height: 44,
                     decoration: BoxDecoration(
                       color: color.withValues(alpha: 0.13),
-                      borderRadius: BorderRadius.circular(13),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(icon, color: color, size: 23),
                   ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -52,7 +55,7 @@ class _DesktopPageScaffold extends StatelessWidget {
                             fontWeight: FontWeight.w900,
                           ),
                         ),
-                        const SizedBox(height: 3),
+                        const SizedBox(height: 4),
                         Text(
                           subtitle,
                           style: TextStyle(
@@ -68,10 +71,7 @@ class _DesktopPageScaffold extends StatelessWidget {
               ),
             ),
           ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(28, 8, 28, 32),
-            sliver: SliverToBoxAdapter(child: child),
-          ),
+          SliverToBoxAdapter(child: child),
         ],
       ),
     );
@@ -146,7 +146,7 @@ class _DesktopRewardsWorkspaceState extends State<_DesktopRewardsWorkspace> {
               letterSpacing: 0.7,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           LayoutBuilder(
             builder: (context, constraints) => GridView.count(
               key: const ValueKey('desktop-trophies-in-progress'),
@@ -166,7 +166,7 @@ class _DesktopRewardsWorkspaceState extends State<_DesktopRewardsWorkspace> {
                   .toList(),
             ),
           ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 24),
           KeyedSubtree(
             key: widget.summaryTutorialKey,
             child: _DesktopSectionCard(
@@ -205,7 +205,7 @@ class _DesktopRewardsWorkspaceState extends State<_DesktopRewardsWorkspace> {
               ),
             ),
           ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 24),
           _DesktopSectionCard(
             tokens: tokens,
             child: _DesktopRewardCollection(
@@ -260,7 +260,7 @@ class _DesktopRewardsWorkspaceState extends State<_DesktopRewardsWorkspace> {
               letterSpacing: 0.7,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           LayoutBuilder(
             builder: (context, constraints) => GridView.count(
               key: const ValueKey('desktop-trophies-how-to'),
@@ -338,10 +338,10 @@ class _DesktopTrophyProgressCard extends StatelessWidget {
     label:
         '${progress.title}: ${progress.current} из ${progress.target}, ${(progress.value * 100).round()} процентов',
     child: Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: progress.color.withValues(alpha: 0.055),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: progress.color.withValues(alpha: 0.22)),
       ),
       child: Column(
@@ -372,19 +372,19 @@ class _DesktopTrophyProgressCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 5),
+          const SizedBox(height: 4),
           Text(
             '${progress.current}/${progress.target} · ${progress.condition}',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(color: tokens.mutedText, fontSize: 10.5),
           ),
-          const SizedBox(height: 9),
+          const SizedBox(height: 8),
           DesktopProgressBar(
             value: progress.value,
             color: progress.color,
             background: progress.color.withValues(alpha: 0.12),
-            height: 6,
+            height: DesktopScale.barHeight,
           ),
         ],
       ),
@@ -409,10 +409,10 @@ class _DesktopTrophyHowToCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(14),
+    padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
       color: tokens.cardSurface,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(16),
       border: Border.all(color: color.withValues(alpha: 0.18)),
     ),
     child: Row(
@@ -422,11 +422,11 @@ class _DesktopTrophyHowToCard extends StatelessWidget {
           height: 38,
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(icon, color: color, size: 19),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 12),
         Expanded(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -500,7 +500,7 @@ class _DesktopSettingsWorkspace extends StatelessWidget {
                 onTap: onOpenProfile,
               ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 16),
             _DesktopSettingsSection(
               tokens: tokens,
               title: 'Внешний вид и движение',
@@ -527,7 +527,7 @@ class _DesktopSettingsWorkspace extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 16),
             _DesktopSettingsSection(
               tokens: tokens,
               title: 'Звук и помощь',
@@ -554,7 +554,7 @@ class _DesktopSettingsWorkspace extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 16),
             _DesktopSettingsSection(
               tokens: tokens,
               title: 'Данные на устройстве',
@@ -564,7 +564,7 @@ class _DesktopSettingsWorkspace extends StatelessWidget {
                 dirty: state.persistenceStatus.isDirty,
               ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 16),
             _DesktopSettingsSection(
               tokens: tokens,
               title: 'О приложении',
@@ -647,7 +647,7 @@ class _DesktopRewardCollection extends StatelessWidget {
     curve: DesktopJournalTokens.motionCurve,
     alignment: Alignment.topCenter,
     child: Padding(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -655,7 +655,7 @@ class _DesktopRewardCollection extends StatelessWidget {
           Row(
             children: [
               Icon(icon, color: color, size: 20),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   title,
@@ -694,12 +694,12 @@ class _DesktopEmptyMessage extends StatelessWidget {
     constraints: const BoxConstraints(minHeight: 142),
     child: Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, color: tokens.mutedText, size: 32),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             Text(
               title,
               style: TextStyle(
@@ -708,7 +708,7 @@ class _DesktopEmptyMessage extends StatelessWidget {
                 fontWeight: FontWeight.w900,
               ),
             ),
-            const SizedBox(height: 5),
+            const SizedBox(height: 4),
             Text(
               subtitle,
               textAlign: TextAlign.center,
@@ -736,7 +736,7 @@ class _DesktopRewardChestCard extends StatelessWidget {
   Widget build(BuildContext context) => _DesktopSectionCard(
     tokens: tokens,
     child: Padding(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       child: Row(
         children: [
           Container(
@@ -744,7 +744,7 @@ class _DesktopRewardChestCard extends StatelessWidget {
             height: 38,
             decoration: BoxDecoration(
               color: tokens.rewardGold.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(11),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
               Icons.redeem_rounded,
@@ -752,7 +752,7 @@ class _DesktopRewardChestCard extends StatelessWidget {
               size: 20,
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -767,7 +767,7 @@ class _DesktopRewardChestCard extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 4),
                 Text(
                   chest.description,
                   maxLines: 2,
@@ -806,10 +806,10 @@ class _DesktopCountPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
     decoration: BoxDecoration(
       color: color.withValues(alpha: 0.12),
-      borderRadius: BorderRadius.circular(99),
+      borderRadius: BorderRadius.circular(999),
     ),
     child: Text(
       '$value',
@@ -908,7 +908,7 @@ class _DesktopSettingsStatus extends StatelessWidget {
             height: 38,
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
               hasError ? Icons.warning_amber_rounded : Icons.save_outlined,
@@ -928,7 +928,7 @@ class _DesktopSettingsStatus extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 4),
                 Text(
                   'Хранилище работает на этом устройстве; cloud sync не включён.',
                   style: TextStyle(color: tokens.mutedText, fontSize: 11),
