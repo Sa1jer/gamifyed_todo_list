@@ -266,6 +266,51 @@ bool _hasContainerWithColor(WidgetTester tester, Color color) {
 }
 
 void main() {
+  testWidgets('quest reward keeps its gold pill', (WidgetTester tester) async {
+    // Подложка под наградой — решение владельца. Значение XP и пилюля идут
+    // одним блестящим жёлтым #FFCF40; читаемости это стоит контраста, но
+    // выбор сделан осознанно (см. desktop_journal_palette_test.dart).
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = InMemoryStorageService()
+      .._onboardingSeen = true
+      .._theme = false
+      ..skills = [
+        Skill(
+          id: 'axe',
+          name: 'секира',
+          goal: 'цель',
+          color: const Color(0xFF4A9EFF),
+          icon: Icons.fitness_center,
+        ),
+      ]
+      ..tasks = [
+        Task(
+          id: 'quest-1',
+          title: 'Квест',
+          skillId: 'axe',
+          xpReward: 60,
+          type: TaskType.shortTerm,
+        ),
+      ];
+    await storage.init();
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    final pill = find.byKey(const ValueKey('desktop-reward-pill'));
+    expect(pill, findsOneWidget);
+    expect(find.text('+60 XP'), findsWidgets);
+    final decoration =
+        tester.widget<Container>(pill).decoration! as BoxDecoration;
+    expect(decoration.color, isNotNull);
+    expect(decoration.border, isNotNull);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('MaterialApp theme follows the saved theme after load', (
     WidgetTester tester,
   ) async {
@@ -1249,8 +1294,18 @@ void main() {
       final initialRect = tester.getRect(row);
       expect(tester.widget<AnimatedOpacity>(overflow).opacity, 0);
       expect(tester.widget<AnimatedOpacity>(roadmap).opacity, 0);
-      expect((tester.widget<Padding>(content).padding as EdgeInsets).right, 76);
+      // Место под лоток действий раскрывается только на время наведения:
+      // иначе название и полоса уровня всегда стоят сдвинутыми влево.
+      expect(
+        (tester.widget<AnimatedPadding>(content).padding as EdgeInsets).right,
+        0,
+      );
       final initialContentRect = tester.getRect(content);
+      final title = find.descendant(
+        of: content,
+        matching: find.text('Использованный навык'),
+      );
+      final initialTitleWidth = tester.getRect(title).width;
       expect(
         find.descendant(
           of: row,
@@ -1268,8 +1323,13 @@ void main() {
       expect(tester.getRect(row), initialRect);
       expect(tester.widget<AnimatedOpacity>(overflow).opacity, 1);
       expect(tester.widget<AnimatedOpacity>(roadmap).opacity, 1);
-      expect((tester.widget<Padding>(content).padding as EdgeInsets).right, 76);
+      expect(
+        (tester.widget<AnimatedPadding>(content).padding as EdgeInsets).right,
+        76,
+      );
+      // Сам бокс отступа занимает ту же ширину — сдвигается его содержимое.
       expect(tester.getRect(content), initialContentRect);
+      expect(tester.getRect(title).width, lessThan(initialTitleWidth));
       expect(tester.getRect(overflow).width, 38);
       expect(tester.getRect(roadmap).width, 38);
       final roadmapTrigger = find.descendant(

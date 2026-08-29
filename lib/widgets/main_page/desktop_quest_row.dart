@@ -8,6 +8,7 @@ import '../../theme/app_typography.dart';
 import '../../utils.dart';
 import '../desktop_journal_tokens.dart';
 import '../shared.dart';
+import 'desktop_workspace_support.dart';
 
 enum _DesktopTaskMenuAction { edit, archive, restore, delete }
 
@@ -191,7 +192,14 @@ class _DesktopQuestRowState extends State<DesktopQuestRow> {
                           color: tokens.mutedText,
                           size: 19,
                         ),
-                        color: tokens.raisedSurface,
+                        color: tokens.cardSurface,
+                        shape: desktopMenuShape(tokens),
+                        elevation: 8,
+                        shadowColor: Colors.black.withValues(alpha: 0.16),
+                        position: PopupMenuPosition.under,
+                        menuPadding: const EdgeInsets.symmetric(
+                          vertical: DesktopScale.space8,
+                        ),
                         onOpened: () => setState(() => _menuOpen = true),
                         onCanceled: () => setState(() => _menuOpen = false),
                         onSelected: (action) {
@@ -209,35 +217,31 @@ class _DesktopQuestRowState extends State<DesktopQuestRow> {
                         },
                         itemBuilder: (_) => [
                           if (!done)
-                            PopupMenuItem(
+                            desktopMenuItem(
                               value: _DesktopTaskMenuAction.edit,
-                              child: Text(
-                                'Редактировать',
-                                style: TextStyle(color: tokens.text),
-                              ),
+                              icon: Icons.edit_outlined,
+                              label: 'Редактировать',
+                              color: tokens.text,
                             ),
                           if (done && !task.isArchived)
-                            PopupMenuItem(
+                            desktopMenuItem(
                               value: _DesktopTaskMenuAction.archive,
-                              child: Text(
-                                'Архивировать',
-                                style: TextStyle(color: tokens.text),
-                              ),
+                              icon: Icons.inventory_2_outlined,
+                              label: 'Архивировать',
+                              color: tokens.text,
                             ),
                           if (done && task.isArchived)
-                            PopupMenuItem(
+                            desktopMenuItem(
                               value: _DesktopTaskMenuAction.restore,
-                              child: Text(
-                                'Вернуть из архива',
-                                style: TextStyle(color: tokens.text),
-                              ),
+                              icon: Icons.unarchive_outlined,
+                              label: 'Вернуть из архива',
+                              color: tokens.text,
                             ),
-                          PopupMenuItem(
+                          desktopMenuItem(
                             value: _DesktopTaskMenuAction.delete,
-                            child: Text(
-                              'Удалить',
-                              style: TextStyle(color: tokens.danger),
-                            ),
+                            icon: Icons.delete_outline_rounded,
+                            label: 'Удалить',
+                            color: tokens.danger,
                           ),
                         ],
                       ),
@@ -424,13 +428,12 @@ class _DesktopRewardPill extends StatelessWidget {
     return Semantics(
       label: 'Награда $value XP',
       child: Container(
+        key: const ValueKey('desktop-reward-pill'),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: tokens.rewardGoldGraphic.withValues(alpha: 0.09),
+          color: tokens.rewardGoldSurface,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: tokens.rewardGoldGraphic.withValues(alpha: 0.3),
-          ),
+          border: Border.all(color: tokens.rewardGoldGraphic),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

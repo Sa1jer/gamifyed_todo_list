@@ -677,9 +677,17 @@ class _DesktopSkillRowState extends State<_DesktopSkillRow> {
                 child: Stack(
                   alignment: Alignment.centerRight,
                   children: [
-                    Padding(
+                    // Место под выезжающий лоток резервировалось всегда,
+                    // из-за чего название и полоса уровня были постоянно
+                    // сдвинуты влево. Освобождаем его только на время
+                    // наведения — в том же темпе, что едет сам лоток.
+                    AnimatedPadding(
                       key: ValueKey('desktop-skill-content-${skill.id}'),
-                      padding: const EdgeInsets.only(right: actionTrayWidth),
+                      duration: DesktopJournalTokens.fastMotion,
+                      curve: DesktopJournalTokens.motionCurve,
+                      padding: EdgeInsets.only(
+                        right: actionsVisible ? actionTrayWidth : 0,
+                      ),
                       child: Row(
                         children: [
                           Container(
@@ -792,7 +800,16 @@ class _DesktopSkillRowState extends State<_DesktopSkillRow> {
                                     size: 17,
                                     color: tokens.mutedText,
                                   ),
-                                  color: tokens.raisedSurface,
+                                  color: tokens.cardSurface,
+                                  shape: desktopMenuShape(tokens),
+                                  elevation: 8,
+                                  shadowColor: Colors.black.withValues(
+                                    alpha: 0.16,
+                                  ),
+                                  position: PopupMenuPosition.under,
+                                  menuPadding: const EdgeInsets.symmetric(
+                                    vertical: DesktopScale.space8,
+                                  ),
                                   onOpened: () =>
                                       setState(() => _menuOpen = true),
                                   onCanceled: () =>
@@ -803,29 +820,23 @@ class _DesktopSkillRowState extends State<_DesktopSkillRow> {
                                     if (value == 'delete') widget.onDelete();
                                   },
                                   itemBuilder: (_) => [
-                                    PopupMenuItem(
+                                    desktopMenuItem(
                                       key: ValueKey(
                                         'desktop-skill-menu-edit-${skill.id}',
                                       ),
                                       value: 'edit',
-                                      child: Text(
-                                        'Редактировать навык',
-                                        style: textTheme.bodyMedium?.copyWith(
-                                          color: tokens.text,
-                                        ),
-                                      ),
+                                      icon: Icons.edit_outlined,
+                                      label: 'Редактировать навык',
+                                      color: tokens.text,
                                     ),
-                                    PopupMenuItem(
+                                    desktopMenuItem(
                                       key: ValueKey(
                                         'desktop-skill-menu-delete-${skill.id}',
                                       ),
                                       value: 'delete',
-                                      child: Text(
-                                        'Удалить навык',
-                                        style: textTheme.bodyMedium?.copyWith(
-                                          color: tokens.danger,
-                                        ),
-                                      ),
+                                      icon: Icons.delete_outline_rounded,
+                                      label: 'Удалить навык',
+                                      color: tokens.danger,
                                     ),
                                   ],
                                 ),

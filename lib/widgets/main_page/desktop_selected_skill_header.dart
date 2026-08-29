@@ -115,7 +115,8 @@ class DesktopSelectedSkillHeader extends StatelessWidget {
         child: DesktopProgressBar(
           value: skill.progress,
           color: skill.color,
-          background: tokens.raisedSurface,
+          background: tokens.subtleOutline,
+          trackOutline: tokens.outline,
           height: DesktopScale.barHeight,
           level: skill.level,
         ),
@@ -309,6 +310,10 @@ class DesktopProgressBar extends StatelessWidget {
   final double value;
   final Color color;
   final Color background;
+
+  /// Обводка дорожки. На светлой теме пустая полоса сливалась с тонированной
+  /// подложкой карточки навыка — тонкий контур возвращает ей границы.
+  final Color? trackOutline;
   final double height;
   final int? level;
 
@@ -317,18 +322,33 @@ class DesktopProgressBar extends StatelessWidget {
     required this.value,
     required this.color,
     required this.background,
+    this.trackOutline,
     required this.height,
     this.level,
   });
 
   @override
   Widget build(BuildContext context) {
-    return XPBar(
+    final bar = XPBar(
       progress: value,
       color: color,
       height: height,
       backgroundColor: background,
       level: level,
+    );
+    if (trackOutline == null) return bar;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(DesktopScale.radiusPill),
+        border: Border.all(
+          color: trackOutline!,
+          width: DesktopScale.borderThin,
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(DesktopScale.radiusPill),
+        child: bar,
+      ),
     );
   }
 }

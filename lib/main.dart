@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/rendering.dart';
 import 'storage_service.dart';
 import 'notification_service.dart';
@@ -161,6 +162,16 @@ class _RPGAppState extends State<RPGApp>
 
       if (hasFrame) {
         _revealCtrl.value = 0;
+        // Кадр смены темы — самый тяжёлый во всём взаимодействии: заново
+        // строится и растеризуется всё дерево в новых цветах, и туда же
+        // приходит загрузка полноэкранной текстуры старого кадра. Если
+        // запустить анимацию сразу, эта работа попадает на её первые кадры и
+        // читается как рывок. Пропускаем её под полностью закрытым экраном:
+        // при progress = 0 круг накрывает всё, и подготовка не видна.
+        await SchedulerBinding.instance.endOfFrame;
+        if (!mounted) return;
+        await SchedulerBinding.instance.endOfFrame;
+        if (!mounted) return;
         await _revealCtrl.forward();
       }
     } finally {
@@ -235,11 +246,17 @@ class _RPGAppState extends State<RPGApp>
             ),
             child: child,
           ),
-          child: RawImage(
-            image: _overlayImage,
-            fit: BoxFit.fill,
-            width: double.infinity,
-            height: double.infinity,
+          // Без собственного слоя картинка перезаписывается в родительский
+          // на каждом кадре, потому что меняется обтравка. С границей
+          // перерисовки кадр анимации сводится к смене клипа над готовым
+          // слоем.
+          child: RepaintBoundary(
+            child: RawImage(
+              image: _overlayImage,
+              fit: BoxFit.fill,
+              width: double.infinity,
+              height: double.infinity,
+            ),
           ),
         ),
       ),

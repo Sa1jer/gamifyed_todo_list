@@ -42,6 +42,46 @@ class DesktopCompactButton extends StatelessWidget {
   }
 }
 
+/// Общая огранка всплывающих меню десктопа.
+///
+/// Материаловские умолчания дают почти прямые углы и глухую тень — рядом с
+/// карточками на радиусе 12 и тонкими границами это выглядит чужеродно.
+ShapeBorder desktopMenuShape(DesktopJournalTokens tokens) =>
+    RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(DesktopScale.radiusM),
+      side: BorderSide(color: tokens.outline, width: DesktopScale.borderThin),
+    );
+
+/// Пункт меню со значком.
+///
+/// Значок здесь не украшение: удаление до сих пор отличалось от остальных
+/// пунктов только красным цветом.
+PopupMenuItem<T> desktopMenuItem<T>({
+  Key? key,
+  required T value,
+  required IconData icon,
+  required String label,
+  required Color color,
+}) => PopupMenuItem<T>(
+  key: key,
+  value: value,
+  height: 42,
+  child: Row(
+    children: [
+      Icon(icon, size: 18, color: color),
+      const SizedBox(width: DesktopScale.space12),
+      Expanded(
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(color: color, fontWeight: FontWeight.w600),
+        ),
+      ),
+    ],
+  ),
+);
+
 class DesktopInteractiveSurface extends StatefulWidget {
   final double borderRadius;
   final Color baseColor;

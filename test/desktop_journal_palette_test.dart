@@ -17,8 +17,10 @@ void main() {
 
     test('чернильные роли читаемы на карточке и на фоне', () {
       // Прежние значения не проходили AA: золото #B47700 давало 3.76:1.
+      // rewardGold сюда не входит: владелец выбрал блестящий жёлтый
+      // #FFCF40 вместо цвета, проходящего AA. См. отдельную проверку ниже —
+      // она фиксирует выбор, чтобы он не выглядел недосмотром.
       for (final entry in {
-        'rewardGold': tokens.rewardGold,
         'successGreen': tokens.successGreen,
         'streakAmber': tokens.streakAmber,
       }.entries) {
@@ -35,25 +37,27 @@ void main() {
       }
     });
 
-    test('чернильные роли читаемы на собственной подложке-пилюле', () {
+    test('чернильные роли читаемы на собственной тонированной карточке', () {
+      // Карточка трофея заливается самим чернильным цветом на 5.5% и несёт
+      // на себе его же текст — самый тёмный фон под этими цветами.
       for (final entry in {
-        'rewardGold': (tokens.rewardGold, tokens.rewardGoldGraphic),
-        'successGreen': (tokens.successGreen, tokens.successGreenGraphic),
-        'streakAmber': (tokens.streakAmber, tokens.streakAmberGraphic),
+        'successGreen': tokens.successGreen,
+        'streakAmber': tokens.streakAmber,
       }.entries) {
-        final (ink, graphic) = entry.value;
-        final pill = _over(graphic.withValues(alpha: 0.14), tokens.cardSurface);
+        final tinted = _over(
+          entry.value.withValues(alpha: 0.055),
+          tokens.cardSurface,
+        );
         expect(
-          _contrast(ink, pill),
+          _contrast(entry.value, tinted),
           greaterThanOrEqualTo(4.5),
-          reason: '${entry.key} на пилюле',
+          reason: '${entry.key} на собственной заливке',
         );
       }
     });
 
     test('графические роли держат 3:1 — порог для нетекстовой графики', () {
       for (final entry in {
-        'rewardGoldGraphic': tokens.rewardGoldGraphic,
         'successGreenGraphic': tokens.successGreenGraphic,
         'streakAmberGraphic': tokens.streakAmberGraphic,
       }.entries) {
@@ -70,10 +74,6 @@ void main() {
       // зелёными, а текст на них уходит вглубь ровно настолько, чтобы
       // читаться. Если яркости сойдутся, разделение потеряет смысл.
       expect(
-        tokens.rewardGoldGraphic.computeLuminance(),
-        greaterThan(tokens.rewardGold.computeLuminance()),
-      );
-      expect(
         tokens.successGreenGraphic.computeLuminance(),
         greaterThan(tokens.successGreen.computeLuminance()),
       );
@@ -82,6 +82,16 @@ void main() {
         greaterThan(tokens.streakAmber.computeLuminance()),
       );
     });
+  });
+
+  test('золото — осознанный выбор владельца, а не промах по контрасту', () {
+    // Блестящий жёлтый hsl(45, 100%, 63%). На белом это 1.55:1 — ниже AA.
+    // Тест фиксирует решение: если цвет когда-нибудь поедет, станет видно,
+    // что это правка, а не случайная регрессия.
+    final light = DesktopJournalTokens.resolve(false);
+    expect(light.rewardGold, const Color(0xFFFFCF40));
+    expect(light.rewardGoldGraphic, light.rewardGold);
+    expect(_contrast(light.rewardGold, light.cardSurface), lessThan(2));
   });
 
   test('в тёмной теме графическая и чернильная роли совпадают', () {

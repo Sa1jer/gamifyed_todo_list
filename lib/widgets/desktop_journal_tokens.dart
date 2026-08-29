@@ -121,9 +121,15 @@ class DesktopJournalTokens {
   /// Графические роли: заливки, иконки, границы, полосы. Насыщеннее чернильных
   /// и держат 3:1 на светлой карточке — порог для нетекстовой графики.
   /// В тёмной теме совпадают с чернильными.
+  ///
+  /// Золото из этого правила выведено: владелец выбрал для него блестящий
+  /// жёлтый, общий с чернильной ролью, и порог 3:1 оно не держит.
   final Color rewardGoldGraphic;
   final Color successGreenGraphic;
   final Color streakAmberGraphic;
+
+  /// Подложка под наградой в строке квеста — заливка внутри контура.
+  final Color rewardGoldSurface;
 
   final Color semanticBlue;
   final Color danger;
@@ -146,6 +152,7 @@ class DesktopJournalTokens {
     required this.rewardGoldGraphic,
     required this.successGreenGraphic,
     required this.streakAmberGraphic,
+    required this.rewardGoldSurface,
     required this.semanticBlue,
     required this.danger,
   });
@@ -164,15 +171,19 @@ class DesktopJournalTokens {
         text: Color(0xFF181923),
         mutedText: Color(0xFF6F7282),
         profilePurple: Color(0xFF6D55E8),
-        // Полностью насыщенные золото/зелень/янтарь — настолько светлые,
-        // насколько позволяет контраст. Прежние значения читались коричневыми
-        // и при этом не проходили AA: #B47700 давал 3.76:1 на белом.
-        rewardGold: Color(0xFF8A6000),
-        successGreen: Color(0xFF007A2D),
-        streakAmber: Color(0xFFAD5100),
-        rewardGoldGraphic: Color(0xFFC28800),
+        // Золото — решение владельца: блестящий жёлтый #FFCF40, тот же
+        // оттенок, что и в тёмной теме. Контраст на белом 1.55:1, то есть
+        // ниже AA (4.5:1); выбран ради узнаваемого золота, а не читаемости.
+        // Любой цвет, проходящий AA на белом, неизбежно уходит в коричневый:
+        // потолок насыщенного золота при 4.5:1 — #946800.
+        rewardGold: Color(0xFFFFCF40),
+        // Зелень и янтарь остаются на пороге AA: их владелец не оспаривал.
+        successGreen: Color(0xFF00802F),
+        streakAmber: Color(0xFFB25300),
+        rewardGoldGraphic: Color(0xFFFFCF40),
         successGreenGraphic: Color(0xFF00A83E),
         streakAmberGraphic: Color(0xFFEB6D00),
+        rewardGoldSurface: Color(0x14FAAD00),
         semanticBlue: Color(0xFF1268C7),
         danger: Color(0xFFD83651),
       );
@@ -195,6 +206,7 @@ class DesktopJournalTokens {
       rewardGoldGraphic: Color(0xFFFFC21A),
       successGreenGraphic: Color(0xFF2ED36F),
       streakAmberGraphic: Color(0xFFFF8A1F),
+      rewardGoldSurface: Color(0x17FFC21A),
       semanticBlue: Color(0xFF2D8CFF),
       danger: Color(0xFFFF315B),
     );
