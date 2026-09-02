@@ -15,6 +15,7 @@ class NextActionLens extends StatefulWidget {
     required this.onChooseTask,
     required this.onOpenEmptySkill,
     required this.onCreateSkill,
+    this.onHide,
   });
 
   final NextActionResolution resolution;
@@ -24,6 +25,9 @@ class NextActionLens extends StatefulWidget {
   final ValueChanged<String> onChooseTask;
   final ValueChanged<Skill> onOpenEmptySkill;
   final VoidCallback onCreateSkill;
+
+  /// Скрыть подсказку до следующего запуска. `null` — кнопки скрытия нет.
+  final VoidCallback? onHide;
 
   @override
   State<NextActionLens> createState() => _NextActionLensState();
@@ -106,6 +110,7 @@ class _NextActionLensState extends State<NextActionLens> {
       onChooseTask: () => _pickTask(candidate),
       onBootEntry: () =>
           _editBootEntry(candidate, BootEntryPlan.suggest(candidate.task)),
+      onHide: widget.onHide,
     );
   }
 
@@ -154,6 +159,7 @@ class _NextActionCard extends StatelessWidget {
     required this.onOpenTask,
     required this.onChooseTask,
     required this.onBootEntry,
+    this.onHide,
   });
 
   final NextActionCandidate candidate;
@@ -161,6 +167,15 @@ class _NextActionCard extends StatelessWidget {
   final VoidCallback onOpenTask;
   final VoidCallback onChooseTask;
   final VoidCallback onBootEntry;
+  final VoidCallback? onHide;
+
+  static String reasonLabel(NextActionReason reason) => switch (reason) {
+    NextActionReason.explicitOverride => 'Выбрано тобой',
+    NextActionReason.selectedSkillActiveStage => 'Текущий этап',
+    NextActionReason.selectedSkill => 'Текущий навык',
+    NextActionReason.activeStage => 'Активный этап',
+    NextActionReason.availableTask => 'Открытый квест',
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -176,7 +191,11 @@ class _NextActionCard extends StatelessWidget {
           'Следующее действие: ${candidate.actionText}. ${candidate.skill.name}',
       child: Container(
         key: const ValueKey('next-action-lens'),
-        padding: const EdgeInsets.all(14),
+        // Панель занимала 351 px из 852 — больше трети экрана телефона под
+        // одну подсказку. Заголовок, чип причины и три полноразмерные
+        // кнопки съедали почти всё; теперь причина ушла в строку описания,
+        // а действия — в один ряд.
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Color.alphaBlend(
             candidate.skill.color.withAlpha(isDark ? 18 : 14),
@@ -198,92 +217,100 @@ class _NextActionCard extends StatelessWidget {
                 Icon(
                   Icons.play_circle_outline_rounded,
                   color: accent,
-                  size: 21,
+                  size: 15,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     'Следующее действие',
                     style: TextStyle(
-                      color: text,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 17,
+                      color: muted,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 11,
                     ),
                   ),
                 ),
+                if (onHide != null)
+                  SizedBox(
+                    width: 28,
+                    height: 22,
+                    child: IconButton(
+                      key: const ValueKey('next-action-hide'),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 28,
+                        minHeight: 22,
+                      ),
+                      tooltip: 'Скрыть подсказку',
+                      iconSize: 16,
+                      color: muted,
+                      onPressed: onHide,
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ),
               ],
             ),
-            const SizedBox(height: 6),
-            _ReasonChip(
-              reason: candidate.reason,
-              color: accent,
-              isDark: isDark,
-            ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 4),
             Text(
               candidate.actionText,
               key: const ValueKey('next-action-title'),
               style: TextStyle(
                 color: text,
-                fontSize: 18,
+                fontSize: 15,
                 fontWeight: FontWeight.w800,
-                height: 1.15,
+                height: 1.2,
               ),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 5),
-            Text(
-              candidate.usesMinimumAction
-                  ? 'Минимальный шаг к квесту «${candidate.task.title}»'
-                  : candidate.skill.name,
-              style: TextStyle(color: muted, fontSize: 13, height: 1.25),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 12),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final compact = constraints.maxWidth < 355;
-                return Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    FilledButton.icon(
-                      key: const ValueKey('next-action-open-task'),
-                      onPressed: onOpenTask,
-                      icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                      label: const Text('Открыть квест'),
-                      style: FilledButton.styleFrom(
-                        minimumSize: Size(compact ? 0 : 164, 44),
-                        backgroundColor: accent,
-                        foregroundColor: Colors.white,
-                      ),
+            const SizedBox(height: 2),
+            Text(
+              [
+                candidate.usesMinimumAction
+                    ? 'Минимальный шаг · ${candidate.task.title}'
+                    : candidate.skill.name,
+                reasonLabel(candidate.reason),
+              ].join(' · '),
+              style: TextStyle(color: muted, fontSize: 11.5, height: 1.2),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton.icon(
+                    key: const ValueKey('next-action-open-task'),
+                    onPressed: onOpenTask,
+                    icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                    label: const Text('Открыть квест'),
+                    style: FilledButton.styleFrom(
+                      // 48dp — минимальная зона нажатия; ниже неё панель
+                      // ужимать нельзя даже ради высоты.
+                      minimumSize: const Size(0, 48),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      backgroundColor: accent,
+                      foregroundColor: Colors.white,
                     ),
-                    OutlinedButton.icon(
-                      key: const ValueKey('next-action-choose-another'),
-                      onPressed: onChooseTask,
-                      icon: const Icon(Icons.swap_horiz_rounded, size: 18),
-                      label: const Text('Другое'),
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(44, 44),
-                        foregroundColor: accent,
-                        side: BorderSide(color: accent.withAlpha(160)),
-                      ),
-                    ),
-                    TextButton.icon(
-                      key: const ValueKey('next-action-boot-entry'),
-                      onPressed: onBootEntry,
-                      icon: const Icon(Icons.low_priority_rounded, size: 18),
-                      label: const Text('Трудно начать?'),
-                      style: TextButton.styleFrom(
-                        minimumSize: const Size(44, 44),
-                        foregroundColor: muted,
-                      ),
-                    ),
-                  ],
-                );
-              },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _NextActionIconAction(
+                  actionKey: const ValueKey('next-action-choose-another'),
+                  tooltip: 'Другое действие',
+                  icon: Icons.swap_horiz_rounded,
+                  color: accent,
+                  onPressed: onChooseTask,
+                ),
+                const SizedBox(width: 8),
+                _NextActionIconAction(
+                  actionKey: const ValueKey('next-action-boot-entry'),
+                  tooltip: 'Трудно начать?',
+                  icon: Icons.low_priority_rounded,
+                  color: muted,
+                  onPressed: onBootEntry,
+                ),
+              ],
             ),
           ],
         ),
@@ -292,39 +319,36 @@ class _NextActionCard extends StatelessWidget {
   }
 }
 
-class _ReasonChip extends StatelessWidget {
-  const _ReasonChip({
-    required this.reason,
+class _NextActionIconAction extends StatelessWidget {
+  const _NextActionIconAction({
+    required this.actionKey,
+    required this.tooltip,
+    required this.icon,
     required this.color,
-    required this.isDark,
+    required this.onPressed,
   });
 
-  final NextActionReason reason;
+  final Key actionKey;
+  final String tooltip;
+  final IconData icon;
   final Color color;
-  final bool isDark;
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    final label = switch (reason) {
-      NextActionReason.explicitOverride => 'Выбрано тобой',
-      NextActionReason.selectedSkillActiveStage => 'Текущий этап',
-      NextActionReason.selectedSkill => 'Текущий навык',
-      NextActionReason.activeStage => 'Активный этап',
-      NextActionReason.availableTask => 'Открытый квест',
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      decoration: BoxDecoration(
-        color: color.withAlpha(isDark ? 24 : 20),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color,
-          fontSize: 10,
-          fontWeight: FontWeight.w800,
+    return SizedBox(
+      width: 48,
+      height: 48,
+      child: OutlinedButton(
+        key: actionKey,
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          padding: EdgeInsets.zero,
+          minimumSize: const Size(48, 48),
+          foregroundColor: color,
+          side: BorderSide(color: color.withAlpha(140)),
         ),
+        child: Tooltip(message: tooltip, child: Icon(icon, size: 18)),
       ),
     );
   }

@@ -59,6 +59,11 @@ class _DebugAdminPanelState extends State<_DebugAdminPanel> {
     Navigator.pop(context, label);
   }
 
+  void _showWelcomeScreen() {
+    widget.state.replayWelcome();
+    Navigator.pop(context);
+  }
+
   Future<void> _confirmClearDebugState() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -345,6 +350,16 @@ class _DebugAdminPanelState extends State<_DebugAdminPanel> {
                       achievements: widget.state.achievements,
                       onSetAll: _confirmSetAllAchievements,
                       onToggleAchievement: _setAchievementUnlocked,
+                    ),
+                    _DebugActionCard(
+                      isDark: isDark,
+                      icon: Icons.waving_hand_outlined,
+                      title: 'Показать Welcome',
+                      description:
+                          'Сбрасывает только отметку о просмотре. Навыки, '
+                          'квесты и прогресс остаются на месте.',
+                      actionLabel: 'Открыть',
+                      onTap: _showWelcomeScreen,
                     ),
                     _DebugAdminSection(
                       isDark: isDark,
@@ -896,6 +911,76 @@ class _DebugAchievementRow extends StatelessWidget {
             value: isUnlocked,
             activeThumbColor: const Color(0xFF34C759),
             onChanged: onChanged,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DebugActionCard extends StatelessWidget {
+  final bool isDark;
+  final IconData icon;
+  final String title;
+  final String description;
+  final String actionLabel;
+  final VoidCallback onTap;
+
+  const _DebugActionCard({
+    required this.isDark,
+    required this.icon,
+    required this.title,
+    required this.description,
+    required this.actionLabel,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final txt = textColor(isDark);
+    final sub = subtext(isDark);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF15151D) : const Color(0xFFF4F5FA),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: borderColor(isDark)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: sub, size: 18),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: txt,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: TextStyle(
+                    color: sub,
+                    fontSize: 11.2,
+                    height: 1.3,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          FilledButton(
+            key: const ValueKey('debug-show-welcome'),
+            onPressed: onTap,
+            child: Text(actionLabel),
           ),
         ],
       ),

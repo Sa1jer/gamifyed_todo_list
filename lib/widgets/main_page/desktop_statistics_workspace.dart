@@ -6,7 +6,6 @@ enum _DesktopStatisticsDetail {
   timeline,
   growth,
   calendar,
-  xpLog,
   achievements,
   resistance,
 }
@@ -208,7 +207,7 @@ class _DesktopStatisticsMainContent extends StatelessWidget {
                 tokens: tokens,
                 color: const Color(0xFFB84DFF),
                 icon: Icons.auto_stories_outlined,
-                title: 'Летопись',
+                title: 'Летопись опыта',
                 subtitle:
                     '${state.totalTasksCompleted} побед · ур. ${state.profile.level}',
                 onTap: () => onOpen(_DesktopStatisticsDetail.timeline),
@@ -420,13 +419,6 @@ class _DesktopStatisticsRail extends StatelessWidget {
         color: const Color(0xFFB84DFF),
         onTap: () => onOpen(_DesktopStatisticsDetail.calendar),
       ),
-      _DesktopRailLink(
-        tokens: tokens,
-        title: 'Журнал XP',
-        icon: Icons.receipt_long_outlined,
-        color: tokens.successGreenGraphic,
-        onTap: () => onOpen(_DesktopStatisticsDetail.xpLog),
-      ),
       const SizedBox(height: 16),
       _DesktopSectionLabel(
         tokens: tokens,
@@ -482,10 +474,10 @@ class _DesktopStatisticsDetailPage extends StatelessWidget {
         'Квесты, закрытые за последние семь дней',
       ),
       _DesktopStatisticsDetail.timeline => (
-        'Летопись',
+        'Летопись опыта',
         Icons.auto_stories_outlined,
         const Color(0xFFB84DFF),
-        'Все закрытые квесты по датам',
+        'Все закрытые квесты и начисленный за них опыт',
       ),
       _DesktopStatisticsDetail.growth => (
         'Срез роста',
@@ -498,12 +490,6 @@ class _DesktopStatisticsDetailPage extends StatelessWidget {
         Icons.calendar_month_outlined,
         const Color(0xFFB84DFF),
         'Сколько квестов закрыто в каждый день',
-      ),
-      _DesktopStatisticsDetail.xpLog => (
-        'Журнал XP',
-        Icons.receipt_long_outlined,
-        tokens.successGreenGraphic,
-        'Опыт, начисленный за каждый закрытый квест',
       ),
       _DesktopStatisticsDetail.achievements => (
         'Достижения',

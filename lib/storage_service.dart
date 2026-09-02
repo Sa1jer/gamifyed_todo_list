@@ -130,6 +130,19 @@ class StorageService {
   Future<void> saveSnapshot(StorageSnapshot snapshot) =>
       _snapshotStore().save(snapshot);
 
+  /// Сериализует состояние для файла переноса между устройствами.
+  ///
+  /// Тот же кодек, что и у локального снапшота: у файла та же версия схемы и
+  /// та же проверка при чтении, поэтому экспорт не может разойтись с тем, что
+  /// приложение умеет загружать.
+  String encodeSnapshotForTransfer(StorageSnapshot snapshot) =>
+      _snapshotCodec().encode(snapshot);
+
+  /// Разбирает файл переноса. Бросает исключение на чужом или битом файле —
+  /// вызывающий код обязан сделать это до того, как что-то перезапишет.
+  StorageSnapshot decodeSnapshotForTransfer(String raw) =>
+      _snapshotCodec().decode(raw);
+
   SnapshotStore _snapshotStore() {
     final backend = _snapshotBackend;
     if (backend == null) {

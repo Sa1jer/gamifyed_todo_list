@@ -11,6 +11,13 @@ import '../../tutorial/guided_tour_session.dart';
 class GuidedTourSessionController extends ChangeNotifier {
   GuidedTourSession? _session;
   bool _showCoreCompletion = false;
+
+  /// Шаг, действие которого пользователь начал и бросил.
+  ///
+  /// Отмена диалога возвращала на побайтово ту же карточку: ни отклика, ни
+  /// подсказки, что делать дальше. Флаг позволяет шагу сказать об этом и
+  /// предложить пропуск.
+  String? _abandonedStepId;
   final ValueNotifier<TutorialAnchorId?> activeAnchor = ValueNotifier(null);
 
   GuidedTourSession? get session => _session;
@@ -23,6 +30,16 @@ class GuidedTourSessionController extends ChangeNotifier {
       _session!.isPaused &&
       _session!.plan.mode != GuidedTourMode.firstRunCore;
   bool get showCoreCompletion => _showCoreCompletion;
+
+  /// Пользователь открыл действие текущего шага и закрыл его, ничего не создав.
+  bool get currentStepAbandoned =>
+      _abandonedStepId != null && _abandonedStepId == currentStep?.id;
+
+  void markStepAbandoned(String stepId) {
+    if (_abandonedStepId == stepId) return;
+    _abandonedStepId = stepId;
+    notifyListeners();
+  }
 
   void startFirstRun({String? initialStepId}) {
     _showCoreCompletion = false;
@@ -128,6 +145,10 @@ class GuidedTourSessionController extends ChangeNotifier {
   }
 
   void _notifyChanged() {
+    // Любое движение сессии снимает отметку: она относится к конкретному шагу.
+    if (_abandonedStepId != null && _abandonedStepId != currentStep?.id) {
+      _abandonedStepId = null;
+    }
     final nextAnchor = currentStep?.anchorId;
     if (activeAnchor.value != nextAnchor) activeAnchor.value = nextAnchor;
     notifyListeners();

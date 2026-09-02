@@ -709,6 +709,7 @@ class _MainPageState extends State<MainPage> {
           blocked: _firstRunDialogOpen,
           reservedRegions: reserved,
           onPrimary: _guidedTour.primary,
+          onSkip: (_) => _guidedTour.skipAbandonedStep(),
           onDismiss: _guidedTour.dismiss,
           onPrevious: _guidedTour.previous,
         ),

@@ -1026,6 +1026,35 @@ void main() {
       state.dispose();
     });
 
+    test('replayWelcome возвращает Welcome, не трогая данные', () async {
+      final storage = _InMemoryStorageService();
+      final state = AppState(storage: storage, seedDefaults: false);
+      await state.loadSavedData();
+      state.beginWelcome();
+      state.skills.add(
+        Skill(
+          id: 'axe',
+          name: 'секира',
+          goal: 'цель',
+          color: const Color(0xFF4A9EFF),
+          icon: Icons.fitness_center,
+        ),
+      );
+      await state.flushSaves();
+      expect(state.shouldShowWelcome, isFalse);
+
+      // Отладочный вход в Welcome на заполненном аккаунте: сбрасывается
+      // только отметка о просмотре.
+      state.replayWelcome();
+      await state.flushSaves();
+
+      expect(state.shouldShowWelcome, isTrue);
+      expect(state.welcomeSeen, isFalse);
+      expect(storage._welcomeSeen, isFalse);
+      expect(state.skills.any((skill) => skill.id == 'axe'), isTrue);
+      expect(state.profile.xp, state.profile.xp);
+    });
+
     test('fresh install shows Welcome before tutorial', () async {
       final storage = _InMemoryStorageService();
       final state = AppState(storage: storage, seedDefaults: false);

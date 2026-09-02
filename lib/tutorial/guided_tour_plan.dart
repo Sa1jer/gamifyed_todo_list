@@ -43,6 +43,7 @@ class GuidedTourStep {
     this.destination,
     this.navigateTo,
     this.missingTargetPolicy = TutorialMissingTargetPolicy.coachCard,
+    this.abandonedBody,
   });
 
   final String id;
@@ -56,6 +57,13 @@ class GuidedTourStep {
   final GuidedTourDestination? destination;
   final GuidedTourDestination? navigateTo;
   final TutorialMissingTargetPolicy missingTargetPolicy;
+
+  /// Текст на случай, когда действие шага открыли и закрыли, ничего не сделав.
+  ///
+  /// Задан только у шагов, которые ведут в отдельный диалог: там отмена
+  /// возвращала пользователя на ту же карточку без единого отклика. Наличие
+  /// текста также включает кнопку «Пропустить».
+  final String? abandonedBody;
 }
 
 class GuidedTourPlan {
@@ -86,6 +94,9 @@ class GuidedTourPlan {
         body:
             'Навык — направление роста. Для начала достаточно названия и цели.',
         primaryLabel: 'Создать навык',
+        abandonedBody:
+            'Передумал — ничего страшного. Навык можно создать в любой момент '
+            'кнопкой «Навык» слева.',
         presentation: GuidedTourPresentation.spotlight,
         anchorId: TutorialAnchorId.skillCreate,
         destination: GuidedTourDestination.act,
@@ -97,6 +108,9 @@ class GuidedTourPlan {
         title: 'Первый квест',
         body: 'Квест — конкретное действие внутри выбранного навыка.',
         primaryLabel: 'Создать квест',
+        abandonedBody:
+            'Окно закрыто. Квест можно добавить позже — кнопкой «Новый квест» '
+            'в шапке навыка.',
         presentation: GuidedTourPresentation.spotlight,
         anchorId: TutorialAnchorId.questCreate,
         destination: GuidedTourDestination.act,
@@ -106,8 +120,15 @@ class GuidedTourPlan {
         id: TutorialStepIds.coreCompleteQuest,
         chapterId: TutorialModuleIds.core,
         title: 'Следующее действие',
+        // Прежний текст просил квест не закрывать — и обучение заканчивалось
+        // до того, как петля «действие → опыт → рост» хоть раз замкнулась.
+        // Заставлять отмечать невыполненное нельзя, поэтому приглашаем и
+        // говорим, что произойдёт. Если пользователь закроет квест прямо
+        // сейчас, шаг завершится сам: см.
+        // AppState._completeCoreTutorialAfterFirstAction.
         body:
-            'Вот что можно сделать следующим. Завершать квест сейчас не нужно.',
+            'Вот что можно сделать следующим. Закрой квест, когда выполнишь '
+            'его, — приложение начислит опыт и поднимет навык.',
         primaryLabel: 'Понятно',
         presentation: GuidedTourPresentation.spotlight,
         anchorId: TutorialAnchorId.actNextAction,
@@ -217,15 +238,18 @@ class GuidedTourPlan {
       presentation: GuidedTourPresentation.spotlight,
       anchorId: TutorialAnchorId.actInbox,
       destination: GuidedTourDestination.act,
-      missingTargetPolicy: TutorialMissingTargetPolicy.useParentAnchor,
-      parentAnchorId: TutorialAnchorId.actNextAction,
+      // Запасной якорь подсвечивал соседнюю область, в которой Задачника
+      // нет: пользователь видел выделение с заголовком «Задачник» и пустоту
+      // внутри. Если цели на экране нет — шаг пропускается.
+      missingTargetPolicy: TutorialMissingTargetPolicy.skip,
     ),
     const GuidedTourStep(
       id: 'tour.act.context',
       chapterId: TutorialModuleIds.act,
-      title: 'Вернуться без перегруза',
+      title: 'После паузы',
       body:
-          'После паузы приложение кратко напомнит контекст. Импульс отражает только реальные завершённые действия.',
+          'Если вернуться через несколько дней, здесь появится напоминание, '
+          'на чём ты остановился, и список последних закрытых квестов.',
       primaryLabel: 'К карте',
       presentation: GuidedTourPresentation.coachCard,
       anchorId: TutorialAnchorId.actNextAction,
@@ -304,8 +328,10 @@ class GuidedTourPlan {
     GuidedTourStep(
       id: 'tour.statistics.summary',
       chapterId: TutorialModuleIds.stats,
-      title: 'Смотри на общую картину',
-      body: 'Не нужно следить за каждым графиком. Одного обзора достаточно.',
+      title: 'Что показывает Рост',
+      body:
+          'Опыт за сегодня и за неделю, какие навыки растут быстрее и какие '
+          'квесты закрыты. Отдельные экраны с деталями открываются отсюда.',
       primaryLabel: 'К трофеям',
       presentation: GuidedTourPresentation.spotlight,
       anchorId: TutorialAnchorId.statisticsSummary,
@@ -330,9 +356,10 @@ class GuidedTourPlan {
     GuidedTourStep(
       id: 'tour.trophies.summary',
       chapterId: TutorialModuleIds.trophies,
-      title: 'Обратная связь после действий',
+      title: 'Откуда берутся трофеи',
       body:
-          'Эффекты и сундуки появляются из реального прогресса. Это не новый список дел.',
+          'Сундуки и эффекты открываются за уже закрытые квесты и серии дней. '
+          'Отдельно ничего выполнять не нужно.',
       primaryLabel: 'К профилю',
       presentation: GuidedTourPresentation.spotlight,
       anchorId: TutorialAnchorId.trophiesSummary,

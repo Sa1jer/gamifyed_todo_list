@@ -583,6 +583,9 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
       txt: txt,
       sub: sub,
       bdr: bdr,
+      // Название — главное поле формы, но оно было в одну строку, а цель
+      // под ним — в две. Второстепенное поле выглядело важнее первого.
+      min: 2,
       fieldKey: const ValueKey('add-skill-name-field'),
       onChanged: (_) {
         if (_nameError != null) setState(() => _nameError = null);
@@ -599,7 +602,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
       txt: txt,
       sub: sub,
       bdr: bdr,
-      min: 2,
+      min: 1,
       fieldKey: const ValueKey('add-skill-goal-field'),
     );
 

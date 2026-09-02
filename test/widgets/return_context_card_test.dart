@@ -82,6 +82,52 @@ void main() {
     );
   }
 
+  testWidgets('mobile card stays compact without losing touch targets', (
+    WidgetTester tester,
+  ) async {
+    // На телефоне карточка занимала 346 px: плотная раскладка включалась
+    // только на десктопе, а три кнопки переносились на две строки.
+    tester.view.physicalSize = const Size(393, 852);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: theme(Brightness.dark),
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ReturnContextCard(
+              candidate: candidate(),
+              momentum: null,
+              isDark: true,
+              desktop: false,
+              reducedMotion: true,
+              onContinue: () {},
+              onAnotherAction: () {},
+              onDismiss: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final card = find.byKey(const ValueKey('return-context-card'));
+    expect(tester.getSize(card).height, lessThan(260));
+    for (final key in [
+      'return-context-continue',
+      'return-context-another',
+      'return-context-dismiss',
+    ]) {
+      expect(
+        tester.getSize(find.byKey(ValueKey(key))).height,
+        greaterThanOrEqualTo(48),
+        reason: key,
+      );
+    }
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('renders reliable rows and omits unavailable evidence', (
     tester,
   ) async {

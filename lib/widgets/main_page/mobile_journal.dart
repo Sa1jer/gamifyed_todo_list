@@ -70,6 +70,11 @@ class _MobileActJournal extends StatefulWidget {
 class _MobileActJournalState extends State<_MobileActJournal> {
   bool _inboxExpanded = false;
   String? _nextActionOverrideTaskId;
+
+  /// Подсказка скрыта на время сессии: «скрыть» здесь означает «не мешай
+  /// сейчас», а не «выключи навсегда». После перезапуска она возвращается.
+  bool _nextActionHidden = false;
+  bool _addSkillPressed = false;
   _MobileSkillTransitionPhase _skillTransition =
       _MobileSkillTransitionPhase.idle;
   String? _transitionSkillId;
@@ -167,44 +172,62 @@ class _MobileActJournalState extends State<_MobileActJournal> {
   }
 
   Widget _buildOverviewWithDock(BuildContext context, AppState state) {
-    final inboxCount = state.inboxTasks.where((task) => !task.isDone).length;
     return KeyedSubtree(
       key: const ValueKey('mobile-skill-overview-with-inbox-dock'),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          // Keep enough room for the overview when the keyboard shortens the
-          // workspace. The Inbox owns only its local, upward-growing region.
-          final maxInboxContentHeight = math.max(
-            120.0,
-            math.min(430.0, constraints.maxHeight - 216.0),
-          );
-          return Column(
-            children: [
-              Expanded(child: _buildOverview(context, state)),
-              Container(
-                key: const ValueKey('mobile-inbox-dock-divider'),
-                height: 1,
-                color: _MobileJournalTokens.outline(
-                  state.isDark,
-                ).withAlpha(state.isDark ? 110 : 90),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: _MobileInboxAccordion(
-                  key: widget.inboxTutorialKey,
-                  expanded: _inboxExpanded,
-                  taskCount: inboxCount,
-                  maxContentHeight: maxInboxContentHeight,
-                  isDark: state.isDark,
-                  onToggle: () =>
-                      setState(() => _inboxExpanded = !_inboxExpanded),
-                  onComplete: widget.onComplete,
-                ),
-              ),
-            ],
-          );
-        },
+      child: _withInboxDock(
+        state,
+        _buildOverview(context, state),
+        anchorKey: widget.inboxTutorialKey,
       ),
+    );
+  }
+
+  /// Пристыковывает Задачник снизу к любому содержимому экрана «Сейчас».
+  ///
+  /// Раньше док жил только на обзоре, и выбор навыка убирал его целиком.
+  /// Для surface быстрого захвата это противоречие: бытовое дело чаще всего
+  /// и вспоминается посреди работы над навыком. Плюс тур наводился на
+  /// исчезнувший якорь и подсвечивал пустоту.
+  /// [anchorKey] — якорь тура. Его несёт только док обзора: во время
+  /// перехода между обзором и фокусом оба существуют один кадр, а GlobalKey
+  /// может быть в дереве лишь однажды. Шаг тура про Задачник в фокус-режиме
+  /// просто пропускается — цели на этом экране у него нет.
+  Widget _withInboxDock(AppState state, Widget content, {Key? anchorKey}) {
+    final inboxCount = state.inboxTasks.where((task) => !task.isDone).length;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Keep enough room for the content when the keyboard shortens the
+        // workspace. The Inbox owns only its local, upward-growing region.
+        final maxInboxContentHeight = math.max(
+          120.0,
+          math.min(430.0, constraints.maxHeight - 216.0),
+        );
+        return Column(
+          children: [
+            Expanded(child: content),
+            Container(
+              key: const ValueKey('mobile-inbox-dock-divider'),
+              height: 1,
+              color: _MobileJournalTokens.outline(
+                state.isDark,
+              ).withAlpha(state.isDark ? 110 : 90),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: _MobileInboxAccordion(
+                key: anchorKey,
+                expanded: _inboxExpanded,
+                taskCount: inboxCount,
+                maxContentHeight: maxInboxContentHeight,
+                isDark: state.isDark,
+                onToggle: () =>
+                    setState(() => _inboxExpanded = !_inboxExpanded),
+                onComplete: widget.onComplete,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -223,12 +246,20 @@ class _MobileActJournalState extends State<_MobileActJournal> {
       _skillTransition = _MobileSkillTransitionPhase.opening;
     });
     if (!reducedMotion) {
-      await Future<void>.delayed(const Duration(milliseconds: 180));
+      // Ждём ровно столько, сколько длится уходящая анимация обзора.
+      // Прежние 180 мс были магическим числом и расходились с реальной
+      // длительностью — переход дёргался уже на этом стыке.
+      await Future<void>.delayed(_motionDuration(context));
     }
     if (!mounted || generation != _transitionGeneration) return;
+
+    // Смена выбранного навыка перестраивает весь экран: обзор сносится,
+    // впервые строится TasksPanel фокуса. Это самый тяжёлый кадр перехода,
+    // и раньше он попадал в середину анимации. Пропускаем его до того, как
+    // начнётся входящая: закрытие фокуса так и делало, открытие — нет.
     state.selectSkill(skill.id);
     if (!reducedMotion) {
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+      await WidgetsBinding.instance.endOfFrame;
     }
     if (!mounted || generation != _transitionGeneration) return;
     setState(() {
@@ -253,7 +284,7 @@ class _MobileActJournalState extends State<_MobileActJournal> {
       _skillTransition = _MobileSkillTransitionPhase.closing;
     });
     if (!reducedMotion) {
-      await Future<void>.delayed(const Duration(milliseconds: 150));
+      await Future<void>.delayed(_motionDuration(context));
     }
     if (!mounted || generation != _transitionGeneration) return;
     setState(() => _skillTransition = _MobileSkillTransitionPhase.restoring);
@@ -311,21 +342,25 @@ class _MobileActJournalState extends State<_MobileActJournal> {
                                 ),
                                 const SizedBox(height: 10),
                               ],
-                              NextActionLens(
-                                resolution: nextAction,
-                                persistenceStatus: state.persistenceStatus,
-                                isDark: isDark,
-                                onOpenTask: (candidate) => _openNextActionSkill(
-                                  state,
-                                  candidate.skill,
+                              if (!_nextActionHidden)
+                                NextActionLens(
+                                  resolution: nextAction,
+                                  persistenceStatus: state.persistenceStatus,
+                                  isDark: isDark,
+                                  onOpenTask: (candidate) =>
+                                      _openNextActionSkill(
+                                        state,
+                                        candidate.skill,
+                                      ),
+                                  onChooseTask: (taskId) => setState(
+                                    () => _nextActionOverrideTaskId = taskId,
+                                  ),
+                                  onOpenEmptySkill: (skill) =>
+                                      _openNextActionSkill(state, skill),
+                                  onCreateSkill: widget.onCreateSkill,
+                                  onHide: () =>
+                                      setState(() => _nextActionHidden = true),
                                 ),
-                                onChooseTask: (taskId) => setState(
-                                  () => _nextActionOverrideTaskId = taskId,
-                                ),
-                                onOpenEmptySkill: (skill) =>
-                                    _openNextActionSkill(state, skill),
-                                onCreateSkill: widget.onCreateSkill,
-                              ),
                             ],
                           )
                         : ReturnContextCard(
@@ -371,22 +406,45 @@ class _MobileActJournalState extends State<_MobileActJournal> {
                           key: widget.createFirstSkillButtonKey,
                           child: Tooltip(
                             message: 'Создать навык',
-                            child: FilledButton.icon(
-                              key: const ValueKey('mobile-add-skill-open'),
-                              onPressed: widget.onCreateSkill,
-                              style: FilledButton.styleFrom(
-                                minimumSize: const Size(44, 40),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                ),
-                                backgroundColor: _MobileJournalTokens.violet,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(13),
+                            // Кнопка не давала никакого отклика на нажатие:
+                            // ink-рябь Material на сплошной фиолетовой
+                            // заливке практически не видна. Listener не
+                            // участвует в арене жестов, поэтому сам тап
+                            // по-прежнему достаётся кнопке.
+                            child: Listener(
+                              onPointerDown: (_) =>
+                                  setState(() => _addSkillPressed = true),
+                              onPointerUp: (_) =>
+                                  setState(() => _addSkillPressed = false),
+                              onPointerCancel: (_) =>
+                                  setState(() => _addSkillPressed = false),
+                              child: AnimatedScale(
+                                scale: _addSkillPressed ? 0.94 : 1,
+                                duration:
+                                    MediaQuery.disableAnimationsOf(context) ||
+                                        state.reducedMotion
+                                    ? Duration.zero
+                                    : kMotionFast,
+                                curve: kMotionCurve,
+                                child: FilledButton.icon(
+                                  key: const ValueKey('mobile-add-skill-open'),
+                                  onPressed: widget.onCreateSkill,
+                                  style: FilledButton.styleFrom(
+                                    minimumSize: const Size(48, 48),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                    ),
+                                    backgroundColor:
+                                        _MobileJournalTokens.violet,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(13),
+                                    ),
+                                  ),
+                                  icon: const Icon(Icons.add_rounded, size: 19),
+                                  label: const Text('Навык'),
                                 ),
                               ),
-                              icon: const Icon(Icons.add_rounded, size: 19),
-                              label: const Text('Навык'),
                             ),
                           ),
                         ),
@@ -539,19 +597,25 @@ class _MobileActJournalState extends State<_MobileActJournal> {
               duration: _motionDuration(context),
               curve: _MobileJournalTokens.curve,
               scale: closing ? 0.97 : 1,
-              child: SingleChildScrollView(
-                key: ValueKey('mobile-journal-focus-${skill.id}'),
-                keyboardDismissBehavior:
-                    ScrollViewKeyboardDismissBehavior.onDrag,
-                padding: const EdgeInsets.only(bottom: 12),
-                child: TasksPanel(
-                  onComplete: widget.onComplete,
-                  onMinimumAction: widget.onMinimumAction,
-                  mobileFocus: true,
-                  onMobileOverview: () => _closeSkillFocus(state, skill),
-                  onMobileDeleteSkill: () =>
-                      _confirmDeleteSkill(context, state: state, skill: skill),
-                  createFirstQuestButtonKey: widget.createFirstQuestButtonKey,
+              child: _withInboxDock(
+                state,
+                SingleChildScrollView(
+                  key: ValueKey('mobile-journal-focus-${skill.id}'),
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: TasksPanel(
+                    onComplete: widget.onComplete,
+                    onMinimumAction: widget.onMinimumAction,
+                    mobileFocus: true,
+                    onMobileOverview: () => _closeSkillFocus(state, skill),
+                    onMobileDeleteSkill: () => _confirmDeleteSkill(
+                      context,
+                      state: state,
+                      skill: skill,
+                    ),
+                    createFirstQuestButtonKey: widget.createFirstQuestButtonKey,
+                  ),
                 ),
               ),
             ),

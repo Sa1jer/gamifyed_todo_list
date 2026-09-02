@@ -54,3 +54,22 @@ class CommittedSnapshot {
   final StorageSnapshot snapshot;
   final SnapshotLoadSource source;
 }
+
+/// Почему файл переноса не подошёл.
+enum UserDataImportFailure {
+  /// Файл не читается как снапшот: не JSON, чужая структура, битые данные.
+  unreadable,
+
+  /// Файл собран приложением другой версии схемы.
+  versionMismatch,
+}
+
+class UserDataImportException implements Exception {
+  const UserDataImportException(this.reason, [this.fileVersion]);
+
+  final UserDataImportFailure reason;
+  final Object? fileVersion;
+
+  @override
+  String toString() => 'UserDataImportException($reason, $fileVersion)';
+}

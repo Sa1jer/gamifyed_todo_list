@@ -24,6 +24,7 @@ class GuidedTourHost extends StatefulWidget {
     required this.onPrimary,
     required this.onDismiss,
     required this.onPrevious,
+    required this.onSkip,
     this.blocked = false,
     this.reservedRegions = const [],
   });
@@ -38,6 +39,7 @@ class GuidedTourHost extends StatefulWidget {
   final GuidedTourStepCallback onPrimary;
   final GuidedTourStepCallback onDismiss;
   final GuidedTourStepCallback onPrevious;
+  final GuidedTourStepCallback onSkip;
 
   @override
   State<GuidedTourHost> createState() => _GuidedTourHostState();
@@ -283,6 +285,8 @@ class _GuidedTourHostState extends State<GuidedTourHost>
                   mobile: widget.mobile,
                   reservedRegions: widget.reservedRegions,
                   canGoPrevious: canGoPrevious,
+                  abandoned: widget.controller.currentStepAbandoned,
+                  onSkip: () => unawaited(_runAction(widget.onSkip, step)),
                   onPrimary: () =>
                       unawaited(_runAction(widget.onPrimary, step)),
                   onPrevious: canGoPrevious
@@ -310,8 +314,10 @@ class _GuidedTourOverlay extends StatelessWidget {
     required this.mobile,
     required this.reservedRegions,
     required this.canGoPrevious,
+    required this.abandoned,
     required this.onPrimary,
     required this.onDismiss,
+    required this.onSkip,
     this.onPrevious,
   });
 
@@ -323,8 +329,10 @@ class _GuidedTourOverlay extends StatelessWidget {
   final bool mobile;
   final List<Rect> reservedRegions;
   final bool canGoPrevious;
+  final bool abandoned;
   final VoidCallback onPrimary;
   final VoidCallback onDismiss;
+  final VoidCallback onSkip;
   final VoidCallback? onPrevious;
 
   @override
@@ -388,9 +396,11 @@ class _GuidedTourOverlay extends StatelessWidget {
                   totalSteps: totalSteps,
                   isDark: isDark,
                   canGoPrevious: canGoPrevious,
+                  abandoned: abandoned,
                   onPrimary: onPrimary,
                   onPrevious: onPrevious,
                   onDismiss: onDismiss,
+                  onSkip: onSkip,
                 ),
               ),
             ),
@@ -440,8 +450,10 @@ class _GuidedTourCard extends StatelessWidget {
     required this.totalSteps,
     required this.isDark,
     required this.canGoPrevious,
+    required this.abandoned,
     required this.onPrimary,
     required this.onDismiss,
+    required this.onSkip,
     this.onPrevious,
   });
 
@@ -450,8 +462,10 @@ class _GuidedTourCard extends StatelessWidget {
   final int totalSteps;
   final bool isDark;
   final bool canGoPrevious;
+  final bool abandoned;
   final VoidCallback onPrimary;
   final VoidCallback onDismiss;
+  final VoidCallback onSkip;
   final VoidCallback? onPrevious;
 
   @override
@@ -530,7 +544,10 @@ class _GuidedTourCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                step.body,
+                abandoned && step.abandonedBody != null
+                    ? step.abandonedBody!
+                    : step.body,
+                key: const ValueKey('guided-tour-body'),
                 style: TextStyle(
                   color: secondary,
                   fontSize: 13.5,
@@ -549,6 +566,14 @@ class _GuidedTourCard extends StatelessWidget {
                       key: const ValueKey('guided-tour-previous'),
                       onPressed: onPrevious,
                       child: const Text('Назад'),
+                    ),
+                  // Появляется только после брошенного действия: до этого
+                  // предлагать пропуск незачем.
+                  if (abandoned && step.abandonedBody != null)
+                    TextButton(
+                      key: const ValueKey('guided-tour-skip'),
+                      onPressed: onSkip,
+                      child: const Text('Пропустить'),
                     ),
                   FilledButton(
                     key: const ValueKey('guided-tour-primary'),

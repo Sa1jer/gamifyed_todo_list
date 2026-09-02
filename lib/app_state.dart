@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -897,6 +898,61 @@ class AppState extends ChangeNotifier {
 
   void replayFirstRunTutorial() {
     startTutorialModule(TutorialModuleIds.core);
+  }
+
+  /// Доступен ли перенос данных файлом.
+  ///
+  /// Legacy-хранилище без снапшотов переносить нечем: у него нет единого
+  /// документа состояния.
+  bool get supportsDataTransfer => _storage.supportsSnapshots;
+
+  /// Весь профиль пользователя одним JSON-документом.
+  String exportUserData() =>
+      _storage.encodeSnapshotForTransfer(_createStorageSnapshot());
+
+  /// Заменяет все данные содержимым файла переноса.
+  ///
+  /// Разбор идёт первым: на чужом или битом файле бросается исключение и
+  /// ничего не перезаписывается. Дальше снапшот кладётся в хранилище и
+  /// читается обычным путём загрузки — тем самым, что работает при старте, со
+  /// всеми миграциями, нормализацией обучения и починкой служебных сущностей.
+  /// Своей копии этой логики здесь нет намеренно.
+  Future<bool> importUserData(String raw) async {
+    final StorageSnapshot snapshot;
+    try {
+      // Версию проверяем отдельно и до разбора: пользователю важно
+      // различать «файл не наш» и «файл от другой версии приложения».
+      final probe = jsonDecode(raw);
+      final fileVersion = probe is Map ? probe['version'] : null;
+      // Несовпадение версий — только когда версия в файле есть и она другая.
+      // Отсутствие поля означает, что файл вообще не наш.
+      if (fileVersion is int && fileVersion != kStorageSnapshotVersion) {
+        throw UserDataImportException(
+          UserDataImportFailure.versionMismatch,
+          fileVersion,
+        );
+      }
+      snapshot = _storage.decodeSnapshotForTransfer(raw);
+    } on UserDataImportException {
+      rethrow;
+    } catch (_) {
+      throw const UserDataImportException(UserDataImportFailure.unreadable);
+    }
+    await _storage.saveSnapshot(snapshot);
+    final loaded = await retryLoadSavedData();
+    if (loaded) _notifyViewStateChanged();
+    return loaded;
+  }
+
+  /// Возвращает пользователя на первый экран Welcome.
+  ///
+  /// Ничего кроме флага не трогает: навыки, квесты и прогресс остаются на
+  /// месте, поэтому экран можно посмотреть на заполненном аккаунте.
+  void replayWelcome() {
+    if (!_welcomeSeen) return;
+    _welcomeSeen = false;
+    _requestObservedImmediateSave();
+    _notifyViewStateChanged();
   }
 
   /// Leaves the first-run Welcome immediately and starts the real Core flow.

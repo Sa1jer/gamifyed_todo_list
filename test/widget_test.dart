@@ -266,6 +266,212 @@ bool _hasContainerWithColor(WidgetTester tester, Color color) {
 }
 
 void main() {
+  testWidgets('mobile next action panel is compact and can be hidden', (
+    WidgetTester tester,
+  ) async {
+    // Панель занимала 351 px из 852 — больше трети экрана телефона под одну
+    // подсказку. Заголовок, чип причины и три полноразмерные кнопки.
+    tester.view.physicalSize = const Size(393, 852);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = InMemoryStorageService()
+      .._onboardingSeen = true
+      .._welcomeSeen = true
+      ..skills = [
+        Skill(
+          id: 'yt',
+          name: 'YouTube',
+          goal: 'Видео про сборки',
+          color: const Color(0xFFFF3B30),
+          icon: Icons.tv_rounded,
+        ),
+      ]
+      ..tasks = [
+        Task(
+          id: 'q1',
+          title: 'Записать аудио по сценарию.',
+          skillId: 'yt',
+          xpReward: 100,
+          type: TaskType.shortTerm,
+        ),
+      ];
+    await storage.init();
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    final lens = find.byKey(const ValueKey('next-action-lens'));
+    expect(lens, findsOneWidget);
+    expect(
+      tester.getSize(lens).height,
+      lessThan(200),
+      reason: 'панель должна оставаться компактной',
+    );
+
+    // Зоны нажатия не приносятся в жертву высоте.
+    for (final key in [
+      'next-action-open-task',
+      'next-action-choose-another',
+      'next-action-boot-entry',
+    ]) {
+      expect(
+        tester.getSize(find.byKey(ValueKey(key))).height,
+        greaterThanOrEqualTo(48),
+        reason: key,
+      );
+    }
+
+    await tester.tap(find.byKey(const ValueKey('next-action-hide')));
+    await tester.pumpAndSettle();
+    expect(lens, findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets('wide profile splits identity and settings into two columns', (
+    WidgetTester tester,
+  ) async {
+    // Раньше окно было 460×680 при доступных 1320×820: шапка занимала
+    // половину, а из 1198 px содержимого 857 лежали под сгибом.
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = InMemoryStorageService()
+      .._onboardingSeen = true
+      .._welcomeSeen = true
+      ..skills = [
+        Skill(
+          id: 'axe',
+          name: 'секира',
+          goal: 'цель',
+          color: const Color(0xFF4A9EFF),
+          icon: Icons.fitness_center,
+        ),
+      ];
+    await storage.init();
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(find.text('Your Name'));
+    await tester.pumpAndSettle();
+
+    const identity = ValueKey('desktop-profile-body-scroll');
+    const settings = ValueKey('desktop-profile-settings-scroll');
+    expect(find.byKey(identity), findsOneWidget);
+    expect(find.byKey(settings), findsOneWidget);
+
+    // Колонки стоят рядом, а не одна под другой.
+    final left = tester.getRect(find.byKey(identity));
+    final right = tester.getRect(find.byKey(settings));
+    expect(left.right, lessThanOrEqualTo(right.left));
+    expect(left.top, right.top);
+
+    // Настройки — в правой колонке, путь пользователя — в левой.
+    expect(
+      find.descendant(
+        of: find.byKey(settings),
+        matching: find.text('Интерфейс'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(identity),
+        matching: find.text('Личные данные'),
+      ),
+      findsOneWidget,
+    );
+    // Левая колонка шире правой.
+    expect(left.width, greaterThan(right.width));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('narrow profile keeps a single column', (
+    WidgetTester tester,
+  ) async {
+    // На узком десктопе две колонки сжались бы в кашу.
+    tester.view.physicalSize = const Size(900, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = InMemoryStorageService()
+      .._onboardingSeen = true
+      .._welcomeSeen = true;
+    await storage.init();
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(find.text('Your Name'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('desktop-profile-body-scroll')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('desktop-profile-settings-scroll')),
+      findsNothing,
+    );
+    // Настройки не пропали — они ниже по той же колонке.
+    await tester.scrollUntilVisible(
+      find.text('Данные'),
+      200,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const ValueKey('desktop-profile-body-scroll')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    expect(find.text('Данные'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets('cancelling a tour action offers a way out', (
+    WidgetTester tester,
+  ) async {
+    // Отмена диалога возвращала на побайтово ту же карточку: ни отклика,
+    // ни подсказки. Единственными выходами были «создать» и «закрыть тур».
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = InMemoryStorageService();
+    await storage.init();
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(find.byType(FilledButton).first, warnIfMissed: false);
+    await tester.pumpAndSettle();
+
+    String body() => tester
+        .widget<Text>(find.byKey(const ValueKey('guided-tour-body')))
+        .data!;
+
+    expect(find.text('Первый навык'), findsOneWidget);
+    final original = body();
+    expect(find.byKey(const ValueKey('guided-tour-skip')), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('guided-tour-primary')));
+    await tester.pumpAndSettle();
+    expect(find.byType(Dialog), findsWidgets);
+
+    await tester.tap(find.text('Отмена').last, warnIfMissed: false);
+    await tester.pumpAndSettle();
+
+    expect(body(), isNot(original));
+    expect(body(), contains('в любой момент'));
+    final skip = find.byKey(const ValueKey('guided-tour-skip'));
+    expect(skip, findsOneWidget);
+
+    await tester.tap(skip);
+    await tester.pumpAndSettle();
+    expect(find.text('Первый навык'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('quest reward keeps its gold pill', (WidgetTester tester) async {
     // Подложка под наградой — решение владельца. Значение XP и пилюля идут
     // одним блестящим жёлтым #FFCF40; читаемости это стоит контраста, но
@@ -1169,10 +1375,11 @@ void main() {
     final detailEntries = <(String, String)>[
       ('Победы дня', 'daily'),
       ('Неделя', 'weekly'),
-      ('Летопись', 'timeline'),
+      ('Летопись опыта', 'timeline'),
       ('Срез роста', 'growth'),
       ('Календарь квестов', 'calendar'),
-      ('Журнал XP', 'xpLog'),
+      // «Журнал XP» показывал тот же список закрытых квестов, что и
+      // «Летопись», отличаясь только заголовком и цветом иконки.
       ('Достижения', 'achievements'),
       ('Сопротивление', 'resistance'),
     ];
@@ -2610,7 +2817,12 @@ void main() {
       findsOneWidget,
     );
 
-    await tester.pump(const Duration(milliseconds: 181));
+    // Уходящая анимация обзора длится столько же, сколько сама анимация
+    // (220 мс), а не магические 180. После неё — ещё кадр на построение
+    // фокуса: смена навыка перестраивает экран целиком, и раньше этот
+    // тяжёлый кадр попадал в середину перехода.
+    await tester.pump(const Duration(milliseconds: 221));
+    await tester.pump();
     expect(
       find.byKey(const ValueKey('mobile-skill-focus-transition-middle')),
       findsOneWidget,
@@ -2703,10 +2915,12 @@ void main() {
     final body = find.byKey(const ValueKey('desktop-profile-body-scroll'));
     expect(hero, findsOneWidget);
     expect(body, findsOneWidget);
+    // Именно одна прокручиваемая область тела: у каждого TextField есть
+    // собственный внутренний Scrollable, считать их здесь нечего.
     expect(
       find.descendant(
         of: find.byType(ProfileDialog),
-        matching: find.byType(Scrollable),
+        matching: find.byType(ListView),
       ),
       findsOneWidget,
     );
@@ -3495,7 +3709,7 @@ void main() {
     await tester.tap(find.text('Открыть рост'));
     await tester.pumpAndSettle();
     expect(find.byType(MobileStatisticsPage), findsOneWidget);
-    expect(find.text('Смотри на общую картину'), findsOneWidget);
+    expect(find.text('Что показывает Рост'), findsOneWidget);
 
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
@@ -3587,7 +3801,7 @@ void main() {
     }
 
     await advance('Задачник', 'Дальше');
-    await advance('Вернуться без перегруза', 'К карте');
+    await advance('После паузы', 'К карте');
     await advance('Дорожная карта', 'Открыть карту');
     expect(find.byKey(const ValueKey('mastery-workspace')), findsOneWidget);
     await advance('Путь навыка', 'Дальше');
@@ -3597,13 +3811,13 @@ void main() {
       find.byKey(const ValueKey('desktop-statistics-workspace')),
       findsOneWidget,
     );
-    await advance('Смотри на общую картину', 'К трофеям');
+    await advance('Что показывает Рост', 'К трофеям');
     await advance('Трофеи', 'Открыть трофеи');
     expect(
       find.byKey(const ValueKey('desktop-rewards-workspace')),
       findsOneWidget,
     );
-    await advance('Обратная связь после действий', 'К профилю');
+    await advance('Откуда берутся трофеи', 'К профилю');
     await advance('Профиль', 'Открыть профиль');
     expect(find.byType(ProfileDialog), findsOneWidget);
     await advance('Готово', 'Завершить');
@@ -4393,7 +4607,12 @@ void main() {
       find.byKey(const ValueKey('mobile-skill-card-opening-mobile-experience')),
       findsOneWidget,
     );
-    await tester.pump(const Duration(milliseconds: 181));
+    // Уходящая анимация обзора длится столько же, сколько сама анимация
+    // (220 мс), а не магические 180. После неё — ещё кадр на построение
+    // фокуса: смена навыка перестраивает экран целиком, и раньше этот
+    // тяжёлый кадр попадал в середину перехода.
+    await tester.pump(const Duration(milliseconds: 221));
+    await tester.pump();
     expect(
       find.byKey(const ValueKey('mobile-act-focus-mobile-experience')),
       findsOneWidget,
@@ -4414,7 +4633,14 @@ void main() {
       findsOneWidget,
     );
     expect(find.byKey(const ValueKey('mobile-momentum-row')), findsNothing);
-    expect(find.text('Задачник'), findsNothing);
+    // Задачник остаётся пристыкованным и в фокусе навыка: это surface
+    // быстрого захвата, и бытовое дело чаще всего вспоминается как раз
+    // посреди работы над навыком.
+    expect(find.text('Задачник'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('mobile-inbox-dock-divider')),
+      findsOneWidget,
+    );
     expect(find.byKey(const ValueKey('next-action-lens')), findsNothing);
     expect(
       find.byKey(
@@ -4555,7 +4781,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.byKey(const ValueKey('mobile-act-overview')), findsNothing);
-    await tester.pump(const Duration(milliseconds: 151));
+    await tester.pump(const Duration(milliseconds: 221));
     expect(find.byKey(const ValueKey('mobile-act-overview')), findsOneWidget);
     await tester.pumpAndSettle();
     expect(

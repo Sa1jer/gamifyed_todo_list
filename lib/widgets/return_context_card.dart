@@ -36,7 +36,11 @@ class ReturnContextCard extends StatelessWidget {
       desktop: desktop,
     );
     final textScale = MediaQuery.textScalerOf(context).scale(1);
-    final dense = desktop && textScale < 1.6;
+    // Раньше плотная раскладка включалась только на десктопе, и телефон —
+    // где места меньше всего — получал самые крупные отступы. Плотность
+    // отступает только под увеличенный шрифт.
+    final dense = textScale < 1.6;
+    final denseColors = colors.withDense(dense);
     final semantics = <String>[
       'Продолжить путь',
       'Навык: ${candidate.skillName}',
@@ -56,7 +60,7 @@ class ReturnContextCard extends StatelessWidget {
             ? Duration.zero
             : const Duration(milliseconds: 220),
         curve: Curves.easeOutCubic,
-        padding: EdgeInsets.all(dense ? 16 : 18),
+        padding: EdgeInsets.all(dense ? 12 : 18),
         decoration: BoxDecoration(
           color: colors.surface,
           borderRadius: BorderRadius.circular(desktop ? 16 : 22),
@@ -69,11 +73,11 @@ class ReturnContextCard extends StatelessWidget {
             final content = _ReturnContextContent(
               candidate: candidate,
               momentum: momentum,
-              colors: colors,
+              colors: denseColors,
               dense: dense,
             );
             final actions = _ReturnContextActions(
-              colors: colors,
+              colors: denseColors,
               stackPrimary: !desktop && constraints.maxWidth < 350,
               onContinue: onContinue,
               onAnotherAction: onAnotherAction,
@@ -85,7 +89,7 @@ class ReturnContextCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   content,
-                  SizedBox(height: dense ? 14 : 18),
+                  SizedBox(height: dense ? 10 : 18),
                   actions,
                 ],
               );
@@ -128,31 +132,35 @@ class _ReturnContextContent extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: dense ? 38 : 44,
-              height: dense ? 38 : 44,
+              width: dense ? 32 : 44,
+              height: dense ? 32 : 44,
               decoration: BoxDecoration(
                 color: colors.accent.withValues(alpha: 0.13),
-                borderRadius: BorderRadius.circular(dense ? 11 : 13),
+                borderRadius: BorderRadius.circular(dense ? 10 : 13),
               ),
               child: Icon(
                 Icons.route_rounded,
                 color: colors.accent,
-                size: dense ? 21 : 24,
+                size: dense ? 18 : 24,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'Продолжить путь',
-                    style: context.appTextTheme.titleLarge?.copyWith(
-                      color: colors.text,
-                      fontWeight: FontWeight.w900,
-                    ),
+                    style:
+                        (dense
+                                ? context.appTextTheme.titleSmall
+                                : context.appTextTheme.titleLarge)
+                            ?.copyWith(
+                              color: colors.text,
+                              fontWeight: FontWeight.w900,
+                            ),
                   ),
-                  const SizedBox(height: 3),
+                  SizedBox(height: dense ? 1 : 3),
                   Text(
                     candidate.skillName,
                     key: const ValueKey('return-context-skill'),
@@ -166,7 +174,7 @@ class _ReturnContextContent extends StatelessWidget {
             ),
           ],
         ),
-        SizedBox(height: dense ? 12 : 16),
+        SizedBox(height: dense ? 8 : 16),
         if (candidate.stageTitle case final stage?) ...[
           _ReturnContextRow(
             key: const ValueKey('return-context-stage'),
@@ -174,7 +182,7 @@ class _ReturnContextContent extends StatelessWidget {
             value: stage,
             colors: colors,
           ),
-          SizedBox(height: dense ? 7 : 9),
+          SizedBox(height: dense ? 5 : 9),
         ],
         if (candidate.lastResult case final result?) ...[
           _ReturnContextRow(
@@ -183,7 +191,7 @@ class _ReturnContextContent extends StatelessWidget {
             value: result,
             colors: colors,
           ),
-          SizedBox(height: dense ? 7 : 9),
+          SizedBox(height: dense ? 5 : 9),
         ],
         if (momentum != null) ...[
           MomentumEvidenceLine(
@@ -192,7 +200,7 @@ class _ReturnContextContent extends StatelessWidget {
             desktop: colors.desktop,
             compact: dense,
           ),
-          SizedBox(height: dense ? 9 : 11),
+          SizedBox(height: dense ? 7 : 11),
         ],
         _ReturnContextRow(
           key: const ValueKey('return-context-next-action'),
@@ -238,7 +246,11 @@ class _ReturnContextRow extends StatelessWidget {
           ),
         ],
       ),
-      style: context.appTextTheme.bodyMedium,
+      style: colors.dense
+          ? context.appTextTheme.bodySmall
+          : context.appTextTheme.bodyMedium,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
     );
   }
 }
@@ -267,39 +279,89 @@ class _ReturnContextActions extends StatelessWidget {
         minimumSize: const Size(0, 48),
         backgroundColor: colors.accent,
         foregroundColor: colors.onAccent,
-        padding: const EdgeInsets.symmetric(horizontal: 18),
+        padding: EdgeInsets.symmetric(horizontal: colors.dense ? 12 : 18),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
       ),
-      icon: const Icon(Icons.arrow_forward_rounded, size: 19),
-      label: const Text('Продолжить'),
-    );
-    final secondary = OutlinedButton(
-      key: const ValueKey('return-context-another'),
-      onPressed: onAnotherAction,
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size(0, 48),
-        foregroundColor: colors.text,
-        side: BorderSide(color: colors.border),
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
+      icon: Icon(Icons.arrow_forward_rounded, size: colors.dense ? 17 : 19),
+      label: const Text(
+        'Продолжить',
+        maxLines: 1,
+        softWrap: false,
+        overflow: TextOverflow.fade,
       ),
-      child: const Text('Другой шаг'),
     );
+    // В плотном ряду подпись «Другой шаг» переносилась на две строки и
+    // растягивала весь ряд — оставляем значок с подсказкой.
+    final secondary = colors.dense
+        ? SizedBox(
+            width: 48,
+            height: 48,
+            child: OutlinedButton(
+              key: const ValueKey('return-context-another'),
+              onPressed: onAnotherAction,
+              style: OutlinedButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: const Size(48, 48),
+                foregroundColor: colors.text,
+                side: BorderSide(color: colors.border),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(13),
+                ),
+              ),
+              child: const Tooltip(
+                message: 'Другой шаг',
+                child: Icon(Icons.swap_horiz_rounded, size: 18),
+              ),
+            ),
+          )
+        : OutlinedButton(
+            key: const ValueKey('return-context-another'),
+            onPressed: onAnotherAction,
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(0, 48),
+              foregroundColor: colors.text,
+              side: BorderSide(color: colors.border),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(13),
+              ),
+            ),
+            child: const Text('Другой шаг'),
+          );
     final dismiss = TextButton(
       key: const ValueKey('return-context-dismiss'),
       onPressed: onDismiss,
       style: TextButton.styleFrom(
         minimumSize: const Size(0, 48),
         foregroundColor: colors.muted,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: EdgeInsets.symmetric(horizontal: colors.dense ? 8 : 12),
       ),
-      child: const Text('Не сейчас'),
+      child: const Text(
+        'Не сейчас',
+        maxLines: 1,
+        softWrap: false,
+        overflow: TextOverflow.fade,
+      ),
     );
 
     if (stackPrimary) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [primary, const SizedBox(height: 8), secondary, dismiss],
+      );
+    }
+    if (colors.dense) {
+      // Три кнопки в Wrap переносились на две строки и стоили карточке
+      // почти 90 px. В один ряд они помещаются, если основное действие
+      // забирает остаток ширины.
+      return Row(
+        children: [
+          Expanded(child: primary),
+          const SizedBox(width: 8),
+          secondary,
+          const SizedBox(width: 4),
+          dismiss,
+        ],
       );
     }
     return Wrap(
@@ -322,6 +384,7 @@ class _ReturnContextColors {
     required this.onAccent,
     required this.isDark,
     required this.desktop,
+    this.dense = true,
   });
 
   final Color surface;
@@ -332,6 +395,21 @@ class _ReturnContextColors {
   final Color onAccent;
   final bool isDark;
   final bool desktop;
+
+  /// Плотная раскладка: влияет и на кегль строк «этап / результат / шаг».
+  final bool dense;
+
+  _ReturnContextColors withDense(bool value) => _ReturnContextColors(
+    surface: surface,
+    border: border,
+    text: text,
+    muted: muted,
+    accent: accent,
+    onAccent: onAccent,
+    isDark: isDark,
+    desktop: desktop,
+    dense: value,
+  );
 
   factory _ReturnContextColors.resolve({
     required bool isDark,

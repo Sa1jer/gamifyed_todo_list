@@ -99,10 +99,10 @@ class GuidedTourAppCoordinator {
     if (controller.session?.plan.mode == GuidedTourMode.firstRunCore) {
       switch (step.id) {
         case TutorialStepIds.coreCreateSkill:
-          await onCreateSkill();
+          await _runStepAction(step, onCreateSkill);
           return;
         case TutorialStepIds.coreCreateQuest:
-          await onCreateQuest();
+          await _runStepAction(step, onCreateQuest);
           return;
         case TutorialStepIds.coreCompleteQuest:
           await onAcknowledgeNextAction();
@@ -111,6 +111,24 @@ class GuidedTourAppCoordinator {
     }
     await navigation.advance();
   }
+
+  /// Выполняет действие шага и замечает, если пользователь его бросил.
+  ///
+  /// Признак — шаг не сменился: значит, создание отменили. Тогда карточка
+  /// подстроит текст и предложит пропустить, вместо того чтобы молча
+  /// показать себя заново.
+  Future<void> _runStepAction(
+    GuidedTourStep step,
+    FutureOr<void> Function() action,
+  ) async {
+    await action();
+    if (controller.currentStep?.id == step.id) {
+      controller.markStepAbandoned(step.id);
+    }
+  }
+
+  /// Пропустить шаг, действие которого пользователь решил не выполнять.
+  Future<void> skipAbandonedStep() => navigation.advance();
 
   Future<void> dismiss(GuidedTourStep step) async {
     if (controller.session?.plan.mode == GuidedTourMode.firstRunCore) {

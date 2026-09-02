@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../models.dart';
 import '../app_state.dart';
+import '../storage_snapshot.dart';
+import '../user_data_transfer.dart';
 import '../tutorial/guided_tour_session.dart';
 import '../utils.dart';
 import 'character_timeline_dialog.dart';
@@ -44,6 +46,7 @@ class _ProfileDialogState extends State<ProfileDialog> {
   late TextEditingController _ageCtrl;
   bool _editingName = false;
   bool _didInitControllers = false;
+  bool _transferBusy = false;
 
   @override
   void initState() {
@@ -117,52 +120,111 @@ class _ProfileDialogState extends State<ProfileDialog> {
       );
     }
 
+    // Ширина окна берётся от экрана, а не задаётся жёстко: две колонки на
+    // узком десктопе сжались бы в кашу. Порог — 900 px содержимого плюс
+    // 120 px insetPadding.
+    final available = MediaQuery.sizeOf(context);
+    final wide = available.width - 120 >= 900;
+
+    // «Кто ты» — то, что про пользователя и его путь.
+    final identityColumn = <Widget>[
+      _buildPersonalInfo(context, s, p, isDark, txt, sub, bdr),
+      const SizedBox(height: 24),
+      SubLbl('Прогресс', sub),
+      const SizedBox(height: 10),
+      _buildTotalXP(context, p, txt, sub),
+      const SizedBox(height: 4),
+      Text(
+        'Изучаю ${s.activeSkillCount} ${_skillWord(s.activeSkillCount)}',
+        style: TextStyle(color: sub, fontSize: 13),
+      ),
+      const SizedBox(height: 10),
+      _ProfileTimelineButton(
+        state: s,
+        isDark: isDark,
+        txt: txt,
+        sub: sub,
+        fullScreen: widget.fullScreen,
+      ),
+      const SizedBox(height: 24),
+      _buildSkillsSection(context, s, isDark, txt, sub),
+    ];
+
+    // «Что можно изменить» — настройки устройства и данные.
+    final settingsColumn = <Widget>[
+      _buildInterfaceSettings(s, isDark, txt, sub, bdr),
+      const SizedBox(height: 24),
+      _buildDataTransfer(context, s, isDark, txt, sub, bdr),
+    ];
+
+    // Разделители-линии убраны: у каждой секции уже есть собственная
+    // подпись, и шесть одинаковых линий только мешали увидеть границы тем.
+    final body = wide
+        ? Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 6,
+                child: ListView(
+                  key: const ValueKey('desktop-profile-body-scroll'),
+                  padding: const EdgeInsets.fromLTRB(24, 16, 16, 24),
+                  children: identityColumn,
+                ),
+              ),
+              VerticalDivider(width: 1, thickness: 1, color: bdr),
+              Expanded(
+                flex: 4,
+                child: ListView(
+                  key: const ValueKey('desktop-profile-settings-scroll'),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 24, 24),
+                  children: settingsColumn,
+                ),
+              ),
+            ],
+          )
+        : ListView(
+            key: const ValueKey('desktop-profile-body-scroll'),
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            children: [
+              ...identityColumn,
+              const SizedBox(height: 24),
+              ...settingsColumn,
+            ],
+          );
+
     final content = ClipRRect(
       borderRadius: BorderRadius.circular(widget.fullScreen ? 0 : 20),
       child: Container(
-        width: widget.fullScreen ? double.infinity : 460,
+        width: widget.fullScreen
+            ? double.infinity
+            : wide
+            ? 900
+            : 460,
         constraints: widget.fullScreen
             ? const BoxConstraints()
-            : const BoxConstraints(maxHeight: 680),
+            // На широкой раскладке окно занимает всю доступную высоту: то,
+            // что не занято, всё равно осталось бы пустым полем вокруг
+            // диалога, а каждый лишний пиксель здесь снимает прокрутку.
+            : BoxConstraints(
+                maxHeight: wide
+                    ? (available.height - 80).clamp(560.0, 900.0)
+                    : 680,
+              ),
         color: bg,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _buildDesktopProfileHero(context, s, p, isDark, txt, sub, bdr),
-            Expanded(
-              child: ListView(
-                key: const ValueKey('desktop-profile-body-scroll'),
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-                children: [
-                  _buildTotalXP(context, p, txt, sub),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Изучаю ${s.activeSkillCount} ${_skillWord(s.activeSkillCount)}',
-                    style: TextStyle(color: sub, fontSize: 13),
-                  ),
-                  const SizedBox(height: 10),
-                  _ProfileTimelineButton(
-                    state: s,
-                    isDark: isDark,
-                    txt: txt,
-                    sub: sub,
-                    fullScreen: widget.fullScreen,
-                  ),
-                  const SizedBox(height: 18),
-                  Container(height: 1, color: bdr),
-                  const SizedBox(height: 14),
-                  _buildPersonalInfo(context, s, p, isDark, txt, sub, bdr),
-                  const SizedBox(height: 18),
-                  Container(height: 1, color: bdr),
-                  const SizedBox(height: 14),
-                  _buildInterfaceSettings(s, isDark, txt, sub, bdr),
-                  const SizedBox(height: 18),
-                  Container(height: 1, color: bdr),
-                  const SizedBox(height: 14),
-                  _buildSkillsSection(context, s, isDark, txt, sub),
-                ],
-              ),
+            _buildDesktopProfileHero(
+              context,
+              s,
+              p,
+              isDark,
+              txt,
+              sub,
+              bdr,
+              wide: wide,
             ),
+            Expanded(child: body),
           ],
         ),
       ),
@@ -257,6 +319,17 @@ class _ProfileDialogState extends State<ProfileDialog> {
                 const SizedBox(height: 18),
                 Container(height: 1, color: border),
                 const SizedBox(height: 16),
+                _buildDataTransfer(
+                  context,
+                  state,
+                  isDark,
+                  text,
+                  secondary,
+                  border,
+                ),
+                const SizedBox(height: 18),
+                Container(height: 1, color: border),
+                const SizedBox(height: 16),
                 _buildSkillsSection(context, state, isDark, text, secondary),
               ],
             ),
@@ -273,8 +346,9 @@ class _ProfileDialogState extends State<ProfileDialog> {
     bool isDark,
     Color text,
     Color secondary,
-    Color border,
-  ) {
+    Color border, {
+    required bool wide,
+  }) {
     return DecoratedBox(
       key: const ValueKey('desktop-profile-fixed-hero'),
       decoration: BoxDecoration(
@@ -301,22 +375,52 @@ class _ProfileDialogState extends State<ProfileDialog> {
             ],
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 10, 24, 16),
+            padding: wide
+                ? const EdgeInsets.fromLTRB(24, 6, 24, 10)
+                : const EdgeInsets.fromLTRB(24, 10, 24, 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildNameRow(
-                  context,
-                  state,
-                  profile,
-                  text,
-                  secondary,
-                  offsetForAvatar: false,
-                ),
-                const SizedBox(height: 7),
-                LvlBadge(level: profile.level, color: const Color(0xFF4A9EFF)),
-                const SizedBox(height: 12),
-                _buildXPSection(context, profile, secondary),
+                // На широкой раскладке имя, уровень и полоса опыта занимают
+                // две строки вместо четырёх блоков: шапка забирала половину
+                // окна именно здесь.
+                if (wide)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildNameRow(
+                          context,
+                          state,
+                          profile,
+                          text,
+                          secondary,
+                          offsetForAvatar: false,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      LvlBadge(
+                        level: profile.level,
+                        color: const Color(0xFF4A9EFF),
+                      ),
+                    ],
+                  )
+                else ...[
+                  _buildNameRow(
+                    context,
+                    state,
+                    profile,
+                    text,
+                    secondary,
+                    offsetForAvatar: false,
+                  ),
+                  const SizedBox(height: 7),
+                  LvlBadge(
+                    level: profile.level,
+                    color: const Color(0xFF4A9EFF),
+                  ),
+                ],
+                SizedBox(height: wide ? 6 : 12),
+                _buildXPSection(context, profile, secondary, compact: wide),
               ],
             ),
           ),
@@ -629,7 +733,32 @@ class _ProfileDialogState extends State<ProfileDialog> {
 
   // ── XP section ────────────────────────────────────────────────────────────
 
-  Widget _buildXPSection(BuildContext context, UserProfile p, Color sub) {
+  Widget _buildXPSection(
+    BuildContext context,
+    UserProfile p,
+    Color sub, {
+    bool compact = false,
+  }) {
+    // Подпись «До уровня N» повторяла то же самое третьим числом подряд.
+    // В компактной шапке остаются уровень и полоса с остатком.
+    if (compact) {
+      return Row(
+        children: [
+          Expanded(
+            child: XPBar(
+              progress: p.progress,
+              color: const Color(0xFF4A9EFF),
+              height: 8,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            '${p.xp} / ${p.xpNeeded}',
+            style: TextStyle(color: sub, fontSize: 12),
+          ),
+        ],
+      );
+    }
     final stacked =
         widget.fullScreen && MediaQuery.textScalerOf(context).scale(1) >= 1.5;
     return Column(
@@ -1053,6 +1182,207 @@ class _ProfileDialogState extends State<ProfileDialog> {
 
   // ── Skills section ────────────────────────────────────────────────────────
 
+  // ── Data transfer ─────────────────────────────────────────────────────────
+
+  /// Messenger и Navigator берутся до первого await: диалог профиля может
+  /// закрыться, пока пользователь выбирает файл.
+  void _notify(
+    ScaffoldMessengerState messenger,
+    bool isDark,
+    String message, {
+    bool error = false,
+  }) {
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: error ? const Color(0xFFD83651) : surface(isDark),
+        showCloseIcon: true,
+      ),
+    );
+  }
+
+  Future<void> _exportUserData(BuildContext context, AppState state) async {
+    if (_transferBusy) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final isDark = state.isDark;
+    setState(() => _transferBusy = true);
+    try {
+      // Незаписанные изменения не должны потеряться в экспорте.
+      await state.flushSaves();
+      final path = await UserDataTransfer.exportToFile(
+        json: state.exportUserData(),
+        fileName: UserDataTransfer.suggestedFileName(DateTime.now()),
+      );
+      if (path == null) return;
+      _notify(messenger, isDark, 'Данные сохранены в $path');
+    } catch (error) {
+      _notify(
+        messenger,
+        isDark,
+        'Не удалось сохранить файл: $error',
+        error: true,
+      );
+    } finally {
+      if (mounted) setState(() => _transferBusy = false);
+    }
+  }
+
+  Future<void> _importUserData(BuildContext context, AppState state) async {
+    if (_transferBusy) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    final isDark = state.isDark;
+    final confirmed = await _confirmImport(context, isDark);
+    if (confirmed != true) return;
+    setState(() => _transferBusy = true);
+    try {
+      final raw = await UserDataTransfer.pickImportFile();
+      if (raw == null) return;
+      final loaded = await state.importUserData(raw);
+      if (!loaded) {
+        _notify(
+          messenger,
+          isDark,
+          'Файл прочитан, но данные не загрузились',
+          error: true,
+        );
+        return;
+      }
+      _notify(messenger, state.isDark, 'Данные восстановлены из файла');
+      await navigator.maybePop();
+    } on UserDataImportException catch (error) {
+      _notify(messenger, isDark, switch (error.reason) {
+        UserDataImportFailure.versionMismatch =>
+          'Файл сделан другой версией приложения. Обновите RPG To-Do на '
+              'обоих устройствах и экспортируйте заново.',
+        UserDataImportFailure.unreadable =>
+          'Это не файл с данными RPG To-Do или он повреждён',
+      }, error: true);
+    } catch (error) {
+      _notify(
+        messenger,
+        isDark,
+        'Не удалось прочитать файл: $error',
+        error: true,
+      );
+    } finally {
+      if (mounted) setState(() => _transferBusy = false);
+    }
+  }
+
+  Future<bool?> _confirmImport(BuildContext context, bool isDark) {
+    final txt = textColor(isDark);
+    final sub = subtext(isDark);
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: surface(isDark),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Заменить все данные?', style: TextStyle(color: txt)),
+        content: Text(
+          'Навыки, квесты, история и прогресс на этом устройстве будут '
+          'заменены содержимым файла. Отменить это будет нечем — сначала '
+          'сохраните текущие данные экспортом.',
+          style: TextStyle(color: sub, height: 1.35),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Отмена'),
+          ),
+          FilledButton(
+            key: const ValueKey('profile-import-confirm'),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFD83651),
+            ),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Заменить'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDataTransfer(
+    BuildContext context,
+    AppState state,
+    bool isDark,
+    Color txt,
+    Color sub,
+    Color bdr,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SubLbl('Данные', sub),
+        const SizedBox(height: 10),
+        Text(
+          'Один файл со всеми навыками, квестами, историей и настройками. '
+          'Экспортируйте на одном устройстве и импортируйте на другом.',
+          style: TextStyle(color: sub, fontSize: 12, height: 1.35),
+        ),
+        const SizedBox(height: 12),
+        if (!state.supportsDataTransfer)
+          Text(
+            'Перенос недоступен: хранилище этого устройства работает в '
+            'устаревшем режиме без единого документа состояния.',
+            style: TextStyle(color: sub, fontSize: 12, height: 1.35),
+          )
+        else
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  key: const ValueKey('profile-export-data'),
+                  onPressed: _transferBusy
+                      ? null
+                      : () => _exportUserData(context, state),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: txt,
+                    side: BorderSide(color: bdr),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  icon: const Icon(Icons.upload_file_outlined, size: 18),
+                  label: const Text('Экспорт'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton.icon(
+                  key: const ValueKey('profile-import-data'),
+                  onPressed: _transferBusy
+                      ? null
+                      : () => _importUserData(context, state),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: txt,
+                    side: BorderSide(color: bdr),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  icon: const Icon(Icons.download_outlined, size: 18),
+                  label: const Text('Импорт'),
+                ),
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+
+  static String _openTaskLabel(int count) {
+    if (count == 0) return 'Пусто';
+    final tail = count % 100;
+    final last = count % 10;
+    final word = tail >= 11 && tail <= 14
+        ? 'задач'
+        : last == 1
+        ? 'задача'
+        : last >= 2 && last <= 4
+        ? 'задачи'
+        : 'задач';
+    return '$count $word';
+  }
+
   Widget _buildSkillsSection(
     BuildContext context,
     AppState s,
@@ -1069,27 +1399,39 @@ class _ProfileDialogState extends State<ProfileDialog> {
           builder: (context, constraints) => Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: s.skills
-                .map(
-                  (sk) => SizedBox(
-                    width: widget.fullScreen ? constraints.maxWidth : null,
-                    child: Tooltip(
-                      message: 'Перейти к навыку “${sk.name}”',
-                      child: GestureDetector(
-                        onTap: () {
-                          s.selectSkill(sk.id);
-                          Navigator.pop(context);
-                        },
-                        child: _SkillChip(
-                          skill: sk,
-                          isDark: isDark,
-                          expanded: widget.fullScreen,
-                        ),
-                      ),
+            children: s.skills.map((sk) {
+              final inbox = sk.id == kInboxSkillId;
+              final openTasks = inbox
+                  ? s.inboxTasks.where((task) => !task.isDone).length
+                  : 0;
+              return SizedBox(
+                // Плитки одного размера: раньше ширина зависела от длины
+                // названия, и ряд навыков выглядел рваным.
+                width: widget.fullScreen ? constraints.maxWidth : 158,
+                child: Tooltip(
+                  message: inbox
+                      ? 'Открыть Задачник'
+                      : 'Перейти к навыку “${sk.name}”',
+                  child: GestureDetector(
+                    onTap: () {
+                      s.selectSkill(sk.id);
+                      Navigator.pop(context);
+                    },
+                    child: _SkillChip(
+                      skill: sk,
+                      isDark: isDark,
+                      expanded: widget.fullScreen,
+                      // У Задачника нет ни опыта, ни уровня: это быстрые
+                      // дела вне навыков. Показываем то, что там правда есть.
+                      meta: inbox
+                          ? _openTaskLabel(openTasks)
+                          : 'Ур. ${sk.level} · ${(sk.progress * 100).round()}%',
+                      progress: inbox ? null : sk.progress,
                     ),
                   ),
-                )
-                .toList(),
+                ),
+              );
+            }).toList(),
           ),
         ),
       ],
@@ -1269,9 +1611,17 @@ class _SkillChip extends StatefulWidget {
   final bool isDark;
   final bool expanded;
 
+  /// Вторая строка плитки: уровень с процентом либо число открытых задач.
+  final String meta;
+
+  /// Полоса прогресса. `null` там, где прогресса нет — у Задачника.
+  final double? progress;
+
   const _SkillChip({
     required this.skill,
     required this.isDark,
+    required this.meta,
+    required this.progress,
     this.expanded = false,
   });
   @override
@@ -1295,61 +1645,53 @@ class _SkillChipState extends State<_SkillChip> {
         duration: kMotionFast,
         curve: kMotionCurve,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
             color: sk.color.withAlpha(22),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: sk.color.withAlpha(80)),
           ),
-          child: Row(
-            mainAxisSize: widget.expanded ? MainAxisSize.max : MainAxisSize.min,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(sk.icon, color: sk.color, size: 14),
-              const SizedBox(width: 6),
-              Flexible(
-                fit: widget.expanded ? FlexFit.tight : FlexFit.loose,
-                child: Text(
-                  sk.name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: sk.color,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              SizedBox(
-                width: 78,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${sk.xp}/${sk.xpNeeded} XP',
-                      maxLines: 1,
-                      style: TextStyle(color: sub, fontSize: 10),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      'Ур.${sk.level}',
+              Row(
+                children: [
+                  Icon(sk.icon, color: sk.color, size: 14),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      sk.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: sub.withAlpha(190),
-                        fontSize: 9.5,
+                        color: sk.color,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(2),
-                      child: LinearProgressIndicator(
-                        value: sk.progress,
-                        minHeight: 3,
-                        backgroundColor: sk.color.withAlpha(30),
-                        valueColor: AlwaysStoppedAnimation(sk.color),
-                      ),
-                    ),
-                  ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                widget.meta,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: sub, fontSize: 10.5),
+              ),
+              const SizedBox(height: 6),
+              // Полоса рисуется всегда — иначе плитки разъезжались бы по
+              // высоте. У Задачника она пустая и приглушённая.
+              ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: LinearProgressIndicator(
+                  value: widget.progress ?? 0,
+                  minHeight: 3,
+                  backgroundColor: sk.color.withAlpha(
+                    widget.progress == null ? 16 : 30,
+                  ),
+                  valueColor: AlwaysStoppedAnimation(sk.color),
                 ),
               ),
             ],
