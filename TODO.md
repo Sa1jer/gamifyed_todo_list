@@ -1,6 +1,6 @@
 # TODO / Living Backlog
 
-Last updated: 2026-08-29
+Last updated: 2026-09-03
 
 This file tracks the active implementation roadmap and completed project work. Update it after every meaningful code or design change.
 
@@ -26,11 +26,12 @@ This file tracks the active implementation roadmap and completed project work. U
 - [ ] Add real-Hive fault-injection and CI storage regression coverage for open failure, interrupted writes, rollback, retry idempotency, and legacy dual-read.
 - [ ] Define a conservative snapshot retention/cleanup policy after multiple releases; keep at least current and previous valid payloads.
 - [ ] Add native restart, process-kill, and disposable-filesystem disk-full recovery tests.
-- [ ] Decide backup/export and encrypted-at-rest policy before public distribution.
-- [ ] Consider legacy-box cleanup only after export/restore support and several releases of verified snapshot recovery.
+- [ ] Decide the encryption policy for the new user-data transfer file before public distribution. Export/import now writes the full snapshot as plain JSON through `StorageSnapshotCodec`, so one file carries every skill, quest, history entry and profile field in the clear; decide whether that is acceptable outside a trusted device and whether at-rest encryption is also required.
+- [ ] Consider legacy-box cleanup only after several releases of verified snapshot recovery. The export/restore precondition is now met by the profile data transfer.
 - [x] Bound profile avatar/banner decoding to rendered dimensions and dispose replaced native overlay images; physical-device image-memory profiling remains part of the native pass.
 - [ ] Validate native Windows/macOS pointer tracking after skill-card hit-region alignment; capture a platform repro if compositor hover still differs.
 - [ ] Profile mobile theme switching after the `2x` snapshot cap and add a reduced-motion fallback only if frame timings still show jank.
+- [ ] Verify mobile scroll smoothness on physical Android hardware in profile mode. Reported jank was observed on a debug build, which is not representative; the skill list has since moved from a `shrinkWrap` `ReorderableListView` inside a `SliverToBoxAdapter` to a lazy `SliverReorderableList`, but no trace has been captured. Record which lane misses the budget (UI vs raster) before changing further code.
 - [ ] Run the labelled Debug Admin frame-timing presets with `flutter run --profile --dart-define=RPG_FRAME_TIMINGS=true` on physical 120/144/165 Hz Android hardware and macOS; record refresh rate, frame count, build/raster p90/p95/p99, over-budget frames, and the reported bottleneck before claiming high-refresh performance.
 - [ ] Complete native desktop window-state smoke QA: macOS normal/maximized/fullscreen and disconnected-monitor restore; Windows normal/maximized restore, disconnected monitors, taskbar work areas, and `100%/125%/150%` DPI. Follow `docs/DESKTOP_WINDOW_STATE.md` and record observed startup flash behavior.
 - [ ] Add a Windows-native test target for desktop window placement: registry round-trip, signed coordinates, disconnected-monitor fallback, work-area clamping, and high-to-low DPI restore. The policy cannot be executed from the macOS test host.
@@ -331,6 +332,34 @@ Manual desktop/QHD checklist:
 
 ## Recently Completed
 
+- `1.3.64` desktop light theme repair: `MaterialApp` kept the startup brightness because the
+  root never subscribed to `AppState`, so everything reading `Theme.of(context)` — the
+  skill-growth toast, sliders, switches, dialog defaults — stayed dark in a light app.
+  Animated surfaces no longer rest on `Colors.transparent`: lerping from transparent black to
+  a light surface passed through grey and flashed on every hover and checkbox toggle
+  (measured `#B7B7B9` against a predicted `#BBBBBB`); fixed at all eleven sites. Reward gold,
+  success green and streak amber split into ink and graphic roles.
+- `1.3.64` desktop navigation and Inbox: tapping a skill or `Задачник` from a secondary
+  workspace only changed the selection and left the screen unchanged; both now return to Act.
+  The focus rail hides while the Inbox is open. Quick-add hover moved from the Material ink
+  layer to the button's own background.
+- `1.3.64` tutorial, data transfer, profile and mobile density: abandoned tutorial steps now
+  answer with `abandonedBody` and a Skip action instead of returning a byte-identical card;
+  the third core step invites closing the first quest instead of forbidding it; the Inbox step
+  no longer highlights a region that cannot contain the Inbox. Profile gained file
+  export/import of the full snapshot through the existing codec, with parse-before-write and a
+  version-mismatch message distinct from "not our file"; macOS entitlements moved from
+  read-only to read-write for user-selected files. The profile dialog went from `460x680` with
+  857 of 1198px below the fold to two columns over the available height. `Журнал XP` was
+  removed as a duplicate of `Летопись`, now `Летопись опыта`. The mobile next-action panel
+  went `351 -> 160px` and can be hidden; the return-context card `346 -> 227px` after density
+  stopped keying off desktop rather than text scale; both keep 48dp touch targets. Opening a
+  skill no longer rebuilds the screen in the middle of its own animation.
+- `1.3.64` mobile scroll cost: the skill list was a `shrinkWrap` `ReorderableListView` inside a
+  `SliverToBoxAdapter`, so every card — a `Slidable` with two action panes and three nested
+  implicitly-animated widgets — was built, laid out and painted whether or not it was on
+  screen. `SliverReorderableList` builds lazily and culls. Per-card open-quest counting moved
+  from `O(skills x tasks)` to one pass. Not yet verified on hardware.
 - Next Action Lens + Boot Entry MVP: mobile Act now derives one deterministic,
   overrideable Skill quest from selected context, active stage, priority and
   task order. A temporary, editable three-step Boot Entry helps open context,
