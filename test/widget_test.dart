@@ -4441,7 +4441,8 @@ void main() {
     );
     expect(listFinder, findsOneWidget);
 
-    final list = tester.widget<ReorderableListView>(listFinder);
+    // Список стал сливерным и ленивым: строит только видимые карточки.
+    final list = tester.widget<SliverReorderableList>(listFinder);
     list.onReorderItem!.call(0, 1);
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));

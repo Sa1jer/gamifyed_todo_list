@@ -307,6 +307,14 @@ class _MobileActJournalState extends State<_MobileActJournal> {
     final streak = state.tasks
         .where((task) => task.type == TaskType.repeating && task.streak > 0)
         .fold<int>(0, (current, task) => math.max(current, task.streak));
+    // Раньше каждая карточка сама просеивала все квесты: O(навыки × квесты)
+    // на каждый пересбор списка. Считаем один раз проходом по задачам.
+    final activeQuestCounts = <String, int>{};
+    for (final task in state.tasks) {
+      if (task.isDone) continue;
+      activeQuestCounts[task.skillId] =
+          (activeQuestCounts[task.skillId] ?? 0) + 1;
+    }
     final nextAction = const NextActionResolver().resolve(
       skills: skills,
       tasks: state.tasks,
@@ -460,101 +468,98 @@ class _MobileActJournalState extends State<_MobileActJournal> {
                     ),
                   )
                 else
-                  SliverToBoxAdapter(
-                    child: ReorderableListView.builder(
-                      key: const ValueKey('mobile-skill-overview-list'),
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      buildDefaultDragHandles: false,
-                      itemCount: skills.length,
-                      onReorderItem: state.reorderSkills,
-                      itemBuilder: (context, index) {
-                        final skill = skills[index];
-                        final activeCount = state
-                            .tasksForSkill(skill.id)
-                            .where((task) => !task.isDone)
-                            .length;
-                        final card = MobileSkillOverviewCard(
-                          skill: skill,
-                          activeQuestCount: activeCount,
-                          isDark: isDark,
-                          reorderIndex: index,
-                          onTap: () => _openSkillFocus(state, skill, index),
-                          onLongPress: () => _showSkillActions(
-                            context,
-                            state: state,
-                            skill: skill,
-                          ),
-                          onEdit: () =>
-                              _editSkill(context, state: state, skill: skill),
-                          onDelete: () => _confirmDeleteSkill(
-                            context,
-                            state: state,
-                            skill: skill,
-                          ),
-                        );
-                        final transitionIndex = _transitionSkillIndex;
-                        final reducedMotion = MobileMotion.reduced(
+                  // Был ReorderableListView с shrinkWrap внутри
+                  // SliverToBoxAdapter: он строит и раскладывает все карточки
+                  // разом, без отсечения за пределами экрана, и каждая несёт
+                  // три вложенных анимированных виджета. Сливерный вариант
+                  // строит лениво и выбрасывает уехавшее из вида.
+                  SliverReorderableList(
+                    key: const ValueKey('mobile-skill-overview-list'),
+                    itemCount: skills.length,
+                    onReorderItem: state.reorderSkills,
+                    itemBuilder: (context, index) {
+                      final skill = skills[index];
+                      final activeCount = activeQuestCounts[skill.id] ?? 0;
+                      final card = MobileSkillOverviewCard(
+                        skill: skill,
+                        activeQuestCount: activeCount,
+                        isDark: isDark,
+                        reorderIndex: index,
+                        onTap: () => _openSkillFocus(state, skill, index),
+                        onLongPress: () => _showSkillActions(
                           context,
-                          appReducedMotion: state.reducedMotion,
-                        );
-                        final moving =
-                            !reducedMotion &&
-                                _skillTransition ==
-                                    _MobileSkillTransitionPhase.opening ||
-                            _skillTransition ==
-                                _MobileSkillTransitionPhase.restoring;
-                        final selected = _transitionSkillId == skill.id;
-                        final direction = transitionIndex == null
-                            ? 0
-                            : index.compareTo(transitionIndex);
-                        final offset = moving
-                            ? selected
-                                  ? const Offset(0, -0.1)
-                                  : Offset(0, direction < 0 ? -0.34 : 0.34)
-                            : Offset.zero;
-                        final opacity = moving ? (selected ? 0.48 : 0.0) : 1.0;
-                        final transitionKey = !moving
-                            ? 'mobile-skill-card-${skill.id}'
-                            : selected
-                            ? 'mobile-skill-card-opening-${skill.id}'
-                            : direction < 0
-                            ? 'mobile-skill-card-exiting-above-${skill.id}'
-                            : 'mobile-skill-card-exiting-below-${skill.id}';
-                        return Padding(
-                          key: ValueKey('mobile-skill-overview-${skill.id}'),
-                          padding: EdgeInsets.only(
-                            bottom: index == skills.length - 1 ? 0 : 10,
-                          ),
-                          child: AnimatedSlide(
-                            duration: _motionDuration(context),
+                          state: state,
+                          skill: skill,
+                        ),
+                        onEdit: () =>
+                            _editSkill(context, state: state, skill: skill),
+                        onDelete: () => _confirmDeleteSkill(
+                          context,
+                          state: state,
+                          skill: skill,
+                        ),
+                      );
+                      final transitionIndex = _transitionSkillIndex;
+                      final reducedMotion = MobileMotion.reduced(
+                        context,
+                        appReducedMotion: state.reducedMotion,
+                      );
+                      final moving =
+                          !reducedMotion &&
+                              _skillTransition ==
+                                  _MobileSkillTransitionPhase.opening ||
+                          _skillTransition ==
+                              _MobileSkillTransitionPhase.restoring;
+                      final selected = _transitionSkillId == skill.id;
+                      final direction = transitionIndex == null
+                          ? 0
+                          : index.compareTo(transitionIndex);
+                      final offset = moving
+                          ? selected
+                                ? const Offset(0, -0.1)
+                                : Offset(0, direction < 0 ? -0.34 : 0.34)
+                          : Offset.zero;
+                      final opacity = moving ? (selected ? 0.48 : 0.0) : 1.0;
+                      final transitionKey = !moving
+                          ? 'mobile-skill-card-${skill.id}'
+                          : selected
+                          ? 'mobile-skill-card-opening-${skill.id}'
+                          : direction < 0
+                          ? 'mobile-skill-card-exiting-above-${skill.id}'
+                          : 'mobile-skill-card-exiting-below-${skill.id}';
+                      return Padding(
+                        key: ValueKey('mobile-skill-overview-${skill.id}'),
+                        padding: EdgeInsets.only(
+                          bottom: index == skills.length - 1 ? 0 : 10,
+                        ),
+                        child: AnimatedSlide(
+                          duration: _motionDuration(context),
+                          curve: _MobileJournalTokens.curve,
+                          offset: offset,
+                          child: AnimatedOpacity(
+                            duration: MediaQuery.disableAnimationsOf(context)
+                                ? Duration.zero
+                                : const Duration(milliseconds: 210),
                             curve: _MobileJournalTokens.curve,
-                            offset: offset,
-                            child: AnimatedOpacity(
-                              duration: MediaQuery.disableAnimationsOf(context)
-                                  ? Duration.zero
-                                  : const Duration(milliseconds: 210),
+                            opacity: opacity,
+                            child: AnimatedScale(
+                              duration: _motionDuration(context),
                               curve: _MobileJournalTokens.curve,
-                              opacity: opacity,
-                              child: AnimatedScale(
-                                duration: _motionDuration(context),
-                                curve: _MobileJournalTokens.curve,
-                                scale: moving ? (selected ? 1.025 : 0.97) : 1,
+                              scale: moving ? (selected ? 1.025 : 0.97) : 1,
+                              child: KeyedSubtree(
+                                key: ValueKey(transitionKey),
                                 child: KeyedSubtree(
-                                  key: ValueKey(transitionKey),
-                                  child: KeyedSubtree(
-                                    key: index == 0
-                                        ? widget.nextQuestActionKey
-                                        : null,
-                                    child: card,
-                                  ),
+                                  key: index == 0
+                                      ? widget.nextQuestActionKey
+                                      : null,
+                                  child: card,
                                 ),
                               ),
                             ),
                           ),
-                        );
-                      },
-                    ),
+                        ),
+                      );
+                    },
                   ),
               ],
             ),
