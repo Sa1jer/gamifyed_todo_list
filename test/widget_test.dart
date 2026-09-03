@@ -7897,9 +7897,11 @@ void main() {
     await tester.tap(find.text('Настройки квеста'));
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('20 XP').first);
+    // Дефолт нового квеста — 100 XP (см. `556a2a5`). Проверяется не он, а
+    // то, что введённое вручную число прижимается к сетке: 75 -> 80.
+    await tester.ensureVisible(find.text('100 XP').first);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('20 XP').first);
+    await tester.tap(find.text('100 XP').first);
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField).last, '75');
