@@ -440,6 +440,9 @@ class _MapNodeButtonState extends State<_MapNodeButton> {
     );
     final target = widget.node.questTarget;
     final diameter = _roadmapNodeOrbDiameter(target);
+    // Ближайший закрытый этап держится ярче дальних: путь должен читаться
+    // как «вот это следующее», а не как ряд одинаковых замков.
+    final lockedFade = _roadmapLockedDistance(widget.skill, widget.node) >= 2;
     final icon = switch (status) {
       SkillTreeNodeStatus.locked => Icons.lock,
       SkillTreeNodeStatus.active => Icons.bolt_rounded,
@@ -485,8 +488,12 @@ class _MapNodeButtonState extends State<_MapNodeButton> {
                       : statusColor.withAlpha(widget.isDark ? 34 : 24),
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: widget.selected ? Colors.white : statusColor,
-                    width: widget.selected ? 3 : 2,
+                    color: widget.selected
+                        ? Colors.white
+                        : lockedFade
+                        ? statusColor.withAlpha(widget.isDark ? 90 : 110)
+                        : statusColor,
+                    width: DesktopScale.borderThick,
                   ),
                   boxShadow: [
                     if (_hovered ||
@@ -509,55 +516,61 @@ class _MapNodeButtonState extends State<_MapNodeButton> {
                       ),
                   ],
                 ),
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  alignment: Alignment.center,
-                  children: [
-                    Icon(icon, color: statusColor, size: diameter * 0.42),
-                    Positioned(
-                      bottom: -10,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: widget.isDark
-                              ? const Color(0xFF0D0D12)
-                              : const Color(0xFFF7F8FC),
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(
-                            color: statusColor,
-                            width: DesktopScale.borderThin,
-                          ),
-                        ),
-                        child: Text(
-                          '${math.min(completed, target)}/$target',
-                          style: TextStyle(
-                            color: statusColor,
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                child: Center(
+                  child: Icon(
+                    icon,
+                    color: lockedFade
+                        ? statusColor.withAlpha(widget.isDark ? 110 : 130)
+                        : statusColor,
+                    size: diameter * 0.42,
+                  ),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.only(top: _roadmapNodeLabelGap),
-                child: _AdaptiveNodeLabel(
+              // Бейдж стоял `Positioned(bottom: -10)` внутри стека орба: он
+              // наползал на обводку, а двухстрочная подпись упиралась в него.
+              // Теперь он в потоке, и зазоры до круга и до подписи заданы.
+              const SizedBox(height: _roadmapNodeBadgeGap),
+              SizedBox(
+                height: _roadmapNodeBadgeHeight,
+                child: Container(
                   key: ValueKey(
-                    'map-node-label-${widget.skill.id}-${widget.node.id}',
+                    'map-node-progress-${widget.skill.id}-${widget.node.id}',
                   ),
-                  textKey: ValueKey(
-                    'map-node-label-text-${widget.skill.id}-${widget.node.id}',
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: widget.isDark
+                        ? const Color(0xFF0D0D12)
+                        : const Color(0xFFF7F8FC),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: statusColor,
+                      width: DesktopScale.borderThin,
+                    ),
                   ),
-                  text: widget.node.title,
-                  color: status == SkillTreeNodeStatus.locked
-                      ? subtext(widget.isDark)
-                      : textColor(widget.isDark),
+                  child: Text(
+                    '${math.min(completed, target)}/$target',
+                    style: TextStyle(
+                      color: statusColor,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w900,
+                      height: 1,
+                    ),
+                  ),
                 ),
+              ),
+              const SizedBox(height: _roadmapNodeLabelGap),
+              _AdaptiveNodeLabel(
+                key: ValueKey(
+                  'map-node-label-${widget.skill.id}-${widget.node.id}',
+                ),
+                textKey: ValueKey(
+                  'map-node-label-text-${widget.skill.id}-${widget.node.id}',
+                ),
+                text: widget.node.title,
+                color: status == SkillTreeNodeStatus.locked
+                    ? subtext(widget.isDark)
+                    : textColor(widget.isDark),
               ),
             ],
           ),

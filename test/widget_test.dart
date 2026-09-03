@@ -266,6 +266,66 @@ bool _hasContainerWithColor(WidgetTester tester, Color color) {
 }
 
 void main() {
+  testWidgets('stage progress badge sits below the orb, clear of the label', (
+    WidgetTester tester,
+  ) async {
+    // Бейдж висел `Positioned(bottom: -10)` внутри стека орба: наползал на
+    // обводку, а двухстрочная подпись упиралась в него.
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final skill = Skill(
+      id: 'badge-skill',
+      name: 'Навык',
+      goal: 'Цель',
+      color: const Color(0xFF4A9EFF),
+      icon: Icons.route_rounded,
+      treeNodes: [
+        SkillTreeNode(
+          id: 'badge-stage',
+          title: 'Этап с длинным названием в две строки',
+          requiredQuestCompletions: 3,
+        ),
+      ],
+    );
+    final storage = InMemoryStorageService()
+      .._onboardingSeen = true
+      .._welcomeSeen = true
+      ..skills = [skill];
+    await storage.init();
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    await tester.tap(find.byIcon(Icons.account_tree).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('map-skill-orb-badge-skill')));
+    await tester.pumpAndSettle();
+
+    final orb = find.byKey(
+      const ValueKey('map-node-surface-badge-skill-badge-stage'),
+    );
+    final badge = find.byKey(
+      const ValueKey('map-node-progress-badge-skill-badge-stage'),
+    );
+    final label = find.byKey(
+      const ValueKey('map-node-label-badge-skill-badge-stage'),
+    );
+    expect(orb, findsOneWidget);
+    expect(badge, findsOneWidget);
+
+    final orbRect = tester.getRect(orb);
+    final badgeRect = tester.getRect(badge);
+    final labelRect = tester.getRect(label);
+
+    // Бейдж целиком ниже круга и не касается его.
+    expect(badgeRect.top, greaterThanOrEqualTo(orbRect.bottom));
+    // Между бейджем и подписью есть зазор.
+    expect(labelRect.top, greaterThanOrEqualTo(badgeRect.bottom));
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('mobile next action panel is compact and can be hidden', (
     WidgetTester tester,
   ) async {

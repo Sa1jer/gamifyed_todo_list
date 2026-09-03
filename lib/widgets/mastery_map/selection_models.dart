@@ -14,9 +14,19 @@ const _roadmapVerticalNodeLabelWidth = 196.0;
 const _roadmapVerticalNodeLabelMinHeight = 58.0;
 const _roadmapVerticalNodeLabelGap = 18.0;
 // Centers the orb itself on the layout/painter endpoint. The remaining item
-// height is reserved for the label below the orb.
-const _roadmapNodeItemTopOffset = 53.5;
-const _roadmapNodeLabelGap = 13.0;
+// height is reserved for the badge and label below the orb.
+//
+// Инвариант: `_roadmapNodeContentTopOffset + диаметр / 2 == 0`, иначе орб
+// уедет с точки, к которой художник крепит соединители. Значение зависит от
+// высоты содержимого: с добавлением бейджа в поток оно пересчитано с 53.5.
+const _roadmapNodeItemTopOffset = 44.0;
+// Бейдж прогресса стоит в потоке между орбом и подписью, а не висит на
+// обводке круга. Высоты подобраны так, чтобы содержимое узла осталось внутри
+// прежних `_roadmapNodeItemHeight`: расстояние между параллельными путями и
+// так меньше высоты узла, растить её нельзя.
+const _roadmapNodeBadgeGap = 4.0;
+const _roadmapNodeBadgeHeight = 18.0;
+const _roadmapNodeLabelGap = 10.0;
 const _roadmapNodeLabelWidth = 156.0;
 const _roadmapNodeLabelHeight = 44.0;
 const _roadmapInsertHitSize = 46.0;
@@ -31,6 +41,8 @@ double _roadmapNodeOrbDiameter(int questTarget) => switch (questTarget) {
 
 double _roadmapNodeContentHeight(SkillTreeNode node) =>
     _roadmapNodeOrbDiameter(node.questTarget) +
+    _roadmapNodeBadgeGap +
+    _roadmapNodeBadgeHeight +
     _roadmapNodeLabelGap +
     _roadmapNodeLabelHeight;
 
@@ -38,8 +50,15 @@ double _roadmapNodeContentTopOffset(SkillTreeNode node) =>
     -_roadmapNodeItemTopOffset +
     (_roadmapNodeItemHeight - _roadmapNodeContentHeight(node)) / 2;
 
+/// Смещение от точки узла до верха его орба.
+///
+/// Используется только вертикальной раскладкой, где орб центрирован на точке.
+/// Раньше это выражалось через высоту горизонтального содержимого — величины
+/// совпадали, потому что `_roadmapNodeItemTopOffset` был под них подобран.
+/// Из-за этой связки любое изменение горизонтальной композиции сдвигало точки
+/// вставки в вертикальной. Считаем прямо.
 double _roadmapNodeOrbTopOffset(SkillTreeNode node) =>
-    _roadmapNodeContentTopOffset(node);
+    -_roadmapNodeOrbDiameter(node.questTarget) / 2;
 
 double _roadmapNodeLabelTextBottomOffset(
   SkillTreeNode node,
@@ -54,6 +73,8 @@ double _roadmapNodeLabelTextBottomOffset(
   final labelTop =
       _roadmapNodeContentTopOffset(node) +
       _roadmapNodeOrbDiameter(node.questTarget) +
+      _roadmapNodeBadgeGap +
+      _roadmapNodeBadgeHeight +
       _roadmapNodeLabelGap;
   return labelTop +
       _roadmapLabelTextHeight(
@@ -298,6 +319,33 @@ double _adaptiveSkillLabelFontSize(
       ? 0.92
       : 0.84;
   return (base * widthFactor * scaleFactor * lengthFactor).clamp(14.0, base);
+}
+
+/// Насколько закрытый этап далёк от фронта работ.
+///
+/// `0` — этап не закрыт. `1` — откроется сразу, как только закроют то, что
+/// прямо перед ним. `2` и больше — дальше по цепочке. Раньше все закрытые
+/// этапы выглядели одинаково, и путь читался как «замок, замок, замок».
+int _roadmapLockedDistance(Skill skill, SkillTreeNode node) {
+  if (skill.treeNodeStatus(node) != SkillTreeNodeStatus.locked) return 0;
+  final byId = {for (final item in skill.treeNodes) item.id: item};
+  final seen = <String>{};
+
+  int distance(SkillTreeNode current) {
+    if (!seen.add(current.id)) return 1;
+    final status = skill.treeNodeStatus(current);
+    if (status != SkillTreeNodeStatus.locked) return 0;
+    var deepest = 0;
+    for (final id in current.prerequisiteIds) {
+      final prerequisite = byId[id];
+      if (prerequisite == null) continue;
+      final ahead = distance(prerequisite);
+      if (ahead > deepest) deepest = ahead;
+    }
+    return deepest + 1;
+  }
+
+  return distance(node);
 }
 
 double _adaptiveNodeLabelFontSize(
