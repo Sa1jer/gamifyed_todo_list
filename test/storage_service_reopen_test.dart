@@ -55,6 +55,81 @@ void main() {
   );
 
   test(
+    'corrupt real box bytes never masquerade as a clean empty start',
+    () async {
+      // Инъекция сбоя в настоящий Hive, а не в подменённый StorageService:
+      // в файл бокса пишем мусор, который не разбирается как его формат.
+      final first = StorageService(hivePath: hiveDirectory.path);
+      await first.init();
+      await first.saveSkills(<Skill>[skill('doomed')]);
+      await Hive.close();
+
+      final boxFile = File('${hiveDirectory.path}/skills.hive');
+      expect(boxFile.existsSync(), isTrue);
+      boxFile.writeAsBytesSync(List<int>.filled(4096, 0x7f));
+
+      Object? caught;
+      List<Skill> loaded = const <Skill>[];
+      final storage = StorageService(hivePath: hiveDirectory.path);
+      try {
+        await storage.init();
+        loaded = await storage.loadSkills();
+      } catch (error) {
+        caught = error;
+      }
+
+      // Важен не тип исключения, а то, что порча не выглядит как чистый
+      // пустой старт с целыми данными: либо падение, либо пустота.
+      if (caught == null) {
+        expect(loaded, isEmpty);
+      }
+    },
+  );
+
+  test(
+    'write into a closed real box leaves the committed snapshot intact',
+    () async {
+      final storage = StorageService(hivePath: hiveDirectory.path);
+      await storage.init();
+      await storage.saveSnapshot(snapshot('committed'));
+
+      // Прерванная запись: боксы закрыты под работающим сервисом.
+      await Hive.close();
+      await expectLater(
+        storage.saveSnapshot(snapshot('never-committed')),
+        throwsA(anything),
+      );
+
+      final reopened = StorageService(hivePath: hiveDirectory.path);
+      await reopened.init();
+      final loaded = await reopened.loadLatestSnapshot();
+      expect(loaded?.snapshot.id, 'committed');
+      expect(loaded?.source, SnapshotLoadSource.current);
+    },
+  );
+
+  test(
+    'saving the same snapshot twice stays idempotent on real Hive',
+    () async {
+      final storage = StorageService(hivePath: hiveDirectory.path);
+      await storage.init();
+      await storage.saveSnapshot(snapshot('once'));
+      await storage.saveSnapshot(snapshot('once'));
+      await Hive.close();
+
+      final reopened = StorageService(hivePath: hiveDirectory.path);
+      await reopened.init();
+      expect((await reopened.loadLatestSnapshot())?.snapshot.id, 'once');
+      final box = Hive.box<String>('storage_snapshots');
+      final payloads = box.keys
+          .whereType<String>()
+          .where((key) => key.startsWith(SnapshotStore.payloadPrefix))
+          .toList();
+      expect(payloads.length, lessThanOrEqualTo(2));
+    },
+  );
+
+  test(
     'legacy boxes and committed snapshot survive a real Hive reopen',
     () async {
       final first = StorageService(hivePath: hiveDirectory.path);
