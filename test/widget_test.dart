@@ -5497,9 +5497,13 @@ void main() {
     final middleLabelDelta =
         tester.getCenter(nodeLabel(middle.id)).dx -
         verticalMiddleSurface.center.dx;
-    expect(rootLabelDelta.abs(), greaterThan(60));
-    expect(middleLabelDelta.abs(), greaterThan(60));
-    expect(rootLabelDelta * middleLabelDelta, lessThan(0));
+    final terminalLabelDelta =
+        tester.getCenter(nodeLabel(terminal.id)).dx -
+        verticalTerminalSurface.center.dx;
+    // Stages on the axis label to one side so the names read as a column.
+    expect(rootLabelDelta, greaterThan(60));
+    expect(middleLabelDelta, greaterThan(60));
+    expect(terminalLabelDelta, greaterThan(60));
     final verticalRootLabel = tester.widget<Text>(nodeLabel(root.id));
     expect(verticalRootLabel.textAlign, isNot(TextAlign.center));
     expect(verticalRootLabel.style?.fontSize, greaterThanOrEqualTo(16));

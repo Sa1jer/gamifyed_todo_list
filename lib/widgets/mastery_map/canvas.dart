@@ -778,7 +778,6 @@ class _OrbMasteryMapCanvasState extends State<_OrbMasteryMapCanvas>
         : _buildVerticalNodeGeometry(
             state: state,
             skill: selectedSkill,
-            pathLayout: pathLayout,
             nodePositions: nodePositions,
             skillCenter: selectedCenter,
             layoutAxis: widget.layoutAxis,

@@ -137,7 +137,6 @@ extension _OrbMasteryMapCanvasGeometry on _OrbMasteryMapCanvasState {
   Map<String, VerticalRoadmapNodeGeometry> _buildVerticalNodeGeometry({
     required AppState state,
     required Skill skill,
-    required RoadmapPathLayout pathLayout,
     required Map<String, Offset> nodePositions,
     required Offset skillCenter,
     required _RoadmapLayoutAxis layoutAxis,
@@ -156,8 +155,6 @@ extension _OrbMasteryMapCanvasGeometry on _OrbMasteryMapCanvasState {
       final metadata =
           '${_roadmapStageStatusLabel(status)} · ${math.min(completed, target)}/$target';
       final side = _verticalNodeLabelSide(
-        pathLayout,
-        node.id,
         orbCenter: orbCenter,
         skillCenter: skillCenter,
       );
@@ -182,28 +179,16 @@ extension _OrbMasteryMapCanvasGeometry on _OrbMasteryMapCanvasState {
     return result;
   }
 
-  VerticalRoadmapLabelSide _verticalNodeLabelSide(
-    RoadmapPathLayout layout,
-    String nodeId, {
+  /// Branch stages label outward, away from the axis: a
+  /// [_roadmapVerticalNodeLabelWidth] label pointed inward would run over the
+  /// neighbouring path, which sits only 180px away. Stages on the axis itself
+  /// have no outward side, so they all label right and read as one column.
+  VerticalRoadmapLabelSide _verticalNodeLabelSide({
     required Offset orbCenter,
     required Offset skillCenter,
   }) {
     final branchDelta = orbCenter.dx - skillCenter.dx;
-    if (branchDelta.abs() > 1) {
-      return branchDelta < 0
-          ? VerticalRoadmapLabelSide.left
-          : VerticalRoadmapLabelSide.right;
-    }
-    for (var pathIndex = 0; pathIndex < layout.paths.length; pathIndex++) {
-      final stageIndex = layout.paths[pathIndex].nodes.indexWhere(
-        (node) => node.id == nodeId,
-      );
-      if (stageIndex >= 0) {
-        return (pathIndex + stageIndex).isEven
-            ? VerticalRoadmapLabelSide.left
-            : VerticalRoadmapLabelSide.right;
-      }
-    }
-    return VerticalRoadmapLabelSide.left;
+    if (branchDelta < -1) return VerticalRoadmapLabelSide.left;
+    return VerticalRoadmapLabelSide.right;
   }
 }
