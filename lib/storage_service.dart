@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import 'models.dart';
@@ -8,6 +8,7 @@ import 'persistence/hive_preference_store.dart';
 import 'persistence/legacy_hive_domain_store.dart';
 import 'persistence/legacy_storage_codec.dart';
 import 'persistence/snapshot_store.dart';
+import 'persistence/storage_location.dart';
 import 'persistence/storage_migration_policy.dart';
 import 'persistence/storage_snapshot_codec.dart';
 import 'storage_snapshot.dart';
@@ -83,7 +84,8 @@ class StorageService {
 
     final hivePath = _hivePath;
     if (hivePath == null) {
-      await Hive.initFlutter();
+      WidgetsFlutterBinding.ensureInitialized();
+      Hive.init((await defaultStorageDirectory()).path);
     } else {
       Hive.init(hivePath);
     }
