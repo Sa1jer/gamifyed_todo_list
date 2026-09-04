@@ -421,3 +421,14 @@ const kColors = <Color>[
   Color(0xFFAF52DE),
   Color(0xFF8E8E93),
 ];
+
+/// Russian plural for «квест», so a count never reads as «1 квестов».
+String questWord(int count) {
+  final lastTwo = count.abs() % 100;
+  if (lastTwo >= 11 && lastTwo <= 14) return 'квестов';
+  return switch (count.abs() % 10) {
+    1 => 'квест',
+    2 || 3 || 4 => 'квеста',
+    _ => 'квестов',
+  };
+}

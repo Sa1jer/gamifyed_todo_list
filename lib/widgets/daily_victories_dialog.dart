@@ -1041,15 +1041,7 @@ class _SoftEmpty extends StatelessWidget {
 
 String _questCount(int count) => '$count ${_questWord(count)}';
 
-String _questWord(int count) {
-  final lastTwo = count % 100;
-  if (lastTwo >= 11 && lastTwo <= 14) return 'квестов';
-  return switch (count % 10) {
-    1 => 'квест',
-    2 || 3 || 4 => 'квеста',
-    _ => 'квестов',
-  };
-}
+String _questWord(int count) => questWord(count);
 
 String _chargeCount(int count) => '$count ${_chargeWord(count)}';
 

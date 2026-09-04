@@ -12,6 +12,7 @@ export 'shared/surfaces.dart';
 export 'shared/buttons.dart';
 export 'shared/progress_badges.dart';
 export 'shared/dashed_border.dart';
+export 'shared/destructive_confirm.dart';
 
 class MotionFadeSlideSwitcher extends StatelessWidget {
   final Widget child;

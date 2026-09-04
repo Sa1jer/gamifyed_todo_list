@@ -719,36 +719,17 @@ class _MobileActJournalState extends State<_MobileActJournal> {
   }) async {
     final isDark = state.isDark;
     final taskCount = state.tasksForSkill(skill.id).length;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: surface(isDark),
-        title: Text(
-          'Удалить навык «${skill.name}»?',
-          style: TextStyle(color: textColor(isDark)),
-        ),
-        content: Text(
-          'Будут удалены уровень и XP навыка, его RoadMap и $taskCount ${_questWord(taskCount)}. Это действие нельзя отменить.',
-          style: TextStyle(color: subtext(isDark), height: 1.35),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Отмена'),
-          ),
-          FilledButton(
-            key: ValueKey('confirm-delete-skill-${skill.id}'),
-            onPressed: () => Navigator.pop(dialogContext, true),
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFFF3B30),
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Удалить навык'),
-          ),
-        ],
-      ),
+    final confirmed = await confirmDestructiveAction(
+      context,
+      isDark: isDark,
+      title: 'Удалить навык «${skill.name}»?',
+      message:
+          'Будут удалены уровень и XP навыка, его RoadMap и $taskCount '
+          '${_questWord(taskCount)}. Это действие нельзя отменить.',
+      confirmLabel: 'Удалить навык',
+      confirmKey: ValueKey('confirm-delete-skill-${skill.id}'),
     );
-    if (!mounted || confirmed != true) return;
+    if (!mounted || !confirmed) return;
     AppFeedback.destructive();
     state.removeSkill(skill.id);
   }
@@ -1012,12 +993,4 @@ Duration _motionDuration(BuildContext context) => MobileMotion.duration(
   normal: _MobileJournalTokens.motion,
 );
 
-String _questWord(int count) {
-  final mod10 = count % 10;
-  final mod100 = count % 100;
-  if (mod10 == 1 && mod100 != 11) return 'квест';
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
-    return 'квеста';
-  }
-  return 'квестов';
-}
+String _questWord(int count) => questWord(count);

@@ -1,5 +1,35 @@
 part of '../mastery_map_workspace.dart';
 
+/// Удаление этапа необратимо: сам этап с чек-листом пропадает, поэтому его
+/// подтверждают. Связанные квесты при этом выживают — [removeStage] только
+/// снимает у них привязку, — и сообщение говорит об этом прямо, чтобы вопрос
+/// не читался страшнее, чем есть.
+Future<void> _confirmDeleteRoadmapNode(
+  BuildContext context, {
+  required AppState state,
+  required Skill skill,
+  required SkillTreeNode node,
+  required void Function(_MasterySelection selection) onDeleted,
+}) async {
+  final linked = state.tasksForTreeNode(skill.id, node.id).length;
+  final confirmed = await confirmDestructiveAction(
+    context,
+    isDark: state.isDark,
+    title: 'Удалить этап?',
+    message: linked == 0
+        ? '«${node.title}» и его чек-лист будут удалены. Вернуть этап будет '
+              'нечем.'
+        : '«${node.title}» и его чек-лист будут удалены. $linked '
+              '${questWord(linked)} останутся в навыке, но потеряют привязку '
+              'к этапу.',
+    confirmLabel: 'Удалить этап',
+    confirmKey: ValueKey('confirm-delete-node-${node.id}'),
+  );
+  if (!confirmed) return;
+  state.removeSkillTreeNode(skill.id, node.id);
+  onDeleted(_MasterySelection.skill(skill.id));
+}
+
 Future<NextRoadmapChoice?> _showNextGoalFlow(
   BuildContext context, {
   required AppState state,
@@ -203,10 +233,15 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
       },
       onMasterNode: (skill, node) =>
           state.masterSkillTreeNode(skill.id, node.id),
-      onDeleteNode: (skill, node) {
-        state.removeSkillTreeNode(skill.id, node.id);
-        _setSelection(_MasterySelection.skill(skill.id));
-      },
+      onDeleteNode: (skill, node) => unawaited(
+        _confirmDeleteRoadmapNode(
+          context,
+          state: state,
+          skill: skill,
+          node: node,
+          onDeleted: _setSelection,
+        ),
+      ),
     );
 
     if (mobile) {
@@ -240,10 +275,15 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
         },
         onMasterNode: (skill, node) =>
             state.masterSkillTreeNode(skill.id, node.id),
-        onDeleteNode: (skill, node) {
-          state.removeSkillTreeNode(skill.id, node.id);
-          _setSelection(_MasterySelection.skill(skill.id));
-        },
+        onDeleteNode: (skill, node) => unawaited(
+          _confirmDeleteRoadmapNode(
+            context,
+            state: state,
+            skill: skill,
+            node: node,
+            onDeleted: _setSelection,
+          ),
+        ),
       );
     }
 
@@ -725,12 +765,15 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
                               },
                               onMasterNode: (skill, node) =>
                                   state.masterSkillTreeNode(skill.id, node.id),
-                              onDeleteNode: (skill, node) {
-                                state.removeSkillTreeNode(skill.id, node.id);
-                                updateSelection(
-                                  _MasterySelection.skill(skill.id),
-                                );
-                              },
+                              onDeleteNode: (skill, node) => unawaited(
+                                _confirmDeleteRoadmapNode(
+                                  context,
+                                  state: state,
+                                  skill: skill,
+                                  node: node,
+                                  onDeleted: updateSelection,
+                                ),
+                              ),
                             ),
                           ),
                         ],

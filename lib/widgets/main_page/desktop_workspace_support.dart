@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../app_state.dart';
@@ -5,6 +7,7 @@ import '../../models.dart';
 import '../../utils.dart';
 import '../desktop_journal_tokens.dart';
 import '../dialogs.dart';
+import '../shared/destructive_confirm.dart';
 
 class DesktopCompactButton extends StatelessWidget {
   final String label;
@@ -253,32 +256,24 @@ void showDesktopEditSkill(BuildContext context, AppState state, Skill skill) {
   );
 }
 
-void showDesktopDeleteSkill(BuildContext context, AppState state, Skill skill) {
-  final tokens = DesktopJournalTokens.resolve(state.isDark);
+void showDesktopDeleteSkill(
+  BuildContext context,
+  AppState state,
+  Skill skill,
+) {
   final taskCount = state.tasksForSkill(skill.id).length;
-  showDialog<void>(
-    context: context,
-    builder: (dialogContext) => AlertDialog(
-      backgroundColor: tokens.raisedSurface,
-      title: Text('Удалить навык?', style: TextStyle(color: tokens.text)),
-      content: Text(
-        '«${skill.name}» и $taskCount связанных квестов будут удалены.',
-        style: TextStyle(color: tokens.mutedText),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(dialogContext),
-          child: const Text('Отмена'),
-        ),
-        TextButton(
-          onPressed: () {
-            state.removeSkill(skill.id);
-            Navigator.pop(dialogContext);
-          },
-          style: TextButton.styleFrom(foregroundColor: tokens.danger),
-          child: const Text('Удалить'),
-        ),
-      ],
-    ),
+  unawaited(
+    confirmDestructiveAction(
+      context,
+      isDark: state.isDark,
+      title: 'Удалить навык?',
+      message:
+          '«${skill.name}» и $taskCount ${questWord(taskCount)} будут удалены. '
+          'Это действие нельзя отменить.',
+      confirmLabel: 'Удалить навык',
+      confirmKey: ValueKey('confirm-delete-skill-${skill.id}'),
+    ).then((confirmed) {
+      if (confirmed) state.removeSkill(skill.id);
+    }),
   );
 }
