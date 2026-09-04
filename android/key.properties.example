@@ -1,6 +1,20 @@
-# Copy to android/key.properties and replace every placeholder locally.
-# Never commit android/key.properties or the keystore itself.
-storePassword=<local-store-password>
-keyPassword=<local-key-password>
-keyAlias=upload
-storeFile=<absolute-path-to-private-upload-keystore.jks>
+# Шаблон. Скопируйте рядом под именем key.properties и подставьте свои значения:
+#
+#   cp android/key.properties.example android/key.properties
+#
+# key.properties закрыт android/.gitignore и в репозиторий не попадёт.
+# Сам файл ключа (*.jks) закрыт корневым .gitignore и должен лежать ВНЕ проекта.
+
+# Полный путь к файлу хранилища, созданному keytool. Не относительный.
+storeFile=/Users/<ваше имя пользователя>/rpg-todo-release.jks
+
+# Пароль, который вы придумали при создании хранилища.
+storePassword=<ваш пароль>
+
+# Имя ключа внутри хранилища — то, что вы передали в -alias.
+keyAlias=rpg-todo
+
+# В современном формате хранилища (PKCS12, он по умолчанию начиная с JDK 9)
+# у ключа нет отдельного пароля: он совпадает с паролем хранилища. Значение
+# здесь должно быть тем же самым, что и в storePassword.
+keyPassword=<тот же пароль>
