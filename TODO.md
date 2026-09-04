@@ -294,8 +294,9 @@ Automated baseline completed on 2026-06-30:
 
 Release blockers and deferred maintenance:
 
-- [ ] Replace Android/iOS/macOS `com.example...` identifiers with final owned application and bundle identifiers before distribution.
-- [ ] Provide a private `android/key.properties`; release Gradle correctly refuses release assembly without signing and never falls back to debug signing.
+- [x] Android, iOS and macOS moved off `com.example...` to `com.rpgtodo.app` (2026-09-04), verified against the built APK with `aapt2 dump packagename`. Done early on purpose: a new application ID installs as a different app, so every ID change costs testers their local data unless they export first.
+- [ ] Settle the final identifier before any store submission. `com.rpgtodo.app` is a placeholder in one respect — reverse-DNS is meant to come from a domain the publisher controls, and `rpgtodo.com` is not owned. Either buy a domain or take `io.github.sa1jer.rpgtodo`, which needs no purchase. The ID cannot change after publication.
+- [ ] Provide a private `android/key.properties`; release Gradle correctly refuses release assembly without signing and never falls back to debug signing. The keystore is the owner's to create — it carries passwords. `*.jks`/`*.keystore` are now gitignored repo-wide; `key.properties` was already covered by `android/.gitignore`. Until then, betas go out as debug builds. See `docs/BETA_DISTRIBUTION.md`.
 - [ ] Replace the default Flutter Android launcher icon/basic launch artwork with final RPG To-Do assets before store distribution.
 - [ ] Migrate the app and affected plugins (`audioplayers_android`, `flutter_timezone`) to Flutter Built-in Kotlin in a dedicated dependency/build-system batch before the compatibility warning becomes an error.
 - [ ] Install the matching iOS platform in Xcode and configure distribution signing; the iOS no-codesign probe is currently blocked because iOS `26.2` is not installed.

@@ -80,7 +80,7 @@
 
 ### P2 — Release / privacy
 
-1. Android/iOS/macOS всё ещё используют `com.example...` identifiers; Android release требует private signing config.
+1. Android/iOS/macOS переведены на `com.rpgtodo.app` (2026-09-04); Android release по-прежнему требует private signing config.
 2. Android debug artifact и emulator startup подтверждены; Android release требует private signing, iOS runtime/signing пока не готовы.
 3. Android backup отключён. Политика iOS backup и необходимость encrypted-at-rest хранения пользовательских задач/целей ещё не решены.
 4. `SCHEDULE_EXACT_ALARM` и `exactAllowWhileIdle` требуют отдельной store-policy проверки.

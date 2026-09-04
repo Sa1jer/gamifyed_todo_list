@@ -48,20 +48,26 @@ default. Do not weaken the signing guard merely to make a probe green.
 
 ## Identity and Branding
 
-- Namespace: `com.example.todo_list_app`.
-- Application ID: `com.example.todo_list_app`.
-- Kotlin source package: `com.example.todo_list_app`.
+- Namespace: `com.rpgtodo.app`.
+- Application ID: `com.rpgtodo.app`.
+- Kotlin source package: `com.rpgtodo.app`.
+- iOS and macOS bundle identifier: `com.rpgtodo.app`; the test targets are
+  `com.rpgtodo.app.RunnerTests`.
 - App label: `RPG To-Do List` and is not a placeholder.
 - Launcher icon: the default Flutter icon and must be replaced before release.
 - Launch background is still the basic Flutter template configuration.
 
-The current `com.example...` ID is a release blocker. The app appears
-unpublished, but that must be confirmed by the owner before changing it.
-Candidate IDs for explicit confirmation:
+`com.example...` is gone from every platform as of 2026-09-04. The ID was
+changed while the tester group was small precisely because the change is not
+free: an APK with a new application ID installs as a *different* app, so a
+tester keeps the old one until they uninstall it, and uninstalling takes their
+local data with it. Testers must export their profile from the old build before
+switching — see `docs/BETA_DISTRIBUTION.md`.
 
-- `com.albert.rpgtodo`
-- `com.dodik.rpgtodo`
-- `com.dodik.gamifiedtodo`
+`com.rpgtodo.app` is a placeholder in one respect: reverse-DNS IDs are meant to
+be derived from a domain the publisher controls, and `rpgtodo.com` is not owned.
+That is acceptable for private distribution and must be settled before any store
+submission, because the ID cannot change afterwards.
 
 Keep `namespace`, `applicationId`, and the `MainActivity.kt` package consistent
 unless there is a deliberate reason to separate them. Once published, changing
