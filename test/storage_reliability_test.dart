@@ -137,6 +137,9 @@ void main() {
       state.tasks
         ..add(task('task-a', 'skill-a'))
         ..add(task('task-b', 'skill-a'));
+      // Прямая правка коллекций минует границу мутаций, поэтому фасад узнаёт
+      // о несохранённой работе только отсюда. Без этого flush нечего писать.
+      state.refresh();
       addTearDown(() async {
         storage.clearFailures();
         state.dispose();
@@ -234,6 +237,7 @@ void main() {
         state.dispose();
       });
       await state.loadSavedData();
+      state.addSkill(skill('unsaved-change'));
       storage.failBeforeOperation = StorageOperation.saveTasks;
 
       await expectLater(
@@ -377,6 +381,7 @@ void main() {
       final state = AppState(storage: storage);
       addTearDown(storage.clearFailures);
       await state.loadSavedData();
+      state.addSkill(skill('unsaved-change'));
       storage.failBeforeOperation = StorageOperation.saveTasks;
       await expectLater(
         state.flushSaves(),

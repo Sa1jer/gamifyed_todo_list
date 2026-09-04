@@ -756,7 +756,18 @@ class AppState extends ChangeNotifier {
     return _saveScheduler.request(immediate: immediate);
   }
 
-  Future<void> flushSaves() => _saveScheduler.flush();
+  /// Writes pending changes now, and skips the write when there are none.
+  ///
+  /// A flush with a clean state costs a full snapshot for nothing, and
+  /// [PersistenceStatus.isDirty] is already the app's record of unsaved work:
+  /// every mutation sets it, a successful write clears it, and a failed write
+  /// puts it back, so a skipped flush cannot drop changes. A pending debounce
+  /// is deliberately left running rather than cancelled, so the skip can never
+  /// swallow queued work either.
+  Future<void> flushSaves() {
+    if (!_persistenceStatus.isDirty) return Future.value();
+    return _saveScheduler.flush();
+  }
 
   Future<bool> retrySave() async {
     if (_persistenceStatus.blocksSaving) return false;

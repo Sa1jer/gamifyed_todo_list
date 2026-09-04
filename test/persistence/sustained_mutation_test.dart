@@ -14,10 +14,15 @@ class _CountingStorageService extends StorageService {
   _CountingStorageService({required super.hivePath});
 
   int snapshotWrites = 0;
+  bool failNextSnapshotWrite = false;
 
   @override
   Future<void> saveSnapshot(StorageSnapshot snapshot) {
     snapshotWrites++;
+    if (failNextSnapshotWrite) {
+      failNextSnapshotWrite = false;
+      return Future.error(StateError('snapshot write refused'));
+    }
     return super.saveSnapshot(snapshot);
   }
 }
@@ -101,14 +106,17 @@ void main() {
 
     await state.flushSaves();
     final writesAfterFlush = storage.snapshotWrites;
-
-    // Зафиксированное поведение, а не желаемое: flush пишет безусловно, он
-    // не смотрит на dirty. То есть каждый уход в фон стоит полной записи
-    // снапшота даже без изменений. Тест закрепляет это как характеристику,
-    // чтобы смена семантики не прошла молча — см. follow-up в TODO.md.
-    await state.flushSaves();
-    expect(storage.snapshotWrites, writesAfterFlush + 1);
     expect(state.persistenceStatus.isDirty, isFalse);
+
+    // Чистый flush не пишет: снапшот на диске уже описывает это состояние.
+    await state.flushSaves();
+    expect(storage.snapshotWrites, writesAfterFlush);
+
+    // Новая мутация возвращает право на запись.
+    state.addSkill(skill('later'));
+    expect(state.persistenceStatus.isDirty, isTrue);
+    await state.flushSaves();
+    expect(storage.snapshotWrites, greaterThan(writesAfterFlush));
 
     // Состояние доживает до перезапуска процесса.
     await Hive.close();
@@ -118,4 +126,35 @@ void main() {
     expect(snapshot.skills.any((s) => s.id == 'pending'), isTrue);
     expect(snapshot.tasks.single.id, 'pending-task');
   });
+
+  test(
+    'a failed write keeps the state dirty so the next flush retries',
+    () async {
+      final storage = _CountingStorageService(hivePath: hiveDirectory.path);
+      await storage.init();
+      final state = AppState(storage: storage, seedDefaults: false);
+      addTearDown(state.dispose);
+      await state.loadSavedData();
+      await state.flushSaves();
+      storage.snapshotWrites = 0;
+
+      state.addSkill(skill('survives-failure'));
+      storage.failNextSnapshotWrite = true;
+      await expectLater(state.flushSaves(), throwsA(isA<StateError>()));
+
+      // Скипающий flush не должен проглотить работу, которую не удалось записать.
+      expect(state.persistenceStatus.isDirty, isTrue);
+      expect(storage.snapshotWrites, 1);
+
+      await state.flushSaves();
+      expect(storage.snapshotWrites, 2);
+      expect(state.persistenceStatus.isDirty, isFalse);
+
+      final committed = await storage.loadLatestSnapshot();
+      expect(
+        committed!.snapshot.skills.any((s) => s.id == 'survives-failure'),
+        isTrue,
+      );
+    },
+  );
 }
