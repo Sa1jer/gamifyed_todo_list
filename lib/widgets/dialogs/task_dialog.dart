@@ -430,7 +430,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                       style: TextStyle(
                         color: txt,
                         fontSize: 13,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -773,7 +773,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                   style: TextStyle(
                     color: sub,
                     fontSize: compact ? 11.5 : 12,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w500,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

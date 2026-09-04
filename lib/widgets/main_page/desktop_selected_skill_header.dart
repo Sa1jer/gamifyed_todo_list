@@ -54,7 +54,7 @@ class DesktopSelectedSkillHeader extends StatelessWidget {
         style: TextStyle(
           color: tokens.text,
           fontSize: compact ? 18 : 20,
-          fontWeight: FontWeight.w900,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
@@ -68,7 +68,7 @@ class DesktopSelectedSkillHeader extends StatelessWidget {
         style: TextStyle(
           color: tokens.mutedText,
           fontSize: 13,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w500,
         ),
       ),
     );
@@ -299,7 +299,7 @@ class DesktopLevelPill extends StatelessWidget {
         style: TextStyle(
           color: color,
           fontSize: 10.5,
-          fontWeight: FontWeight.w900,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
@@ -385,7 +385,7 @@ class _DesktopSelectedSkillPrimaryButton extends StatelessWidget {
       icon: Icon(icon, size: 18),
       label: Text(
         label,
-        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
+        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
       ),
     );
   }

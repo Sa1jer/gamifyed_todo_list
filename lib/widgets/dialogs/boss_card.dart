@@ -71,7 +71,7 @@ class BossResistanceCard extends StatelessWidget {
                     Text(
                       boss.title,
                       style: TextStyle(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w700,
                         color: txt,
                         fontSize: 14,
                       ),
@@ -116,7 +116,7 @@ class BossResistanceCard extends StatelessWidget {
                   style: TextStyle(
                     color: accent,
                     fontSize: 11,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
@@ -204,7 +204,7 @@ class _BossPhaseBadge extends StatelessWidget {
         style: TextStyle(
           color: color,
           fontSize: 11,
-          fontWeight: FontWeight.bold,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );

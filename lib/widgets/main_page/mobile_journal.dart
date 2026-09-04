@@ -406,7 +406,7 @@ class _MobileActJournalState extends State<_MobileActJournal> {
                             style: TextStyle(
                               color: _MobileJournalTokens.text(isDark),
                               fontSize: 20,
-                              fontWeight: FontWeight.w900,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ),
@@ -861,7 +861,7 @@ class _MobileInboxAccordion extends StatelessWidget {
                                             taskCount == 0 ? 120 : 195,
                                           ),
                                     fontSize: 11,
-                                    fontWeight: FontWeight.w900,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
                               ),
@@ -878,7 +878,7 @@ class _MobileInboxAccordion extends StatelessWidget {
                                 style: TextStyle(
                                   color: _MobileJournalTokens.text(isDark),
                                   fontSize: 15,
-                                  fontWeight: FontWeight.w900,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                               const SizedBox(height: 2),

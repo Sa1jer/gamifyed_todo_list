@@ -130,7 +130,7 @@ class MobileSecondaryHeader extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                     if (subtitleText != null && subtitleText.isNotEmpty) ...[

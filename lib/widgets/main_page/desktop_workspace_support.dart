@@ -39,7 +39,7 @@ class DesktopCompactButton extends StatelessWidget {
       icon: Icon(icon, size: 15),
       label: Text(
         label,
-        style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900),
+        style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700),
       ),
     );
   }
@@ -78,7 +78,7 @@ PopupMenuItem<T> desktopMenuItem<T>({
           label,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(color: color, fontWeight: FontWeight.w600),
+          style: TextStyle(color: color, fontWeight: FontWeight.w500),
         ),
       ),
     ],

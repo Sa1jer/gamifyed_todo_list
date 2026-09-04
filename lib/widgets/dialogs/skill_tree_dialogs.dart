@@ -62,7 +62,7 @@ class _SkillTreeDialogState extends State<SkillTreeDialog> {
                     child: Text(
                       'Карта мастерства: ${skill.name}',
                       style: TextStyle(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w700,
                         fontSize: 18,
                         color: txt,
                       ),
@@ -288,7 +288,7 @@ class _SkillTreeIntro extends StatelessWidget {
           color: subtext(isDark),
           fontSize: 12,
           height: 1.3,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w500,
         ),
       ),
     );
@@ -618,7 +618,7 @@ class _MasteryMapNode extends StatelessWidget {
                       style: TextStyle(
                         color: statusColor,
                         fontSize: 10.5,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
@@ -638,7 +638,7 @@ class _MasteryMapNode extends StatelessWidget {
                   : textColor(isDark),
               fontSize: 11,
               height: 1.05,
-              fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w700,
             ),
           ),
         ],
@@ -698,7 +698,7 @@ class _LegendDot extends StatelessWidget {
           style: TextStyle(
             color: color,
             fontSize: 10.5,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ],

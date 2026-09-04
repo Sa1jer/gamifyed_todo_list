@@ -79,7 +79,7 @@ class WeeklyProcrastinationInsightsCard extends StatelessWidget {
                         style: TextStyle(
                           color: txt,
                           fontSize: 12.5,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       subtitle: Text(
@@ -213,7 +213,7 @@ class _PrimaryInsightCard extends StatelessWidget {
                   style: TextStyle(
                     color: txt,
                     fontSize: 12.5,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
@@ -289,7 +289,7 @@ class _InsightColumn extends StatelessWidget {
                       style: TextStyle(
                         color: txt,
                         fontSize: 12.5,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                     Text(
@@ -390,7 +390,7 @@ class _InsightTaskTile extends StatelessWidget {
                   style: TextStyle(
                     color: txt,
                     fontSize: 12,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
@@ -415,7 +415,7 @@ class _InsightTaskTile extends StatelessWidget {
                     style: TextStyle(
                       color: const Color(0xFF34C759),
                       fontSize: 10.5,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
@@ -442,7 +442,7 @@ class _InsightTaskTile extends StatelessWidget {
                         style: TextStyle(
                           color: Color(0xFF34C759),
                           fontSize: 10.5,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),

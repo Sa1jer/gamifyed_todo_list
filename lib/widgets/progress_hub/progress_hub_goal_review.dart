@@ -66,7 +66,7 @@ class ProgressReviewBlock extends StatelessWidget {
                       style: TextStyle(
                         color: txt,
                         fontSize: 14,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 3),
@@ -76,7 +76,7 @@ class ProgressReviewBlock extends StatelessWidget {
                         color: sub,
                         fontSize: 12,
                         height: 1.3,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
@@ -134,7 +134,7 @@ class GoalProgressOverview extends StatelessWidget {
                     style: TextStyle(
                       color: txt,
                       fontSize: 13.5,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 3),
@@ -240,7 +240,7 @@ class _GoalProgressCard extends StatelessWidget {
                       style: TextStyle(
                         color: txt,
                         fontSize: 13,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -258,7 +258,7 @@ class _GoalProgressCard extends StatelessWidget {
                 style: TextStyle(
                   color: skill.color,
                   fontSize: 12.5,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ],

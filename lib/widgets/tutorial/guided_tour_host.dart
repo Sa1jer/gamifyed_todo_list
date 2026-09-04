@@ -510,7 +510,7 @@ class _GuidedTourCard extends StatelessWidget {
                       style: TextStyle(
                         color: accent,
                         fontSize: 11,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w700,
                         letterSpacing: 0.7,
                       ),
                     ),
@@ -539,7 +539,7 @@ class _GuidedTourCard extends StatelessWidget {
                 style: TextStyle(
                   color: foreground,
                   fontSize: 19,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 8),
@@ -552,7 +552,7 @@ class _GuidedTourCard extends StatelessWidget {
                   color: secondary,
                   fontSize: 13.5,
                   height: 1.4,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
               const SizedBox(height: 16),

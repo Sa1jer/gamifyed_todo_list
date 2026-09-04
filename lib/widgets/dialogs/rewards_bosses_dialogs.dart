@@ -76,7 +76,7 @@ class _RewardsDialogState extends State<RewardsDialog> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w700,
                           fontSize: 18,
                           color: txt,
                         ),
@@ -203,7 +203,7 @@ class _RewardsDialogState extends State<RewardsDialog> {
         style: TextStyle(
           color: text,
           fontSize: 16,
-          fontWeight: FontWeight.w900,
+          fontWeight: FontWeight.w700,
         ),
       ),
       const SizedBox(height: 12),
@@ -286,7 +286,7 @@ class _RewardsDialogState extends State<RewardsDialog> {
                 style: TextStyle(
                   color: txt,
                   fontSize: 14,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),

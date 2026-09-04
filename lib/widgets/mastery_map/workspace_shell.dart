@@ -666,7 +666,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
                                   style: TextStyle(
                                     color: textColor(isDark),
                                     fontSize: 18,
-                                    fontWeight: FontWeight.w900,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
                               ),
@@ -870,7 +870,7 @@ class _AdaptiveRoadmapEmptyState extends StatelessWidget {
                         textAlign: TextAlign.center,
                         style: context.appTextTheme.titleLarge?.copyWith(
                           color: textColor(isDark),
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -1061,7 +1061,7 @@ class _RoadmapStageEditorDialogState extends State<_RoadmapStageEditorDialog> {
                           style: TextStyle(
                             color: txt,
                             fontSize: 13,
-                            fontWeight: FontWeight.w900,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
@@ -1081,7 +1081,7 @@ class _RoadmapStageEditorDialogState extends State<_RoadmapStageEditorDialog> {
                           style: TextStyle(
                             color: widget.color,
                             fontSize: 20,
-                            fontWeight: FontWeight.w900,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),

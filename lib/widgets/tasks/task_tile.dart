@@ -94,7 +94,7 @@ class _TaskTileState extends State<TaskTile> {
                     style: TextStyle(
                       color: widget.skillColor,
                       fontSize: 11,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],

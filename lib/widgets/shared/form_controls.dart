@@ -17,7 +17,7 @@ class DlgHeader extends StatelessWidget {
       Text(
         title,
         style: TextStyle(
-          fontWeight: FontWeight.bold,
+          fontWeight: FontWeight.w700,
           color: txtColor,
           fontSize: 18,
         ),
@@ -154,7 +154,7 @@ class MobileFormPage extends StatelessWidget {
                   style: TextButton.styleFrom(foregroundColor: accentColor),
                   child: Text(
                     saveLabel,
-                    style: const TextStyle(fontWeight: FontWeight.w900),
+                    style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ),
                 const SizedBox(width: 4),
@@ -246,7 +246,7 @@ class DlgActions extends StatelessWidget {
             'Отмена',
             style: TextStyle(
               color: Colors.grey,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
               fontSize: 14,
             ),
           ),
@@ -264,7 +264,7 @@ class DlgActions extends StatelessWidget {
             saveLabel,
             style: const TextStyle(
               color: Colors.white,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
               fontSize: 14,
             ),
           ),
@@ -328,13 +328,13 @@ Future<int?> showIntegerEditDialog(
                         style: TextStyle(
                           color: txt,
                           fontSize: 18,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                         ),
                         decoration: InputDecoration(
                           suffixText: suffix,
                           suffixStyle: TextStyle(
                             color: color,
-                            fontWeight: FontWeight.w900,
+                            fontWeight: FontWeight.w700,
                           ),
                           errorText: errorText,
                           helperText: 'Диапазон: $min-$max',
@@ -385,6 +385,6 @@ class SubLbl extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
     text,
-    style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
+    style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w500),
   );
 }

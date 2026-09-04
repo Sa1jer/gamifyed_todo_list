@@ -52,7 +52,7 @@ class _DesktopPageScaffold extends StatelessWidget {
                           style: TextStyle(
                             color: tokens.text,
                             fontSize: 21,
-                            fontWeight: FontWeight.w900,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -61,7 +61,7 @@ class _DesktopPageScaffold extends StatelessWidget {
                           style: TextStyle(
                             color: tokens.mutedText,
                             fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],
@@ -142,7 +142,7 @@ class _DesktopRewardsWorkspaceState extends State<_DesktopRewardsWorkspace> {
             style: TextStyle(
               color: tokens.mutedText,
               fontSize: 12,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
               letterSpacing: 0.7,
             ),
           ),
@@ -256,7 +256,7 @@ class _DesktopRewardsWorkspaceState extends State<_DesktopRewardsWorkspace> {
             style: TextStyle(
               color: tokens.mutedText,
               fontSize: 12,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
               letterSpacing: 0.7,
             ),
           ),
@@ -359,7 +359,7 @@ class _DesktopTrophyProgressCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: tokens.text,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
@@ -367,7 +367,7 @@ class _DesktopTrophyProgressCard extends StatelessWidget {
                 '${(progress.value * 100).round()}%',
                 style: TextStyle(
                   color: progress.color,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ],
@@ -438,7 +438,7 @@ class _DesktopTrophyHowToCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: tokens.text,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 4),
@@ -579,7 +579,7 @@ class _DesktopSettingsWorkspace extends StatelessWidget {
                         'RPG To-Do List',
                         style: TextStyle(
                           color: tokens.text,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
@@ -661,7 +661,7 @@ class _DesktopRewardCollection extends StatelessWidget {
                   title,
                   style: context.appTextTheme.titleMedium?.copyWith(
                     color: tokens.text,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
@@ -705,7 +705,7 @@ class _DesktopEmptyMessage extends StatelessWidget {
               style: TextStyle(
                 color: tokens.text,
                 fontSize: 16,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: 4),
@@ -764,7 +764,7 @@ class _DesktopRewardChestCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: tokens.text,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -813,7 +813,7 @@ class _DesktopCountPill extends StatelessWidget {
     ),
     child: Text(
       '$value',
-      style: TextStyle(color: color, fontWeight: FontWeight.w900),
+      style: TextStyle(color: color, fontWeight: FontWeight.w700),
     ),
   );
 }
@@ -866,7 +866,7 @@ class _DesktopSettingsSection extends StatelessWidget {
           style: TextStyle(
             color: tokens.mutedText,
             fontSize: 11,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w700,
             letterSpacing: 0.7,
           ),
         ),
@@ -925,7 +925,7 @@ class _DesktopSettingsStatus extends StatelessWidget {
                   title,
                   style: TextStyle(
                     color: tokens.text,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 4),

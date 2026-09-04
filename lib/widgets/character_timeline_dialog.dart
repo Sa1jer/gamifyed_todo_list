@@ -87,7 +87,7 @@ class CharacterTimelineDialog extends StatelessWidget {
                         style: TextStyle(
                           color: txt,
                           fontSize: 20,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       const SizedBox(height: 3),
@@ -186,7 +186,7 @@ class CharacterTimelineDialog extends StatelessWidget {
                         style: TextStyle(
                           color: text,
                           fontSize: 18,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
@@ -737,7 +737,7 @@ class _TimelineHero extends StatelessWidget {
                       style: TextStyle(
                         color: txt,
                         fontSize: 21,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                     _TimelinePill(
@@ -864,7 +864,7 @@ class _TimelineMetricTile extends StatelessWidget {
                   style: TextStyle(
                     color: txt,
                     fontSize: 20,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -910,7 +910,7 @@ class _TimelineList extends StatelessWidget {
                   style: TextStyle(
                     color: txt,
                     fontSize: 15,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
@@ -1012,7 +1012,7 @@ class _TimelineEventTile extends StatelessWidget {
                         style: TextStyle(
                           color: txt,
                           fontSize: 13.5,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
@@ -1110,7 +1110,7 @@ class _TimelinePill extends StatelessWidget {
         style: TextStyle(
           color: color,
           fontSize: 10.8,
-          fontWeight: FontWeight.w900,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
@@ -1143,7 +1143,7 @@ class _TimelineEmpty extends StatelessWidget {
             style: TextStyle(
               color: sub,
               fontSize: 14,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 4),

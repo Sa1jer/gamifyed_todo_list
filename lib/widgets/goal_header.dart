@@ -49,7 +49,7 @@ class GoalHeader extends StatelessWidget {
               color: sub,
               fontSize: compact ? 12 : 12.5,
               height: 1.2,
-              fontWeight: compact ? FontWeight.w700 : FontWeight.w800,
+              fontWeight: compact ? FontWeight.w700 : FontWeight.w700,
             ),
           ),
         ),
@@ -60,7 +60,7 @@ class GoalHeader extends StatelessWidget {
             style: TextStyle(
               color: skill.color,
               fontSize: 11,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],

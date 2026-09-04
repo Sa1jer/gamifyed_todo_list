@@ -81,7 +81,7 @@ class DesktopStatisticsSummaryStrip extends StatelessWidget {
                 value,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: color, fontWeight: FontWeight.w900),
+                style: TextStyle(color: color, fontWeight: FontWeight.w700),
               ),
             ),
           ],
@@ -155,7 +155,7 @@ class DesktopStatisticsAnalyticsPanel extends StatelessWidget {
                       '${week.skillById(skill.id)?.weeklyXp ?? 0}',
                       style: TextStyle(
                         color: skill.color,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ],
@@ -172,7 +172,7 @@ class DesktopStatisticsAnalyticsPanel extends StatelessWidget {
     style: TextStyle(
       color: tokens.mutedText,
       fontSize: 10.5,
-      fontWeight: FontWeight.w900,
+      fontWeight: FontWeight.w700,
       letterSpacing: 0.7,
     ),
   );

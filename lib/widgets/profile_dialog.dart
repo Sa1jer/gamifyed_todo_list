@@ -627,7 +627,7 @@ class _ProfileDialogState extends State<ProfileDialog> {
                         p.initial,
                         style: const TextStyle(
                           color: Colors.white,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w700,
                           fontSize: 32,
                         ),
                       ),
@@ -674,7 +674,7 @@ class _ProfileDialogState extends State<ProfileDialog> {
                 controller: _nameCtrl,
                 autofocus: true,
                 style: TextStyle(
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w700,
                   fontSize: 22,
                   color: txt,
                 ),
@@ -697,7 +697,7 @@ class _ProfileDialogState extends State<ProfileDialog> {
                   child: Text(
                     p.name,
                     style: TextStyle(
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w700,
                       fontSize: 22,
                       color: txt,
                     ),
@@ -830,7 +830,7 @@ class _ProfileDialogState extends State<ProfileDialog> {
             style: TextStyle(
               color: txt,
               fontSize: 15,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],
@@ -845,7 +845,7 @@ class _ProfileDialogState extends State<ProfileDialog> {
           style: TextStyle(
             color: txt,
             fontSize: 15,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ],
@@ -1158,7 +1158,7 @@ class _ProfileDialogState extends State<ProfileDialog> {
                             style: TextStyle(
                               color: txt,
                               fontSize: 13,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -1516,7 +1516,7 @@ class _ProfileTimelineButton extends StatelessWidget {
                     style: TextStyle(
                       color: txt,
                       fontSize: 13,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -1583,7 +1583,7 @@ class _ProfileSettingsToggle extends StatelessWidget {
                 style: TextStyle(
                   color: text,
                   fontSize: 13,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 2),

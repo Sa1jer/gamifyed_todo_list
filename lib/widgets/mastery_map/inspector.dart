@@ -258,7 +258,7 @@ class _EmptyMapInspector extends StatelessWidget {
                           style: TextStyle(
                             color: textColor(isDark),
                             fontSize: 12.5,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
@@ -268,7 +268,7 @@ class _EmptyMapInspector extends StatelessWidget {
                         style: TextStyle(
                           color: skill.color,
                           fontSize: 11,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ],
@@ -429,7 +429,7 @@ class _SkillInspector extends StatelessWidget {
               style: TextStyle(
                 color: textColor(isDark),
                 fontSize: 13,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: 8),
@@ -507,7 +507,7 @@ class _InspectorMiniMetric extends StatelessWidget {
           style: TextStyle(
             color: subtext(isDark),
             fontSize: 9.5,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w700,
           ),
         ),
         const SizedBox(height: 4),
@@ -518,7 +518,7 @@ class _InspectorMiniMetric extends StatelessWidget {
           style: TextStyle(
             color: color,
             fontSize: 12,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ],
@@ -757,7 +757,7 @@ class _QuestPracticeInspector extends StatelessWidget {
                       color: textColor(isDark),
                       fontSize: 12.5,
                       height: 1.25,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
@@ -776,7 +776,7 @@ class _QuestPracticeInspector extends StatelessWidget {
             color: sub,
             fontSize: 12.5,
             height: 1.35,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w500,
           ),
         ),
         if (done && task.lastCompletedAt != null) ...[
@@ -871,7 +871,7 @@ class _InspectorTitle extends StatelessWidget {
                       style: context.appTextTheme.titleLarge?.copyWith(
                         color: textColor(isDark),
                         height: 1.08,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
@@ -967,7 +967,7 @@ class _MetricCard extends StatelessWidget {
                   style: TextStyle(
                     color: textColor(isDark),
                     fontSize: 12.5,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
@@ -989,7 +989,7 @@ class _MetricCard extends StatelessWidget {
                 style: TextStyle(
                   color: color,
                   fontSize: 12,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ],
@@ -1006,7 +1006,7 @@ class _MetricCard extends StatelessWidget {
                   color: subtext(isDark),
                   fontSize: 11,
                   height: 1.25,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ),
@@ -1062,7 +1062,7 @@ class _MasterNodeAction extends StatelessWidget {
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 12,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ],

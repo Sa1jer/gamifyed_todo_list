@@ -257,7 +257,7 @@ class _RewardNoticePopoverState extends State<RewardNoticePopover>
                               style: TextStyle(
                                 color: txt,
                                 fontSize: 13,
-                                fontWeight: FontWeight.w800,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -290,7 +290,7 @@ class _RewardNoticePopoverState extends State<RewardNoticePopover>
                             style: TextStyle(
                               color: widget.notice.color,
                               fontSize: 11,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ),

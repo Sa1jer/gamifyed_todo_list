@@ -105,8 +105,8 @@ class _IconChoiceButtonState extends State<_IconChoiceButton> {
                                 : widget.inactiveColor,
                             fontSize: 9,
                             fontWeight: selected
-                                ? FontWeight.w800
-                                : FontWeight.w600,
+                                ? FontWeight.w700
+                                : FontWeight.w500,
                           ),
                         ),
                       ],
@@ -295,7 +295,7 @@ class FirstRunDialogHint extends StatelessWidget {
                 color: textColor(isDark),
                 fontSize: 12.2,
                 height: 1.3,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),

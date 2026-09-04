@@ -49,7 +49,7 @@ class SkillsPanel extends StatelessWidget {
                         child: Text(
                           planningMode ? 'Система навыков' : 'Навыки',
                           style: TextStyle(
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w700,
                             color: txt,
                             fontSize: 16,
                           ),
@@ -267,7 +267,7 @@ class SkillsPanel extends StatelessWidget {
                         style: TextStyle(
                           color: txt,
                           fontSize: 18,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
@@ -431,7 +431,7 @@ class _EmptySkillsState extends StatelessWidget {
               style: TextStyle(
                 color: txt,
                 fontSize: 15,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: 5),
@@ -556,7 +556,7 @@ class _SkillCardState extends State<SkillCard> {
                               child: Text(
                                 sk.name,
                                 style: TextStyle(
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.w500,
                                   fontSize: 14,
                                   color: txt,
                                 ),
@@ -600,7 +600,7 @@ class _SkillCardState extends State<SkillCard> {
                                     color: Color(0xFF2A2A40),
                                     fontSize: 9,
                                     height: 1,
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
                               ),
@@ -651,7 +651,7 @@ class _SkillCardState extends State<SkillCard> {
                                     style: TextStyle(
                                       color: sub,
                                       fontSize: 10,
-                                      fontWeight: FontWeight.w600,
+                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
                                   const SizedBox(width: 6),

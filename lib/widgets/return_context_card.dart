@@ -157,7 +157,7 @@ class _ReturnContextContent extends StatelessWidget {
                                 : context.appTextTheme.titleLarge)
                             ?.copyWith(
                               color: colors.text,
-                              fontWeight: FontWeight.w900,
+                              fontWeight: FontWeight.w700,
                             ),
                   ),
                   SizedBox(height: dense ? 1 : 3),
@@ -166,7 +166,7 @@ class _ReturnContextContent extends StatelessWidget {
                     key: const ValueKey('return-context-skill'),
                     style: context.appTextTheme.bodyMedium?.copyWith(
                       color: colors.accent,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ],
@@ -241,7 +241,7 @@ class _ReturnContextRow extends StatelessWidget {
             text: value,
             style: TextStyle(
               color: emphasize ? colors.text : colors.muted,
-              fontWeight: emphasize ? FontWeight.w800 : FontWeight.w600,
+              fontWeight: emphasize ? FontWeight.w700 : FontWeight.w500,
             ),
           ),
         ],

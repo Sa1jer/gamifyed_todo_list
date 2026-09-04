@@ -74,7 +74,7 @@ class _LoadRecoveryScreen extends StatelessWidget {
                         'Не удалось загрузить данные',
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.w800),
+                            ?.copyWith(fontWeight: FontWeight.w700),
                       ),
                       const SizedBox(height: 12),
                       const Text(

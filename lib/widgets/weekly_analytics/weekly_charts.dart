@@ -55,7 +55,7 @@ class WeeklyXpChart extends StatelessWidget {
                           style: TextStyle(
                             color: sub,
                             fontSize: 11,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
@@ -105,7 +105,7 @@ class WeeklyXpChart extends StatelessWidget {
                           style: TextStyle(
                             color: day.xp == 0 ? sub : txt,
                             fontSize: 11,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
@@ -195,7 +195,7 @@ class WeeklySkillBreakdown extends StatelessWidget {
                                       style: TextStyle(
                                         color: textColor(isDark),
                                         fontSize: 12.5,
-                                        fontWeight: FontWeight.w800,
+                                        fontWeight: FontWeight.w700,
                                       ),
                                     ),
                                   ),
@@ -204,7 +204,7 @@ class WeeklySkillBreakdown extends StatelessWidget {
                                     style: TextStyle(
                                       color: color,
                                       fontSize: 11,
-                                      fontWeight: FontWeight.w800,
+                                      fontWeight: FontWeight.w700,
                                     ),
                                   ),
                                 ],
@@ -310,7 +310,7 @@ class WeeklyTaskList extends StatelessWidget {
                                 style: TextStyle(
                                   color: txt,
                                   fontSize: 12.5,
-                                  fontWeight: FontWeight.w800,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                               const SizedBox(height: 3),
@@ -329,7 +329,7 @@ class WeeklyTaskList extends StatelessWidget {
                           style: const TextStyle(
                             color: Color(0xFF34C759),
                             fontSize: 12,
-                            fontWeight: FontWeight.w900,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ],
@@ -406,7 +406,7 @@ class WeeklyStreakRisks extends StatelessWidget {
                                 style: TextStyle(
                                   color: txt,
                                   fontSize: 12.5,
-                                  fontWeight: FontWeight.w800,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                               const SizedBox(height: 3),

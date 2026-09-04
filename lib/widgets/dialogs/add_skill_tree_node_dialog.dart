@@ -86,7 +86,7 @@ class _AddSkillTreeNodeDialogState extends State<AddSkillTreeNodeDialog> {
                           style: TextStyle(
                             color: txt,
                             fontSize: 12.5,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
@@ -202,7 +202,7 @@ class _AddSkillTreeNodeDialogState extends State<AddSkillTreeNodeDialog> {
                   color: sub,
                   fontSize: 12,
                   height: 1.3,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
               const SizedBox(height: 24),
@@ -231,7 +231,7 @@ class _AddSkillTreeNodeDialogState extends State<AddSkillTreeNodeDialog> {
       inactiveTextColor: sub,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       radius: 999,
-      selectedWeight: FontWeight.w800,
+      selectedWeight: FontWeight.w700,
       onTap: () => setState(() => _requiredQuestCompletions = value),
     );
   }

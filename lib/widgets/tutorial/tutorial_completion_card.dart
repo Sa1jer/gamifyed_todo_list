@@ -110,7 +110,7 @@ class _TutorialCompletionCardState extends State<TutorialCompletionCard> {
                                         .titleMedium
                                         ?.copyWith(
                                           color: foreground,
-                                          fontWeight: FontWeight.w900,
+                                          fontWeight: FontWeight.w700,
                                         ),
                                   ),
                                   const SizedBox(height: 3),
@@ -122,7 +122,7 @@ class _TutorialCompletionCardState extends State<TutorialCompletionCard> {
                                         ?.copyWith(
                                           color: secondary,
                                           height: 1.35,
-                                          fontWeight: FontWeight.w600,
+                                          fontWeight: FontWeight.w500,
                                         ),
                                   ),
                                 ],

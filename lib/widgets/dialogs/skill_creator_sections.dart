@@ -102,7 +102,7 @@ class _DesktopSkillIconPickerDialogState
                       style: TextStyle(
                         color: textColor(widget.isDark),
                         fontSize: 19,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
@@ -141,7 +141,7 @@ class _DesktopSkillIconPickerDialogState
                       labelStyle: TextStyle(
                         color: selected ? widget.accentColor : secondary,
                         fontWeight: selected
-                            ? FontWeight.w900
+                            ? FontWeight.w700
                             : FontWeight.w700,
                       ),
                     );
@@ -270,7 +270,7 @@ class DesktopSkillIdentityPreview extends StatelessWidget {
                             : textColor(isDark),
                         fontSize: 14.5,
                         height: 1.12,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -282,7 +282,7 @@ class DesktopSkillIdentityPreview extends StatelessWidget {
                         color: subtext(isDark),
                         fontSize: 10.5,
                         height: 1.2,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
@@ -365,7 +365,7 @@ class MobileSkillEmblemPreview extends StatelessWidget {
                     ? subtext(isDark)
                     : textColor(isDark),
                 fontSize: 16,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
@@ -400,7 +400,7 @@ class MobileSkillFormSection extends StatelessWidget {
             color: textColor(isDark),
             fontSize: hasSubtitle ? 14.5 : 15.5,
             height: 1.2,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w700,
           ),
         ),
         if (hasSubtitle) ...[
@@ -411,7 +411,7 @@ class MobileSkillFormSection extends StatelessWidget {
               color: subtext(isDark),
               fontSize: 11.5,
               height: 1.3,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],

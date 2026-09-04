@@ -183,7 +183,7 @@ class _TodayDashboardState extends State<TodayDashboard> {
                             style: TextStyle(
                               color: txt,
                               fontSize: 17,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w700,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -641,7 +641,7 @@ class _MobileNextActionSummary extends StatelessWidget {
                     style: TextStyle(
                       color: accent,
                       fontSize: 11,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
@@ -655,7 +655,7 @@ class _MobileNextActionSummary extends StatelessWidget {
               style: TextStyle(
                 color: txt,
                 fontSize: 12,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w700,
               ),
             ),
             const Spacer(),
@@ -697,7 +697,7 @@ class _MobileNextActionSummary extends StatelessWidget {
                   style: TextStyle(
                     color: accent,
                     fontSize: 11,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -711,7 +711,7 @@ class _MobileNextActionSummary extends StatelessWidget {
                         style: TextStyle(
                           color: txt,
                           fontSize: 12.5,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
@@ -726,7 +726,7 @@ class _MobileNextActionSummary extends StatelessWidget {
                           style: TextStyle(
                             color: accent,
                             fontSize: 9.5,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
@@ -791,7 +791,7 @@ class _MobileSummaryButton extends StatelessWidget {
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 11.5,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ],
@@ -856,7 +856,7 @@ class _NextActionCard extends StatelessWidget {
                       style: TextStyle(
                         color: txt,
                         fontSize: 15,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w700,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -872,7 +872,7 @@ class _NextActionCard extends StatelessWidget {
                 style: TextStyle(
                   color: txt,
                   fontSize: 15,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ],
@@ -883,7 +883,7 @@ class _NextActionCard extends StatelessWidget {
                 style: TextStyle(
                   color: accent,
                   fontSize: 12.5,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                   height: 1.2,
                 ),
                 maxLines: 1,
@@ -944,7 +944,7 @@ class _NextActionCard extends StatelessWidget {
                   style: TextStyle(
                     color: accent,
                     fontSize: 12.5,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -973,7 +973,7 @@ class _NextActionCard extends StatelessWidget {
             titleStyle: TextStyle(
               color: txt,
               fontSize: 16.5,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
               height: 1.12,
             ),
             descriptionColor: sub,

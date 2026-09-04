@@ -787,7 +787,7 @@ class _XPBubbleState extends State<XPBubble>
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: txt,
-                            fontWeight: FontWeight.w900,
+                            fontWeight: FontWeight.w700,
                             fontSize: 13,
                             height: 1,
                           ),
@@ -857,7 +857,7 @@ class _XPBubbleRewardLine extends StatelessWidget {
     final style = TextStyle(
       color: textColor,
       fontSize: 11,
-      fontWeight: FontWeight.w600,
+      fontWeight: FontWeight.w500,
       height: 1,
     );
     final spans = <InlineSpan>[];
@@ -867,7 +867,7 @@ class _XPBubbleRewardLine extends StatelessWidget {
           text: '+${content.baseXp} XP',
           style: style.copyWith(
             color: rewardColor,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w700,
           ),
         ),
       );
@@ -877,7 +877,7 @@ class _XPBubbleRewardLine extends StatelessWidget {
       spans.add(
         TextSpan(
           text: 'эффект +${content.bonusXp} XP',
-          style: style.copyWith(color: bonusColor, fontWeight: FontWeight.w900),
+          style: style.copyWith(color: bonusColor, fontWeight: FontWeight.w700),
         ),
       );
     }

@@ -299,7 +299,7 @@ class _DesktopBrand extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: context.appTextTheme.titleMedium?.copyWith(
                       color: tokens.text,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
@@ -383,7 +383,7 @@ class _DesktopProfileSummary extends StatelessWidget {
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: compact ? 15 : 18,
-                                fontWeight: FontWeight.w900,
+                                fontWeight: FontWeight.w700,
                               ),
                             )
                           : null,
@@ -400,7 +400,7 @@ class _DesktopProfileSummary extends StatelessWidget {
                             style: TextStyle(
                               color: tokens.text,
                               fontSize: 14.5,
-                              fontWeight: FontWeight.w900,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                           SizedBox(height: compact ? 3 : 5),
@@ -433,7 +433,7 @@ class _DesktopProfileSummary extends StatelessWidget {
                         style: TextStyle(
                           color: tokens.profilePurple,
                           fontSize: 10.5,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ],
@@ -558,7 +558,7 @@ class _DesktopNavItemState extends State<_DesktopNavItem> {
                             style: context.appTextTheme.labelLarge?.copyWith(
                               color: active ? tokens.text : tokens.mutedText,
                               fontWeight: active
-                                  ? FontWeight.w800
+                                  ? FontWeight.w700
                                   : FontWeight.w700,
                             ),
                           ),
@@ -715,7 +715,7 @@ class _DesktopSkillRowState extends State<_DesktopSkillRow> {
                                   overflow: TextOverflow.ellipsis,
                                   style: textTheme.titleSmall?.copyWith(
                                     color: tokens.text,
-                                    fontWeight: FontWeight.w900,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
                                 const SizedBox(height: 4),
@@ -901,7 +901,7 @@ class _DesktopInboxShortcut extends StatelessWidget {
                   'Задачник',
                   style: context.appTextTheme.labelLarge?.copyWith(
                     color: tokens.text,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
@@ -909,7 +909,7 @@ class _DesktopInboxShortcut extends StatelessWidget {
                 '$active',
                 style: context.appTextRoles.compactMetadata.copyWith(
                   color: Color(0xFF2ED36F),
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ],
@@ -948,7 +948,7 @@ class _DesktopSidebarEmpty extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: context.appTextTheme.bodySmall?.copyWith(
                     color: tokens.text,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 8),

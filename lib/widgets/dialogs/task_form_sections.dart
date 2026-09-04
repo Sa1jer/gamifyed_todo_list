@@ -54,7 +54,7 @@ class TaskStageContextCard extends StatelessWidget {
                   style: TextStyle(
                     color: textColor,
                     fontSize: 12.8,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 Text(
@@ -65,7 +65,7 @@ class TaskStageContextCard extends StatelessWidget {
                     color: subtextColor,
                     fontSize: 11,
                     height: 1.2,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
@@ -122,7 +122,7 @@ class TaskStageSuggestionCard extends StatelessWidget {
                   style: TextStyle(
                     color: textColor,
                     fontSize: 12.5,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -132,7 +132,7 @@ class TaskStageSuggestionCard extends StatelessWidget {
                     color: subtextColor,
                     fontSize: 11,
                     height: 1.25,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
@@ -321,7 +321,7 @@ class TaskXpSection extends StatelessWidget {
                     '$xp XP',
                     style: TextStyle(
                       color: rewardColor,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w700,
                       fontSize: 13,
                     ),
                   ),

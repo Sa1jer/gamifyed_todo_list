@@ -49,7 +49,7 @@ class _CompactSkillSelector extends StatelessWidget {
                     style: TextStyle(
                       color: txt,
                       fontSize: 13.5,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
@@ -86,7 +86,7 @@ class _CompactSkillSelector extends StatelessWidget {
                         style: TextStyle(
                           color: sub,
                           fontSize: 11.5,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     )
@@ -240,7 +240,7 @@ class _CompactSkillChipState extends State<_CompactSkillChip> {
                             : textColor(widget.isDark),
                         fontSize: 11.5,
                         height: 1.05,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 3),
@@ -312,7 +312,7 @@ class _MobileInboxShortcut extends StatelessWidget {
                 style: TextStyle(
                   color: selected ? color : textColor(isDark),
                   fontSize: 10.5,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(width: 5),

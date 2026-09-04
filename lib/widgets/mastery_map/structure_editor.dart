@@ -89,7 +89,7 @@ class _RoadmapStageOrderDialogState extends State<_RoadmapStageOrderDialog> {
                   color: subtext(isDark),
                   fontSize: 12.5,
                   height: 1.35,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
               const SizedBox(height: 16),
@@ -119,7 +119,7 @@ class _RoadmapStageOrderDialogState extends State<_RoadmapStageOrderDialog> {
                             style: TextStyle(
                               color: textColor(isDark),
                               fontSize: 13,
-                              fontWeight: FontWeight.w900,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                           if (!editable) ...[
@@ -209,7 +209,7 @@ class _RoadmapStageOrderRow extends StatelessWidget {
         children: [
           Text(
             '${index + 1}',
-            style: TextStyle(color: color, fontWeight: FontWeight.w900),
+            style: TextStyle(color: color, fontWeight: FontWeight.w700),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -220,7 +220,7 @@ class _RoadmapStageOrderRow extends StatelessWidget {
               style: TextStyle(
                 color: textColor(isDark),
                 fontSize: 12.5,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),

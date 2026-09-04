@@ -37,7 +37,7 @@ class NextRoadmapPromptDialog extends StatelessWidget {
                       style: TextStyle(
                         color: text,
                         fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
@@ -180,7 +180,7 @@ class _NextGoalDialogState extends State<NextGoalDialog> {
                         style: TextStyle(
                           color: text,
                           fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
@@ -201,7 +201,7 @@ class _NextGoalDialogState extends State<NextGoalDialog> {
                   style: TextStyle(
                     color: secondary,
                     fontSize: 11,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -268,7 +268,7 @@ class _NextGoalDialogState extends State<NextGoalDialog> {
                     color: secondary,
                     fontSize: 11.5,
                     height: 1.3,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -643,7 +643,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
                 color: sub,
                 fontSize: 11.5,
                 height: 1.3,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ] else ...[
@@ -690,7 +690,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
               style: TextStyle(
                 color: txt,
                 fontSize: 15,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: 12),
@@ -729,7 +729,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
                   widget.fullScreen && _showAllIcons
                       ? 'Основные'
                       : 'Все иконки',
-                  style: const TextStyle(fontWeight: FontWeight.w800),
+                  style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),
             ],
@@ -742,7 +742,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
               style: TextStyle(
                 color: sub,
                 fontSize: 11,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w500,
               ),
             ),
           if (widget.fullScreen && _showAllIcons) ...[
@@ -768,7 +768,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
                       labelStyle: TextStyle(
                         color: selected ? _color : sub,
                         fontWeight: selected
-                            ? FontWeight.w900
+                            ? FontWeight.w700
                             : FontWeight.w700,
                       ),
                     ),
@@ -951,7 +951,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
                     : 'Сохранить изменения',
                 style: const TextStyle(
                   fontSize: 14,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),
@@ -1122,7 +1122,7 @@ class _OptionalFirstStageSection extends StatelessWidget {
                             style: TextStyle(
                               color: textColor,
                               fontSize: 13.5,
-                              fontWeight: FontWeight.w900,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -1131,7 +1131,7 @@ class _OptionalFirstStageSection extends StatelessWidget {
                             style: TextStyle(
                               color: secondaryTextColor,
                               fontSize: 11,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
@@ -1177,7 +1177,7 @@ class _OptionalFirstStageSection extends StatelessWidget {
                       color: secondaryTextColor,
                       fontSize: 11.5,
                       height: 1.3,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],

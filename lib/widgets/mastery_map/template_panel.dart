@@ -21,7 +21,7 @@ Size _roadmapGoalAnchorSize({
       _measureRoadmapAnchorText(
         'Цель пути',
         fontSize: _roadmapGoalAnchorHeaderFontSize,
-        fontWeight: FontWeight.w900,
+        fontWeight: FontWeight.w700,
         baseTextStyle: baseTextStyle,
         textScaler: textScaler,
         textDirection: textDirection,
@@ -29,7 +29,7 @@ Size _roadmapGoalAnchorSize({
   final goalWidth = _measureRoadmapAnchorText(
     goal,
     fontSize: _roadmapGoalAnchorGoalFontSize,
-    fontWeight: FontWeight.w900,
+    fontWeight: FontWeight.w700,
     baseTextStyle: baseTextStyle,
     textScaler: textScaler,
     textDirection: textDirection,
@@ -46,7 +46,7 @@ Size _roadmapGoalAnchorSize({
     maxLines: 1,
     fontSize: _roadmapGoalAnchorHeaderFontSize,
     height: 1.0,
-    fontWeight: FontWeight.w900,
+    fontWeight: FontWeight.w700,
     baseTextStyle: baseTextStyle,
     textScaler: textScaler,
     textDirection: textDirection,
@@ -57,7 +57,7 @@ Size _roadmapGoalAnchorSize({
     maxLines: 2,
     fontSize: _roadmapGoalAnchorGoalFontSize,
     height: 1.15,
-    fontWeight: FontWeight.w900,
+    fontWeight: FontWeight.w700,
     baseTextStyle: baseTextStyle,
     textScaler: textScaler,
     textDirection: textDirection,
@@ -167,7 +167,7 @@ class _RoadmapGoalAnchor extends StatelessWidget {
                     'Цель пути',
                     style: context.appTextTheme.titleSmall?.copyWith(
                       color: skill.color,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                       letterSpacing: 0.2,
                     ),
                   ),
@@ -182,7 +182,7 @@ class _RoadmapGoalAnchor extends StatelessWidget {
                 style: context.appTextTheme.titleMedium?.copyWith(
                   color: textColor(isDark),
                   height: 1.15,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ],
@@ -263,7 +263,7 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
                       'Шаблоны путей',
                       style: context.appTextTheme.titleSmall?.copyWith(
                         color: textColor(isDark),
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 1),
@@ -455,7 +455,7 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
                     style: TextStyle(
                       color: subtext(isDark),
                       fontSize: 11.2,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
@@ -547,7 +547,7 @@ class _RoadmapTemplateChoice extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: context.appTextTheme.titleSmall?.copyWith(
                       color: selected ? color : textColor(isDark),
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -581,7 +581,7 @@ class _RoadmapTemplateChoice extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: context.appTextTheme.titleSmall?.copyWith(
                             color: selected ? color : textColor(isDark),
-                            fontWeight: FontWeight.w900,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -652,7 +652,7 @@ class _RoadmapCounterControl extends StatelessWidget {
                   style: TextStyle(
                     color: color,
                     fontSize: 14,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
@@ -674,7 +674,7 @@ class _RoadmapCounterControl extends StatelessWidget {
             style: TextStyle(
               color: textColor(isDark),
               fontSize: 11.2,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
             ),
           );
           final stackControls =
@@ -823,7 +823,7 @@ class _MapCanvasAction extends StatelessWidget {
               style: TextStyle(
                 color: color,
                 fontSize: 11.5,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ],

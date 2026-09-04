@@ -100,7 +100,7 @@ class _MobileWorkspaceNav extends StatelessWidget {
                                       : sub,
                                   fontSize: 11,
                                   fontWeight: item == mode
-                                      ? FontWeight.w900
+                                      ? FontWeight.w700
                                       : FontWeight.w700,
                                 ),
                               ),

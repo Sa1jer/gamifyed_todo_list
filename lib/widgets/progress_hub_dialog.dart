@@ -213,7 +213,7 @@ class ProgressHubContent extends StatelessWidget {
                               style: TextStyle(
                                 color: txt,
                                 fontSize: 19,
-                                fontWeight: FontWeight.w900,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
                             const SizedBox(height: 3),

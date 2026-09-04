@@ -127,7 +127,7 @@ class WelcomePage extends StatelessWidget {
                                         color: text,
                                         fontSize: compact ? 32 : 44,
                                         height: 1.05,
-                                        fontWeight: FontWeight.w900,
+                                        fontWeight: FontWeight.w700,
                                       ),
                                     ),
                                     const SizedBox(height: 12),
@@ -138,7 +138,7 @@ class WelcomePage extends StatelessWidget {
                                         color: text,
                                         fontSize: compact ? 20 : 25,
                                         height: 1.2,
-                                        fontWeight: FontWeight.w800,
+                                        fontWeight: FontWeight.w700,
                                       ),
                                     ),
                                     SizedBox(height: compact ? 22 : 28),
@@ -151,7 +151,7 @@ class WelcomePage extends StatelessWidget {
                                         color: muted,
                                         fontSize: compact ? 15 : 17,
                                         height: 1.45,
-                                        fontWeight: FontWeight.w600,
+                                        fontWeight: FontWeight.w500,
                                       ),
                                     ),
                                     SizedBox(height: compact ? 28 : 34),
@@ -182,7 +182,7 @@ class WelcomePage extends StatelessWidget {
                                             ),
                                             textStyle: const TextStyle(
                                               fontSize: 17,
-                                              fontWeight: FontWeight.w900,
+                                              fontWeight: FontWeight.w700,
                                             ),
                                           ),
                                         ),
@@ -210,7 +210,7 @@ class WelcomePage extends StatelessWidget {
                                             style: TextStyle(
                                               color: muted,
                                               fontSize: 12.5,
-                                              fontWeight: FontWeight.w600,
+                                              fontWeight: FontWeight.w500,
                                             ),
                                           ),
                                         ),
@@ -312,7 +312,7 @@ class _WelcomeLoop extends StatelessWidget {
                   ? MobileJournalTokens.amber
                   : muted,
               fontSize: 14,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
             ),
           ),
           if (index < labels.length - 1)

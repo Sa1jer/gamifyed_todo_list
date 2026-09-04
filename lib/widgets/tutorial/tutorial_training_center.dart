@@ -81,7 +81,7 @@ class TutorialTrainingCenter extends StatelessWidget {
                     child: Text(
                       'Обучение',
                       style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
@@ -110,7 +110,7 @@ class TutorialTrainingCenter extends StatelessWidget {
                     Text(
                       'Отдельные темы',
                       style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -178,7 +178,7 @@ class _FullTourCard extends StatelessWidget {
             Text(
               resumable ? 'Продолжить обучение' : 'Весь продукт за один тур',
               style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: 4),
@@ -186,7 +186,7 @@ class _FullTourCard extends StatelessWidget {
               stepText,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w500,
               ),
             ),
             const SizedBox(height: 14),
@@ -272,7 +272,7 @@ class _TutorialTopicTile extends StatelessWidget {
       ),
       title: Text(
         module.title,
-        style: const TextStyle(fontWeight: FontWeight.w800),
+        style: const TextStyle(fontWeight: FontWeight.w700),
       ),
       subtitle: Text(
         completed ? 'Пройдено · можно повторить' : module.subtitle,

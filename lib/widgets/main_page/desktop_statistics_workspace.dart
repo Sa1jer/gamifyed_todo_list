@@ -327,7 +327,7 @@ class _DesktopCourseNudgeCard extends StatelessWidget {
                   style: TextStyle(
                     color: nudge.skill.color,
                     fontSize: 10.5,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                     letterSpacing: 0.5,
                   ),
                 ),
@@ -337,7 +337,7 @@ class _DesktopCourseNudgeCard extends StatelessWidget {
                   style: TextStyle(
                     color: tokens.text,
                     fontSize: 14,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -349,7 +349,7 @@ class _DesktopCourseNudgeCard extends StatelessWidget {
                     color: tokens.mutedText,
                     fontSize: 11.5,
                     height: 1.3,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
@@ -621,7 +621,7 @@ class _DesktopStatisticsDetailPage extends StatelessWidget {
                   entry.taskTitle,
                   style: TextStyle(
                     color: tokens.text,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 subtitle: Text(
@@ -632,7 +632,7 @@ class _DesktopStatisticsDetailPage extends StatelessWidget {
                   '+${entry.xp} XP',
                   style: TextStyle(
                     color: tokens.rewardGold,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
@@ -663,7 +663,7 @@ class _DesktopSectionLabel extends StatelessWidget {
         style: TextStyle(
           color: tokens.text,
           fontSize: 15,
-          fontWeight: FontWeight.w900,
+          fontWeight: FontWeight.w700,
         ),
       ),
       const SizedBox(height: 4),
@@ -672,7 +672,7 @@ class _DesktopSectionLabel extends StatelessWidget {
         style: TextStyle(
           color: tokens.mutedText,
           fontSize: 11.5,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w500,
         ),
       ),
     ],
@@ -728,7 +728,7 @@ class _DesktopStatisticsLinkCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: tokens.text,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -785,7 +785,7 @@ class _DesktopStatisticsSkillProgress extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: tokens.text,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
@@ -793,7 +793,7 @@ class _DesktopStatisticsSkillProgress extends StatelessWidget {
                     '${(skill.treeProgress * 100).round()}%',
                     style: TextStyle(
                       color: skill.color,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ],
@@ -868,7 +868,7 @@ class _DesktopContinuationCard extends StatelessWidget {
                   style: TextStyle(
                     color: tokens.text,
                     fontSize: 15,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -883,7 +883,7 @@ class _DesktopContinuationCard extends StatelessWidget {
                   '$weekXp XP на неделе',
                   style: TextStyle(
                     color: skill.color,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
@@ -932,7 +932,7 @@ class _DesktopRailLink extends StatelessWidget {
                 style: TextStyle(
                   color: tokens.text,
                   fontSize: 11.5,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),
@@ -1011,7 +1011,7 @@ class _DesktopDetailCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: tokens.text,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 4),
@@ -1027,7 +1027,7 @@ class _DesktopDetailCard extends StatelessWidget {
         const SizedBox(width: 8),
         Text(
           value,
-          style: TextStyle(color: color, fontWeight: FontWeight.w900),
+          style: TextStyle(color: color, fontWeight: FontWeight.w700),
         ),
       ],
     ),

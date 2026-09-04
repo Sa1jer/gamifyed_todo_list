@@ -99,7 +99,7 @@ class MobileMomentumCard extends StatelessWidget {
           style: TextStyle(
             color: MobileJournalTokens.text(isDark),
             fontSize: 17,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w700,
           ),
         ),
         const SizedBox(height: 2),
@@ -218,7 +218,7 @@ class MobileSkillOverviewCard extends StatelessWidget {
                           style: TextStyle(
                             color: MobileJournalTokens.text(isDark),
                             fontSize: 16,
-                            fontWeight: FontWeight.w900,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                         const SizedBox(height: 5),
@@ -257,7 +257,7 @@ class MobileSkillOverviewCard extends StatelessWidget {
                         style: TextStyle(
                           color: skill.color,
                           fontSize: 13,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       ReorderableDelayedDragStartListener(
@@ -395,7 +395,7 @@ class MobileJournalEmptySkills extends StatelessWidget {
           style: TextStyle(
             color: MobileJournalTokens.text(isDark),
             fontSize: 16,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w700,
           ),
         ),
         const SizedBox(height: 4),

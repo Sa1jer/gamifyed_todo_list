@@ -106,7 +106,7 @@ class MomentumEvidenceLine extends StatelessWidget {
                 snapshot.headline,
                 style: context.appTextTheme.bodyMedium?.copyWith(
                   color: colors.text,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 2),
@@ -115,7 +115,7 @@ class MomentumEvidenceLine extends StatelessWidget {
                 key: const ValueKey('momentum-evidence-copy'),
                 style: context.appTextTheme.bodySmall?.copyWith(
                   color: colors.muted,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w500,
                   height: 1.3,
                 ),
               ),

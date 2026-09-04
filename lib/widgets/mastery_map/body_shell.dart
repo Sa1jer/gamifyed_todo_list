@@ -57,7 +57,7 @@ class _MasteryMapHero extends StatelessWidget {
                   style: TextStyle(
                     color: textColor(isDark),
                     fontSize: mobile ? 16 : 18,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -68,7 +68,7 @@ class _MasteryMapHero extends StatelessWidget {
                   style: TextStyle(
                     color: subtext(isDark),
                     fontSize: mobile ? 11 : 12.5,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],

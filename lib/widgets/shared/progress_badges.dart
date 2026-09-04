@@ -187,7 +187,7 @@ class LvlBadge extends StatelessWidget {
     ),
     child: Text(
       'Ур. $level',
-      style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
+      style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w500),
     ),
   );
 }
@@ -223,7 +223,7 @@ class TaskBadge extends StatelessWidget {
           style: TextStyle(
             color: color,
             fontSize: 11,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w500,
           ),
         ),
       ],
@@ -268,7 +268,7 @@ class XpRewardPill extends StatelessWidget {
               style: TextStyle(
                 color: foreground,
                 fontSize: 11,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ],
@@ -314,7 +314,7 @@ class InboxTaskCountBubble extends StatelessWidget {
             color: color,
             fontSize: size * 0.46,
             height: 1,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ),
@@ -365,7 +365,7 @@ class TaskTitleWithDescription extends StatelessWidget {
             style: titleStyle.copyWith(
               color: descriptionColor,
               fontSize: (titleStyle.fontSize ?? 14) * 0.86,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
               decoration: TextDecoration.none,
               height: titleStyle.height,
             ),

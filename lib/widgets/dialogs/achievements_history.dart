@@ -112,7 +112,7 @@ class _AchievementCard extends StatelessWidget {
               def.name,
               style: TextStyle(
                 fontSize: 11,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w500,
                 color: unlocked ? txt : sub.withAlpha(100),
               ),
               textAlign: TextAlign.center,
@@ -167,7 +167,7 @@ class _AchievementCard extends StatelessWidget {
               Text(
                 def.name,
                 style: TextStyle(
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w700,
                   fontSize: 18,
                   color: txt,
                 ),
@@ -196,7 +196,7 @@ class _AchievementCard extends StatelessWidget {
                     color: unlocked
                         ? const Color(0xFF34C759)
                         : const Color(0xFF8E8E93),
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w500,
                     fontSize: 12,
                   ),
                 ),
@@ -247,7 +247,7 @@ class HistoryDialog extends StatelessWidget {
                         Text(
                           'Журнал XP',
                           style: TextStyle(
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w700,
                             fontSize: 18,
                             color: txt,
                           ),
@@ -258,7 +258,7 @@ class HistoryDialog extends StatelessWidget {
                           style: TextStyle(
                             color: sub,
                             fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],
@@ -351,7 +351,7 @@ class _HistoryCard extends StatelessWidget {
                 child: Text(
                   e.taskTitle,
                   style: TextStyle(
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w500,
                     fontSize: 14,
                     color: txt,
                   ),
@@ -389,7 +389,7 @@ class _HistoryCard extends StatelessWidget {
                 style: TextStyle(
                   color: c,
                   fontSize: 12,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ],
@@ -399,7 +399,7 @@ class _HistoryCard extends StatelessWidget {
             e.isCompletion ? '+${e.xp} XP' : '-${e.xp} XP',
             style: TextStyle(
               color: e.isCompletion ? c : const Color(0xFFFF3B30),
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w700,
               fontSize: 14,
             ),
           ),

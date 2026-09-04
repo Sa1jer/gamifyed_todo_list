@@ -120,7 +120,7 @@ class _WeeklyReviewCardState extends State<WeeklyReviewCard> {
                         style: TextStyle(
                           color: txt,
                           fontSize: 13.8,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       const SizedBox(height: 3),
@@ -180,7 +180,7 @@ class _WeeklyReviewCardState extends State<WeeklyReviewCard> {
                 color: sub,
                 fontSize: 12,
                 height: 1.3,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],
@@ -234,7 +234,7 @@ class _WeeklyReviewCardState extends State<WeeklyReviewCard> {
                     style: TextStyle(
                       color: sub,
                       fontSize: 12,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),

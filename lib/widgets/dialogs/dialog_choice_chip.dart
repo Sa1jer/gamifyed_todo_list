@@ -89,7 +89,7 @@ class _DialogChoiceChipState extends State<DialogChoiceChip> {
               style: TextStyle(
                 color: labelColor,
                 fontSize: 12,
-                fontWeight: selected ? widget.selectedWeight : FontWeight.w600,
+                fontWeight: selected ? widget.selectedWeight : FontWeight.w500,
               ),
             ),
           ),

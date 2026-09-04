@@ -339,7 +339,7 @@ class _WeeklyAnalyticsDialogState extends State<WeeklyAnalyticsDialog> {
                           maxLines: 2,
                           style: TextStyle(
                             color: secondary,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),

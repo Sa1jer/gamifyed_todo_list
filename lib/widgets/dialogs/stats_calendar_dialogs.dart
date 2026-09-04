@@ -33,7 +33,7 @@ class StatsDialog extends StatelessWidget {
                   Text(
                     'Срез роста',
                     style: TextStyle(
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w700,
                       fontSize: 18,
                       color: txt,
                     ),
@@ -159,7 +159,7 @@ class StatsDialog extends StatelessWidget {
                   style: TextStyle(
                     color: txt,
                     fontSize: 14,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -169,7 +169,7 @@ class StatsDialog extends StatelessWidget {
                     color: sub,
                     fontSize: 12,
                     height: 1.25,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
@@ -187,7 +187,7 @@ class StatsDialog extends StatelessWidget {
         Text(
           'Навыки и квесты',
           style: TextStyle(
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w700,
             color: txt,
             fontSize: 14,
           ),
@@ -219,7 +219,7 @@ class StatsDialog extends StatelessWidget {
                       child: Text(
                         '${sk.name} • Ур. ${sk.level}',
                         style: TextStyle(
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w500,
                           color: txt,
                           fontSize: 13,
                         ),
@@ -251,7 +251,7 @@ class StatsDialog extends StatelessWidget {
                       style: TextStyle(
                         color: sk.color,
                         fontSize: 11,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
@@ -502,7 +502,7 @@ class StatsDialog extends StatelessWidget {
         Text(
           'Сегодня',
           style: TextStyle(
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w700,
             color: txt,
             fontSize: 14,
           ),
@@ -615,7 +615,7 @@ class _ChartPanel extends StatelessWidget {
                   title,
                   style: TextStyle(
                     color: txt,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w700,
                     fontSize: 14,
                   ),
                 ),
@@ -645,7 +645,7 @@ class _EmptyChartHint extends StatelessWidget {
       child: Center(
         child: Text(
           text,
-          style: TextStyle(color: color, fontWeight: FontWeight.w600),
+          style: TextStyle(color: color, fontWeight: FontWeight.w500),
         ),
       ),
     );
@@ -722,7 +722,7 @@ class _StatCard extends StatelessWidget {
             style: TextStyle(
               color: txt,
               fontSize: 20,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],
@@ -748,7 +748,7 @@ class _TodayStatItem extends StatelessWidget {
           style: TextStyle(
             color: color,
             fontSize: 18,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w700,
           ),
         ),
         const SizedBox(height: 2),
@@ -817,7 +817,7 @@ class _CalendarDialogState extends State<CalendarDialog> {
                         Text(
                           'Календарь квестов',
                           style: TextStyle(
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w700,
                             fontSize: 18,
                             color: txt,
                           ),
@@ -828,7 +828,7 @@ class _CalendarDialogState extends State<CalendarDialog> {
                           style: TextStyle(
                             color: sub,
                             fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],
@@ -890,7 +890,7 @@ class _CalendarDialogState extends State<CalendarDialog> {
           Text(
             '${_monthName(_selectedMonth.month)} ${_selectedMonth.year}',
             style: TextStyle(
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w700,
               color: txt,
               fontSize: 16,
             ),
@@ -923,7 +923,7 @@ class _CalendarDialogState extends State<CalendarDialog> {
                   style: TextStyle(
                     color: sub,
                     fontSize: 11,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w500,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -1017,7 +1017,7 @@ class _CalendarDialogState extends State<CalendarDialog> {
               style: TextStyle(
                 color: isSelected ? Colors.white : txt,
                 fontWeight: isToday || isSelected
-                    ? FontWeight.bold
+                    ? FontWeight.w700
                     : FontWeight.normal,
                 fontSize: 13,
               ),
@@ -1068,7 +1068,7 @@ class _CalendarDialogState extends State<CalendarDialog> {
                 Text(
                   formatShortDate(selectedDate),
                   style: TextStyle(
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w700,
                     color: txt,
                     fontSize: 13,
                   ),
@@ -1149,7 +1149,7 @@ class _CalendarDialogState extends State<CalendarDialog> {
                                   style: const TextStyle(
                                     color: Color(0xFF34C759),
                                     fontSize: 11,
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
                               ],

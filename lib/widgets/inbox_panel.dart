@@ -142,7 +142,7 @@ class _InboxPanelState extends State<InboxPanel> {
                                   style: TextStyle(
                                     color: txt,
                                     fontSize: 18,
-                                    fontWeight: FontWeight.w900,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
                                 const SizedBox(height: 2),
@@ -153,7 +153,7 @@ class _InboxPanelState extends State<InboxPanel> {
                                   style: TextStyle(
                                     color: sub,
                                     fontSize: 11.5,
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
                               ],
@@ -250,7 +250,7 @@ class _InboxPanelState extends State<InboxPanel> {
                           style: TextStyle(
                             color: sub,
                             fontSize: 10.5,
-                            fontWeight: FontWeight.w900,
+                            fontWeight: FontWeight.w700,
                             letterSpacing: 0.7,
                           ),
                         ),
@@ -277,7 +277,7 @@ class _InboxPanelState extends State<InboxPanel> {
                           style: TextStyle(
                             color: sub,
                             fontSize: 10.5,
-                            fontWeight: FontWeight.w900,
+                            fontWeight: FontWeight.w700,
                             letterSpacing: 0.7,
                           ),
                         ),
@@ -411,7 +411,7 @@ class _InboxPanelState extends State<InboxPanel> {
                             style: TextStyle(
                               color: txt,
                               fontSize: 15,
-                              fontWeight: FontWeight.w900,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                           Text(
@@ -419,7 +419,7 @@ class _InboxPanelState extends State<InboxPanel> {
                             style: TextStyle(
                               color: sub,
                               fontSize: 11,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w500,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -500,7 +500,7 @@ class _InboxPanelState extends State<InboxPanel> {
                                   style: TextStyle(
                                     color: sub,
                                     fontSize: 10.5,
-                                    fontWeight: FontWeight.w800,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
                               ),

@@ -131,7 +131,7 @@ class _RewardRevealNoticeState extends State<RewardRevealNotice>
                         style: TextStyle(
                           color: reveal.color,
                           fontSize: 12,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -140,7 +140,7 @@ class _RewardRevealNoticeState extends State<RewardRevealNotice>
                         style: TextStyle(
                           color: txt,
                           fontSize: 13,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       if (reveal.buffTitle != null ||
@@ -220,7 +220,7 @@ class RewardChestCard extends StatelessWidget {
                         style: TextStyle(
                           color: txt,
                           fontSize: 14,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
@@ -314,7 +314,7 @@ class ActiveBuffCard extends StatelessWidget {
                       style: TextStyle(
                         color: txt,
                         fontSize: 13.5,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                     Text(
@@ -400,7 +400,7 @@ class RewardsEmptyState extends StatelessWidget {
             title,
             style: TextStyle(
               color: sub,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
               fontSize: 13,
             ),
           ),

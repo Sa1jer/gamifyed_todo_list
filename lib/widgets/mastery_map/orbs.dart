@@ -194,7 +194,7 @@ class _SkillOrbButtonState extends State<_SkillOrbButton> {
                                   color: widget.skill.color,
                                   fontSize: levelSize,
                                   height: 1,
-                                  fontWeight: FontWeight.w900,
+                                  fontWeight: FontWeight.w700,
                                   shadows: [
                                     Shadow(
                                       color: Colors.black.withAlpha(
@@ -303,7 +303,7 @@ class _AdaptiveOrbLabel extends StatelessWidget {
               textScale: MediaQuery.textScalerOf(context).scale(1),
             ),
             height: 1.05,
-            fontWeight: selected ? FontWeight.w900 : FontWeight.w800,
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w700,
           ),
         ),
       ),
@@ -382,7 +382,7 @@ class _SelectSkillHint extends StatelessWidget {
                   style: TextStyle(
                     color: textColor(isDark),
                     fontSize: 12,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -553,7 +553,7 @@ class _MapNodeButtonState extends State<_MapNodeButton> {
                     style: TextStyle(
                       color: statusColor,
                       fontSize: 10.5,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                       height: 1,
                     ),
                   ),
@@ -703,7 +703,7 @@ class _VerticalRoadmapStageLabel extends StatelessWidget {
                       vertical: true,
                     ),
                     height: 1.12,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -768,7 +768,7 @@ class _AdaptiveNodeLabel extends StatelessWidget {
               textScale: MediaQuery.textScalerOf(context).scale(1),
             ),
             height: 1.05,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w500,
           ),
         ),
       ),

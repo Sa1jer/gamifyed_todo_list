@@ -102,7 +102,7 @@ class _TasksPanelState extends State<TasksPanel> {
                 style: TextStyle(
                   color: txt,
                   fontSize: 16,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 4),
@@ -187,7 +187,7 @@ class _TasksPanelState extends State<TasksPanel> {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w700,
                             fontSize: 17,
                             color: txt,
                           ),
@@ -217,7 +217,7 @@ class _TasksPanelState extends State<TasksPanel> {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w700,
                             fontSize: 16,
                             color: txt,
                           ),
@@ -404,7 +404,7 @@ class _TasksPanelState extends State<TasksPanel> {
                                 icon: const Icon(Icons.add_rounded, size: 19),
                                 label: const Text(
                                   'Новый квест',
-                                  style: TextStyle(fontWeight: FontWeight.w900),
+                                  style: TextStyle(fontWeight: FontWeight.w700),
                                 ),
                               ),
                             ),
@@ -456,7 +456,7 @@ class _TasksPanelState extends State<TasksPanel> {
                                       style: TextStyle(
                                         color: sub,
                                         fontSize: 12,
-                                        fontWeight: FontWeight.w600,
+                                        fontWeight: FontWeight.w500,
                                       ),
                                     ),
                                   ],
@@ -538,7 +538,7 @@ class _TasksPanelState extends State<TasksPanel> {
                     icon: const Icon(Icons.arrow_back_rounded, size: 17),
                     label: const Text(
                       'Навыки',
-                      style: TextStyle(fontWeight: FontWeight.w800),
+                      style: TextStyle(fontWeight: FontWeight.w700),
                     ),
                   ),
                 ),
@@ -576,7 +576,7 @@ class _TasksPanelState extends State<TasksPanel> {
                             style: TextStyle(
                               color: txt,
                               fontSize: 18,
-                              fontWeight: FontWeight.w900,
+                              fontWeight: FontWeight.w700,
                               height: 1.08,
                             ),
                           ),
@@ -605,7 +605,7 @@ class _TasksPanelState extends State<TasksPanel> {
                             style: TextStyle(
                               color: skill.color,
                               fontSize: 12,
-                              fontWeight: FontWeight.w900,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ),
@@ -668,7 +668,7 @@ class _TasksPanelState extends State<TasksPanel> {
                   style: TextStyle(
                     color: sub,
                     fontSize: 12,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                     letterSpacing: 0.8,
                   ),
                 ),
@@ -780,7 +780,7 @@ class _TasksPanelState extends State<TasksPanel> {
                       icon: const Icon(Icons.delete_outline_rounded),
                       label: const Text(
                         'Удалить навык',
-                        style: TextStyle(fontWeight: FontWeight.w900),
+                        style: TextStyle(fontWeight: FontWeight.w700),
                       ),
                     ),
                   ),

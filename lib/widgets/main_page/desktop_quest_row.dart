@@ -352,7 +352,7 @@ class _DesktopTypeBadge extends StatelessWidget {
         style: TextStyle(
           color: color,
           fontSize: 9.5,
-          fontWeight: FontWeight.w800,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
@@ -413,7 +413,7 @@ class _DesktopMiniActionState extends State<_DesktopMiniAction> {
           style: TextStyle(
             color: widget.color,
             fontSize: 9.5,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ),

@@ -84,7 +84,7 @@ class _EmptyNodeInspector extends StatelessWidget {
           style: TextStyle(
             color: textColor(isDark),
             fontSize: 17,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w700,
           ),
         ),
         const SizedBox(height: 8),
@@ -176,7 +176,7 @@ class _SelectedNodeInspector extends StatelessWidget {
                       color: txt,
                       fontSize: 16,
                       height: 1.1,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -227,7 +227,7 @@ class _SelectedNodeInspector extends StatelessWidget {
           style: TextStyle(
             color: txt,
             fontSize: 13,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w700,
           ),
         ),
         const SizedBox(height: 8),
@@ -240,7 +240,7 @@ class _SelectedNodeInspector extends StatelessWidget {
                     style: TextStyle(
                       color: sub,
                       fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w500,
                       height: 1.35,
                     ),
                   ),
@@ -343,7 +343,7 @@ class _NodeProgressPanel extends StatelessWidget {
                   style: TextStyle(
                     color: textColor(isDark),
                     fontSize: 12.5,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
@@ -352,7 +352,7 @@ class _NodeProgressPanel extends StatelessWidget {
                 style: TextStyle(
                   color: color,
                   fontSize: 12,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ],
@@ -505,7 +505,7 @@ class SkillTreeEmptyState extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             'Карта мастерства пока пустая',
-            style: TextStyle(color: sub, fontWeight: FontWeight.w600),
+            style: TextStyle(color: sub, fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 8),
           Text(

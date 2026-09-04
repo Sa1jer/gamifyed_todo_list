@@ -64,7 +64,7 @@ class _MasteryCollapsibleQuestSectionState
                     style: TextStyle(
                       color: textColor(widget.isDark),
                       fontSize: 12.2,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
@@ -83,7 +83,7 @@ class _MasteryCollapsibleQuestSectionState
                     style: TextStyle(
                       color: widget.color,
                       fontSize: 10.5,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
@@ -147,7 +147,7 @@ class MasteryStagePracticeQuestList extends StatelessWidget {
           style: TextStyle(
             color: sub,
             fontSize: 12,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w500,
             height: 1.35,
           ),
         ),
@@ -279,7 +279,7 @@ class _MasteryInspectorQuestRow extends StatelessWidget {
                   style: context.appTextTheme.titleSmall?.copyWith(
                     color: done ? sub : textColor(isDark),
                     height: 1.12,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                     decoration: done
                         ? TextDecoration.lineThrough
                         : TextDecoration.none,
@@ -292,7 +292,7 @@ class _MasteryInspectorQuestRow extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: context.appTextRoles.compactMetadata.copyWith(
                     color: sub,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
@@ -437,7 +437,7 @@ class MasteryRoadmapMinimumButton extends StatelessWidget {
               style: TextStyle(
                 color: color,
                 fontSize: 10.2,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ],

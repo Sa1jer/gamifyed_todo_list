@@ -66,7 +66,7 @@ class _MasteryMobileSelectionSummary extends StatelessWidget {
                   color: sub,
                   fontSize: 12,
                   height: 1.3,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
               const SizedBox(height: 12),
@@ -154,7 +154,7 @@ class _MasteryMobileSelectionSummary extends StatelessWidget {
                         style: TextStyle(
                           color: textColor(isDark),
                           fontSize: 14,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       const SizedBox(height: 3),
@@ -166,7 +166,7 @@ class _MasteryMobileSelectionSummary extends StatelessWidget {
                           color: sub,
                           fontSize: 11.5,
                           height: 1.25,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
@@ -184,7 +184,7 @@ class _MasteryMobileSelectionSummary extends StatelessWidget {
                     icon: const Icon(Icons.notes_rounded, size: 17),
                     label: const Text(
                       'Детали',
-                      style: TextStyle(fontWeight: FontWeight.w900),
+                      style: TextStyle(fontWeight: FontWeight.w700),
                     ),
                   ),
                 ],
@@ -369,7 +369,7 @@ class _MobileEmptyMasteryPanel extends StatelessWidget {
             color: sub,
             fontSize: 12,
             height: 1.3,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w500,
           ),
         ),
         const SizedBox(height: 12),
@@ -428,7 +428,7 @@ class _MobileMasterySkillChip extends StatelessWidget {
                 style: TextStyle(
                   color: textColor(isDark),
                   fontSize: 12,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),
@@ -438,7 +438,7 @@ class _MobileMasterySkillChip extends StatelessWidget {
               style: TextStyle(
                 color: skill.color,
                 fontSize: 11,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ],
@@ -801,7 +801,7 @@ class _MobileQuestMasteryPanel extends StatelessWidget {
             color: sub,
             fontSize: 12,
             height: 1.3,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w500,
           ),
         ),
         const SizedBox(height: 12),
@@ -885,7 +885,7 @@ class _MobileCollapsibleQuestSectionState
                     style: TextStyle(
                       color: textColor(widget.isDark),
                       fontSize: 12.2,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
@@ -904,7 +904,7 @@ class _MobileCollapsibleQuestSectionState
                     style: TextStyle(
                       color: widget.color,
                       fontSize: 10.5,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
@@ -970,7 +970,7 @@ class _MobileStagePracticeList extends StatelessWidget {
             style: TextStyle(
               color: textColor(isDark),
               fontSize: 13,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 7),
@@ -982,7 +982,7 @@ class _MobileStagePracticeList extends StatelessWidget {
               color: sub,
               fontSize: 11.8,
               height: 1.3,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
             ),
           )
         else ...[
@@ -1089,7 +1089,7 @@ class _MobileMasteryQuestRow extends StatelessWidget {
                   style: context.appTextTheme.titleSmall?.copyWith(
                     color: task.isDone ? sub : textColor(isDark),
                     height: 1.12,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                     decoration: task.isDone
                         ? TextDecoration.lineThrough
                         : TextDecoration.none,
@@ -1106,7 +1106,7 @@ class _MobileMasteryQuestRow extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: context.appTextRoles.compactMetadata.copyWith(
                     color: sub,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
@@ -1134,7 +1134,7 @@ class _MobileMasteryQuestRow extends StatelessWidget {
             style: TextStyle(
               color: task.isDone ? sub : color,
               fontSize: 11,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(width: 8),

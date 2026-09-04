@@ -197,7 +197,7 @@ before it enters an implementation brief.
 - [x] Wave 2 items that were already satisfied before the work started: stage diameter (62/74/86 against the audit's 56 minimum), label size (clamped at 13.5 against 12), and camera bounds (already computed from real node geometry). The audit measured a build that predates the RoadMap label rebuild.
 - [ ] Desktop audit waves 3-4 (colour roles, text roles, screen consolidation, tutorial reduction): require owner product decisions; see `AUDIT.md` P0-02/03/05 and P1-06/08/09/10.
 - [ ] Revisit Smarter Quest product model, value proposition, and UX before re-enabling its creation/edit controls.
-- [ ] Continue reducing remaining hardcoded `fontSize` values by subsystem; keep canvas-geometry labels as explicit exceptions until RoadMap painter metrics move to tokens.
+- [ ] Continue reducing remaining hardcoded `fontSize` values by subsystem; keep canvas-geometry labels as explicit exceptions until RoadMap painter metrics move to tokens. Font *weights* are already done: every product subsystem now uses only the three scale roles, and the leftovers sit in `lib/debug/`, the frozen `lib/widgets/planning/`, and the map's geometry files.
 - [ ] Add screenshot-based native typography QA for Windows/macOS at `100%/125%/150%` scale and `200%` text size.
 - [ ] Perform physical Windows QHD validation at 125% and 150% scaling, including pointer hover, drag handles, popup placement, and text density.
 - [ ] Perform native macOS screenshot comparison at 1440/1920/2560 widths and tune only presentation tokens/spacing.

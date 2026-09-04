@@ -43,7 +43,7 @@ class _BossesDialogState extends State<BossesDialog> {
                   Text(
                     'События сопротивления',
                     style: TextStyle(
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w700,
                       fontSize: 18,
                       color: txt,
                     ),
@@ -111,7 +111,7 @@ class _BossesDialogState extends State<BossesDialog> {
                         Text(
                           'События сопротивления',
                           style: TextStyle(
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w700,
                             color: txt,
                             fontSize: 14,
                           ),
@@ -379,7 +379,7 @@ class _AddBossDialogState extends State<_AddBossDialog> {
                       '$_streak дней',
                       style: const TextStyle(
                         color: Color(0xFFFF2D55),
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w700,
                         fontSize: 13,
                       ),
                     ),

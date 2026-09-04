@@ -141,7 +141,7 @@ class _MobileRoadmapJournalState extends State<_MobileRoadmapJournal> {
                       widget.isDark,
                     )
                   : MobileJournalTokens.text(widget.isDark),
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
             ),
           );
         },
@@ -392,7 +392,7 @@ class _MobileRoadmapAscentGraph extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: MobileJournalTokens.text(isDark),
-                                fontWeight: FontWeight.w900,
+                                fontWeight: FontWeight.w700,
                                 fontSize: 14,
                               ),
                             ),
@@ -542,7 +542,7 @@ class _MobileRoadmapStageCard extends StatelessWidget {
                         ? MobileJournalTokens.muted(isDark)
                         : MobileJournalTokens.text(isDark),
                     fontSize: 13.5,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 3),
@@ -706,7 +706,7 @@ class _MobileRoadmapHeader extends StatelessWidget {
                   style: TextStyle(
                     color: MobileJournalTokens.text(isDark),
                     fontSize: 17,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 Text(
@@ -795,7 +795,7 @@ class _MobileRoadmapSkillChooser extends StatelessWidget {
                     style: TextStyle(
                       color: MobileJournalTokens.text(isDark),
                       fontSize: 15,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
@@ -808,7 +808,7 @@ class _MobileRoadmapSkillChooser extends StatelessWidget {
                             skill.color,
                             isDark,
                           ),
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(width: 4),
@@ -854,7 +854,7 @@ class _MobileEmptyPath extends StatelessWidget {
               style: TextStyle(
                 color: MobileJournalTokens.text(isDark),
                 fontSize: 16,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: 5),

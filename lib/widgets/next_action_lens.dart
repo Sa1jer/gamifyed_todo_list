@@ -225,7 +225,7 @@ class _NextActionCard extends StatelessWidget {
                     'Следующее действие',
                     style: TextStyle(
                       color: muted,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                       fontSize: 11,
                     ),
                   ),
@@ -257,7 +257,7 @@ class _NextActionCard extends StatelessWidget {
               style: TextStyle(
                 color: text,
                 fontSize: 15,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w700,
                 height: 1.2,
               ),
               maxLines: 2,
@@ -396,7 +396,7 @@ class _EmptyNextActionLens extends StatelessWidget {
                 children: [
                   Text(
                     'Пока нет следующего действия',
-                    style: TextStyle(color: text, fontWeight: FontWeight.w800),
+                    style: TextStyle(color: text, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 3),
                   Text(
@@ -509,7 +509,7 @@ class _BootEntryActiveCard extends StatelessWidget {
                   'Вход в квест',
                   style: TextStyle(
                     color: text,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                     fontSize: 17,
                   ),
                 ),
@@ -604,7 +604,7 @@ class _BootEntryCompleteCard extends StatelessWidget {
               'Вход завершён',
               style: TextStyle(
                 color: MobileJournalTokens.text(isDark),
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w700,
                 fontSize: 17,
               ),
             ),
@@ -685,7 +685,7 @@ class _NextActionPickerSheet extends StatelessWidget {
             style: TextStyle(
               color: MobileJournalTokens.text(isDark),
               fontSize: 18,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 4),
@@ -829,7 +829,7 @@ class _BootEntryEditorSheetState extends State<_BootEntryEditorSheet> {
                   style: TextStyle(
                     color: text,
                     fontSize: 20,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -919,7 +919,7 @@ class _BootField extends StatelessWidget {
         '$label${required ? ' *' : ''}',
         style: TextStyle(
           color: MobileJournalTokens.text(isDark),
-          fontWeight: FontWeight.w800,
+          fontWeight: FontWeight.w700,
         ),
       ),
       const SizedBox(height: 6),

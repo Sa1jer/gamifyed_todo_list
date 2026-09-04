@@ -197,7 +197,7 @@ class DesktopRightRail extends StatelessWidget {
                           '${skill.xp}',
                           style: roles.compactMetadata.copyWith(
                             color: skill.color,
-                            fontWeight: FontWeight.w900,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ],
@@ -244,7 +244,7 @@ class _RailHeading extends StatelessWidget {
             title,
             style: context.appTextTheme.titleMedium?.copyWith(
               color: tokens.text,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ),
@@ -374,7 +374,7 @@ class _FocusTaskState extends State<_FocusTask> {
                   (compact ? textTheme.labelLarge : textTheme.titleSmall)
                       ?.copyWith(
                         color: task.isDone ? tokens.mutedText : tokens.text,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                         decoration: task.isDone
                             ? TextDecoration.lineThrough
                             : null,
@@ -565,7 +565,7 @@ class _WeeklyBars extends StatelessWidget {
                             ? tokens.profilePurple
                             : tokens.mutedText,
                         letterSpacing: 0,
-                        fontWeight: isToday ? FontWeight.w900 : FontWeight.w700,
+                        fontWeight: isToday ? FontWeight.w700 : FontWeight.w700,
                       ),
                     ),
                   ],
@@ -591,7 +591,7 @@ class _RailEmpty extends StatelessWidget {
       text,
       style: context.appTextTheme.bodySmall?.copyWith(
         color: tokens.mutedText,
-        fontWeight: FontWeight.w600,
+        fontWeight: FontWeight.w500,
       ),
     );
   }

@@ -163,7 +163,7 @@ class _GoalMilestoneBannerState extends State<GoalMilestoneBanner>
                                       _titleFor(milestone),
                                       style: TextStyle(
                                         color: text,
-                                        fontWeight: FontWeight.w900,
+                                        fontWeight: FontWeight.w700,
                                         fontSize: isComplete ? 15.5 : 14.5,
                                       ),
                                     ),

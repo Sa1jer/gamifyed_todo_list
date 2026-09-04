@@ -74,7 +74,7 @@ class WeeklyGoalCard extends StatelessWidget {
                 style: const TextStyle(
                   color: color,
                   fontSize: 11.5,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ],
@@ -103,7 +103,7 @@ class WeeklyGoalCard extends StatelessWidget {
                           style: TextStyle(
                             color: txt,
                             fontSize: 14,
-                            fontWeight: FontWeight.w900,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -128,7 +128,7 @@ class WeeklyGoalCard extends StatelessWidget {
                         style: TextStyle(
                           color: txt,
                           fontSize: 16,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
@@ -146,7 +146,7 @@ class WeeklyGoalCard extends StatelessWidget {
                         style: const TextStyle(
                           color: color,
                           fontSize: 11.5,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
@@ -350,7 +350,7 @@ class _WeeklyGoalEditorDialogState extends State<_WeeklyGoalEditorDialog> {
                     style: TextStyle(
                       color: txt,
                       fontSize: 18,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
@@ -383,7 +383,7 @@ class _WeeklyGoalEditorDialogState extends State<_WeeklyGoalEditorDialog> {
               style: TextStyle(
                 color: txt,
                 fontSize: 13,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: 8),
@@ -400,7 +400,7 @@ class _WeeklyGoalEditorDialogState extends State<_WeeklyGoalEditorDialog> {
                         '${index + 1}.',
                         style: TextStyle(
                           color: sub,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
@@ -451,7 +451,7 @@ class _WeeklyGoalEditorDialogState extends State<_WeeklyGoalEditorDialog> {
                 style: TextStyle(
                   color: _items.length >= 5 ? sub : color,
                   fontSize: 12,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),

@@ -122,7 +122,7 @@ class DesktopMainWorkspace extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: context.appTextTheme.titleLarge?.copyWith(
                   color: tokens.text,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),
@@ -332,7 +332,7 @@ class DesktopMainWorkspace extends StatelessWidget {
                               'Активных квестов пока нет.',
                               style: TextStyle(
                                 color: tokens.mutedText,
-                                fontWeight: FontWeight.w600,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                           ...active.map(
@@ -371,7 +371,7 @@ class DesktopMainWorkspace extends StatelessWidget {
                               style: TextStyle(
                                 color: tokens.mutedText,
                                 fontSize: 12,
-                                fontWeight: FontWeight.w600,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                           ...completed.map(
@@ -482,7 +482,7 @@ class _DesktopStatCard extends StatelessWidget {
                     style: TextStyle(
                       color: tokens.text,
                       fontSize: 18,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -524,7 +524,7 @@ class _DesktopQuestSectionTitle extends StatelessWidget {
       style: TextStyle(
         color: tokens.mutedText,
         fontSize: 11.5,
-        fontWeight: FontWeight.w900,
+        fontWeight: FontWeight.w700,
         letterSpacing: 0.55,
       ),
     );
@@ -569,7 +569,7 @@ class _DesktopFirstQuestEmpty extends StatelessWidget {
             textAlign: TextAlign.center,
             style: context.appTextTheme.titleMedium?.copyWith(
               color: tokens.text,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 8),
@@ -640,7 +640,7 @@ class _DesktopInlineEmpty extends StatelessWidget {
               style: TextStyle(
                 color: tokens.mutedText,
                 fontSize: 12,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),

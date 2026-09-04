@@ -48,7 +48,7 @@ class SkillGoalProgress extends StatelessWidget {
                   style: TextStyle(
                     color: progress.isComplete ? skill.color : secondary,
                     fontSize: compact ? 10 : 12,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
@@ -59,7 +59,7 @@ class SkillGoalProgress extends StatelessWidget {
                 style: TextStyle(
                   color: progress.isEmpty ? secondary : skill.color,
                   fontSize: compact ? 10 : 12,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ],
@@ -104,7 +104,7 @@ class SkillGoalProgress extends StatelessWidget {
               icon: const Icon(Icons.flag_outlined, size: 16),
               label: const Text(
                 'Задать следующую цель',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
               ),
             ),
           ],

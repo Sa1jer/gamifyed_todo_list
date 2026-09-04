@@ -142,7 +142,7 @@ class TodayQuestQueue extends StatelessWidget {
             style: TextStyle(
               color: txt,
               fontSize: 13,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 2),
@@ -265,7 +265,7 @@ class TodayQuestMiniRow extends StatelessWidget {
                         style: TextStyle(
                           color: txt,
                           fontSize: 11.5,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w500,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -276,7 +276,7 @@ class TodayQuestMiniRow extends StatelessWidget {
                         titleStyle: TextStyle(
                           color: txt,
                           fontSize: 11.5,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w500,
                         ),
                         descriptionColor: sub,
                       ),
@@ -391,7 +391,7 @@ class TodayQuickActionButton extends StatelessWidget {
                       style: TextStyle(
                         color: fg,
                         fontSize: 12,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ],
@@ -444,7 +444,7 @@ class _TodayStatTile extends StatelessWidget {
                     style: TextStyle(
                       color: txt,
                       fontSize: 17,
-                      fontWeight: muted ? FontWeight.w800 : FontWeight.bold,
+                      fontWeight: muted ? FontWeight.w700 : FontWeight.w700,
                     ),
                   ),
                   Text(
@@ -559,7 +559,7 @@ class _TodayTinyProgressLabel extends StatelessWidget {
               style: TextStyle(
                 color: color,
                 fontSize: 11,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ],

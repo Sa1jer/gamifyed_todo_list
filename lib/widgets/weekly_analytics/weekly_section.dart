@@ -50,7 +50,7 @@ class WeeklyAnalyticsSection extends StatelessWidget {
                       style: TextStyle(
                         color: txt,
                         fontSize: 14,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -110,7 +110,7 @@ class WeeklyAnalyticsEmptyState extends StatelessWidget {
             style: TextStyle(
               color: sub,
               fontSize: 13,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 4),

@@ -129,7 +129,7 @@ class ProfileBar extends StatelessWidget {
                                 style: TextStyle(
                                   color: textColor(isDark),
                                   fontSize: 16,
-                                  fontWeight: FontWeight.w900,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                               Text(
@@ -185,7 +185,7 @@ class ProfileBar extends StatelessWidget {
                     style: TextStyle(
                       color: subtext(isDark),
                       fontSize: 11,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                       letterSpacing: 0.5,
                     ),
                   ),
@@ -409,7 +409,7 @@ class ProfileBar extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w700,
                                 fontSize: 14,
                                 color: txt,
                               ),
@@ -505,7 +505,7 @@ class _ProfileAvatar extends StatelessWidget {
                 profile.initial,
                 style: TextStyle(
                   color: Colors.white,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w700,
                   fontSize: size * 0.42,
                 ),
               ),
@@ -569,7 +569,7 @@ class _MobileMenuTile extends StatelessWidget {
                       style: TextStyle(
                         color: MobileJournalTokens.text(isDark),
                         fontSize: 13.5,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -609,7 +609,7 @@ class _MobileMenuTile extends StatelessWidget {
                     style: TextStyle(
                       color: color,
                       fontSize: 11,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 )

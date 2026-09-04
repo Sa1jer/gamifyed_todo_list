@@ -32,7 +32,7 @@ class ProgressHubSection extends StatelessWidget {
           style: TextStyle(
             color: txt,
             fontSize: 13.5,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w700,
           ),
         ),
         const SizedBox(height: 3),
@@ -169,7 +169,7 @@ class _ProgressHubCardState extends State<ProgressHubCard> {
                         widget.title,
                         style: TextStyle(
                           color: txt,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                           fontSize: 13.5,
                         ),
                       ),
@@ -188,7 +188,7 @@ class _ProgressHubCardState extends State<ProgressHubCard> {
                         style: TextStyle(
                           color: widget.color,
                           fontSize: 11.5,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ],

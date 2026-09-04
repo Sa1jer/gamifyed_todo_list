@@ -78,7 +78,7 @@ class DailyVictoriesDialog extends StatelessWidget {
                         style: TextStyle(
                           color: txt,
                           fontSize: 20,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       const SizedBox(height: 3),
@@ -405,7 +405,7 @@ class _VictoryHero extends StatelessWidget {
                         style: TextStyle(
                           color: txt,
                           fontSize: 21,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -427,7 +427,7 @@ class _VictoryHero extends StatelessWidget {
                           style: TextStyle(
                             color: txt,
                             fontSize: 21,
-                            fontWeight: FontWeight.w900,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
@@ -555,7 +555,7 @@ class _MetricTile extends StatelessWidget {
                   style: TextStyle(
                     color: txt,
                     fontSize: 20,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -719,7 +719,7 @@ class _SectionShell extends StatelessWidget {
                   style: TextStyle(
                     color: txt,
                     fontSize: 14.5,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
@@ -778,7 +778,7 @@ class _SkillVictoryTile extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: txt,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                           fontSize: 13,
                         ),
                       ),
@@ -788,7 +788,7 @@ class _SkillVictoryTile extends StatelessWidget {
                       style: TextStyle(
                         color: stat.color,
                         fontSize: 11.5,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ],
@@ -848,7 +848,7 @@ class _VictoryEventTile extends StatelessWidget {
                         style: TextStyle(
                           color: txt,
                           fontSize: 12.8,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
@@ -942,7 +942,7 @@ class _VictoryEntryTile extends StatelessWidget {
                   style: TextStyle(
                     color: txt,
                     fontSize: 13,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -959,7 +959,7 @@ class _VictoryEntryTile extends StatelessWidget {
             style: TextStyle(
               color: entry.skillColor,
               fontSize: 12,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],
@@ -993,7 +993,7 @@ class _TonePill extends StatelessWidget {
         style: TextStyle(
           color: color,
           fontSize: 11.5,
-          fontWeight: FontWeight.w900,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );

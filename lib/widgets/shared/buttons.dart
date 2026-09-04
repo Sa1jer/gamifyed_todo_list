@@ -96,7 +96,7 @@ class _SmallBtnState extends State<SmallBtn> {
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 13,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ),

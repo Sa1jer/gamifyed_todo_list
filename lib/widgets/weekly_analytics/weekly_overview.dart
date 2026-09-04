@@ -72,7 +72,7 @@ class WeeklyOverview extends StatelessWidget {
                           color: txt,
                           fontSize: 14.5,
                           height: 1.1,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -233,7 +233,7 @@ class _WeeklyMetricCard extends StatelessWidget {
                   style: TextStyle(
                     color: txt,
                     fontSize: 19,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 2),

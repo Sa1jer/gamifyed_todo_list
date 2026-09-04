@@ -277,7 +277,7 @@ class _ProgressStoryFactChip extends StatelessWidget {
           children: [
             TextSpan(
               text: value,
-              style: TextStyle(color: color, fontWeight: FontWeight.w900),
+              style: TextStyle(color: color, fontWeight: FontWeight.w700),
             ),
           ],
         ),
@@ -314,7 +314,7 @@ class ProgressContinueCard extends StatelessWidget {
           style: TextStyle(
             color: txt,
             fontSize: 13.5,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w700,
           ),
         ),
         const SizedBox(height: 3),
@@ -361,7 +361,7 @@ class ProgressContinueCard extends StatelessWidget {
                         style: TextStyle(
                           color: txt,
                           fontSize: 13.8,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       const SizedBox(height: 3),
@@ -373,7 +373,7 @@ class ProgressContinueCard extends StatelessWidget {
                           color: sub,
                           fontSize: 11.5,
                           height: 1.2,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                       const SizedBox(height: 5),
@@ -384,7 +384,7 @@ class ProgressContinueCard extends StatelessWidget {
                         style: TextStyle(
                           color: continuation.color,
                           fontSize: 11.5,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ],

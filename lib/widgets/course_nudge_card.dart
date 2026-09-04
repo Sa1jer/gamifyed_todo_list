@@ -58,7 +58,7 @@ class CourseNudgeCard extends StatelessWidget {
                       style: TextStyle(
                         color: color,
                         fontSize: 12.2,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 3),
@@ -68,7 +68,7 @@ class CourseNudgeCard extends StatelessWidget {
                         color: txt,
                         fontSize: 14.5,
                         height: 1.15,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ],
@@ -115,7 +115,7 @@ class CourseNudgeCard extends StatelessWidget {
                   style: TextStyle(
                     color: sub,
                     fontSize: 12,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
