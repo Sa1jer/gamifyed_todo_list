@@ -355,7 +355,7 @@ class _TasksPanelState extends State<TasksPanel> {
                               onArchive: () => s.archiveCompletedTask(t.id),
                               onRestoreArchive: () =>
                                   s.restoreArchivedTask(t.id),
-                              onDelete: () => s.removeTask(t.id),
+                              onDelete: () => deleteTaskWithUndo(context, s, t.id),
                               onEdit: () => _editTask(context, skill, t),
                             ),
                           );
@@ -378,7 +378,7 @@ class _TasksPanelState extends State<TasksPanel> {
                               onArchive: () => s.archiveCompletedTask(t.id),
                               onRestoreArchive: () =>
                                   s.restoreArchivedTask(t.id),
-                              onDelete: () => s.removeTask(t.id),
+                              onDelete: () => deleteTaskWithUndo(context, s, t.id),
                               onEdit: () => _editTask(context, skill, t),
                             ),
                           );
@@ -483,7 +483,7 @@ class _TasksPanelState extends State<TasksPanel> {
                                   onArchive: () => s.archiveCompletedTask(t.id),
                                   onRestoreArchive: () =>
                                       s.restoreArchivedTask(t.id),
-                                  onDelete: () => s.removeTask(t.id),
+                                  onDelete: () => deleteTaskWithUndo(context, s, t.id),
                                   onEdit: () => _editTask(context, skill, t),
                                 ),
                               );
@@ -695,7 +695,7 @@ class _TasksPanelState extends State<TasksPanel> {
                     onUncomplete: () => state.uncompleteTask(task.id),
                     onArchive: () => state.archiveCompletedTask(task.id),
                     onRestoreArchive: () => state.restoreArchivedTask(task.id),
-                    onDelete: () => state.removeTask(task.id),
+                    onDelete: () => deleteTaskWithUndo(context, state, task.id),
                     onEdit: () => _editTask(context, skill, task),
                   ),
                 for (final task in done)
@@ -710,7 +710,7 @@ class _TasksPanelState extends State<TasksPanel> {
                     onUncomplete: () => state.uncompleteTask(task.id),
                     onArchive: () => state.archiveCompletedTask(task.id),
                     onRestoreArchive: () => state.restoreArchivedTask(task.id),
-                    onDelete: () => state.removeTask(task.id),
+                    onDelete: () => deleteTaskWithUndo(context, state, task.id),
                     onEdit: () => _editTask(context, skill, task),
                   ),
                 MobileAddQuestAction(
@@ -755,7 +755,7 @@ class _TasksPanelState extends State<TasksPanel> {
                         onArchive: () => state.archiveCompletedTask(task.id),
                         onRestoreArchive: () =>
                             state.restoreArchivedTask(task.id),
-                        onDelete: () => state.removeTask(task.id),
+                        onDelete: () => deleteTaskWithUndo(context, state, task.id),
                         onEdit: () => _editTask(context, skill, task),
                       ),
                 ],

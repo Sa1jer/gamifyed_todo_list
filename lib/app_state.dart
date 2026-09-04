@@ -48,6 +48,17 @@ class GoalMilestoneEvent {
   });
 }
 
+/// Удалённый квест вместе с местом, на котором он стоял.
+///
+/// Порядок квестов задаёт пользователь, поэтому отмена, возвращающая квест в
+/// конец списка, отменяет удаление лишь наполовину.
+class RemovedTask {
+  final Task task;
+  final int index;
+
+  const RemovedTask({required this.task, required this.index});
+}
+
 class AppState extends ChangeNotifier {
   static const int inboxTaskXp = 10;
 
@@ -2247,13 +2258,39 @@ class AppState extends ChangeNotifier {
     _commitMutation();
   }
 
-  void removeTask(String id) {
-    final task = _taskMutations.remove(tasks, id);
-    if (task == null) return;
+  void removeTask(String id) => removeTaskForUndo(id);
+
+  /// Удаляет квест и возвращает всё, что нужно, чтобы поставить его обратно.
+  ///
+  /// Один квест — дешёвая потеря, поэтому его удаление не спрашивают, а дают
+  /// отменить; см. `confirmDestructiveAction` для потерь, которые отменить
+  /// нечем. Позиция в списке хранится вместе с квестом: порядок задан
+  /// пользователем вручную, и вернуть квест в конец значит его потерять
+  /// наполовину.
+  RemovedTask? removeTaskForUndo(String id) {
+    final index = tasks.indexWhere((task) => task.id == id);
+    if (index == -1) return null;
+    final task = tasks.removeAt(index);
     _notifications.cancelNotification(_notificationId(task.id));
     if (task.isSkillTask) {
       _syncBossesForSkill(task.skillId);
     }
+    _commitMutation();
+    return RemovedTask(task: task, index: index);
+  }
+
+  /// Возвращает удалённый квест на его место вместе с напоминанием.
+  ///
+  /// Повторный вызов ничего не делает: отмену можно нажать один раз, но
+  /// доставить её может и подавленный SnackBar, и кнопка одновременно.
+  void restoreTask(RemovedTask removed) {
+    final task = removed.task;
+    if (tasks.any((existing) => existing.id == task.id)) return;
+    tasks.insert(removed.index.clamp(0, tasks.length), task);
+    if (task.isSkillTask) {
+      _syncBossesForSkill(task.skillId);
+    }
+    _syncTaskNotification(task);
     _commitMutation();
   }
 

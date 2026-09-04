@@ -228,7 +228,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
       ),
       onDeleteQuest: (task) {
         final skillId = task.skillId;
-        state.removeTask(task.id);
+        deleteTaskWithUndo(context, state, task.id);
         _setSelection(_MasterySelection.skill(skillId));
       },
       onMasterNode: (skill, node) =>
@@ -270,7 +270,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
         ),
         onDeleteQuest: (task) {
           final skillId = task.skillId;
-          state.removeTask(task.id);
+          deleteTaskWithUndo(context, state, task.id);
           _setSelection(_MasterySelection.skill(skillId));
         },
         onMasterNode: (skill, node) =>
@@ -758,7 +758,7 @@ class _MasteryMapWorkspaceState extends State<MasteryMapWorkspace> {
                               ),
                               onDeleteQuest: (task) {
                                 final skillId = task.skillId;
-                                state.removeTask(task.id);
+                                deleteTaskWithUndo(context, state, task.id);
                                 updateSelection(
                                   _MasterySelection.skill(skillId),
                                 );

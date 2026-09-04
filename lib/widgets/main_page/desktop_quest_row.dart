@@ -212,7 +212,11 @@ class _DesktopQuestRowState extends State<DesktopQuestRow> {
                             case _DesktopTaskMenuAction.restore:
                               widget.state.restoreArchivedTask(task.id);
                             case _DesktopTaskMenuAction.delete:
-                              widget.state.removeTask(task.id);
+                              deleteTaskWithUndo(
+                                context,
+                                widget.state,
+                                task.id,
+                              );
                           }
                         },
                         itemBuilder: (_) => [
