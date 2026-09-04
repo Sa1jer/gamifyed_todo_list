@@ -12,6 +12,7 @@ storeFile=/Users/<ваше имя пользователя>/rpg-todo-release.jks
 storePassword=<ваш пароль>
 
 # Имя ключа внутри хранилища — то, что вы передали в -alias.
+# Забыли? `keytool -list -keystore <путь к .jks>` покажет (спросит пароль).
 keyAlias=rpg-todo
 
 # В современном формате хранилища (PKCS12, он по умолчанию начиная с JDK 9)
