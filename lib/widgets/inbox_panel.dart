@@ -634,7 +634,7 @@ class _InboxTaskRow extends StatelessWidget {
               style: TextStyle(
                 color: task.isDone ? sub : txt,
                 fontSize: 12.5,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w500,
                 decoration: task.isDone ? TextDecoration.lineThrough : null,
                 decorationColor: sub,
               ),

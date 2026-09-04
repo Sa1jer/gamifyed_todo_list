@@ -598,7 +598,7 @@ class _MobileQuestCopy extends StatelessWidget {
             color: titleColor,
             fontSize: 15.5,
             height: 1.2,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w500,
             decoration: task.isDone ? TextDecoration.lineThrough : null,
             decorationColor: descriptionColor,
           ),

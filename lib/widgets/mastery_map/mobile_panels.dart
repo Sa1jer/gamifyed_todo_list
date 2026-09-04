@@ -1089,7 +1089,7 @@ class _MobileMasteryQuestRow extends StatelessWidget {
                   style: context.appTextTheme.titleSmall?.copyWith(
                     color: task.isDone ? sub : textColor(isDark),
                     height: 1.12,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w500,
                     decoration: task.isDone
                         ? TextDecoration.lineThrough
                         : TextDecoration.none,

@@ -374,7 +374,7 @@ class _FocusTaskState extends State<_FocusTask> {
                   (compact ? textTheme.labelLarge : textTheme.titleSmall)
                       ?.copyWith(
                         color: task.isDone ? tokens.mutedText : tokens.text,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w500,
                         decoration: task.isDone
                             ? TextDecoration.lineThrough
                             : null,

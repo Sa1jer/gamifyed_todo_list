@@ -279,7 +279,7 @@ class _MasteryInspectorQuestRow extends StatelessWidget {
                   style: context.appTextTheme.titleSmall?.copyWith(
                     color: done ? sub : textColor(isDark),
                     height: 1.12,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w500,
                     decoration: done
                         ? TextDecoration.lineThrough
                         : TextDecoration.none,

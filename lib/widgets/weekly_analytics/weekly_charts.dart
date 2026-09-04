@@ -406,7 +406,7 @@ class WeeklyStreakRisks extends StatelessWidget {
                                 style: TextStyle(
                                   color: txt,
                                   fontSize: 12.5,
-                                  fontWeight: FontWeight.w700,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                               const SizedBox(height: 3),
