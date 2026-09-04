@@ -386,16 +386,6 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
-  void _openAchievementsDialog(AppState state) {
-    showDialog(
-      context: context,
-      builder: (_) => AchievementsDialog(
-        achievements: state.achievements,
-        isDark: state.isDark,
-      ),
-    );
-  }
-
   void _openHistoryDialog(AppState state) {
     showDialog(
       context: context,
@@ -437,7 +427,6 @@ class _MainPageState extends State<MainPage> {
       onOpenStats: () => _openGrowthSliceDialog(state),
       onOpenCalendar: () => _openCalendarDialog(state),
       onOpenBosses: () => _openBossesDialog(state),
-      onOpenAchievements: () => _openAchievementsDialog(state),
       onOpenRewards: () =>
           _openRewardsDialog(state, nestedMobileRoute: nestedMobileRoutes),
     );

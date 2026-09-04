@@ -20,7 +20,6 @@ class ProgressHubDialog extends StatelessWidget {
   final VoidCallback onOpenStats;
   final VoidCallback onOpenCalendar;
   final VoidCallback onOpenBosses;
-  final VoidCallback onOpenAchievements;
   final VoidCallback onOpenRewards;
 
   const ProgressHubDialog({
@@ -33,7 +32,6 @@ class ProgressHubDialog extends StatelessWidget {
     required this.onOpenStats,
     required this.onOpenCalendar,
     required this.onOpenBosses,
-    required this.onOpenAchievements,
     required this.onOpenRewards,
   });
 
@@ -70,7 +68,6 @@ class ProgressHubDialog extends StatelessWidget {
         onOpenStats: onOpenStats,
         onOpenCalendar: onOpenCalendar,
         onOpenBosses: onOpenBosses,
-        onOpenAchievements: onOpenAchievements,
         onOpenRewards: onOpenRewards,
       ),
     );
@@ -92,7 +89,6 @@ class ProgressHubContent extends StatelessWidget {
   final VoidCallback onOpenStats;
   final VoidCallback onOpenCalendar;
   final VoidCallback onOpenBosses;
-  final VoidCallback onOpenAchievements;
   final VoidCallback onOpenRewards;
 
   const ProgressHubContent({
@@ -111,7 +107,6 @@ class ProgressHubContent extends StatelessWidget {
     required this.onOpenStats,
     required this.onOpenCalendar,
     required this.onOpenBosses,
-    required this.onOpenAchievements,
     required this.onOpenRewards,
   });
 
@@ -130,11 +125,13 @@ class ProgressHubContent extends StatelessWidget {
     final unlockedAchievements = state.achievements
         .where((achievement) => achievement.isUnlocked)
         .length;
+    // Когда ничего не происходит, карточка показывает коллекцию: раздел
+    // теперь держит и её, и «нет событий» было бы неправдой.
     final trophyValue = state.unopenedRewardChests.isNotEmpty
         ? '${state.unopenedRewardChests.length} новых'
         : state.activeBuffs.isNotEmpty
         ? 'эффекты активны'
-        : 'нет событий';
+        : '$unlockedAchievements / ${state.achievements.length}';
     final resistanceValue = state.activeBossThreatCount > 0
         ? 'есть сопротивление'
         : state.activeBosses.isNotEmpty
@@ -381,20 +378,10 @@ class ProgressHubContent extends StatelessWidget {
                         cards: [
                           ProgressHubCard(
                             isDark: isDark,
-                            icon: Icons.emoji_events,
-                            color: const Color(0xFFFFCC00),
-                            title: 'Достижения',
-                            subtitle: 'Открытые рубежи',
-                            value:
-                                '$unlockedAchievements / ${state.achievements.length}',
-                            onTap: onOpenAchievements,
-                          ),
-                          ProgressHubCard(
-                            isDark: isDark,
                             icon: Icons.redeem,
                             color: const Color(0xFFFF9500),
                             title: 'Трофеи',
-                            subtitle: 'Сундуки и эффекты после действий',
+                            subtitle: 'Эффекты, сундуки и коллекция достижений',
                             value: trophyValue,
                             onTap: onOpenRewards,
                           ),

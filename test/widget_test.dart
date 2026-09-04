@@ -1439,8 +1439,8 @@ void main() {
       ('Срез роста', 'growth'),
       ('Календарь квестов', 'calendar'),
       // «Журнал XP» показывал тот же список закрытых квестов, что и
-      // «Летопись», отличаясь только заголовком и цветом иконки.
-      ('Достижения', 'achievements'),
+      // «Летопись», отличаясь только заголовком и цветом иконки. Коллекция
+      // достижений уехала в «Трофеи», к активным эффектам и сундукам.
       ('Сопротивление', 'resistance'),
     ];
     for (final entry in detailEntries) {
@@ -4087,7 +4087,10 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: AchievementsDialog(achievements: [achievement], isDark: true),
+          body: AchievementsCollection(
+            achievements: [achievement],
+            isDark: true,
+          ),
         ),
       ),
     );
@@ -4116,7 +4119,10 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: AchievementsDialog(achievements: [achievement], isDark: false),
+          body: AchievementsCollection(
+            achievements: [achievement],
+            isDark: false,
+          ),
         ),
       ),
     );
@@ -5343,6 +5349,39 @@ void main() {
 
     // AppState заводит таймер суточного сброса прямо в конструкторе, поэтому
     // состояние закрывается до проверки инвариантов, а не в tearDown.
+    state.dispose();
+    await tester.pump();
+  });
+
+  testWidgets('Trophies holds the whole achievement collection', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(900, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final state = AppState(
+      storage: InMemoryStorageService().._onboardingSeen = true,
+      seedDefaults: false,
+    );
+    state.normalizeAfterBulkStateChange();
+
+    await tester.pumpWidget(
+      MaterialApp(home: Scaffold(body: RewardsDialog(state: state))),
+    );
+    await tester.pumpAndSettle();
+
+    // Раздел держит и последствия действий, и коллекцию: своей карточки у
+    // достижений больше нет ни в мобильном хабе, ни в десктопной статистике.
+    expect(find.text('Достижения'), findsOneWidget);
+    expect(find.byType(AchievementsCollection), findsOneWidget);
+    expect(
+      state.achievements,
+      isNotEmpty,
+      reason: 'каталог достижений должен быть заполнен по умолчанию',
+    );
+
     state.dispose();
     await tester.pump();
   });

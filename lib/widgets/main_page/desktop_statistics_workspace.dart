@@ -6,7 +6,6 @@ enum _DesktopStatisticsDetail {
   timeline,
   growth,
   calendar,
-  achievements,
   resistance,
 }
 
@@ -428,13 +427,6 @@ class _DesktopStatisticsRail extends StatelessWidget {
       const SizedBox(height: 8),
       _DesktopRailLink(
         tokens: tokens,
-        title: 'Достижения',
-        icon: Icons.workspace_premium_outlined,
-        color: tokens.rewardGoldGraphic,
-        onTap: () => onOpen(_DesktopStatisticsDetail.achievements),
-      ),
-      _DesktopRailLink(
-        tokens: tokens,
         title: 'Сопротивление',
         icon: Icons.shield_outlined,
         color: tokens.danger,
@@ -491,12 +483,6 @@ class _DesktopStatisticsDetailPage extends StatelessWidget {
         const Color(0xFFB84DFF),
         'Сколько квестов закрыто в каждый день',
       ),
-      _DesktopStatisticsDetail.achievements => (
-        'Достижения',
-        Icons.workspace_premium_outlined,
-        tokens.rewardGoldGraphic,
-        'Что открыто и что осталось',
-      ),
       _DesktopStatisticsDetail.resistance => (
         'Сопротивление',
         Icons.shield_outlined,
@@ -540,21 +526,6 @@ class _DesktopStatisticsDetailPage extends StatelessWidget {
             .toList(growable: false),
       _ => state.history.where((entry) => entry.isCompletion).toList(),
     };
-    if (detail == _DesktopStatisticsDetail.achievements) {
-      return _DesktopDetailGrid(
-        children: state.achievements.map((achievement) {
-          final def = achievement.def;
-          return _DesktopDetailCard(
-            tokens: tokens,
-            color: def?.color ?? color,
-            icon: def?.icon ?? Icons.workspace_premium_outlined,
-            title: def?.name ?? achievement.id,
-            subtitle: def?.description ?? 'Достижение',
-            value: achievement.isUnlocked ? 'Открыто' : 'В процессе',
-          );
-        }).toList(),
-      );
-    }
     if (detail == _DesktopStatisticsDetail.resistance) {
       final bosses = state.activeBosses;
       if (bosses.isEmpty) {

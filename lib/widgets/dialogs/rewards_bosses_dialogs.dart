@@ -239,6 +239,26 @@ class _RewardsDialogState extends State<RewardsDialog> {
                 }).toList(),
               ),
       ),
+      const SizedBox(height: 24),
+      Text(
+        'Достижения',
+        style: TextStyle(
+          color: text,
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      const SizedBox(height: 4),
+      Text(
+        'Что уже открыто и что осталось. Полная коллекция, а не только '
+        'ближайшее.',
+        style: TextStyle(color: secondary, fontSize: 12, height: 1.35),
+      ),
+      const SizedBox(height: 12),
+      AchievementsCollection(
+        achievements: widget.state.achievements,
+        isDark: isDark,
+      ),
     ];
   }
 

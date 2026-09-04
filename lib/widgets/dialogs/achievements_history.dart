@@ -4,10 +4,17 @@ part of '../dialogs.dart';
 // ACHIEVEMENTS DIALOG
 // ═══════════════════════════════════════════════════════════════════════════════
 
-class AchievementsDialog extends StatelessWidget {
+/// Сетка достижений без собственной прокрутки.
+///
+/// Живёт внутри «Трофеев»: коллекция и активные эффекты — это последствия
+/// действий, и держать их в двух разделах с похожими названиями значило
+/// заставлять выбирать вслепую. Каталог фиксированный и маленький, поэтому
+/// ленивая прокрутка здесь не нужна.
+class AchievementsCollection extends StatelessWidget {
   final List<Achievement> achievements;
   final bool isDark;
-  const AchievementsDialog({
+
+  const AchievementsCollection({
     super.key,
     required this.achievements,
     required this.isDark,
@@ -15,67 +22,28 @@ class AchievementsDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = surface(isDark);
-    final txt = textColor(isDark);
-    final sub = subtext(isDark);
-    final bdr = borderColor(isDark);
-
-    return Dialog(
-      backgroundColor: bg,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: SizedBox(
-        width: 480,
-        height: 560,
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 24, 16, 16),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.emoji_events,
-                    color: Color(0xFFFFCC00),
-                    size: 22,
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Достижения',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                      color: txt,
-                    ),
-                  ),
-                  const Spacer(),
-                  PressFeedback(
-                    scale: 0.94,
-                    tooltip: 'Закрыть достижения',
-                    onTap: () => Navigator.pop(context),
-                    child: Icon(Icons.close, color: sub, size: 22),
-                  ),
-                ],
-              ),
-            ),
-            Container(height: 1, color: bdr),
-            Expanded(
-              child: GridView.builder(
-                padding: const EdgeInsets.all(16),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: 0.85,
-                ),
-                itemCount: achievements.length,
-                itemBuilder: (_, i) => _AchievementCard(
-                  achievement: achievements[i],
-                  isDark: isDark,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Три колонки на десктопе, две на телефоне: карточка достижения ниже
+        // 140px перестаёт вмещать название в две строки.
+        final columns = constraints.maxWidth >= 460 ? 3 : 2;
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: EdgeInsets.zero,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 0.85,
+          ),
+          itemCount: achievements.length,
+          itemBuilder: (_, index) => _AchievementCard(
+            achievement: achievements[index],
+            isDark: isDark,
+          ),
+        );
+      },
     );
   }
 }
