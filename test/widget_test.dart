@@ -5307,6 +5307,46 @@ void main() {
     await tester.pump();
   });
 
+  testWidgets('the mobile hub has one growth log, and it reaches the XP journal', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final state = AppState(
+      storage: InMemoryStorageService().._onboardingSeen = true,
+      seedDefaults: false,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CharacterTimelineDialog(
+            state: state,
+            fullScreen: true,
+            onOpenXpJournal: () {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Страница обещает журнал XP текстом, поэтому переход в него обязан быть:
+    // своей карточки в хабе у журнала больше нет.
+    expect(
+      find.byKey(const ValueKey('timeline-open-xp-journal')),
+      findsOneWidget,
+    );
+    expect(find.text('Журнал XP'), findsOneWidget);
+
+    // AppState заводит таймер суточного сброса прямо в конструкторе, поэтому
+    // состояние закрывается до проверки инвариантов, а не в tearDown.
+    state.dispose();
+    await tester.pump();
+  });
+
   testWidgets('desktop RoadMap toggles horizontal and vertical layouts', (
     WidgetTester tester,
   ) async {

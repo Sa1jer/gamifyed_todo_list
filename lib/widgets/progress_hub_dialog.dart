@@ -21,7 +21,6 @@ class ProgressHubDialog extends StatelessWidget {
   final VoidCallback onOpenCalendar;
   final VoidCallback onOpenBosses;
   final VoidCallback onOpenAchievements;
-  final VoidCallback onOpenHistory;
   final VoidCallback onOpenRewards;
 
   const ProgressHubDialog({
@@ -35,7 +34,6 @@ class ProgressHubDialog extends StatelessWidget {
     required this.onOpenCalendar,
     required this.onOpenBosses,
     required this.onOpenAchievements,
-    required this.onOpenHistory,
     required this.onOpenRewards,
   });
 
@@ -73,7 +71,6 @@ class ProgressHubDialog extends StatelessWidget {
         onOpenCalendar: onOpenCalendar,
         onOpenBosses: onOpenBosses,
         onOpenAchievements: onOpenAchievements,
-        onOpenHistory: onOpenHistory,
         onOpenRewards: onOpenRewards,
       ),
     );
@@ -96,7 +93,6 @@ class ProgressHubContent extends StatelessWidget {
   final VoidCallback onOpenCalendar;
   final VoidCallback onOpenBosses;
   final VoidCallback onOpenAchievements;
-  final VoidCallback onOpenHistory;
   final VoidCallback onOpenRewards;
 
   const ProgressHubContent({
@@ -116,7 +112,6 @@ class ProgressHubContent extends StatelessWidget {
     required this.onOpenCalendar,
     required this.onOpenBosses,
     required this.onOpenAchievements,
-    required this.onOpenHistory,
     required this.onOpenRewards,
   });
 
@@ -285,9 +280,9 @@ class ProgressHubContent extends StatelessWidget {
                             isDark: isDark,
                             icon: Icons.auto_stories,
                             color: const Color(0xFFAF52DE),
-                            title: 'Летопись',
+                            title: 'Летопись опыта',
                             subtitle:
-                                'Уровни, сопротивление, освоение и недели',
+                                'Уровни, освоение, недели и журнал XP',
                             value: 'Ур. ${state.profile.level}',
                             onTap: onOpenCharacterTimeline,
                           ),
@@ -373,15 +368,6 @@ class ProgressHubContent extends StatelessWidget {
                             subtitle: 'Когда реально закрывались квесты',
                             value: '${story.completedDays} активных дней',
                             onTap: onOpenCalendar,
-                          ),
-                          ProgressHubCard(
-                            isDark: isDark,
-                            icon: Icons.history,
-                            color: const Color(0xFF8E8E93),
-                            title: 'Журнал XP',
-                            subtitle: 'Начисления, отмены и проверки',
-                            value: '${state.history.length} записей',
-                            onTap: onOpenHistory,
                           ),
                         ],
                       ),

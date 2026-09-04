@@ -336,7 +336,11 @@ class _MainPageState extends State<MainPage> {
   }) {
     if (_usesMobileWorkspaceRoutes) {
       _openMobileWorkspaceRoute(
-        (_) => CharacterTimelineDialog(state: state, fullScreen: true),
+        (_) => CharacterTimelineDialog(
+          state: state,
+          fullScreen: true,
+          onOpenXpJournal: () => _openHistoryDialog(state),
+        ),
         allowNested: nestedMobileRoute,
       );
       return;
@@ -434,7 +438,6 @@ class _MainPageState extends State<MainPage> {
       onOpenCalendar: () => _openCalendarDialog(state),
       onOpenBosses: () => _openBossesDialog(state),
       onOpenAchievements: () => _openAchievementsDialog(state),
-      onOpenHistory: () => _openHistoryDialog(state),
       onOpenRewards: () =>
           _openRewardsDialog(state, nestedMobileRoute: nestedMobileRoutes),
     );

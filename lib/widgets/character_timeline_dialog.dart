@@ -10,10 +10,19 @@ class CharacterTimelineDialog extends StatelessWidget {
   final AppState state;
   final bool fullScreen;
 
+  /// Вход в журнал XP.
+  ///
+  /// На мобильном хабе у журнала больше нет своей карточки: две записи с
+  /// похожими именами заставляли выбирать вслепую. Попасть в него можно
+  /// отсюда — эта страница сама ссылается на журнал в тексте, так что без
+  /// перехода обещание осталось бы невыполнимым.
+  final VoidCallback? onOpenXpJournal;
+
   const CharacterTimelineDialog({
     super.key,
     required this.state,
     this.fullScreen = false,
+    this.onOpenXpJournal,
   });
 
   @override
@@ -192,6 +201,14 @@ class CharacterTimelineDialog extends StatelessWidget {
                     height: 1.35,
                   ),
                 ),
+                if (onOpenXpJournal != null) ...[
+                  const SizedBox(height: 10),
+                  _XpJournalLink(
+                    isDark: isDark,
+                    entryCount: state.history.length,
+                    onTap: onOpenXpJournal!,
+                  ),
+                ],
                 const SizedBox(height: 14),
               ],
             ),
@@ -587,6 +604,81 @@ List<_TimelineEvent> _buildWeekEvents(AppState state) {
   }
 
   return events;
+}
+
+/// Переход в журнал XP со страницы летописи.
+class _XpJournalLink extends StatelessWidget {
+  final bool isDark;
+  final int entryCount;
+  final VoidCallback onTap;
+
+  const _XpJournalLink({
+    required this.isDark,
+    required this.entryCount,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final text = textColor(isDark);
+    final secondary = subtext(isDark);
+
+    return PressFeedback(
+      scale: 0.98,
+      onTap: onTap,
+      child: Container(
+        key: const ValueKey('timeline-open-xp-journal'),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: dialogFieldSurface(isDark),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: borderColor(isDark)),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.history, color: secondary, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Журнал XP',
+                    style: TextStyle(
+                      color: text,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '$entryCount ${_entryWord(entryCount)}: начисления, отмены '
+                    'и проверки',
+                    style: TextStyle(
+                      color: secondary,
+                      fontSize: 12,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: secondary, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static String _entryWord(int count) {
+    final lastTwo = count.abs() % 100;
+    if (lastTwo >= 11 && lastTwo <= 14) return 'записей';
+    return switch (count.abs() % 10) {
+      1 => 'запись',
+      2 || 3 || 4 => 'записи',
+      _ => 'записей',
+    };
+  }
 }
 
 class _TimelineHero extends StatelessWidget {

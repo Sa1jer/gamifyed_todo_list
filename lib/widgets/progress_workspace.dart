@@ -11,7 +11,6 @@ class ProgressWorkspaceDestinations {
   final VoidCallback onOpenCalendar;
   final VoidCallback onOpenBosses;
   final VoidCallback onOpenAchievements;
-  final VoidCallback onOpenHistory;
   final VoidCallback onOpenRewards;
 
   const ProgressWorkspaceDestinations({
@@ -22,7 +21,6 @@ class ProgressWorkspaceDestinations {
     required this.onOpenCalendar,
     required this.onOpenBosses,
     required this.onOpenAchievements,
-    required this.onOpenHistory,
     required this.onOpenRewards,
   });
 }
@@ -61,7 +59,6 @@ class ProgressWorkspace extends StatelessWidget {
           onOpenCalendar: destinations.onOpenCalendar,
           onOpenBosses: destinations.onOpenBosses,
           onOpenAchievements: destinations.onOpenAchievements,
-          onOpenHistory: destinations.onOpenHistory,
           onOpenRewards: destinations.onOpenRewards,
         ),
       ),
