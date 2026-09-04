@@ -5376,6 +5376,10 @@ void main() {
     // достижений больше нет ни в мобильном хабе, ни в десктопной статистике.
     expect(find.text('Достижения'), findsOneWidget);
     expect(find.byType(AchievementsCollection), findsOneWidget);
+    // Мобильный маршрут — не единственный: `RewardsDialog` рисует телефон, а
+    // десктопные «Трофеи» это отдельный виджет. Проверка ниже держит оба,
+    // потому что первый заход добавил коллекцию только в один из них и на
+    // десктопе она стала недостижимой.
     expect(
       state.achievements,
       isNotEmpty,
@@ -5384,6 +5388,37 @@ void main() {
 
     state.dispose();
     await tester.pump();
+  });
+
+  testWidgets('desktop Trophies also holds the achievement collection', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1400, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = InMemoryStorageService().._onboardingSeen = true;
+    await storage.init();
+
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    await tester.tap(find.byIcon(Icons.emoji_events_outlined).first);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('desktop-rewards-workspace')),
+      findsOneWidget,
+    );
+    // Десктопные «Трофеи» — отдельный виджет от мобильного маршрута. Когда
+    // экран достижений убрали из статистики, коллекция должна была появиться
+    // здесь; без этой проверки она осталась достижимой только с телефона.
+    expect(
+      find.byKey(const ValueKey('desktop-trophies-collection')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('desktop RoadMap toggles horizontal and vertical layouts', (

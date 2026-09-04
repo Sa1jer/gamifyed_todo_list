@@ -252,6 +252,22 @@ class _DesktopRewardsWorkspaceState extends State<_DesktopRewardsWorkspace> {
           ),
           const SizedBox(height: 24),
           Text(
+            'ВСЕ ДОСТИЖЕНИЯ',
+            style: TextStyle(
+              color: tokens.mutedText,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.7,
+            ),
+          ),
+          const SizedBox(height: 12),
+          AchievementsCollection(
+            key: const ValueKey('desktop-trophies-collection'),
+            achievements: state.achievements,
+            isDark: state.isDark,
+          ),
+          const SizedBox(height: 24),
+          Text(
             'КАК ПОЛУЧИТЬ ТРОФЕИ',
             style: TextStyle(
               color: tokens.mutedText,
