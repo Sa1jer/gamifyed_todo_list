@@ -296,7 +296,7 @@ Release blockers and deferred maintenance:
 
 - [x] Android, iOS and macOS moved off `com.example...` to `com.rpgtodo.app` (2026-09-04), verified against the built APK with `aapt2 dump packagename`. Done early on purpose: a new application ID installs as a different app, so every ID change costs testers their local data unless they export first.
 - [ ] Settle the final identifier before any store submission. `com.rpgtodo.app` is a placeholder in one respect — reverse-DNS is meant to come from a domain the publisher controls, and `rpgtodo.com` is not owned. Either buy a domain or take `io.github.sa1jer.rpgtodo`, which needs no purchase. The ID cannot change after publication.
-- [ ] Provide a private `android/key.properties`; release Gradle correctly refuses release assembly without signing and never falls back to debug signing. The keystore is the owner's to create — it carries passwords. `*.jks`/`*.keystore` are now gitignored repo-wide; `key.properties` was already covered by `android/.gitignore`. Until then, betas go out as debug builds. See `docs/BETA_DISTRIBUTION.md`.
+- [x] Release signing is configured and verified (2026-09-04). `flutter build apk --release` succeeds and `apksigner verify --print-certs` reports the owner's certificate (`CN=RPG To-Do`, RSA 2048, valid to 2054), not the Android debug key. Signed with v2 only, which is correct: v2 is understood from API 24 and `minSdkVersion` is 24. The keystore lives outside the repository and `git ls-files` finds no `.jks`, `.keystore` or `key.properties`.
 - [ ] Replace the default Flutter Android launcher icon/basic launch artwork with final RPG To-Do assets before store distribution.
 - [ ] Migrate the app and affected plugins (`audioplayers_android`, `flutter_timezone`) to Flutter Built-in Kotlin in a dedicated dependency/build-system batch before the compatibility warning becomes an error.
 - [ ] Install the matching iOS platform in Xcode and configure distribution signing; the iOS no-codesign probe is currently blocked because iOS `26.2` is not installed.
@@ -304,7 +304,7 @@ Release blockers and deferred maintenance:
 - [ ] Decide whether local task/profile/goal text requires encrypted-at-rest storage and a key-management plan before public distribution.
 - [ ] Review whether `SCHEDULE_EXACT_ALARM` is required for store policy and every reminder mode.
 - [ ] Decouple Android notification permission from exact-alarm capability, define an inexact fallback where acceptable, and show human-readable reminder scheduling failure instead of silent degradation.
-- [ ] Bump the release build number from `+1` and verify platform version metadata before shipping.
+- [x] Release build number moved off `+1` (now `1.3.64+2`) and platform metadata verified against the built APK: `com.rpgtodo.app`, versionName `1.3.64`, minSdk 24, targetSdk 36, label `RPG To-Do List`. Every build handed to a tester needs a higher `versionCode` than the one it replaces, or Android refuses the update — see `docs/BETA_DISTRIBUTION.md`.
 - [ ] Migrate stale iOS/macOS CocoaPods integration to Swift Package Manager only in a dedicated build-system batch; do not accept automatic Flutter project churn blindly.
 - [ ] Track the `objective_c` code-asset framework-name warning with the package maintainer or a vetted dependency update.
 - [ ] Run dependency upgrades separately: `file_picker 8 -> 11`, `flutter_local_notifications 21 -> 22` and `build_runner` ecosystem changes require migration review; smaller updates should also be tested as one dependency-only batch.
