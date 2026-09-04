@@ -21,6 +21,38 @@ void main() {
     expect(textTheme.labelSmall?.fontSize, 10.5);
   });
 
+  test('weight carries three roles, so hierarchy comes from size', () {
+    final scheme = ColorScheme.fromSeed(
+      seedColor: const Color(0xFF4A9EFF),
+      brightness: Brightness.light,
+    );
+    final textTheme = AppTypography.textTheme(scheme);
+
+    for (final heading in [
+      textTheme.headlineLarge,
+      textTheme.headlineMedium,
+      textTheme.headlineSmall,
+      textTheme.titleLarge,
+      textTheme.titleMedium,
+      textTheme.titleSmall,
+    ]) {
+      expect(heading?.fontWeight, FontWeight.w700);
+    }
+
+    for (final body in [
+      textTheme.bodyLarge,
+      textTheme.bodyMedium,
+      textTheme.bodySmall,
+    ]) {
+      expect(body?.fontWeight ?? FontWeight.w400, FontWeight.w400);
+    }
+
+    expect(textTheme.labelLarge?.fontWeight, FontWeight.w500);
+    expect(textTheme.labelMedium?.fontWeight, FontWeight.w500);
+    // Единственное исключение: 10.5px разрядка, на которой w500 пропадает.
+    expect(textTheme.labelSmall?.fontWeight, FontWeight.w600);
+  });
+
   testWidgets('theme extension exposes product semantic roles', (tester) async {
     final scheme = ColorScheme.fromSeed(
       seedColor: const Color(0xFF4A9EFF),
@@ -47,7 +79,7 @@ void main() {
       ),
     );
 
-    expect(roles.reward.fontWeight, FontWeight.w900);
+    expect(roles.reward.fontWeight, FontWeight.w700);
     expect(roles.statValue.fontSize, textTheme.titleLarge?.fontSize);
     expect(roles.sectionEyebrow.letterSpacing, 0.7);
     expect(roles.compactMetadata.fontSize, textTheme.labelMedium?.fontSize);
@@ -74,6 +106,6 @@ void main() {
     );
 
     expect(nestedRoles.reward.color, const Color(0xFFFFC21A));
-    expect(nestedRoles.sectionEyebrow.fontWeight, FontWeight.w900);
+    expect(nestedRoles.sectionEyebrow.fontWeight, FontWeight.w600);
   });
 }

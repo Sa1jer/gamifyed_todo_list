@@ -7280,7 +7280,7 @@ void main() {
     final pageTitle = tester.widget<Text>(
       find.byKey(const ValueKey('mobile-form-title')),
     );
-    expect(pageTitle.style?.fontWeight, FontWeight.w900);
+    expect(pageTitle.style?.fontWeight, FontWeight.w700);
     expect(pageTitle.style?.fontSize, 20);
     expect(
       tester.widget(

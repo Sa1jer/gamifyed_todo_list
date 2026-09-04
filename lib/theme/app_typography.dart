@@ -5,6 +5,16 @@ import 'package:flutter/material.dart';
 ///
 /// Responsive components keep these roles stable and adapt their layout,
 /// wrapping, or metadata priority instead of shrinking text per string.
+///
+/// Weight carries three roles and no more, so hierarchy comes from size and
+/// colour rather than from a ladder of nearly identical weights:
+///
+///  * headings — [FontWeight.w700] (`headline*`, `title*`)
+///  * body — [FontWeight.w400], the Material default (`body*`)
+///  * labels and metadata — [FontWeight.w500] (`label*`)
+///
+/// `labelSmall` is the single exception at [FontWeight.w600]: it is the
+/// 10.5px letter-spaced eyebrow, and w500 disappears at that size.
 abstract final class AppTypography {
   static TextTheme textTheme(ColorScheme colorScheme) {
     final typography = Typography.material2021(
@@ -19,32 +29,32 @@ abstract final class AppTypography {
       headlineLarge: base.headlineLarge?.copyWith(
         fontSize: 28,
         height: 1.12,
-        fontWeight: FontWeight.w900,
+        fontWeight: FontWeight.w700,
       ),
       headlineMedium: base.headlineMedium?.copyWith(
         fontSize: 24,
         height: 1.14,
-        fontWeight: FontWeight.w900,
+        fontWeight: FontWeight.w700,
       ),
       headlineSmall: base.headlineSmall?.copyWith(
         fontSize: 20,
         height: 1.16,
-        fontWeight: FontWeight.w900,
+        fontWeight: FontWeight.w700,
       ),
       titleLarge: base.titleLarge?.copyWith(
         fontSize: 18,
         height: 1.2,
-        fontWeight: FontWeight.w900,
+        fontWeight: FontWeight.w700,
       ),
       titleMedium: base.titleMedium?.copyWith(
         fontSize: 15.5,
         height: 1.22,
-        fontWeight: FontWeight.w800,
+        fontWeight: FontWeight.w700,
       ),
       titleSmall: base.titleSmall?.copyWith(
         fontSize: 13.5,
         height: 1.22,
-        fontWeight: FontWeight.w800,
+        fontWeight: FontWeight.w700,
       ),
       bodyLarge: base.bodyLarge?.copyWith(fontSize: 15, height: 1.42),
       bodyMedium: base.bodyMedium?.copyWith(fontSize: 13, height: 1.38),
@@ -52,17 +62,17 @@ abstract final class AppTypography {
       labelLarge: base.labelLarge?.copyWith(
         fontSize: 13,
         height: 1.2,
-        fontWeight: FontWeight.w800,
+        fontWeight: FontWeight.w500,
       ),
       labelMedium: base.labelMedium?.copyWith(
         fontSize: 11,
         height: 1.2,
-        fontWeight: FontWeight.w700,
+        fontWeight: FontWeight.w500,
       ),
       labelSmall: base.labelSmall?.copyWith(
         fontSize: 10.5,
         height: 1.2,
-        fontWeight: FontWeight.w800,
+        fontWeight: FontWeight.w600,
         letterSpacing: 0.7,
       ),
     );
@@ -96,16 +106,16 @@ class AppTextRoles extends ThemeExtension<AppTextRoles> {
     return AppTextRoles(
       reward: textTheme.labelLarge!.copyWith(
         color: rewardColor,
-        fontWeight: FontWeight.w900,
+        fontWeight: FontWeight.w700,
       ),
-      statValue: textTheme.titleLarge!.copyWith(fontWeight: FontWeight.w900),
-      numericRing: textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w900),
+      statValue: textTheme.titleLarge!.copyWith(fontWeight: FontWeight.w700),
+      numericRing: textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w700),
       sectionEyebrow: textTheme.labelSmall!.copyWith(
-        fontWeight: FontWeight.w900,
+        fontWeight: FontWeight.w600,
         letterSpacing: 0.7,
       ),
       compactMetadata: textTheme.labelMedium!.copyWith(
-        fontWeight: FontWeight.w700,
+        fontWeight: FontWeight.w500,
       ),
     );
   }
