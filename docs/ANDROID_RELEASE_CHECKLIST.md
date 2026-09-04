@@ -48,11 +48,11 @@ default. Do not weaken the signing guard merely to make a probe green.
 
 ## Identity and Branding
 
-- Namespace: `com.rpgtodo.app`.
-- Application ID: `com.rpgtodo.app`.
-- Kotlin source package: `com.rpgtodo.app`.
-- iOS and macOS bundle identifier: `com.rpgtodo.app`; the test targets are
-  `com.rpgtodo.app.RunnerTests`.
+- Namespace: `io.github.sa1jer.rpgtodo`.
+- Application ID: `io.github.sa1jer.rpgtodo`.
+- Kotlin source package: `io.github.sa1jer.rpgtodo`.
+- iOS and macOS bundle identifier: `io.github.sa1jer.rpgtodo`; the test targets are
+  `io.github.sa1jer.rpgtodo.RunnerTests`.
 - App label: `RPG To-Do List` and is not a placeholder.
 - Launcher icon: the default Flutter icon and must be replaced before release.
 - Launch background is still the basic Flutter template configuration.
@@ -64,10 +64,12 @@ tester keeps the old one until they uninstall it, and uninstalling takes their
 local data with it. Testers must export their profile from the old build before
 switching — see `docs/BETA_DISTRIBUTION.md`.
 
-`com.rpgtodo.app` is a placeholder in one respect: reverse-DNS IDs are meant to
-be derived from a domain the publisher controls, and `rpgtodo.com` is not owned.
-That is acceptable for private distribution and must be settled before any store
-submission, because the ID cannot change afterwards.
+`io.github.sa1jer.rpgtodo` is final, publication included. Reverse-DNS is meant
+to derive from a domain the publisher controls; rather than buy one, this uses
+the GitHub Pages convention, where the `Sa1jer` account itself establishes the
+claim to `sa1jer.github.io`. No purchase, no collision. Do not revisit it: after
+publication the ID cannot change at all, and before publication every change
+costs testers their local data.
 
 Keep `namespace`, `applicationId`, and the `MainActivity.kt` package consistent
 unless there is a deliberate reason to separate them. Once published, changing

@@ -66,7 +66,7 @@ No package or Dart bridge is required. Android and iOS startup are unaffected.
 To clear the preference for testing without touching app/domain data:
 
 ```bash
-defaults delete com.rpgtodo.app desktopWindowPlacement.v1
+defaults delete io.github.sa1jer.rpgtodo desktopWindowPlacement.v1
 ```
 
 ## Manual Windows Smoke
