@@ -3,7 +3,18 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
-const String kAppVersionLabel = 'v1.3.64+1';
+const String kAppVersionLabel = 'v1.3.64+2';
+
+/// Номер сборки из [kAppVersionLabel] — то, что стоит после `+`.
+///
+/// Именно он упорядочен: `1.3.64` и `1.4.0` сравнивать как строки нельзя, а
+/// номер сборки монотонно растёт. По нему же проверка обновлений понимает,
+/// отстала ли установленная версия от последнего релиза.
+int? get appBuildNumber {
+  final plus = kAppVersionLabel.lastIndexOf('+');
+  if (plus == -1) return null;
+  return int.tryParse(kAppVersionLabel.substring(plus + 1));
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ID GENERATOR

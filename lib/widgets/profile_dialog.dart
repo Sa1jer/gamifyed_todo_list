@@ -8,6 +8,7 @@ import 'package:file_picker/file_picker.dart';
 import '../models.dart';
 import '../app_state.dart';
 import '../tutorial/guided_tour_session.dart';
+import '../update_check.dart';
 import '../utils.dart';
 import 'character_timeline_dialog.dart';
 import 'mobile_secondary_page.dart';
@@ -49,6 +50,10 @@ class ProfileDialog extends StatefulWidget {
 }
 
 class _ProfileDialogState extends State<ProfileDialog> {
+  /// Общий на всё приложение: проверка обновлений ходит в сеть один раз за
+  /// запуск, и каждый новый диалог не должен начинать её заново.
+  static final UpdateChecker _updateChecker = UpdateChecker();
+
   late TextEditingController _nameCtrl;
   late TextEditingController _ageCtrl;
   bool _editingName = false;
@@ -158,6 +163,7 @@ class _ProfileDialogState extends State<ProfileDialog> {
 
     // «Что можно изменить» — настройки устройства и данные.
     final settingsColumn = <Widget>[
+      UpdateNotice(checker: _updateChecker, isDark: isDark),
       if (widget.showInterfaceSettings) ...[
         _buildDeviceSettings(s, isDark, txt, sub, bdr),
         const SizedBox(height: 24),
