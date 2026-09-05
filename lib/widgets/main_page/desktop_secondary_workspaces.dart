@@ -637,6 +637,7 @@ class _DesktopEmptyMessage extends StatelessWidget {
   final String subtitle;
 
   const _DesktopEmptyMessage({
+    super.key,
     required this.tokens,
     required this.icon,
     required this.title,

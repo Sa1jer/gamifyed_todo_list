@@ -5342,6 +5342,36 @@ void main() {
     state.dispose();
   });
 
+  testWidgets('desktop Statistics says it once instead of printing zeros', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1400, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = InMemoryStorageService()..onboardingSeen = true;
+    await storage.init();
+
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    await tester.tap(find.byKey(const ValueKey('desktop-nav-statistics')));
+    await tester.pumpAndSettle();
+
+    // Три карточки печатали «0 XP · 0 квестов» подряд. Одно предложение
+    // говорит то же самое и объясняет, что с этим делать.
+    expect(
+      find.byKey(const ValueKey('desktop-statistics-growth-empty')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('desktop-statistics-growth-history')),
+      findsNothing,
+    );
+  });
+
   testWidgets('desktop Settings offers data transfer next to storage status', (
     WidgetTester tester,
   ) async {

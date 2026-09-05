@@ -175,45 +175,66 @@ class _DesktopStatisticsMainContent extends StatelessWidget {
           subtitle: 'Сначала то, что уже получилось и стало частью пути.',
         ),
         const SizedBox(height: 12),
-        LayoutBuilder(
-          builder: (context, constraints) => GridView.count(
-            key: const ValueKey('desktop-statistics-growth-history'),
-            crossAxisCount: constraints.maxWidth >= 760 ? 3 : 1,
-            childAspectRatio: constraints.maxWidth >= 760 ? 2.45 : 4.4,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            children: [
-              _DesktopStatisticsLinkCard(
+        // Пока ни один квест не закрыт, все три карточки печатают ноль:
+        // «0 XP · 0 квестов» трижды подряд не рассказывают ничего, кроме
+        // того, что считать пока нечего. Это лучше сказать один раз словами.
+        if (state.totalTasksCompleted == 0 && state.history.isEmpty)
+          _DesktopSectionCard(
+            tokens: tokens,
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: _DesktopEmptyMessage(
+                key: const ValueKey('desktop-statistics-growth-empty'),
                 tokens: tokens,
-                color: tokens.streakAmberGraphic,
-                icon: Icons.celebration_outlined,
-                title: 'Победы дня',
+                icon: Icons.insights_outlined,
+                title: 'Считать пока нечего',
                 subtitle:
-                    '${state.todayStats?.xpEarned ?? 0} XP · ${state.todayStats?.tasksCompleted ?? 0} квестов',
-                onTap: () => onOpen(_DesktopStatisticsDetail.daily),
+                    'Закрой первый квест — и здесь появятся победы дня, '
+                    'неделя и летопись опыта.',
               ),
-              _DesktopStatisticsLinkCard(
-                tokens: tokens,
-                color: tokens.successGreenGraphic,
-                icon: Icons.calendar_view_week_outlined,
-                title: 'Неделя',
-                subtitle: '${week.totalXp} XP · ${week.completedTasks} квестов',
-                onTap: () => onOpen(_DesktopStatisticsDetail.weekly),
-              ),
-              _DesktopStatisticsLinkCard(
-                tokens: tokens,
-                color: const Color(0xFFB84DFF),
-                icon: Icons.auto_stories_outlined,
-                title: 'Летопись опыта',
-                subtitle:
-                    '${state.totalTasksCompleted} побед · ур. ${state.profile.level}',
-                onTap: () => onOpen(_DesktopStatisticsDetail.timeline),
-              ),
-            ],
+            ),
+          )
+        else
+          LayoutBuilder(
+            builder: (context, constraints) => GridView.count(
+              key: const ValueKey('desktop-statistics-growth-history'),
+              crossAxisCount: constraints.maxWidth >= 760 ? 3 : 1,
+              childAspectRatio: constraints.maxWidth >= 760 ? 2.45 : 4.4,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              children: [
+                _DesktopStatisticsLinkCard(
+                  tokens: tokens,
+                  color: tokens.streakAmberGraphic,
+                  icon: Icons.celebration_outlined,
+                  title: 'Победы дня',
+                  subtitle:
+                      '${state.todayStats?.xpEarned ?? 0} XP · ${state.todayStats?.tasksCompleted ?? 0} квестов',
+                  onTap: () => onOpen(_DesktopStatisticsDetail.daily),
+                ),
+                _DesktopStatisticsLinkCard(
+                  tokens: tokens,
+                  color: tokens.successGreenGraphic,
+                  icon: Icons.calendar_view_week_outlined,
+                  title: 'Неделя',
+                  subtitle:
+                      '${week.totalXp} XP · ${week.completedTasks} квестов',
+                  onTap: () => onOpen(_DesktopStatisticsDetail.weekly),
+                ),
+                _DesktopStatisticsLinkCard(
+                  tokens: tokens,
+                  color: const Color(0xFFB84DFF),
+                  icon: Icons.auto_stories_outlined,
+                  title: 'Летопись опыта',
+                  subtitle:
+                      '${state.totalTasksCompleted} побед · ур. ${state.profile.level}',
+                  onTap: () => onOpen(_DesktopStatisticsDetail.timeline),
+                ),
+              ],
+            ),
           ),
-        ),
         const SizedBox(height: 24),
         _DesktopSectionLabel(
           tokens: tokens,

@@ -227,9 +227,13 @@ class _MasteryInspectorQuestRow extends StatelessWidget {
     final rowColor = done ? const Color(0xFF34C759) : color;
     final canStartMinimum =
         task.hasMinimumAction && !task.isDone && !task.isMinimumActionDone;
+    // Тип и приоритет печатались всегда, а у большинства квестов они
+    // умолчательные — получался столбец одинаковых «Разово · Средний», из
+    // которого нельзя было отличить одну строку от другой. Подпись говорит
+    // только то, чем квест отличается от обычного.
     final metadata = [
-      typeLabel[task.type]!,
-      priorityLabel[task.priority]!,
+      if (task.type != TaskType.shortTerm) typeLabel[task.type]!,
+      if (task.priority != Priority.medium) priorityLabel[task.priority]!,
       if (task.hasMinimumAction) 'минимум есть',
     ].join(' · ');
     return AnimatedContainer(
@@ -285,16 +289,20 @@ class _MasteryInspectorQuestRow extends StatelessWidget {
                         : TextDecoration.none,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  done ? 'Завершено' : metadata,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: context.appTextRoles.compactMetadata.copyWith(
-                    color: sub,
-                    fontWeight: FontWeight.w500,
+                // Пустая подпись не должна оставлять пустую строку под
+                // названием: обычному квесту сказать о себе нечего.
+                if (done || metadata.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    done ? 'Завершено' : metadata,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.appTextRoles.compactMetadata.copyWith(
+                      color: sub,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
