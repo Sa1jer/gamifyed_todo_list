@@ -133,9 +133,10 @@ class DesktopJournalTokens {
 
   /// Слабое золотое свечение вокруг награды.
   ///
-  /// На тёмном фоне оно читается как свет от самой пилюли. На светлом любое
-  /// заметное свечение выглядит грязным пятном, поэтому там оно втрое слабее
-  /// и работает почти как мягкая тень.
+  /// Рисуется только **снаружи** пилюли: заливка у неё полупрозрачная, и
+  /// обычная тень просвечивала бы сквозь неё, размывая цифру. На тёмном фоне
+  /// свечение читается как свет от самой награды; на светлом любое заметное
+  /// свечение выглядит грязным пятном, поэтому там оно втрое слабее.
   final Color rewardGoldGlow;
 
   final Color semanticBlue;
@@ -192,7 +193,7 @@ class DesktopJournalTokens {
         successGreenGraphic: Color(0xFF00A83E),
         streakAmberGraphic: Color(0xFFEB6D00),
         rewardGoldSurface: Color(0x14FAAD00),
-        rewardGoldGlow: Color(0x1FFAAD00),
+        rewardGoldGlow: Color(0x1DFAAD00),
         semanticBlue: Color(0xFF1268C7),
         danger: Color(0xFFD83651),
       );
@@ -216,7 +217,7 @@ class DesktopJournalTokens {
       successGreenGraphic: Color(0xFF2ED36F),
       streakAmberGraphic: Color(0xFFFF8A1F),
       rewardGoldSurface: Color(0x17FFC21A),
-      rewardGoldGlow: Color(0x5CFFC21A),
+      rewardGoldGlow: Color(0x57FFC21A),
       semanticBlue: Color(0xFF2D8CFF),
       danger: Color(0xFFFF315B),
     );

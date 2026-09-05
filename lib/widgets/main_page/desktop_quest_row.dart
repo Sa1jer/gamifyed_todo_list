@@ -431,38 +431,65 @@ class _DesktopRewardPill extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       label: 'Награда $value XP',
-      child: Container(
-        key: const ValueKey('desktop-reward-pill'),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: tokens.rewardGoldSurface,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: tokens.rewardGoldGraphic),
-          // Свечение без смещения: награда светится сама, а не отбрасывает
-          // тень. Радиус чуть больше высоты пилюли, иначе на тёмном фоне
-          // виден край ореола вместо свечения.
-          boxShadow: [
-            BoxShadow(
-              color: tokens.rewardGoldGlow,
-              blurRadius: 14,
-              spreadRadius: -2,
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.bolt_rounded, color: tokens.rewardGoldGraphic, size: 13),
-            const SizedBox(width: 4),
-            Text(
-              '+$value XP',
-              style: context.appTextRoles.reward.copyWith(
-                color: tokens.rewardGold,
+      child: CustomPaint(
+        painter: _RewardGlowPainter(color: tokens.rewardGoldGlow),
+        child: Container(
+          key: const ValueKey('desktop-reward-pill'),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: tokens.rewardGoldSurface,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: tokens.rewardGoldGraphic),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.bolt_rounded,
+                color: tokens.rewardGoldGraphic,
+                size: 13,
               ),
-            ),
-          ],
+              const SizedBox(width: 4),
+              Text(
+                '+$value XP',
+                style: context.appTextRoles.reward.copyWith(
+                  color: tokens.rewardGold,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
+}
+
+/// Золотое свечение снаружи пилюли награды.
+///
+/// [BlurStyle.outer] рисует размытие только за пределами фигуры и ничего
+/// внутри. Обычная тень здесь не подходит: заливка пилюли полупрозрачная, и
+/// свечение просвечивало бы сквозь неё прямо под цифрой.
+class _RewardGlowPainter extends CustomPainter {
+  const _RewardGlowPainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    final shape = RRect.fromRectAndRadius(
+      Offset.zero & size,
+      Radius.circular(size.height / 2),
+    );
+    canvas.drawRRect(
+      shape,
+      Paint()
+        ..color = color
+        ..maskFilter = const MaskFilter.blur(BlurStyle.outer, 5),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_RewardGlowPainter oldDelegate) =>
+      oldDelegate.color != color;
 }

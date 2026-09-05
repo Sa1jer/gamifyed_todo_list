@@ -184,11 +184,7 @@ class _ReturnContextContent extends StatelessWidget {
           ),
           SizedBox(height: dense ? 5 : 9),
         ],
-        // Последний результат нередко совпадает со следующим шагом слово в
-        // слово: повторяющийся квест возвращается тем же названием. Две
-        // одинаковые строки подряд читаются как ошибка, а не как контекст.
-        if (candidate.lastResult case final result?
-            when result.trim() != candidate.reentryAction.trim()) ...[
+        if (candidate.lastResult case final result?) ...[
           _ReturnContextRow(
             key: const ValueKey('return-context-last-result'),
             label: 'Последний результат',
@@ -283,11 +279,7 @@ class _ReturnContextActions extends StatelessWidget {
         minimumSize: const Size(0, 48),
         backgroundColor: colors.accent,
         foregroundColor: colors.onAccent,
-        // Тесно жать кнопку имеет смысл только там, где она делит узкий
-        // ряд с двумя другими. На десктопе ряд свободный.
-        padding: EdgeInsets.symmetric(
-          horizontal: colors.dense && !colors.desktop ? 12 : 18,
-        ),
+        padding: EdgeInsets.symmetric(horizontal: colors.dense ? 12 : 18),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
       ),
       icon: Icon(Icons.arrow_forward_rounded, size: colors.dense ? 17 : 19),
@@ -299,10 +291,8 @@ class _ReturnContextActions extends StatelessWidget {
       ),
     );
     // В плотном ряду подпись «Другой шаг» переносилась на две строки и
-    // растягивала весь ряд — оставляем значок с подсказкой. На десктопе
-    // места хватает, и подпись честнее значка: догадываться, что делает
-    // стрелка, пользователю не нужно.
-    final secondary = colors.dense && !colors.desktop
+    // растягивала весь ряд — оставляем значок с подсказкой.
+    final secondary = colors.dense
         ? SizedBox(
             width: 48,
             height: 48,
@@ -360,14 +350,10 @@ class _ReturnContextActions extends StatelessWidget {
         children: [primary, const SizedBox(height: 8), secondary, dismiss],
       );
     }
-    // На десктопе карточка занимает всю ширину рабочей области, и растянутое
-    // основное действие превращалось в баннер на тысячу пикселей. Там кнопки
-    // берут свою ширину — это ветка Wrap ниже, которая ещё и переносит их,
-    // когда карточка оказывается узкой.
-    if (colors.dense && !colors.desktop) {
-      // На узком экране три кнопки в Wrap переносились на две строки и
-      // стоили карточке почти 90 px. В один ряд они помещаются, если
-      // основное действие забирает остаток ширины.
+    if (colors.dense) {
+      // Три кнопки в Wrap переносились на две строки и стоили карточке
+      // почти 90 px. В один ряд они помещаются, если основное действие
+      // забирает остаток ширины.
       return Row(
         children: [
           Expanded(child: primary),
