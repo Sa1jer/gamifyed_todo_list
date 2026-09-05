@@ -73,11 +73,7 @@ class _UpdateNoticeState extends State<UpdateNotice> {
                 Text(
                   'У вас $kAppVersionLabel. Обновление встанет поверх, '
                   'данные сохранятся.',
-                  style: TextStyle(
-                    color: secondary,
-                    fontSize: 12,
-                    height: 1.3,
-                  ),
+                  style: TextStyle(color: secondary, fontSize: 12, height: 1.3),
                 ),
               ],
             ),

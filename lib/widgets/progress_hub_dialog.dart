@@ -278,8 +278,7 @@ class ProgressHubContent extends StatelessWidget {
                             icon: Icons.auto_stories,
                             color: const Color(0xFFAF52DE),
                             title: 'Летопись опыта',
-                            subtitle:
-                                'Уровни, освоение, недели и журнал XP',
+                            subtitle: 'Уровни, освоение, недели и журнал XP',
                             value: 'Ур. ${state.profile.level}',
                             onTap: onOpenCharacterTimeline,
                           ),

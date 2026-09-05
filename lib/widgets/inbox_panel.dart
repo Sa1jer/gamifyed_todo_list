@@ -266,7 +266,8 @@ class _InboxPanelState extends State<InboxPanel> {
                                 : ActionToastZone.mainWorkspace,
                             onComplete: widget.onComplete,
                             onUndo: () => state.uncompleteTask(task.id),
-                            onDelete: () => deleteTaskWithUndo(context, state, task.id),
+                            onDelete: () =>
+                                deleteTaskWithUndo(context, state, task.id),
                           ),
                         ),
                       ],
@@ -293,7 +294,8 @@ class _InboxPanelState extends State<InboxPanel> {
                                 : ActionToastZone.mainWorkspace,
                             onComplete: widget.onComplete,
                             onUndo: () => state.uncompleteTask(task.id),
-                            onDelete: () => deleteTaskWithUndo(context, state, task.id),
+                            onDelete: () =>
+                                deleteTaskWithUndo(context, state, task.id),
                           ),
                         ),
                       ],
@@ -486,7 +488,8 @@ class _InboxPanelState extends State<InboxPanel> {
                                     : ActionToastZone.mainWorkspace,
                                 onComplete: widget.onComplete,
                                 onUndo: () => state.uncompleteTask(task.id),
-                                onDelete: () => deleteTaskWithUndo(context, state, task.id),
+                                onDelete: () =>
+                                    deleteTaskWithUndo(context, state, task.id),
                               ),
                             ),
                             if (done.isNotEmpty)
@@ -515,7 +518,8 @@ class _InboxPanelState extends State<InboxPanel> {
                                     : ActionToastZone.mainWorkspace,
                                 onComplete: widget.onComplete,
                                 onUndo: () => state.uncompleteTask(task.id),
-                                onDelete: () => deleteTaskWithUndo(context, state, task.id),
+                                onDelete: () =>
+                                    deleteTaskWithUndo(context, state, task.id),
                               ),
                             ),
                           ],

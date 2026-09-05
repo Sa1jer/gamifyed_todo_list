@@ -1273,10 +1273,7 @@ void main() {
     expect(tester.getSize(chests).height, lessThan(240));
     // Блок «Как получить трофеи» убран: две из трёх его карточек повторяли
     // достижения из «В процессе», только без прогресса.
-    expect(
-      find.byKey(const ValueKey('desktop-trophies-how-to')),
-      findsNothing,
-    );
+    expect(find.byKey(const ValueKey('desktop-trophies-how-to')), findsNothing);
     expect(
       find.byKey(const ValueKey('desktop-trophies-collection')),
       findsOneWidget,
@@ -3256,10 +3253,7 @@ void main() {
 
     expect(find.text('Дорожная карта'), findsWidgets);
     expect(find.text('Карта'), findsWidgets);
-    expect(
-      storage.tutorialProgress!.activeModuleId,
-      TutorialModuleIds.roadmap,
-    );
+    expect(storage.tutorialProgress!.activeModuleId, TutorialModuleIds.roadmap);
     expect(find.byKey(const ValueKey('guided-tour-card')), findsOneWidget);
     expect(find.text('Путь навыка'), findsOneWidget);
     expect(
@@ -5193,45 +5187,46 @@ void main() {
     await tester.pump();
   });
 
-  testWidgets('the mobile hub has one growth log, and it reaches the XP journal', (
-    WidgetTester tester,
-  ) async {
-    tester.view.physicalSize = const Size(390, 844);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
+  testWidgets(
+    'the mobile hub has one growth log, and it reaches the XP journal',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
 
-    final state = AppState(
-      storage: InMemoryStorageService()..onboardingSeen = true,
-      seedDefaults: false,
-    );
+      final state = AppState(
+        storage: InMemoryStorageService()..onboardingSeen = true,
+        seedDefaults: false,
+      );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: CharacterTimelineDialog(
-            state: state,
-            fullScreen: true,
-            onOpenXpJournal: () {},
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CharacterTimelineDialog(
+              state: state,
+              fullScreen: true,
+              onOpenXpJournal: () {},
+            ),
           ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    // Страница обещает журнал XP текстом, поэтому переход в него обязан быть:
-    // своей карточки в хабе у журнала больше нет.
-    expect(
-      find.byKey(const ValueKey('timeline-open-xp-journal')),
-      findsOneWidget,
-    );
-    expect(find.text('Журнал XP'), findsOneWidget);
+      // Страница обещает журнал XP текстом, поэтому переход в него обязан быть:
+      // своей карточки в хабе у журнала больше нет.
+      expect(
+        find.byKey(const ValueKey('timeline-open-xp-journal')),
+        findsOneWidget,
+      );
+      expect(find.text('Журнал XP'), findsOneWidget);
 
-    // AppState заводит таймер суточного сброса прямо в конструкторе, поэтому
-    // состояние закрывается до проверки инвариантов, а не в tearDown.
-    state.dispose();
-    await tester.pump();
-  });
+      // AppState заводит таймер суточного сброса прямо в конструкторе, поэтому
+      // состояние закрывается до проверки инвариантов, а не в tearDown.
+      state.dispose();
+      await tester.pump();
+    },
+  );
 
   testWidgets('Trophies holds the whole achievement collection', (
     WidgetTester tester,
@@ -5248,7 +5243,9 @@ void main() {
     state.normalizeAfterBulkStateChange();
 
     await tester.pumpWidget(
-      MaterialApp(home: Scaffold(body: RewardsDialog(state: state))),
+      MaterialApp(
+        home: Scaffold(body: RewardsDialog(state: state)),
+      ),
     );
     await tester.pumpAndSettle();
 
@@ -5391,55 +5388,56 @@ void main() {
     );
   });
 
-  testWidgets('device settings live in Settings on desktop and in the profile without it', (
-    WidgetTester tester,
-  ) async {
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    tester.view.devicePixelRatio = 1;
+  testWidgets(
+    'device settings live in Settings on desktop and in the profile without it',
+    (WidgetTester tester) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      tester.view.devicePixelRatio = 1;
 
-    // 1400 — есть экран «Настройки»; 600 — его нет вовсе, и раздел обязан
-    // остаться в профиле, иначе тему негде переключить.
-    for (final entry in {1400.0: false, 600.0: true}.entries) {
-      final storage = InMemoryStorageService()..onboardingSeen = true;
-      await storage.init();
-      tester.view.physicalSize = Size(entry.key, 1000);
+      // 1400 — есть экран «Настройки»; 600 — его нет вовсе, и раздел обязан
+      // остаться в профиле, иначе тему негде переключить.
+      for (final entry in {1400.0: false, 600.0: true}.entries) {
+        final storage = InMemoryStorageService()..onboardingSeen = true;
+        await storage.init();
+        tester.view.physicalSize = Size(entry.key, 1000);
 
-      await tester.pumpWidget(RPGApp(storage: storage));
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
+        await tester.pumpWidget(RPGApp(storage: storage));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
 
-      await tester.tap(find.text('Your Name').first);
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Your Name').first);
+        await tester.pumpAndSettle();
 
-      expect(
-        find.text('Тёмная тема'),
-        entry.value ? findsWidgets : findsNothing,
-        reason: 'ширина ${entry.key}',
-      );
-      // Подсказки и обучение остаются в профиле на любой ширине. В узкой
-      // раскладке список длиннее, и до входа надо доскроллить.
-      await tester.scrollUntilVisible(
-        find.byKey(const ValueKey('profile-training-center-entry')),
-        200,
-        scrollable: find
-            .descendant(
-              of: find.byType(ProfileDialog),
-              matching: find.byType(Scrollable),
-            )
-            .first,
-      );
-      await tester.pumpAndSettle();
-      expect(
-        find.byKey(const ValueKey('profile-training-center-entry')),
-        findsOneWidget,
-        reason: 'ширина ${entry.key}',
-      );
+        expect(
+          find.text('Тёмная тема'),
+          entry.value ? findsWidgets : findsNothing,
+          reason: 'ширина ${entry.key}',
+        );
+        // Подсказки и обучение остаются в профиле на любой ширине. В узкой
+        // раскладке список длиннее, и до входа надо доскроллить.
+        await tester.scrollUntilVisible(
+          find.byKey(const ValueKey('profile-training-center-entry')),
+          200,
+          scrollable: find
+              .descendant(
+                of: find.byType(ProfileDialog),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const ValueKey('profile-training-center-entry')),
+          findsOneWidget,
+          reason: 'ширина ${entry.key}',
+        );
 
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump();
-    }
-  });
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      }
+    },
+  );
 
   testWidgets('desktop Settings offers data transfer next to storage status', (
     WidgetTester tester,
@@ -6316,7 +6314,11 @@ void main() {
     state.refresh();
 
     await tester.pumpWidget(
-      MaterialApp(home: Scaffold(body: Center(child: RewardsDialog(state: state)))),
+      MaterialApp(
+        home: Scaffold(
+          body: Center(child: RewardsDialog(state: state)),
+        ),
+      ),
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));

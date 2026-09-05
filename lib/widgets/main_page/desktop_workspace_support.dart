@@ -256,11 +256,7 @@ void showDesktopEditSkill(BuildContext context, AppState state, Skill skill) {
   );
 }
 
-void showDesktopDeleteSkill(
-  BuildContext context,
-  AppState state,
-  Skill skill,
-) {
+void showDesktopDeleteSkill(BuildContext context, AppState state, Skill skill) {
   final taskCount = state.tasksForSkill(skill.id).length;
   unawaited(
     confirmDestructiveAction(

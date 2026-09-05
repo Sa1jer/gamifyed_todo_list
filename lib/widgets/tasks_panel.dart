@@ -355,7 +355,8 @@ class _TasksPanelState extends State<TasksPanel> {
                               onArchive: () => s.archiveCompletedTask(t.id),
                               onRestoreArchive: () =>
                                   s.restoreArchivedTask(t.id),
-                              onDelete: () => deleteTaskWithUndo(context, s, t.id),
+                              onDelete: () =>
+                                  deleteTaskWithUndo(context, s, t.id),
                               onEdit: () => _editTask(context, skill, t),
                             ),
                           );
@@ -378,7 +379,8 @@ class _TasksPanelState extends State<TasksPanel> {
                               onArchive: () => s.archiveCompletedTask(t.id),
                               onRestoreArchive: () =>
                                   s.restoreArchivedTask(t.id),
-                              onDelete: () => deleteTaskWithUndo(context, s, t.id),
+                              onDelete: () =>
+                                  deleteTaskWithUndo(context, s, t.id),
                               onEdit: () => _editTask(context, skill, t),
                             ),
                           );
@@ -483,7 +485,8 @@ class _TasksPanelState extends State<TasksPanel> {
                                   onArchive: () => s.archiveCompletedTask(t.id),
                                   onRestoreArchive: () =>
                                       s.restoreArchivedTask(t.id),
-                                  onDelete: () => deleteTaskWithUndo(context, s, t.id),
+                                  onDelete: () =>
+                                      deleteTaskWithUndo(context, s, t.id),
                                   onEdit: () => _editTask(context, skill, t),
                                 ),
                               );
@@ -755,7 +758,8 @@ class _TasksPanelState extends State<TasksPanel> {
                         onArchive: () => state.archiveCompletedTask(task.id),
                         onRestoreArchive: () =>
                             state.restoreArchivedTask(task.id),
-                        onDelete: () => deleteTaskWithUndo(context, state, task.id),
+                        onDelete: () =>
+                            deleteTaskWithUndo(context, state, task.id),
                         onEdit: () => _editTask(context, skill, task),
                       ),
                 ],
