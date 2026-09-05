@@ -6,6 +6,9 @@
 # заставит всех тестировщиков переустановить приложение с потерей данных.
 # Поэтому сборка идёт здесь, на машине владельца, а наружу уходит только APK.
 #
+# Android собирается здесь. Windows приложится к тому же релизу сам, с раннера
+# GitHub: Flutter собирает Windows-приложение только на Windows.
+#
 #   tool/release.sh              — поднять номер сборки и выложить
 #   tool/release.sh --dry-run    — собрать и проверить, но не публиковать
 #
@@ -120,5 +123,11 @@ gh release create "$TAG" "$APK" \
 
 echo
 echo "✓ Опубликовано: $TAG"
+echo
+echo "  Windows-сборка приложится к этому же релизу сама: её собирает"
+echo "  .github/workflows/windows_release.yml на раннере GitHub, потому что"
+echo "  с мака Windows-приложение собрать нельзя. Это займёт несколько минут."
+echo "  Следить: gh run watch"
+echo
 echo "  Тестировщикам с версией до io.github.sa1jer.rpgtodo нужен перенос —"
 echo "  см. docs/BETA_DISTRIBUTION.md"

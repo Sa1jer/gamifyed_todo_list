@@ -1,0 +1,65 @@
+name: Windows release build
+
+# Flutter собирает приложение для Windows только на Windows, а сборка идёт с
+# мака. Раннер GitHub закрывает эту дыру: как только релиз опубликован,
+# он собирает Windows-версию и прикладывает её к тому же релизу.
+#
+# Ключ подписи Android сюда не попадает и не нужен: Windows-сборка его не
+# использует. Поэтому возражение против секретов в CI здесь не действует —
+# в этом workflow нет ни одного секрета, кроме выданного самим GitHub токена
+# с правом писать в этот же репозиторий.
+
+on:
+  release:
+    types: [published]
+  # Ручной запуск: пересобрать Windows для уже опубликованного релиза,
+  # не выпуская новый.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Тег релиза, к которому приложить сборку'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Определить тег
+        id: release
+        shell: bash
+        run: echo "tag=${{ github.event.release.tag_name || inputs.tag }}" >> "$GITHUB_OUTPUT"
+
+      # Собираем именно то, что выпущено, а не то, что сейчас на ветке.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.release.outputs.tag }}
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.44.3'
+          cache: true
+
+      - run: flutter pub get
+      - run: flutter build windows --release
+
+      # В архив кладём содержимое папки, а не саму папку: иначе распаковка даёт
+      # лишний уровень вложенности, и exe оказывается не там, где его ищут.
+      - name: Упаковать
+        shell: pwsh
+        run: |
+          $out = "build/windows/x64/runner/Release"
+          if (-not (Test-Path "$out/todo_list_app.exe")) {
+            Write-Error "Сборка не дала исполняемый файл в $out"
+            exit 1
+          }
+          Compress-Archive -Path "$out/*" -DestinationPath "rpg-todo-windows.zip"
+
+      - name: Приложить к релизу
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ steps.release.outputs.tag }}" rpg-todo-windows.zip --clobber
