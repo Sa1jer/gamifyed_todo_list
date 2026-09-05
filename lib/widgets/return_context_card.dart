@@ -184,7 +184,11 @@ class _ReturnContextContent extends StatelessWidget {
           ),
           SizedBox(height: dense ? 5 : 9),
         ],
-        if (candidate.lastResult case final result?) ...[
+        // Последний результат нередко совпадает со следующим шагом слово в
+        // слово: повторяющийся квест возвращается тем же названием. Две
+        // одинаковые строки подряд читаются как ошибка, а не как контекст.
+        if (candidate.lastResult case final result?
+            when result.trim() != candidate.reentryAction.trim()) ...[
           _ReturnContextRow(
             key: const ValueKey('return-context-last-result'),
             label: 'Последний результат',

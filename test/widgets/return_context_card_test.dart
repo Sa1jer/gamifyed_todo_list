@@ -235,4 +235,43 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('a last result identical to the next step is not repeated', (
+    tester,
+  ) async {
+    const repeated =
+        'Проверить редактирование существующей задачи и сохранить результат';
+
+    await tester.pumpWidget(
+      harness(data: candidate(result: repeated), desktop: true, width: 1100),
+    );
+    await tester.pumpAndSettle();
+
+    // Повторяющийся квест возвращается тем же названием, и две одинаковые
+    // строки подряд читаются как ошибка, а не как контекст.
+    expect(
+      find.byKey(const ValueKey('return-context-last-result')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('return-context-next-action')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('a different last result is still shown', (tester) async {
+    await tester.pumpWidget(
+      harness(
+        data: candidate(result: 'Проверена валидация'),
+        desktop: true,
+        width: 1100,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('return-context-last-result')),
+      findsOneWidget,
+    );
+  });
 }
