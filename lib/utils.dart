@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
-const String kAppVersionLabel = 'v1.3.64+2';
+const String kAppVersionLabel = 'v1.3.64+3';
 
 /// Номер сборки из [kAppVersionLabel] — то, что стоит после `+`.
 ///
