@@ -7,147 +7,10 @@ import 'package:todo_list_app/app_state.dart';
 import 'package:todo_list_app/engines/goal_progress_engine.dart';
 import 'package:todo_list_app/engines/roadmap_engine.dart';
 import 'package:todo_list_app/models.dart';
-import 'package:todo_list_app/storage_service.dart';
+
+import 'helpers/in_memory_storage_service.dart';
 import 'package:todo_list_app/tutorial/tutorial_catalog.dart';
 import 'package:todo_list_app/utils.dart';
-
-class _InMemoryStorageService extends StorageService {
-  List<Skill> _skills = [];
-  List<Task> _tasks = [];
-  bool? _theme;
-  bool? _tooltipsEnabled;
-  bool? _welcomeSeen;
-  bool? _onboardingSeen;
-  TutorialProgress? _tutorialProgress;
-  int? _bestStreak;
-
-  @override
-  Future<void> init() async {}
-
-  @override
-  Future<bool> hasSavedSkills() async => _skills.isNotEmpty;
-
-  @override
-  Future<bool> hasSavedTasks() async => _tasks.isNotEmpty;
-
-  @override
-  Future<bool?> loadTheme() async => _theme;
-
-  @override
-  Future<void> saveTheme(bool isDark) async {
-    _theme = isDark;
-  }
-
-  @override
-  Future<bool?> loadSfxEnabled() async => true;
-
-  @override
-  Future<void> saveSfxEnabled(bool enabled) async {}
-
-  @override
-  Future<bool?> loadTooltipsEnabled() async => _tooltipsEnabled;
-
-  @override
-  Future<void> saveTooltipsEnabled(bool enabled) async {
-    _tooltipsEnabled = enabled;
-  }
-
-  @override
-  Future<bool?> loadWelcomeSeen() async => _welcomeSeen;
-
-  @override
-  Future<void> saveWelcomeSeen(bool seen) async {
-    _welcomeSeen = seen;
-  }
-
-  @override
-  Future<bool?> loadOnboardingSeen() async => _onboardingSeen;
-
-  @override
-  Future<void> saveOnboardingSeen(bool seen) async {
-    _onboardingSeen = seen;
-  }
-
-  @override
-  Future<TutorialProgress?> loadTutorialProgress() async => _tutorialProgress;
-
-  @override
-  Future<void> saveTutorialProgress(TutorialProgress progress) async {
-    _tutorialProgress = progress;
-  }
-
-  @override
-  Future<int?> loadBestStreak() async => _bestStreak;
-
-  @override
-  Future<void> saveBestStreak(int value) async {
-    _bestStreak = value;
-  }
-
-  @override
-  Future<List<Skill>> loadSkills() async => List.of(_skills);
-
-  @override
-  Future<void> saveSkills(List<Skill> skills) async {
-    _skills = List.of(skills);
-  }
-
-  @override
-  Future<List<Task>> loadTasks() async => List.of(_tasks);
-
-  @override
-  Future<void> saveTasks(List<Task> tasks) async {
-    _tasks = List.of(tasks);
-  }
-
-  @override
-  Future<UserProfile> loadProfile() async => UserProfile(name: 'Your Name');
-
-  @override
-  Future<void> saveProfile(UserProfile profile) async {}
-
-  @override
-  Future<List<HistoryEntry>> loadHistory() async => [];
-
-  @override
-  Future<void> saveHistory(List<HistoryEntry> entries) async {}
-
-  @override
-  Future<List<Achievement>> loadAchievements() async => [];
-
-  @override
-  Future<void> saveAchievements(List<Achievement> achievements) async {}
-
-  @override
-  Future<DailyStats?> loadStats() async => null;
-
-  @override
-  Future<void> saveStats(DailyStats stats) async {}
-
-  @override
-  Future<List<Boss>> loadBosses() async => [];
-
-  @override
-  Future<void> saveBosses(List<Boss> bosses) async {}
-
-  @override
-  Future<List<RewardChest>> loadRewardChests() async => [];
-
-  @override
-  Future<void> saveRewardChests(List<RewardChest> rewardChests) async {}
-
-  @override
-  Future<List<Buff>> loadBuffs() async => [];
-
-  @override
-  Future<void> saveBuffs(List<Buff> buffs) async {}
-
-  @override
-  Future<List<WeeklyGoal>> loadWeeklyGoals() async => [];
-
-  @override
-  Future<void> saveWeeklyGoals(List<WeeklyGoal> goals) async {}
-}
 
 Uint8List _validPngBytes() =>
     Uint8List.fromList([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00]);
@@ -171,7 +34,7 @@ void main() {
 
   group('device UI preferences', () {
     test('reduced motion persists outside domain snapshots', () async {
-      final storage = _InMemoryStorageService();
+      final storage = InMemoryStorageService();
       await storage.init();
       final state = AppState(storage: storage);
       await state.loadSavedData();
@@ -195,7 +58,7 @@ void main() {
     late Skill skill;
 
     setUp(() {
-      state = AppState(storage: _InMemoryStorageService(), seedDefaults: false);
+      state = AppState(storage: InMemoryStorageService(), seedDefaults: false);
       skill = Skill(
         id: 'analytics-skill',
         name: 'Исходное имя',
@@ -342,7 +205,7 @@ void main() {
     late Skill skill;
 
     setUp(() {
-      state = AppState(storage: _InMemoryStorageService(), seedDefaults: false);
+      state = AppState(storage: InMemoryStorageService(), seedDefaults: false);
       skill = Skill(
         id: 'surface-skill',
         name: 'Surface skill',
@@ -458,7 +321,7 @@ void main() {
       expect(() => weeklyGoal.keyResults.add(keyResult), returnsNormally);
 
       final state = AppState(
-        storage: _InMemoryStorageService(),
+        storage: InMemoryStorageService(),
         seedDefaults: false,
       );
       addTearDown(state.dispose);
@@ -502,7 +365,7 @@ void main() {
       expect(task.notificationMinute, isNull);
 
       final state = AppState(
-        storage: _InMemoryStorageService(),
+        storage: InMemoryStorageService(),
         seedDefaults: false,
       );
       addTearDown(state.dispose);
@@ -533,7 +396,7 @@ void main() {
 
   group('course nudge runtime dismiss', () {
     test('dismissed keys are session-only', () {
-      final storage = _InMemoryStorageService();
+      final storage = InMemoryStorageService();
       final state = AppState(storage: storage, seedDefaults: false);
 
       state.dismissCourseNudge('skill:review:createFocusQuest:target');
@@ -561,7 +424,7 @@ void main() {
     late Skill skill;
 
     setUp(() {
-      state = AppState(storage: _InMemoryStorageService(), seedDefaults: false);
+      state = AppState(storage: InMemoryStorageService(), seedDefaults: false);
       skill = Skill(
         id: 'skill-inbox-boundary',
         name: 'Flutter',
@@ -773,7 +636,7 @@ void main() {
     late Skill skill;
 
     setUp(() {
-      state = AppState(storage: _InMemoryStorageService(), seedDefaults: false);
+      state = AppState(storage: InMemoryStorageService(), seedDefaults: false);
       skill = Skill(
         id: 'skill-next-goal',
         name: 'Flutter',
@@ -970,7 +833,7 @@ void main() {
     late AppState state;
 
     setUp(() {
-      state = AppState(storage: _InMemoryStorageService(), seedDefaults: false);
+      state = AppState(storage: InMemoryStorageService(), seedDefaults: false);
     });
 
     tearDown(() {
@@ -1008,7 +871,7 @@ void main() {
 
   group('fresh install safety', () {
     test('empty storage does not seed demo skills or quests', () async {
-      final storage = _InMemoryStorageService();
+      final storage = InMemoryStorageService();
       final state = AppState(storage: storage, seedDefaults: false);
 
       await state.loadSavedData();
@@ -1027,7 +890,7 @@ void main() {
     });
 
     test('replayWelcome возвращает Welcome, не трогая данные', () async {
-      final storage = _InMemoryStorageService();
+      final storage = InMemoryStorageService();
       final state = AppState(storage: storage, seedDefaults: false);
       await state.loadSavedData();
       state.beginWelcome();
@@ -1050,13 +913,13 @@ void main() {
 
       expect(state.shouldShowWelcome, isTrue);
       expect(state.welcomeSeen, isFalse);
-      expect(storage._welcomeSeen, isFalse);
+      expect(storage.welcomeSeen, isFalse);
       expect(state.skills.any((skill) => skill.id == 'axe'), isTrue);
       expect(state.profile.xp, state.profile.xp);
     });
 
     test('fresh install shows Welcome before tutorial', () async {
-      final storage = _InMemoryStorageService();
+      final storage = InMemoryStorageService();
       final state = AppState(storage: storage, seedDefaults: false);
 
       await state.loadSavedData();
@@ -1073,7 +936,7 @@ void main() {
       expect(state.shouldShowFirstRunTutorial, isTrue);
       expect(state.activeTutorialModuleId, TutorialModuleIds.core);
       expect(state.activeTutorialStepId, TutorialStepIds.coreCreateSkill);
-      expect(storage._welcomeSeen, isTrue);
+      expect(storage.welcomeSeen, isTrue);
       expect(state.skills.map((skill) => skill.id), [kInboxSkillId]);
       expect(state.tasks, isEmpty);
       expect(state.profile.xp, 0);
@@ -1083,7 +946,7 @@ void main() {
     });
 
     test('Welcome does not return after restart', () async {
-      final storage = _InMemoryStorageService();
+      final storage = InMemoryStorageService();
       final state = AppState(storage: storage, seedDefaults: false);
 
       await state.loadSavedData();
@@ -1100,7 +963,7 @@ void main() {
       expect(restarted.shouldShowFirstRunTutorial, isFalse);
       expect(state.shouldShowFirstRunTutorial, isFalse);
       expect(state.onboardingSeen, isTrue);
-      expect(storage._onboardingSeen, isTrue);
+      expect(storage.onboardingSeen, isTrue);
 
       state.dispose();
       restarted.dispose();
@@ -1109,7 +972,7 @@ void main() {
     test(
       'Core completes after acknowledging first useful action without XP',
       () async {
-        final storage = _InMemoryStorageService();
+        final storage = InMemoryStorageService();
         final state = AppState(storage: storage, seedDefaults: false);
 
         await state.loadSavedData();
@@ -1155,9 +1018,9 @@ void main() {
         expect(state.tasks.single.isDone, isFalse);
         expect(state.profile.xp, 0);
         expect(state.profile.totalXpEarned, 0);
-        expect(storage._onboardingSeen, isTrue);
+        expect(storage.onboardingSeen, isTrue);
         expect(
-          storage._tutorialProgress!.isModuleCompleted(TutorialModuleIds.core),
+          storage.tutorialProgress!.isModuleCompleted(TutorialModuleIds.core),
           isTrue,
         );
 
@@ -1166,7 +1029,7 @@ void main() {
     );
 
     test('core tutorial starts from skill when no skills exist', () async {
-      final storage = _InMemoryStorageService();
+      final storage = InMemoryStorageService();
       final state = AppState(storage: storage, seedDefaults: false);
 
       await state.loadSavedData();
@@ -1181,7 +1044,7 @@ void main() {
     test(
       'core tutorial starts from quest when skill exists without quests',
       () async {
-        final storage = _InMemoryStorageService();
+        final storage = InMemoryStorageService();
         final state = AppState(storage: storage, seedDefaults: false);
 
         await state.loadSavedData();
@@ -1204,7 +1067,7 @@ void main() {
     );
 
     test('core tutorial starts from action when active quest exists', () async {
-      final storage = _InMemoryStorageService();
+      final storage = InMemoryStorageService();
       final state = AppState(storage: storage, seedDefaults: false);
 
       await state.loadSavedData();
@@ -1237,7 +1100,7 @@ void main() {
     test(
       'quest work outside active Core does not mutate tutorial progress',
       () async {
-        final storage = _InMemoryStorageService();
+        final storage = InMemoryStorageService();
         final state = AppState(storage: storage, seedDefaults: false);
 
         await state.loadSavedData();
@@ -1276,7 +1139,7 @@ void main() {
     test(
       'deleting the first quest returns active Core to quest creation',
       () async {
-        final storage = _InMemoryStorageService();
+        final storage = InMemoryStorageService();
         final state = AppState(storage: storage, seedDefaults: false);
 
         await state.loadSavedData();
@@ -1315,7 +1178,7 @@ void main() {
     test(
       'legacy onboardingSeen maps to completed core tutorial module',
       () async {
-        final storage = _InMemoryStorageService().._onboardingSeen = true;
+        final storage = InMemoryStorageService()..onboardingSeen = true;
         final state = AppState(storage: storage, seedDefaults: false);
 
         await state.loadSavedData();
@@ -1333,8 +1196,8 @@ void main() {
     );
 
     test('meaningful existing data infers Welcome as seen', () async {
-      final storage = _InMemoryStorageService()
-        .._skills = [
+      final storage = InMemoryStorageService()
+        ..skills = [
           Skill(
             id: 'existing-skill',
             name: 'Existing',
@@ -1360,8 +1223,8 @@ void main() {
     test(
       'legacy Core progress normalizes without starting optional modules',
       () async {
-        final storage = _InMemoryStorageService()
-          .._tutorialProgress = const TutorialProgress(
+        final storage = InMemoryStorageService()
+          ..tutorialProgress = const TutorialProgress(
             activeModuleId: TutorialModuleIds.core,
             activeStepId: TutorialStepIds.coreOpenRoadmap,
           );
@@ -1385,7 +1248,7 @@ void main() {
     );
 
     test('optional tutorial modules start and dismiss independently', () async {
-      final storage = _InMemoryStorageService().._onboardingSeen = true;
+      final storage = InMemoryStorageService()..onboardingSeen = true;
       final state = AppState(storage: storage, seedDefaults: false);
 
       await state.loadSavedData();
@@ -1424,7 +1287,7 @@ void main() {
             .toList(growable: false);
 
         for (final moduleId in optionalModuleIds) {
-          final storage = _InMemoryStorageService().._onboardingSeen = true;
+          final storage = InMemoryStorageService()..onboardingSeen = true;
           final state = AppState(storage: storage, seedDefaults: false);
           await state.loadSavedData();
 
@@ -1483,7 +1346,7 @@ void main() {
     test(
       'reorder preserves selection and associations across save and load',
       () async {
-        final storage = _InMemoryStorageService();
+        final storage = InMemoryStorageService();
         final state = AppState(storage: storage, seedDefaults: false);
         final foundation = SkillTreeNode(
           id: 'foundation-stage',
@@ -1558,7 +1421,7 @@ void main() {
 
     test('invalid and no-op reorder requests leave order unchanged', () {
       final state = AppState(
-        storage: _InMemoryStorageService(),
+        storage: InMemoryStorageService(),
         seedDefaults: false,
       );
       state.skills.addAll([
@@ -1591,7 +1454,7 @@ void main() {
     test(
       'rewires one linear road without changing stage or quest identity',
       () async {
-        final storage = _InMemoryStorageService();
+        final storage = InMemoryStorageService();
         final state = AppState(storage: storage, seedDefaults: false);
         final masteredAt = DateTime(2026, 6, 1);
         final first = SkillTreeNode(id: 'first', title: 'First');
@@ -1670,7 +1533,7 @@ void main() {
 
     test('rejects branching and cross-road reorder requests', () {
       final state = AppState(
-        storage: _InMemoryStorageService(),
+        storage: InMemoryStorageService(),
         seedDefaults: false,
       );
       final root = SkillTreeNode(id: 'root', title: 'Root');
@@ -1714,7 +1577,7 @@ void main() {
     test(
       'AppState keeps achievement unlock notifications as side effects',
       () async {
-        final storage = _InMemoryStorageService();
+        final storage = InMemoryStorageService();
         final state = AppState(storage: storage, seedDefaults: false);
         addTearDown(state.dispose);
 
@@ -1763,7 +1626,7 @@ void main() {
     }
 
     setUp(() {
-      state = AppState(storage: _InMemoryStorageService(), seedDefaults: true);
+      state = AppState(storage: InMemoryStorageService(), seedDefaults: true);
       task = state.tasks.firstWhere(
         (candidate) => candidate.type == TaskType.repeating,
       );
@@ -1845,7 +1708,7 @@ void main() {
     late AppState state;
 
     setUp(() {
-      state = AppState(storage: _InMemoryStorageService(), seedDefaults: true);
+      state = AppState(storage: InMemoryStorageService(), seedDefaults: true);
     });
 
     tearDown(() {
@@ -1884,7 +1747,7 @@ void main() {
     late AppState state;
 
     setUp(() {
-      state = AppState(storage: _InMemoryStorageService(), seedDefaults: true);
+      state = AppState(storage: InMemoryStorageService(), seedDefaults: true);
     });
 
     tearDown(() {
@@ -1914,7 +1777,7 @@ void main() {
     late AppState state;
 
     setUp(() {
-      state = AppState(storage: _InMemoryStorageService(), seedDefaults: true);
+      state = AppState(storage: InMemoryStorageService(), seedDefaults: true);
     });
 
     tearDown(() {
@@ -2416,7 +2279,7 @@ void main() {
     late Task task;
 
     setUp(() {
-      state = AppState(storage: _InMemoryStorageService(), seedDefaults: true);
+      state = AppState(storage: InMemoryStorageService(), seedDefaults: true);
       task = state.tasks.firstWhere(
         (candidate) => candidate.title == 'Написать REST API на FastAPI',
       );
@@ -2473,7 +2336,7 @@ void main() {
     late AppState state;
 
     setUp(() {
-      state = AppState(storage: _InMemoryStorageService(), seedDefaults: true);
+      state = AppState(storage: InMemoryStorageService(), seedDefaults: true);
     });
 
     tearDown(() {
@@ -2508,7 +2371,7 @@ void main() {
     late Boss boss;
 
     setUp(() {
-      state = AppState(storage: _InMemoryStorageService(), seedDefaults: true);
+      state = AppState(storage: InMemoryStorageService(), seedDefaults: true);
       skill = state.skills.firstWhere((item) => item.name == 'Python');
       task = state.tasks.firstWhere(
         (candidate) => candidate.title == 'Написать REST API на FastAPI',
@@ -2571,7 +2434,7 @@ void main() {
     late Skill skill;
 
     setUp(() {
-      state = AppState(storage: _InMemoryStorageService(), seedDefaults: true);
+      state = AppState(storage: InMemoryStorageService(), seedDefaults: true);
       skill = Skill(
         id: 'backend',
         name: 'Backend',
@@ -2877,7 +2740,7 @@ void main() {
 
     setUp(() {
       state = AppState(
-        storage: _InMemoryStorageService(),
+        storage: InMemoryStorageService(),
         random: math.Random(1),
         seedDefaults: true,
       );
@@ -3180,7 +3043,7 @@ void main() {
   group('selection and skill-count invariants', () {
     test('Inbox is not counted as an actively studied skill', () {
       final state = AppState(
-        storage: _InMemoryStorageService(),
+        storage: InMemoryStorageService(),
         seedDefaults: false,
       );
       addTearDown(state.dispose);
@@ -3201,7 +3064,7 @@ void main() {
 
     test('invalid skill ids cannot become selected state', () {
       final state = AppState(
-        storage: _InMemoryStorageService(),
+        storage: InMemoryStorageService(),
         seedDefaults: false,
       );
       addTearDown(state.dispose);

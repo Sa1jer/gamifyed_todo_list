@@ -8,9 +8,11 @@ import 'package:todo_list_app/debug/debug_admin_panel.dart';
 import 'package:todo_list_app/debug/debug_service.dart';
 import 'package:todo_list_app/main.dart';
 import 'package:todo_list_app/models.dart';
-import 'package:todo_list_app/storage_service.dart';
+
 import 'package:todo_list_app/tutorial/tutorial_catalog.dart';
 import 'package:todo_list_app/utils.dart';
+
+import 'helpers/in_memory_storage_service.dart';
 import 'package:todo_list_app/widgets/dialogs.dart';
 import 'package:todo_list_app/widgets/daily_victories_dialog.dart';
 import 'package:todo_list_app/widgets/character_timeline_dialog.dart';
@@ -81,153 +83,6 @@ void _expectRoadmapConnectorsAttached(
   expect(renderedSkillCenter.dy, closeTo(paintedSkillGlobal.dy, tolerance));
 }
 
-class InMemoryStorageService extends StorageService {
-  List<Skill> skills = [];
-  List<Task> tasks = [];
-  List<HistoryEntry> history = [];
-  List<RewardChest> rewardChests = [];
-  DailyStats? dailyStats;
-  bool? _theme;
-  bool? _tooltipsEnabled;
-  bool? _welcomeSeen;
-  bool? _onboardingSeen;
-  TutorialProgress? _tutorialProgress;
-  int? _bestStreak;
-
-  @override
-  Future<void> init() async {}
-
-  @override
-  Future<bool> hasSavedSkills() async => skills.isNotEmpty;
-
-  @override
-  Future<bool> hasSavedTasks() async => tasks.isNotEmpty;
-
-  @override
-  Future<bool?> loadTheme() async => _theme;
-
-  @override
-  Future<void> saveTheme(bool isDark) async {
-    _theme = isDark;
-  }
-
-  @override
-  Future<bool?> loadSfxEnabled() async => true;
-
-  @override
-  Future<void> saveSfxEnabled(bool enabled) async {}
-
-  @override
-  Future<bool?> loadTooltipsEnabled() async => _tooltipsEnabled;
-
-  @override
-  Future<void> saveTooltipsEnabled(bool enabled) async {
-    _tooltipsEnabled = enabled;
-  }
-
-  @override
-  Future<bool?> loadWelcomeSeen() async => _welcomeSeen;
-
-  @override
-  Future<void> saveWelcomeSeen(bool seen) async {
-    _welcomeSeen = seen;
-  }
-
-  @override
-  Future<bool?> loadOnboardingSeen() async => _onboardingSeen;
-
-  @override
-  Future<void> saveOnboardingSeen(bool seen) async {
-    _onboardingSeen = seen;
-  }
-
-  @override
-  Future<TutorialProgress?> loadTutorialProgress() async => _tutorialProgress;
-
-  @override
-  Future<void> saveTutorialProgress(TutorialProgress progress) async {
-    _tutorialProgress = progress;
-  }
-
-  @override
-  Future<List<Skill>> loadSkills() async => List.of(skills);
-
-  @override
-  Future<void> saveSkills(List<Skill> skills) async {
-    this.skills = List.of(skills);
-  }
-
-  @override
-  Future<List<Task>> loadTasks() async => List.of(tasks);
-
-  @override
-  Future<void> saveTasks(List<Task> tasks) async {
-    this.tasks = List.of(tasks);
-  }
-
-  @override
-  Future<UserProfile> loadProfile() async => UserProfile(name: 'Your Name');
-
-  @override
-  Future<void> saveProfile(UserProfile profile) async {}
-
-  @override
-  Future<List<HistoryEntry>> loadHistory() async => List.of(history);
-
-  @override
-  Future<void> saveHistory(List<HistoryEntry> entries) async {
-    history = List.of(entries);
-  }
-
-  @override
-  Future<List<Achievement>> loadAchievements() async => [];
-
-  @override
-  Future<void> saveAchievements(List<Achievement> achievements) async {}
-
-  @override
-  Future<DailyStats?> loadStats() async => dailyStats;
-
-  @override
-  Future<void> saveStats(DailyStats stats) async {
-    dailyStats = stats;
-  }
-
-  @override
-  Future<List<Boss>> loadBosses() async => [];
-
-  @override
-  Future<void> saveBosses(List<Boss> bosses) async {}
-
-  @override
-  Future<List<RewardChest>> loadRewardChests() async => List.of(rewardChests);
-
-  @override
-  Future<void> saveRewardChests(List<RewardChest> rewardChests) async {
-    this.rewardChests = List.of(rewardChests);
-  }
-
-  @override
-  Future<List<Buff>> loadBuffs() async => [];
-
-  @override
-  Future<void> saveBuffs(List<Buff> buffs) async {}
-
-  @override
-  Future<List<WeeklyGoal>> loadWeeklyGoals() async => [];
-
-  @override
-  Future<void> saveWeeklyGoals(List<WeeklyGoal> goals) async {}
-
-  @override
-  Future<int?> loadBestStreak() async => _bestStreak;
-
-  @override
-  Future<void> saveBestStreak(int value) async {
-    _bestStreak = value;
-  }
-}
-
 class _FakeDebugService extends DebugService {
   DebugAdminDraftState draft;
   bool cleared = false;
@@ -291,8 +146,8 @@ void main() {
       ],
     );
     final storage = InMemoryStorageService()
-      .._onboardingSeen = true
-      .._welcomeSeen = true
+      ..onboardingSeen = true
+      ..welcomeSeen = true
       ..skills = [skill];
     await storage.init();
     await tester.pumpWidget(RPGApp(storage: storage));
@@ -337,8 +192,8 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final storage = InMemoryStorageService()
-      .._onboardingSeen = true
-      .._welcomeSeen = true
+      ..onboardingSeen = true
+      ..welcomeSeen = true
       ..skills = [
         Skill(
           id: 'yt',
@@ -399,8 +254,8 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final storage = InMemoryStorageService()
-      .._onboardingSeen = true
-      .._welcomeSeen = true
+      ..onboardingSeen = true
+      ..welcomeSeen = true
       ..skills = [
         Skill(
           id: 'axe',
@@ -458,8 +313,8 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final storage = InMemoryStorageService()
-      .._onboardingSeen = true
-      .._welcomeSeen = true;
+      ..onboardingSeen = true
+      ..welcomeSeen = true;
     await storage.init();
     await tester.pumpWidget(RPGApp(storage: storage));
     await tester.pump();
@@ -542,8 +397,8 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final storage = InMemoryStorageService()
-      .._onboardingSeen = true
-      .._theme = false
+      ..onboardingSeen = true
+      ..theme = false
       ..skills = [
         Skill(
           id: 'axe',
@@ -586,8 +441,8 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final storage = InMemoryStorageService()
-      .._onboardingSeen = true
-      .._theme = false
+      ..onboardingSeen = true
+      ..theme = false
       ..skills = [
         Skill(
           id: 'axe',
@@ -624,8 +479,8 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final storage = InMemoryStorageService()
-      .._onboardingSeen = true
-      .._theme = false
+      ..onboardingSeen = true
+      ..theme = false
       ..skills = [
         Skill(
           id: 'axe',
@@ -691,7 +546,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final storage = InMemoryStorageService()
-      .._onboardingSeen = true
+      ..onboardingSeen = true
       ..skills = [
         Skill(
           id: 'axe',
@@ -744,7 +599,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final storage = InMemoryStorageService()
-      .._onboardingSeen = true
+      ..onboardingSeen = true
       ..skills = [
         Skill(
           id: 'axe',
@@ -807,7 +662,7 @@ void main() {
     expect(find.text('RPG To-Do'), findsOneWidget);
     expect(find.text('Действовать сегодня'), findsOneWidget);
     expect(find.text('Первый навык'), findsOneWidget);
-    expect(storage._welcomeSeen, isTrue);
+    expect(storage.welcomeSeen, isTrue);
     await tester.tap(find.byKey(const ValueKey('guided-tour-close')));
     await tester.pumpAndSettle();
 
@@ -854,7 +709,7 @@ void main() {
 
     final today = DateTime.now();
     final storage = InMemoryStorageService()
-      .._onboardingSeen = true
+      ..onboardingSeen = true
       ..dailyStats = DailyStats(date: today, tasksCompleted: 2, xpEarned: 40)
       ..skills = [
         Skill(
@@ -990,8 +845,8 @@ void main() {
       ]) {
         tester.view.physicalSize = Size(width, 800);
         final storage = InMemoryStorageService()
-          .._onboardingSeen = true
-          .._theme = width != 1280
+          ..onboardingSeen = true
+          ..theme = width != 1280
           ..skills = [
             Skill(
               id: 'desktop-responsive-${width.toInt()}',
@@ -1044,7 +899,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final storage = InMemoryStorageService()
-      .._onboardingSeen = true
+      ..onboardingSeen = true
       ..skills = [
         Skill(
           id: 'hover-skill',
@@ -1100,7 +955,7 @@ void main() {
     const longTitle =
         'Сделать пятнадцать чистых повторений и записать подробный результат тренировки';
     final storage = InMemoryStorageService()
-      .._onboardingSeen = true
+      ..onboardingSeen = true
       ..skills = [
         Skill(
           id: 'focus-readable-skill',
@@ -1150,7 +1005,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final storage = InMemoryStorageService()
-      .._onboardingSeen = true
+      ..onboardingSeen = true
       ..skills = [
         Skill(
           id: 'inbox-host-skill',
@@ -1205,7 +1060,7 @@ void main() {
       treeNodes: [SkillTreeNode(id: '$id-stage', title: 'Основа $name')],
     );
     final storage = InMemoryStorageService()
-      .._onboardingSeen = true
+      ..onboardingSeen = true
       ..skills = [
         skill('road-shell-a', 'Альфа', const Color(0xFFFF6B2C)),
         skill('road-shell-b', 'Бета', const Color(0xFFB84DFF)),
@@ -1368,7 +1223,7 @@ void main() {
       treeNodes: [SkillTreeNode(id: 'ecosystem-stage', title: 'Основа')],
     );
     final storage = InMemoryStorageService()
-      .._onboardingSeen = true
+      ..onboardingSeen = true
       ..skills = [skill]
       ..dailyStats = DailyStats(date: now, tasksCompleted: 1, xpEarned: 20)
       ..history = [
@@ -1527,7 +1382,7 @@ void main() {
         icon: Icons.auto_awesome_rounded,
       );
       final storage = InMemoryStorageService()
-        .._onboardingSeen = true
+        ..onboardingSeen = true
         ..skills = [used, fresh]
         ..history = [
           HistoryEntry(
@@ -1746,8 +1601,8 @@ void main() {
 
     for (final isDark in [false, true]) {
       final storage = InMemoryStorageService()
-        .._onboardingSeen = true
-        .._theme = isDark;
+        ..onboardingSeen = true
+        ..theme = isDark;
       await storage.init();
       await tester.pumpWidget(RPGApp(storage: storage));
       await tester.pump();
@@ -1842,7 +1697,7 @@ void main() {
         icon: Icons.task_alt_rounded,
       );
       final storage = InMemoryStorageService()
-        .._onboardingSeen = true
+        ..onboardingSeen = true
         ..skills = [skill]
         ..tasks = [
           Task(
@@ -2085,7 +1940,7 @@ void main() {
         icon: Icons.code_rounded,
       );
       final storage = InMemoryStorageService()
-        .._onboardingSeen = true
+        ..onboardingSeen = true
         ..skills = [skill]
         ..tasks = [
           Task(
@@ -2185,7 +2040,7 @@ void main() {
         icon: Icons.forest_rounded,
       );
       final storage = InMemoryStorageService()
-        .._onboardingSeen = true
+        ..onboardingSeen = true
         ..skills = [skill];
       await storage.init();
       await tester.pumpWidget(RPGApp(storage: storage));
@@ -2229,7 +2084,7 @@ void main() {
         icon: Icons.rocket_launch_rounded,
       );
       final storage = InMemoryStorageService()
-        .._onboardingSeen = true
+        ..onboardingSeen = true
         ..skills = [skill]
         ..tasks = [
           Task(
@@ -2277,7 +2132,7 @@ void main() {
           icon: Icons.code_rounded,
         );
         final storage = InMemoryStorageService()
-          .._onboardingSeen = true
+          ..onboardingSeen = true
           ..skills = [skill]
           ..tasks = [
             Task(
@@ -2320,7 +2175,7 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      final storage = InMemoryStorageService().._onboardingSeen = true;
+      final storage = InMemoryStorageService()..onboardingSeen = true;
       await storage.init();
       await tester.pumpWidget(RPGApp(storage: storage));
       await tester.pump();
@@ -2347,7 +2202,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    final storage = InMemoryStorageService().._onboardingSeen = true;
+    final storage = InMemoryStorageService()..onboardingSeen = true;
     await storage.init();
     await tester.pumpWidget(RPGApp(storage: storage));
     await tester.pumpAndSettle();
@@ -2373,7 +2228,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    final storage = InMemoryStorageService().._onboardingSeen = true;
+    final storage = InMemoryStorageService()..onboardingSeen = true;
     await storage.init();
     await tester.pumpWidget(RPGApp(storage: storage));
     await tester.pumpAndSettle();
@@ -2397,7 +2252,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final storage = InMemoryStorageService()
-      .._onboardingSeen = true
+      ..onboardingSeen = true
       ..rewardChests = [
         RewardChest(
           id: 'mobile-header-chest',
@@ -2466,7 +2321,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    final storage = InMemoryStorageService().._onboardingSeen = true;
+    final storage = InMemoryStorageService()..onboardingSeen = true;
     await storage.init();
     await tester.pumpWidget(RPGApp(storage: storage));
     await tester.pump();
@@ -2498,7 +2353,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
 
-    final storage = InMemoryStorageService().._onboardingSeen = true;
+    final storage = InMemoryStorageService()..onboardingSeen = true;
     await storage.init();
     await tester.pumpWidget(RPGApp(storage: storage));
     await tester.pump();
@@ -2632,7 +2487,7 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      final storage = InMemoryStorageService().._onboardingSeen = true;
+      final storage = InMemoryStorageService()..onboardingSeen = true;
       await storage.init();
       await tester.pumpWidget(RPGApp(storage: storage));
       await tester.pump();
@@ -2678,8 +2533,8 @@ void main() {
           : 1.3;
       final skillId = 'responsive-${width.toInt()}';
       final storage = InMemoryStorageService()
-        .._onboardingSeen = true
-        .._theme = width != 393
+        ..onboardingSeen = true
+        ..theme = width != 393
         ..skills = [
           Skill(
             id: skillId,
@@ -2776,7 +2631,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    final storage = InMemoryStorageService().._onboardingSeen = true;
+    final storage = InMemoryStorageService()..onboardingSeen = true;
     await storage.init();
     await tester.pumpWidget(RPGApp(storage: storage));
     await tester.pumpAndSettle();
@@ -2803,7 +2658,7 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
 
       final storage = InMemoryStorageService()
-        .._onboardingSeen = true
+        ..onboardingSeen = true
         ..skills = [
           Skill(
             id: 'adaptive-placeholder',
@@ -2852,7 +2707,7 @@ void main() {
     );
 
     final storage = InMemoryStorageService()
-      .._onboardingSeen = true
+      ..onboardingSeen = true
       ..skills = [
         skill('transition-top', 'Верхний', const Color(0xFF4A9EFF)),
         skill('transition-middle', 'Средний', const Color(0xFFFF9500)),
@@ -2924,8 +2779,8 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
 
     expect(find.byKey(const ValueKey('welcome-page')), findsOneWidget);
-    expect(storage._welcomeSeen, isFalse);
-    expect(storage._onboardingSeen, isFalse);
+    expect(storage.welcomeSeen, isFalse);
+    expect(storage.onboardingSeen, isFalse);
 
     await tester.tap(find.byKey(const ValueKey('welcome-begin-action')));
     await tester.pumpAndSettle();
@@ -2933,12 +2788,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Первый навык'), findsOneWidget);
-    expect(storage._welcomeSeen, isTrue);
+    expect(storage.welcomeSeen, isTrue);
     await tester.tap(find.byKey(const ValueKey('guided-tour-close')));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('guided-tour-card')), findsNothing);
-    expect(storage._onboardingSeen, isTrue);
+    expect(storage.onboardingSeen, isTrue);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
@@ -2954,7 +2809,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
 
-    final storage = InMemoryStorageService().._onboardingSeen = true;
+    final storage = InMemoryStorageService()..onboardingSeen = true;
     await storage.init();
     final state = AppState(storage: storage, seedDefaults: false);
     state.addSkill(
@@ -3019,9 +2874,9 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final storage = InMemoryStorageService()
-      .._welcomeSeen = true
-      .._onboardingSeen = false
-      .._tutorialProgress = const TutorialProgress(
+      ..welcomeSeen = true
+      ..onboardingSeen = false
+      ..tutorialProgress = const TutorialProgress(
         activeModuleId: TutorialModuleIds.core,
         activeStepId: TutorialStepIds.coreCompleteQuest,
         completedStepIds: {
@@ -3070,7 +2925,7 @@ void main() {
       find.byKey(const ValueKey('tutorial-core-completion')),
       findsNothing,
     );
-    expect(storage._onboardingSeen, isTrue);
+    expect(storage.onboardingSeen, isTrue);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
@@ -3085,9 +2940,9 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final storage = InMemoryStorageService()
-      .._welcomeSeen = true
-      .._onboardingSeen = true
-      .._tutorialProgress = const TutorialProgress(
+      ..welcomeSeen = true
+      ..onboardingSeen = true
+      ..tutorialProgress = const TutorialProgress(
         completedModuleIds: {TutorialModuleIds.core},
         completedStepIds: {
           TutorialStepIds.coreCreateSkill,
@@ -3117,7 +2972,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final storage = InMemoryStorageService()
-      .._onboardingSeen = true
+      ..onboardingSeen = true
       ..skills = [
         Skill(
           id: 'skill-roadmap',
@@ -3165,9 +3020,9 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final storage = InMemoryStorageService()
-      .._welcomeSeen = true
-      .._onboardingSeen = false
-      .._tutorialProgress = const TutorialProgress(
+      ..welcomeSeen = true
+      ..onboardingSeen = false
+      ..tutorialProgress = const TutorialProgress(
         activeModuleId: TutorialModuleIds.core,
       )
       ..skills = [
@@ -3204,9 +3059,9 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final storage = InMemoryStorageService()
-      .._welcomeSeen = true
-      .._onboardingSeen = false
-      .._tutorialProgress = const TutorialProgress(
+      ..welcomeSeen = true
+      ..onboardingSeen = false
+      ..tutorialProgress = const TutorialProgress(
         activeModuleId: TutorialModuleIds.core,
         activeStepId: TutorialStepIds.coreCreateSkill,
       );
@@ -3227,7 +3082,7 @@ void main() {
 
     expect(storage.skills.where((skill) => skill.id != kInboxSkillId), isEmpty);
     expect(
-      storage._tutorialProgress!.activeStepId,
+      storage.tutorialProgress!.activeStepId,
       TutorialStepIds.coreCreateSkill,
     );
     expect(find.text('Первый навык'), findsOneWidget);
@@ -3245,9 +3100,9 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final storage = InMemoryStorageService()
-      .._welcomeSeen = true
-      .._onboardingSeen = false
-      .._tutorialProgress = const TutorialProgress(
+      ..welcomeSeen = true
+      ..onboardingSeen = false
+      ..tutorialProgress = const TutorialProgress(
         activeModuleId: TutorialModuleIds.core,
         activeStepId: TutorialStepIds.coreCreateQuest,
         completedStepIds: {TutorialStepIds.coreCreateSkill},
@@ -3275,7 +3130,7 @@ void main() {
 
     expect(storage.tasks, isEmpty);
     expect(
-      storage._tutorialProgress!.activeStepId,
+      storage.tutorialProgress!.activeStepId,
       TutorialStepIds.coreCreateQuest,
     );
     expect(find.text('Первый квест'), findsOneWidget);
@@ -3300,9 +3155,9 @@ void main() {
       type: TaskType.shortTerm,
     );
     final storage = InMemoryStorageService()
-      .._welcomeSeen = true
-      .._onboardingSeen = false
-      .._tutorialProgress = const TutorialProgress(
+      ..welcomeSeen = true
+      ..onboardingSeen = false
+      ..tutorialProgress = const TutorialProgress(
         activeModuleId: TutorialModuleIds.core,
       )
       ..skills = [
@@ -3330,13 +3185,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(task.isDone, isFalse);
-    expect(storage._onboardingSeen, isTrue);
+    expect(storage.onboardingSeen, isTrue);
     expect(
-      storage._tutorialProgress!.isModuleCompleted(TutorialModuleIds.core),
+      storage.tutorialProgress!.isModuleCompleted(TutorialModuleIds.core),
       isTrue,
     );
     expect(
-      storage._tutorialProgress!.isModuleCompleted(TutorialModuleIds.roadmap),
+      storage.tutorialProgress!.isModuleCompleted(TutorialModuleIds.roadmap),
       isFalse,
     );
     expect(find.text('Следующее действие'), findsNothing);
@@ -3358,9 +3213,9 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final storage = InMemoryStorageService()
-      .._welcomeSeen = true
-      .._onboardingSeen = true
-      .._tutorialProgress = const TutorialProgress(
+      ..welcomeSeen = true
+      ..onboardingSeen = true
+      ..tutorialProgress = const TutorialProgress(
         completedModuleIds: {TutorialModuleIds.core},
         activeModuleId: TutorialModuleIds.roadmap,
         activeStepId: TutorialStepIds.roadmapPath,
@@ -3394,13 +3249,13 @@ void main() {
     expect(find.text('Дорожная карта'), findsWidgets);
     expect(find.text('Карта'), findsWidgets);
     expect(
-      storage._tutorialProgress!.activeModuleId,
+      storage.tutorialProgress!.activeModuleId,
       TutorialModuleIds.roadmap,
     );
     expect(find.byKey(const ValueKey('guided-tour-card')), findsOneWidget);
     expect(find.text('Путь навыка'), findsOneWidget);
     expect(
-      storage._tutorialProgress!.isModuleCompleted(TutorialModuleIds.stats),
+      storage.tutorialProgress!.isModuleCompleted(TutorialModuleIds.stats),
       isFalse,
     );
 
@@ -3417,9 +3272,9 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final storage = InMemoryStorageService()
-      .._welcomeSeen = true
-      .._onboardingSeen = true
-      .._tutorialProgress = const TutorialProgress(
+      ..welcomeSeen = true
+      ..onboardingSeen = true
+      ..tutorialProgress = const TutorialProgress(
         completedModuleIds: {TutorialModuleIds.core},
         activeModuleId: TutorialModuleIds.act,
         activeStepId: TutorialStepIds.actMinimum,
@@ -3466,9 +3321,9 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final storage = InMemoryStorageService()
-      .._welcomeSeen = true
-      .._onboardingSeen = true
-      .._tutorialProgress = const TutorialProgress(
+      ..welcomeSeen = true
+      ..onboardingSeen = true
+      ..tutorialProgress = const TutorialProgress(
         completedModuleIds: {TutorialModuleIds.core},
         activeModuleId: TutorialModuleIds.act,
         activeStepId: TutorialStepIds.actMinimum,
@@ -3496,7 +3351,7 @@ void main() {
 
     expect(find.byKey(const ValueKey('guided-tour-card')), findsNothing);
     expect(
-      storage._tutorialProgress!.dismissedModuleIds,
+      storage.tutorialProgress!.dismissedModuleIds,
       isNot(contains(TutorialModuleIds.act)),
     );
 
@@ -3568,9 +3423,9 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final storage = InMemoryStorageService()
-      .._welcomeSeen = true
-      .._onboardingSeen = true
-      .._tooltipsEnabled = false;
+      ..welcomeSeen = true
+      ..onboardingSeen = true
+      ..tooltipsEnabled = false;
     await storage.init();
     await tester.pumpWidget(RPGApp(storage: storage));
     await tester.pump();
@@ -3593,7 +3448,7 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      final storage = InMemoryStorageService().._onboardingSeen = true;
+      final storage = InMemoryStorageService()..onboardingSeen = true;
       await storage.init();
       await tester.pumpWidget(RPGApp(storage: storage));
       await tester.pump();
@@ -3629,7 +3484,7 @@ void main() {
 
       expect(find.text('Дорожная карта'), findsWidgets);
       expect(find.byKey(const ValueKey('guided-tour-card')), findsOneWidget);
-      expect(storage._tutorialProgress!.activeModuleId, isNull);
+      expect(storage.tutorialProgress!.activeModuleId, isNull);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
@@ -3644,7 +3499,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    final storage = InMemoryStorageService().._onboardingSeen = true;
+    final storage = InMemoryStorageService()..onboardingSeen = true;
     await storage.init();
     await tester.pumpWidget(
       RPGApp(storage: storage, captureFrameForTesting: () async => null),
@@ -3681,7 +3536,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('guided-tour-card')), findsOneWidget);
-    expect(storage._tutorialProgress!.activeModuleId, isNull);
+    expect(storage.tutorialProgress!.activeModuleId, isNull);
     expect(tester.takeException(), isNull);
 
     await tester.pumpWidget(const SizedBox.shrink());
@@ -3697,9 +3552,9 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final storage = InMemoryStorageService()
-      .._welcomeSeen = true
-      .._onboardingSeen = true
-      .._tutorialProgress = const TutorialProgress(
+      ..welcomeSeen = true
+      ..onboardingSeen = true
+      ..tutorialProgress = const TutorialProgress(
         completedModuleIds: {TutorialModuleIds.core},
         activeModuleId: TutorialModuleIds.profile,
         activeStepId: TutorialStepIds.profileReplay,
@@ -3717,14 +3572,14 @@ void main() {
     expect(find.text('Готово'), findsOneWidget);
     expect(find.byKey(const ValueKey('guided-tour-card')), findsOneWidget);
     expect(
-      storage._tutorialProgress!.isModuleCompleted(TutorialModuleIds.profile),
+      storage.tutorialProgress!.isModuleCompleted(TutorialModuleIds.profile),
       isFalse,
     );
     await tester.tap(find.text('Завершить'));
     await tester.pumpAndSettle();
 
     expect(
-      storage._tutorialProgress!.isModuleCompleted(TutorialModuleIds.profile),
+      storage.tutorialProgress!.isModuleCompleted(TutorialModuleIds.profile),
       isTrue,
     );
     expect(find.byKey(const ValueKey('guided-tour-card')), findsNothing);
@@ -3743,9 +3598,9 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final storage = InMemoryStorageService()
-      .._welcomeSeen = true
-      .._onboardingSeen = true
-      .._tutorialProgress = const TutorialProgress(
+      ..welcomeSeen = true
+      ..onboardingSeen = true
+      ..tutorialProgress = const TutorialProgress(
         completedModuleIds: {TutorialModuleIds.core},
       );
     await storage.init();
@@ -3823,9 +3678,9 @@ void main() {
         .expand((module) => TutorialCatalog.stepIdsForModule(module.id))
         .toSet();
     final storage = InMemoryStorageService()
-      .._welcomeSeen = true
-      .._onboardingSeen = true
-      .._tutorialProgress = TutorialProgress(
+      ..welcomeSeen = true
+      ..onboardingSeen = true
+      ..tutorialProgress = TutorialProgress(
         completedModuleIds: completedModules,
         completedStepIds: completedSteps,
       )
@@ -3899,9 +3754,9 @@ void main() {
     expect(skill.treeNodes.map((node) => node.id), beforeNodeIds);
     expect(storage.history, beforeHistory);
     expect(storage.rewardChests, beforeRewards);
-    expect(storage._tutorialProgress!.completedModuleIds, beforeModules);
-    expect(storage._tutorialProgress!.completedStepIds, beforeSteps);
-    expect(storage._welcomeSeen, isTrue);
+    expect(storage.tutorialProgress!.completedModuleIds, beforeModules);
+    expect(storage.tutorialProgress!.completedStepIds, beforeSteps);
+    expect(storage.welcomeSeen, isTrue);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
@@ -3926,7 +3781,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    final storage = InMemoryStorageService().._onboardingSeen = true;
+    final storage = InMemoryStorageService()..onboardingSeen = true;
     await storage.init();
     await tester.pumpWidget(RPGApp(storage: storage));
     await tester.pump();
@@ -4351,7 +4206,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final storage = InMemoryStorageService()
-      .._onboardingSeen = true
+      ..onboardingSeen = true
       ..skills = [
         Skill(
           id: 'mobile-long',
@@ -4552,7 +4407,7 @@ void main() {
         'Подробное описание квеста должно полностью переноситься на несколько '
         'строк и увеличивать высоту карточки без обрезки последней части текста.';
     final storage = InMemoryStorageService()
-      .._onboardingSeen = true
+      ..onboardingSeen = true
       ..skills = [
         Skill(
           id: skillId,
@@ -4925,7 +4780,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final storage = InMemoryStorageService()
-      .._onboardingSeen = true
+      ..onboardingSeen = true
       ..skills = [
         Skill(
           id: 'mobile-empty-roadmap',
@@ -5162,7 +5017,7 @@ void main() {
 
     final stage = SkillTreeNode(id: 'stage-1', title: 'Основа');
     final storage = InMemoryStorageService()
-      .._onboardingSeen = true
+      ..onboardingSeen = true
       ..skills = [
         Skill(
           id: 'skill-1',
@@ -5328,7 +5183,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final state = AppState(
-      storage: InMemoryStorageService().._onboardingSeen = true,
+      storage: InMemoryStorageService()..onboardingSeen = true,
       seedDefaults: false,
     );
 
@@ -5368,7 +5223,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final state = AppState(
-      storage: InMemoryStorageService().._onboardingSeen = true,
+      storage: InMemoryStorageService()..onboardingSeen = true,
       seedDefaults: false,
     );
     state.normalizeAfterBulkStateChange();
@@ -5404,7 +5259,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    final storage = InMemoryStorageService().._onboardingSeen = true;
+    final storage = InMemoryStorageService()..onboardingSeen = true;
     await storage.init();
 
     await tester.pumpWidget(RPGApp(storage: storage));
@@ -5435,7 +5290,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    final storage = InMemoryStorageService().._onboardingSeen = true;
+    final storage = InMemoryStorageService()..onboardingSeen = true;
     await storage.init();
 
     await tester.pumpWidget(RPGApp(storage: storage));
@@ -5481,7 +5336,7 @@ void main() {
       prerequisiteIds: [middle.id],
     );
     final storage = InMemoryStorageService()
-      .._onboardingSeen = true
+      ..onboardingSeen = true
       ..skills = [
         Skill(
           id: 'layout-skill',
@@ -5778,7 +5633,7 @@ void main() {
         prerequisiteIds: [middle.id],
       );
       final storage = InMemoryStorageService()
-        .._onboardingSeen = true
+        ..onboardingSeen = true
         ..skills = [
           Skill(
             id: 'sync-skill',
@@ -5841,7 +5696,7 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
 
       final storage = InMemoryStorageService()
-        .._onboardingSeen = true
+        ..onboardingSeen = true
         ..skills = [
           Skill(
             id: 'initial-camera-skill',
@@ -5935,7 +5790,7 @@ void main() {
       ),
     ];
     final storage = InMemoryStorageService()
-      .._onboardingSeen = true
+      ..onboardingSeen = true
       ..skills = skills;
     await storage.init();
     await tester.pumpWidget(RPGApp(storage: storage));
@@ -5986,7 +5841,7 @@ void main() {
         prerequisiteIds: [root.id],
       );
       final storage = InMemoryStorageService()
-        .._onboardingSeen = true
+        ..onboardingSeen = true
         ..skills = [
           Skill(
             id: 'reduced-roadmap',
@@ -6077,7 +5932,7 @@ void main() {
     }
 
     final storage = InMemoryStorageService()
-      .._onboardingSeen = true
+      ..onboardingSeen = true
       ..skills = [skill('short-one', 1), skill('short-two', 2)];
     await storage.init();
     await tester.pumpWidget(RPGApp(storage: storage));
@@ -6140,7 +5995,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final storage = InMemoryStorageService()
-      .._onboardingSeen = true
+      ..onboardingSeen = true
       ..skills = [
         Skill(
           id: 'progress-orb',
@@ -6206,7 +6061,7 @@ void main() {
     );
 
     final storage = InMemoryStorageService()
-      .._onboardingSeen = true
+      ..onboardingSeen = true
       ..skills = [
         masteredSkill('green-skill', const Color(0xFF34C759)),
         masteredSkill('blue-skill', const Color(0xFF4A9EFF)),
@@ -6251,7 +6106,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    final storage = InMemoryStorageService().._onboardingSeen = true;
+    final storage = InMemoryStorageService()..onboardingSeen = true;
     storage.rewardChests = [
       RewardChest(
         id: 'desktop-chest',
@@ -6286,7 +6141,7 @@ void main() {
   testWidgets('opening the last chest does not deny the reward just given', (
     WidgetTester tester,
   ) async {
-    final storage = InMemoryStorageService().._onboardingSeen = true;
+    final storage = InMemoryStorageService()..onboardingSeen = true;
     await storage.init();
     final state = AppState(storage: storage, seedDefaults: false);
     state.rewardChests.add(
@@ -6329,7 +6184,7 @@ void main() {
   testWidgets('Rewards places one Effects section above chest list', (
     WidgetTester tester,
   ) async {
-    final storage = InMemoryStorageService().._onboardingSeen = true;
+    final storage = InMemoryStorageService()..onboardingSeen = true;
     await storage.init();
     final state = AppState(storage: storage, seedDefaults: false);
 
@@ -6380,7 +6235,7 @@ void main() {
       );
     }
     final storage = InMemoryStorageService()
-      .._onboardingSeen = true
+      ..onboardingSeen = true
       ..skills = [
         Skill(
           id: 'long-roadmap',
@@ -6519,7 +6374,7 @@ void main() {
       );
       final stages = [root, left, right, leftEnd, rightEnd, finish];
       final storage = InMemoryStorageService()
-        .._onboardingSeen = true
+        ..onboardingSeen = true
         ..skills = [
           Skill(
             id: 'branch-desktop',
@@ -6615,7 +6470,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final storage = InMemoryStorageService()
-      .._onboardingSeen = true
+      ..onboardingSeen = true
       ..skills = [
         Skill(
           id: 'empty-roadmap',
@@ -6686,7 +6541,7 @@ void main() {
     const taskTitle =
         'Подготовить длинный сценарий проверки мобильного интерфейса';
     final storage = InMemoryStorageService()
-      .._onboardingSeen = true
+      ..onboardingSeen = true
       ..skills = [
         Skill(
           id: 'mobile-skill',
@@ -6890,7 +6745,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final storage = InMemoryStorageService()
-      .._onboardingSeen = true
+      ..onboardingSeen = true
       ..skills = [
         Skill(
           id: 'branching-mobile',
@@ -6956,7 +6811,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final storage = InMemoryStorageService()
-      .._onboardingSeen = true
+      ..onboardingSeen = true
       ..skills = [
         Skill(
           id: 'mobile-focus-skill',
@@ -7024,7 +6879,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final storage = InMemoryStorageService()
-      .._onboardingSeen = true
+      ..onboardingSeen = true
       ..skills = [
         Skill(
           id: 'empty-mobile-skill',
@@ -7060,7 +6915,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    final storage = InMemoryStorageService().._onboardingSeen = true;
+    final storage = InMemoryStorageService()..onboardingSeen = true;
     await storage.init();
     await tester.pumpWidget(RPGApp(storage: storage));
     await tester.pump();
@@ -7099,7 +6954,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final storage = InMemoryStorageService()
-      .._onboardingSeen = true
+      ..onboardingSeen = true
       ..skills = [
         Skill(
           id: 'draft-skill',
@@ -7496,7 +7351,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    final storage = InMemoryStorageService().._onboardingSeen = true;
+    final storage = InMemoryStorageService()..onboardingSeen = true;
     await storage.init();
     await tester.pumpWidget(RPGApp(storage: storage));
     await tester.pump();
