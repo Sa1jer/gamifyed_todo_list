@@ -283,13 +283,19 @@ void main() {
     expect(left.right, lessThanOrEqualTo(right.left));
     expect(left.top, right.top);
 
-    // Настройки — в правой колонке, путь пользователя — в левой.
+    // Настройки — в правой колонке, путь пользователя — в левой. «Интерфейс»
+    // здесь больше не живёт: тема, звук и анимации уехали в «Настройки», где
+    // на этой ширине есть свой экран.
+    expect(
+      find.descendant(of: find.byKey(settings), matching: find.text('Данные')),
+      findsOneWidget,
+    );
     expect(
       find.descendant(
         of: find.byKey(settings),
         matching: find.text('Интерфейс'),
       ),
-      findsOneWidget,
+      findsNothing,
     );
     expect(
       find.descendant(
@@ -1334,7 +1340,9 @@ void main() {
       find.byKey(const ValueKey('desktop-settings-workspace')),
       findsOneWidget,
     );
-    expect(find.text('ПРОФИЛЬ'), findsOneWidget);
+    // Секции «Профиль» в настройках больше нет: она вела обратно в профиль и
+    // составляла половину круговой навигации, на которую жаловался аудит.
+    expect(find.text('ПРОФИЛЬ'), findsNothing);
     expect(find.text('ВНЕШНИЙ ВИД И ДВИЖЕНИЕ'), findsOneWidget);
     expect(find.text('ЗВУК И ПОМОЩЬ'), findsOneWidget);
     expect(find.text('ДАННЫЕ НА УСТРОЙСТВЕ'), findsOneWidget);
@@ -3494,7 +3502,9 @@ void main() {
   testWidgets('Profile keeps tutorial replay connected after a theme change', (
     WidgetTester tester,
   ) async {
-    tester.view.physicalSize = const Size(1400, 900);
+    // Узкая оболочка: там у профиля есть переключатель темы. В десктопной он
+    // уехал в «Настройки», и менять тему из профиля стало нечем.
+    tester.view.physicalSize = const Size(600, 900);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -3609,8 +3619,17 @@ void main() {
 
     await tester.tap(find.text('Your Name').first);
     await tester.pumpAndSettle();
-    await tester.ensureVisible(
+    // Вход в обучение уехал ниже: настройки устройства и подсказки теперь
+    // разные секции. В ленивом списке до него надо доскроллить.
+    await tester.scrollUntilVisible(
       find.byKey(const ValueKey('profile-training-center-entry')),
+      200,
+      scrollable: find
+          .descendant(
+            of: find.byType(ProfileDialog),
+            matching: find.byType(Scrollable),
+          )
+          .first,
     );
     await tester.pumpAndSettle();
     await tester.tap(
@@ -5370,6 +5389,56 @@ void main() {
       find.byKey(const ValueKey('desktop-statistics-growth-history')),
       findsNothing,
     );
+  });
+
+  testWidgets('device settings live in Settings on desktop and in the profile without it', (
+    WidgetTester tester,
+  ) async {
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    tester.view.devicePixelRatio = 1;
+
+    // 1400 — есть экран «Настройки»; 600 — его нет вовсе, и раздел обязан
+    // остаться в профиле, иначе тему негде переключить.
+    for (final entry in {1400.0: false, 600.0: true}.entries) {
+      final storage = InMemoryStorageService()..onboardingSeen = true;
+      await storage.init();
+      tester.view.physicalSize = Size(entry.key, 1000);
+
+      await tester.pumpWidget(RPGApp(storage: storage));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      await tester.tap(find.text('Your Name').first);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Тёмная тема'),
+        entry.value ? findsWidgets : findsNothing,
+        reason: 'ширина ${entry.key}',
+      );
+      // Подсказки и обучение остаются в профиле на любой ширине. В узкой
+      // раскладке список длиннее, и до входа надо доскроллить.
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('profile-training-center-entry')),
+        200,
+        scrollable: find
+            .descendant(
+              of: find.byType(ProfileDialog),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('profile-training-center-entry')),
+        findsOneWidget,
+        reason: 'ширина ${entry.key}',
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    }
   });
 
   testWidgets('desktop Settings offers data transfer next to storage status', (

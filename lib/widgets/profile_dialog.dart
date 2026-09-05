@@ -26,9 +26,18 @@ class ProfileDialog extends StatefulWidget {
   final Key? tutorialTrainingKey;
   final Widget? tutorialOverlay;
 
+  /// Показывать ли настройки устройства — тему, звук, движение.
+  ///
+  /// Их место в «Настройках», но отдельный экран настроек есть только в
+  /// десктопной оболочке: на телефоне и в узком окне его нет вовсе, и убрать
+  /// раздел отсюда значило бы потерять его совсем. Решает оболочка — она одна
+  /// знает, достижимы ли «Настройки».
+  final bool showInterfaceSettings;
+
   const ProfileDialog({
     super.key,
     this.fullScreen = false,
+    this.showInterfaceSettings = true,
     this.onToggleTheme,
     this.tutorialSession,
     this.onTutorialSelection,
@@ -149,7 +158,11 @@ class _ProfileDialogState extends State<ProfileDialog> {
 
     // «Что можно изменить» — настройки устройства и данные.
     final settingsColumn = <Widget>[
-      _buildInterfaceSettings(s, isDark, txt, sub, bdr),
+      if (widget.showInterfaceSettings) ...[
+        _buildDeviceSettings(s, isDark, txt, sub, bdr),
+        const SizedBox(height: 24),
+      ],
+      _buildHelpSettings(s, isDark, txt, sub, bdr),
       const SizedBox(height: 24),
       _buildDataTransfer(context, s, isDark, txt, sub, bdr),
     ];
@@ -312,7 +325,13 @@ class _ProfileDialogState extends State<ProfileDialog> {
                 const SizedBox(height: 18),
                 Container(height: 1, color: border),
                 const SizedBox(height: 16),
-                _buildInterfaceSettings(state, isDark, text, secondary, border),
+                if (widget.showInterfaceSettings) ...[
+                  _buildDeviceSettings(state, isDark, text, secondary, border),
+                  const SizedBox(height: 18),
+                  Container(height: 1, color: border),
+                  const SizedBox(height: 16),
+                ],
+                _buildHelpSettings(state, isDark, text, secondary, border),
                 const SizedBox(height: 18),
                 Container(height: 1, color: border),
                 const SizedBox(height: 16),
@@ -1055,7 +1074,69 @@ class _ProfileDialogState extends State<ProfileDialog> {
     );
   }
 
-  Widget _buildInterfaceSettings(
+  /// Настройки устройства: тема, звук, движение.
+  ///
+  /// В десктопной оболочке их место в «Настройках», и профиль их там не
+  /// показывает. Подсказки и обучение — отдельный метод: они остаются в
+  /// обоих местах сознательно.
+  Widget _buildDeviceSettings(
+    AppState state,
+    bool isDark,
+    Color txt,
+    Color sub,
+    Color bdr,
+  ) {
+    final fBg = isDark ? const Color(0xFF13131A) : const Color(0xFFF5F5F7);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SubLbl('Интерфейс', sub),
+        const SizedBox(height: 10),
+        if (widget.onToggleTheme != null) ...[
+          _ProfileSettingsToggle(
+            background: fBg,
+            border: bdr,
+            text: txt,
+            secondary: sub,
+            icon: Icons.dark_mode_outlined,
+            title: 'Тёмная тема',
+            subtitle: 'Переключается сразу и сохраняется на устройстве.',
+            value: state.isDark,
+            onChanged: (_) => widget.onToggleTheme!(),
+          ),
+          const SizedBox(height: 8),
+        ],
+        _ProfileSettingsToggle(
+          background: fBg,
+          border: bdr,
+          text: txt,
+          secondary: sub,
+          icon: Icons.volume_up_outlined,
+          title: 'Звуки интерфейса',
+          subtitle: 'Отклик на действия, XP и награды.',
+          value: state.sfxEnabled,
+          onChanged: (_) => state.toggleSfxEnabled(),
+        ),
+        const SizedBox(height: 8),
+        _ProfileSettingsToggle(
+          background: fBg,
+          border: bdr,
+          text: txt,
+          secondary: sub,
+          icon: Icons.motion_photos_off_outlined,
+          title: 'Сокращать анимации',
+          subtitle: 'Убирает необязательные перемещения и переходы.',
+          value: state.reducedMotion,
+          onChanged: (_) => state.toggleReducedMotion(),
+        ),
+      ],
+    );
+  }
+
+  /// Подсказки и вход в обучение. Продублированы с «Настройками» намеренно:
+  /// сюда за ними приходят чаще, чем в настройки устройства.
+  Widget _buildHelpSettings(
     AppState state,
     bool isDark,
     Color txt,
@@ -1069,46 +1150,8 @@ class _ProfileDialogState extends State<ProfileDialog> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SubLbl('Интерфейс', sub),
+          SubLbl('Подсказки и обучение', sub),
           const SizedBox(height: 10),
-          if (widget.onToggleTheme != null) ...[
-            _ProfileSettingsToggle(
-              background: fBg,
-              border: bdr,
-              text: txt,
-              secondary: sub,
-              icon: Icons.dark_mode_outlined,
-              title: 'Тёмная тема',
-              subtitle: 'Переключается сразу и сохраняется на устройстве.',
-              value: state.isDark,
-              onChanged: (_) => widget.onToggleTheme!(),
-            ),
-            const SizedBox(height: 8),
-          ],
-          _ProfileSettingsToggle(
-            background: fBg,
-            border: bdr,
-            text: txt,
-            secondary: sub,
-            icon: Icons.volume_up_outlined,
-            title: 'Звуки интерфейса',
-            subtitle: 'Отклик на действия, XP и награды.',
-            value: state.sfxEnabled,
-            onChanged: (_) => state.toggleSfxEnabled(),
-          ),
-          const SizedBox(height: 8),
-          _ProfileSettingsToggle(
-            background: fBg,
-            border: bdr,
-            text: txt,
-            secondary: sub,
-            icon: Icons.motion_photos_off_outlined,
-            title: 'Сокращать анимации',
-            subtitle: 'Убирает необязательные перемещения и переходы.',
-            value: state.reducedMotion,
-            onChanged: (_) => state.toggleReducedMotion(),
-          ),
-          const SizedBox(height: 8),
           _ProfileSettingsToggle(
             background: fBg,
             border: bdr,

@@ -627,6 +627,10 @@ class _MainPageState extends State<MainPage> {
         state: state,
         child: ProfileDialog(
           fullScreen: fullScreen,
+          // Тема, звук и анимации живут в «Настройках», но отдельный экран
+          // настроек есть только в десктопной оболочке. Там, где его нет,
+          // раздел остаётся в профиле — иначе он пропал бы совсем.
+          showInterfaceSettings: mobile,
           onToggleTheme: widget.onToggleTheme,
           tutorialSession: _guidedTour.controller.snapshot,
           onTutorialSelection: _guidedTour.handleTrainingSelection,
@@ -1136,7 +1140,6 @@ class _MainPageState extends State<MainPage> {
                                           tokens: DesktopJournalTokens.resolve(
                                             isDark,
                                           ),
-                                          onOpenProfile: openProfile,
                                           onToggleTheme: widget.onToggleTheme,
                                         ),
                                   ),

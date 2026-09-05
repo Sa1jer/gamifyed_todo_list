@@ -387,14 +387,12 @@ class _DesktopTrophyProgressCard extends StatelessWidget {
 class _DesktopSettingsWorkspace extends StatelessWidget {
   final AppState state;
   final DesktopJournalTokens tokens;
-  final VoidCallback onOpenProfile;
   final VoidCallback onToggleTheme;
 
   const _DesktopSettingsWorkspace({
     super.key,
     required this.state,
     required this.tokens,
-    required this.onOpenProfile,
     required this.onToggleTheme,
   });
 
@@ -412,19 +410,6 @@ class _DesktopSettingsWorkspace extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _DesktopSettingsSection(
-              tokens: tokens,
-              title: 'Профиль',
-              child: _DesktopSettingsTile(
-                tokens: tokens,
-                icon: Icons.person_outline,
-                title: 'Профиль персонажа',
-                subtitle:
-                    '${state.profile.name} · уровень ${state.profile.level} · аватар и обучение',
-                onTap: onOpenProfile,
-              ),
-            ),
-            const SizedBox(height: 16),
             _DesktopSettingsSection(
               tokens: tokens,
               title: 'Внешний вид и движение',
@@ -470,7 +455,7 @@ class _DesktopSettingsWorkspace extends StatelessWidget {
                     key: const ValueKey('desktop-settings-tooltips'),
                     tokens: tokens,
                     icon: Icons.lightbulb_outline,
-                    title: 'Подсказки интерфейса',
+                    title: 'Подсказки при наведении',
                     subtitle: 'Пояснения к иконкам и сложным действиям',
                     value: state.tooltipsEnabled,
                     onChanged: (_) => state.toggleTooltipsEnabled(),
@@ -770,32 +755,6 @@ class _DesktopCountPill extends StatelessWidget {
       '$value',
       style: TextStyle(color: color, fontWeight: FontWeight.w700),
     ),
-  );
-}
-
-class _DesktopSettingsTile extends StatelessWidget {
-  final DesktopJournalTokens tokens;
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  const _DesktopSettingsTile({
-    required this.tokens,
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) => ListTile(
-    minTileHeight: 68,
-    leading: Icon(icon, color: tokens.profilePurple),
-    title: Text(title, style: TextStyle(color: tokens.text)),
-    subtitle: Text(subtitle, style: TextStyle(color: tokens.mutedText)),
-    trailing: Icon(Icons.chevron_right, color: tokens.mutedText),
-    onTap: onTap,
   );
 }
 
