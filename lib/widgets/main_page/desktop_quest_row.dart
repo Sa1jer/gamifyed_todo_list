@@ -438,6 +438,16 @@ class _DesktopRewardPill extends StatelessWidget {
           color: tokens.rewardGoldSurface,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(color: tokens.rewardGoldGraphic),
+          // Свечение без смещения: награда светится сама, а не отбрасывает
+          // тень. Радиус чуть больше высоты пилюли, иначе на тёмном фоне
+          // виден край ореола вместо свечения.
+          boxShadow: [
+            BoxShadow(
+              color: tokens.rewardGoldGlow,
+              blurRadius: 14,
+              spreadRadius: -2,
+            ),
+          ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

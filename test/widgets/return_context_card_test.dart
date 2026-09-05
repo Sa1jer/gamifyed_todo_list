@@ -235,4 +235,73 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('a last result identical to the next step is not repeated', (
+    tester,
+  ) async {
+    const repeated =
+        'Проверить редактирование существующей задачи и сохранить результат';
+
+    await tester.pumpWidget(
+      harness(data: candidate(result: repeated), desktop: true, width: 1100),
+    );
+    await tester.pumpAndSettle();
+
+    // Повторяющийся квест возвращается тем же названием, и две одинаковые
+    // строки подряд читаются как ошибка, а не как контекст.
+    expect(
+      find.byKey(const ValueKey('return-context-last-result')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('return-context-next-action')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('a different last result is still shown', (tester) async {
+    await tester.pumpWidget(
+      harness(
+        data: candidate(result: 'Проверена валидация'),
+        desktop: true,
+        width: 1100,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('return-context-last-result')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('the desktop primary action does not stretch across the card', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      harness(data: candidate(), desktop: true, width: 1100),
+    );
+    await tester.pumpAndSettle();
+
+    final card = tester.getRect(find.byType(ReturnContextCard));
+    final primary = tester.getRect(
+      find.byKey(const ValueKey('return-context-continue')),
+    );
+
+    // Растянутое основное действие превращало карточку в баннер во всю
+    // ширину рабочей области.
+    expect(primary.width, lessThan(card.width / 2));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the desktop secondary action is labelled, not just an icon', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      harness(data: candidate(), desktop: true, width: 1100),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Другой шаг'), findsOneWidget);
+  });
 }
