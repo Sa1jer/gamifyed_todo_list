@@ -6237,6 +6237,46 @@ void main() {
     await tester.pump();
   });
 
+  testWidgets('desktop shows the reward when a chest is opened', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1400, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = InMemoryStorageService().._onboardingSeen = true;
+    storage.rewardChests = [
+      RewardChest(
+        id: 'desktop-chest',
+        title: 'Сундук дисциплины',
+        description: 'За сильный день',
+        rarity: RewardRarity.common,
+        sourceKey: 'strong-day',
+        unlockedAt: DateTime(2026, 9, 5),
+      ),
+    ];
+    await storage.init();
+
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    await tester.tap(find.byIcon(Icons.emoji_events_outlined).first);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Открыть').first);
+    // Карточка награды анимируется постоянно, поэтому фиксированные кадры.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+
+    // Раньше десктоп звал openRewardChest и выбрасывал сообщение: сундук
+    // исчезал, а награду выдавали молча.
+    expect(find.text('Сундук открыт'), findsOneWidget);
+    // И пустое состояние не спорит с только что выданной наградой.
+    expect(find.text('Пока нет сундуков'), findsNothing);
+  });
+
   testWidgets('opening the last chest does not deny the reward just given', (
     WidgetTester tester,
   ) async {

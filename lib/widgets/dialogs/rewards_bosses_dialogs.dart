@@ -336,29 +336,8 @@ class _RewardsDialogState extends State<RewardsDialog> {
   }
 
   void _openChest(BuildContext context, String chestId) {
-    final chest = widget.state.rewardChests
-        .where((item) => item.id == chestId)
-        .firstOrNull;
-    if (chest == null) return;
-
-    final message = widget.state.openRewardChest(chestId);
-    if (message == null) return;
-    AppFeedback.reward();
-    final buff = widget.state.buffs
-        .where((item) => item.sourceChestId == chestId)
-        .firstOrNull;
-
-    setState(
-      () => _lastReveal = RewardReveal(
-        id: '${chest.id}-${buff?.id ?? chest.openedAt?.millisecondsSinceEpoch}',
-        message: message,
-        buffTitle: buff?.title,
-        bonusPercent: buff?.bonusPercent,
-        color: rewardRarityColor[chest.rarity]!,
-        icon: chest.rarity == RewardRarity.epic
-            ? Icons.auto_awesome
-            : Icons.inventory_2,
-      ),
-    );
+    final reveal = openRewardChestForReveal(widget.state, chestId);
+    if (reveal == null) return;
+    setState(() => _lastReveal = reveal);
   }
 }

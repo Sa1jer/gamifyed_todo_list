@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 import '../app_state.dart';
-import '../feedback_service.dart';
 import '../models.dart';
 import '../utils.dart';
 import 'desktop_journal_tokens.dart';
@@ -23,6 +22,8 @@ import 'dialogs/skill_creator_sections.dart';
 
 export 'dialogs/add_skill_tree_node_dialog.dart';
 export 'dialogs/bosses_dialog.dart';
+// Карточка награды и открытие сундука нужны и десктопному экрану «Трофеи».
+export 'dialogs/reward_components.dart';
 
 part 'dialogs/achievements_history.dart';
 part 'dialogs/shared_controls.dart';

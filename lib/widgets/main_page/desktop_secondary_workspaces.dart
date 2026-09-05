@@ -96,6 +96,14 @@ class _DesktopRewardsWorkspace extends StatefulWidget {
 }
 
 class _DesktopRewardsWorkspaceState extends State<_DesktopRewardsWorkspace> {
+  RewardReveal? _lastReveal;
+
+  void _openChest(String chestId) {
+    final reveal = openRewardChestForReveal(widget.state, chestId);
+    if (reveal == null) return;
+    setState(() => _lastReveal = reveal);
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = widget.state;
@@ -206,6 +214,17 @@ class _DesktopRewardsWorkspaceState extends State<_DesktopRewardsWorkspace> {
             ),
           ),
           const SizedBox(height: 24),
+          // Открытие сундука должно быть видно и здесь. Раньше десктоп звал
+          // openRewardChest и выбрасывал его сообщение: сундук просто исчезал,
+          // а награду выдавали молча.
+          if (_lastReveal case final reveal?) ...[
+            RewardRevealNotice(
+              key: ValueKey('desktop-reward-reveal-${reveal.id}'),
+              reveal: reveal,
+              isDark: widget.state.isDark,
+            ),
+            const SizedBox(height: 16),
+          ],
           _DesktopSectionCard(
             tokens: tokens,
             child: _DesktopRewardCollection(
@@ -215,7 +234,13 @@ class _DesktopRewardsWorkspaceState extends State<_DesktopRewardsWorkspace> {
               color: tokens.rewardGoldGraphic,
               title: 'Новые сундуки',
               count: chests.length,
-              child: chests.isEmpty
+              child: chests.isEmpty && _lastReveal != null
+                  // Пустое состояние молчит, пока видна карточка награды:
+                  // последний сундук уходит из списка ровно в момент открытия.
+                  ? const SizedBox.shrink(
+                      key: ValueKey('desktop-chests-after-reveal'),
+                    )
+                  : chests.isEmpty
                   ? _DesktopEmptyMessage(
                       tokens: tokens,
                       icon: Icons.inventory_2_outlined,
@@ -239,8 +264,7 @@ class _DesktopRewardsWorkspaceState extends State<_DesktopRewardsWorkspace> {
                                   child: _DesktopRewardChestCard(
                                     chest: chest,
                                     tokens: tokens,
-                                    onOpen: () =>
-                                        state.openRewardChest(chest.id),
+                                    onOpen: () => _openChest(chest.id),
                                   ),
                                 ),
                               )

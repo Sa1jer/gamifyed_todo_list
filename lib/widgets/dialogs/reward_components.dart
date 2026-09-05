@@ -1,9 +1,42 @@
 import 'package:flutter/material.dart';
 
+import '../../app_state.dart';
+import '../../feedback_service.dart';
 import '../../models.dart';
 import '../../utils.dart';
 import '../reward_animations.dart';
 import '../shared.dart';
+
+/// Открывает сундук и собирает карточку награды для показа.
+///
+/// Живёт здесь, а не в экране: сундуки открывают и с телефона, и с десктопа,
+/// а собрать `RewardReveal` — это три обращения к состоянию подряд, которые
+/// легко разъедутся в двух копиях. Возвращает `null`, если сундука нет или он
+/// уже открыт; тогда показывать нечего.
+RewardReveal? openRewardChestForReveal(AppState state, String chestId) {
+  final chest = state.rewardChests
+      .where((item) => item.id == chestId)
+      .firstOrNull;
+  if (chest == null) return null;
+
+  final message = state.openRewardChest(chestId);
+  if (message == null) return null;
+  AppFeedback.reward();
+
+  final buff = state.buffs
+      .where((item) => item.sourceChestId == chestId)
+      .firstOrNull;
+  return RewardReveal(
+    id: '${chest.id}-${buff?.id ?? chest.openedAt?.millisecondsSinceEpoch}',
+    message: message,
+    buffTitle: buff?.title,
+    bonusPercent: buff?.bonusPercent,
+    color: rewardRarityColor[chest.rarity]!,
+    icon: chest.rarity == RewardRarity.epic
+        ? Icons.auto_awesome
+        : Icons.inventory_2,
+  );
+}
 
 class RewardReveal {
   final String id;
