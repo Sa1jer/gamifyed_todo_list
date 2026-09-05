@@ -74,14 +74,21 @@ APK=build/app/outputs/flutter-apk/app-release.apk
 # подписалось тем ключом, которым нужно.
 
 BUILD_TOOLS=$(ls -d "${ANDROID_HOME:-$HOME/Library/Android/sdk}"/build-tools/* | sort -V | tail -1)
-CERT=$("$BUILD_TOOLS/apksigner" verify --print-certs "$APK" 2>/dev/null |
-  grep 'certificate DN' | head -1)
+
+# Вывод забираем целиком и фильтруем уже в переменной. `| head -1` закрывал бы
+# канал раньше, чем apksigner договорил, тот получал SIGPIPE, и `pipefail`
+# ронял весь скрипт с кодом 141 вместо того, чтобы напечатать сертификат.
+SIGNER_OUTPUT=$("$BUILD_TOOLS/apksigner" verify --print-certs "$APK" 2>/dev/null || true)
+CERT=$(printf '%s\n' "$SIGNER_OUTPUT" | awk '/certificate DN/ {print; exit}')
 
 [[ -n "$CERT" ]] || fail "APK не подписан"
-echo "$CERT" | grep -q 'CN=Android Debug' &&
-  fail "APK подписан отладочным ключом — обновления не встанут поверх"
+case "$CERT" in
+  *"CN=Android Debug"*)
+    fail "APK подписан отладочным ключом — обновления не встанут поверх" ;;
+esac
 
-PACKAGE=$("$BUILD_TOOLS/aapt2" dump badging "$APK" 2>/dev/null | head -1)
+BADGING=$("$BUILD_TOOLS/aapt2" dump badging "$APK" 2>/dev/null || true)
+PACKAGE=$(printf '%s\n' "$BADGING" | awk 'NR == 1')
 
 echo
 echo "  $PACKAGE"
