@@ -369,10 +369,13 @@ class _DesktopSelectedSkillPrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foreground =
-        ThemeData.estimateBrightnessForColor(color) == Brightness.dark
-        ? Colors.white
-        : const Color(0xFF171821);
+    // Белая надпись при любом цвете навыка — решение владельца, принятое с
+    // цифрами на руках. Автоподбор ставил тёмную краску там, где она читается
+    // лучше, и на зелёном разрыв был четырёхкратным: 7.96 против 2.22. Белый
+    // проходит порог 4.5:1 ровно на одном цвете палитры из двенадцати.
+    // Единообразие кнопки владелец предпочёл контрасту; менять обратно без
+    // его слова не нужно.
+    const foreground = Colors.white;
     return FilledButton.icon(
       onPressed: onTap,
       style: FilledButton.styleFrom(

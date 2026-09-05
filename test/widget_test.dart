@@ -2123,6 +2123,61 @@ void main() {
     },
   );
 
+  testWidgets('the new quest button is white on every skill colour', (
+    WidgetTester tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    tester.view.physicalSize = const Size(1400, 900);
+
+    // Шесть цветов, на которых автоподбор ставил тёмную краску: именно они
+    // и меняются решением владельца. Белый читается на них хуже — на жёлтом
+    // 1.51 против 11.68, — но единообразие кнопки владелец выбрал сознательно.
+    const switched = [
+      Color(0xFFFF9500),
+      Color(0xFFFFCC00),
+      Color(0xFFB8E986),
+      Color(0xFF34C759),
+      Color(0xFF00C7BE),
+      Color(0xFF5AC8FA),
+    ];
+
+    for (final color in switched) {
+      final storage = InMemoryStorageService()
+        ..onboardingSeen = true
+        ..skills = [
+          Skill(
+            id: 'colour-skill',
+            name: 'Навык',
+            goal: 'Цель',
+            color: color,
+            icon: Icons.star,
+          ),
+        ];
+      await storage.init();
+
+      await tester.pumpWidget(RPGApp(storage: storage));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      final button = tester.widget<FilledButton>(
+        find.descendant(
+          of: find.byKey(const ValueKey('desktop-add-task-colour-skill')),
+          matching: find.byType(FilledButton),
+        ),
+      );
+      expect(
+        button.style?.foregroundColor?.resolve(const {}),
+        Colors.white,
+        reason: 'цвет навыка $color',
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    }
+  });
+
   testWidgets(
     'desktop selected-skill header keeps its geometry across desktop widths',
     (WidgetTester tester) async {
