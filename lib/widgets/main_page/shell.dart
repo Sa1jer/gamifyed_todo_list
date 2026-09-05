@@ -347,7 +347,13 @@ class _MainPageState extends State<MainPage> {
     }
     showDialog(
       context: context,
-      builder: (_) => CharacterTimelineDialog(state: state),
+      // Ссылка на журнал нужна и здесь. Сейчас эта ветка недостижима — хаб с
+      // «Летописью» живёт только в узкой раскладке, а она уходит маршрутом
+      // выше, — но забыть параметр в одной из двух веток уже удавалось.
+      builder: (_) => CharacterTimelineDialog(
+        state: state,
+        onOpenXpJournal: () => _openHistoryDialog(state),
+      ),
     );
   }
 
