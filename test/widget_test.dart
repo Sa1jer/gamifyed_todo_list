@@ -5282,6 +5282,66 @@ void main() {
     );
   });
 
+  testWidgets('the profile keeps data transfer in both layouts', (
+    WidgetTester tester,
+  ) async {
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    tester.view.devicePixelRatio = 1;
+
+    final storage = InMemoryStorageService(snapshotsSupported: true)
+      ..onboardingSeen = true;
+    await storage.init();
+    final state = AppState(storage: storage, seedDefaults: false);
+    await state.loadSavedData();
+
+    // Двухколоночная раскладка кладёт перенос в правую колонку, одна колонка
+    // — в самый низ. Раздел терялся в обеих, поэтому проверяются обе.
+    for (final width in [1400.0, 700.0]) {
+      tester.view.physicalSize = Size(width, 1000);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: AppStateProvider(state: state, child: const ProfileDialog()),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // В одну колонку перенос стоит последним и не построен, пока до него не
+      // доскроллили: ListView ленивый. Ровно поэтому владелец и не нашёл
+      // кнопки глазами.
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('profile-export-data')),
+        200,
+        scrollable: find
+            .descendant(
+              of: find.byKey(const ValueKey('desktop-profile-body-scroll')),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('profile-export-data')),
+        findsOneWidget,
+        reason: 'ширина $width',
+      );
+      expect(
+        find.byKey(const ValueKey('profile-import-data')),
+        findsOneWidget,
+        reason: 'ширина $width',
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    }
+
+    state.dispose();
+  });
+
   testWidgets('desktop Settings offers data transfer next to storage status', (
     WidgetTester tester,
   ) async {
@@ -5290,7 +5350,8 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    final storage = InMemoryStorageService()..onboardingSeen = true;
+    final storage = InMemoryStorageService(snapshotsSupported: true)
+      ..onboardingSeen = true;
     await storage.init();
 
     await tester.pumpWidget(RPGApp(storage: storage));
@@ -5311,9 +5372,8 @@ void main() {
       find.byKey(const ValueKey('desktop-settings-data-transfer')),
       findsOneWidget,
     );
-    // Кнопки против объяснения — это выбор самого виджета по возможностям
-    // хранилища, и он закрыт в user_data_transfer_controls_test.dart. Здесь
-    // проверяется только то, что раздел вообще смонтирован в настройках.
+    expect(find.byKey(const ValueKey('profile-export-data')), findsOneWidget);
+    expect(find.byKey(const ValueKey('profile-import-data')), findsOneWidget);
   });
 
   testWidgets('desktop RoadMap toggles horizontal and vertical layouts', (

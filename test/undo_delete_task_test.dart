@@ -7,13 +7,10 @@ import 'package:todo_list_app/app_state.dart';
 import 'package:todo_list_app/models.dart';
 import 'package:todo_list_app/storage_service.dart';
 import 'package:todo_list_app/utils.dart';
+import 'package:todo_list_app/widgets/shared/undo_delete.dart';
 
-/// Покрывает примитивы отмены в `AppState`. Обвязка `deleteTaskWithUndo` —
-/// снекбар с кнопкой «Отменить» — тестом не закрыта: она требует настоящего
-/// `AppState`, а настоящий `StorageService` внутри `testWidgets` не завершает
-/// ввод-вывод под фейковым временем. Правильное решение — вынести фейковое
-/// хранилище из `widget_test.dart` и `app_state_test.dart` в общий хелпер и
-/// писать виджет-тест на нём; третью копию фейка заводить не стоит.
+import 'helpers/in_memory_storage_service.dart';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -104,4 +101,87 @@ void main() {
       expect(questIds(state), ['first', 'second', 'third']);
     },
   );
+
+  group('the undo notice', () {
+    /// Хранилище в памяти, а не Hive: настоящий ввод-вывод внутри
+    /// `testWidgets` не завершается под фейковым временем и вешает тест.
+    Future<AppState> buildWidgetState() async {
+      final storage = InMemoryStorageService();
+      await storage.init();
+      final state = AppState(storage: storage, seedDefaults: false);
+      await state.loadSavedData();
+      state.addSkill(
+        Skill(
+          id: 'skill',
+          name: 'Навык',
+          goal: 'Цель',
+          color: const Color(0xFF4A9EFF),
+          icon: Icons.star,
+        ),
+      );
+      for (final id in ['first', 'second', 'third']) {
+        state.addTask(quest(id));
+      }
+      return state;
+    }
+
+    Widget harness(AppState state, String taskId) => MaterialApp(
+      home: Scaffold(
+        body: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => deleteTaskWithUndo(context, state, taskId),
+            child: const Text('удалить'),
+          ),
+        ),
+      ),
+    );
+
+    /// Снекбар держит таймер автозакрытия, планировщик сохранения — дебаунс.
+    /// Оба обязаны истечь до проверки инвариантов.
+    Future<void> settle(WidgetTester tester, AppState state) async {
+      state.dispose();
+      await tester.pump(const Duration(seconds: 8));
+    }
+
+    testWidgets('offers an undo that puts the quest back', (tester) async {
+      final state = await buildWidgetState();
+
+      await tester.pumpWidget(harness(state, 'second'));
+      await tester.tap(find.text('удалить'));
+      await tester.pumpAndSettle();
+
+      expect(questIds(state), ['first', 'third']);
+      expect(find.byKey(const ValueKey('undo-delete-task')), findsOneWidget);
+
+      await tester.tap(find.text('Отменить'));
+      await tester.pumpAndSettle();
+
+      expect(questIds(state), ['first', 'second', 'third']);
+      await settle(tester, state);
+    });
+
+    testWidgets('trims a long title so the notice stays readable', (
+      tester,
+    ) async {
+      final state = await buildWidgetState();
+      state.addTask(
+        Task(
+          id: 'verbose',
+          title:
+              'Очень длинное название квеста, которое не влезает в подсказку',
+          skillId: 'skill',
+          xpReward: 20,
+          type: TaskType.shortTerm,
+        ),
+      );
+
+      await tester.pumpWidget(harness(state, 'verbose'));
+      await tester.tap(find.text('удалить'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('…'), findsOneWidget);
+      expect(find.textContaining('не влезает в подсказку'), findsNothing);
+      await settle(tester, state);
+    });
+  });
 }

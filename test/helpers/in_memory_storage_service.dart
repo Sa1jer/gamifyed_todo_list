@@ -7,20 +7,32 @@ import 'package:todo_list_app/storage_service.dart';
 /// которые успели разойтись: одна возвращала историю и сундуки по кругу,
 /// другая молча их теряла. Копия здесь одна, и она круговая: что сохранили,
 /// то и загрузится.
-class InMemoryStorageService extends StorageService {
-  InMemoryStorageService({this.snapshotsSupported = false});
+/// Снимки состояния в памяти.
+class _InMemorySnapshotBackend implements SnapshotBackend {
+  final Map<String, String> _entries = {};
 
-  /// Умеет ли устройство единый документ состояния.
+  @override
+  Future<String?> read(String key) async => _entries[key];
+
+  @override
+  Future<void> write(String key, String value) async {
+    _entries[key] = value;
+  }
+}
+
+class InMemoryStorageService extends StorageService {
+  /// [snapshotsSupported] решает, показывает ли приложение перенос данных.
   ///
-  /// От этого зависит, показывает ли приложение перенос данных, поэтому
-  /// значение задаётся тестом, а не выводится из пустой заглушки `init`.
-  final bool snapshotsSupported;
+  /// Это настоящий бэкенд, а не подменённый ответ: `supportsSnapshots`
+  /// смотрит на его наличие, и обещать снимки без него значит падать на
+  /// первом же обращении к ним.
+  InMemoryStorageService({bool snapshotsSupported = false})
+    : super(
+        snapshotBackend: snapshotsSupported ? _InMemorySnapshotBackend() : null,
+      );
 
   // Поля ниже публичные: тесты выставляют их напрямую, а из другого файла
   // приватные недоступны.
-
-  @override
-  bool get supportsSnapshots => snapshotsSupported;
 
   List<Skill> skills = [];
   List<Task> tasks = [];
