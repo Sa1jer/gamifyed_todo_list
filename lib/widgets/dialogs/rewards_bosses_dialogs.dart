@@ -208,7 +208,13 @@ class _RewardsDialogState extends State<RewardsDialog> {
       ),
       const SizedBox(height: 12),
       MotionFadeSlideSwitcher(
-        child: unopened.isEmpty
+        // Пустое состояние молчит, пока на экране висит «Сундук открыт»:
+        // последний сундук исчезает из списка ровно в тот момент, когда его
+        // открыли, и «Пока нет сундуков» под сообщением о награде читалось
+        // как отрицание того, что только что произошло.
+        child: unopened.isEmpty && _lastReveal != null
+            ? const SizedBox(key: ValueKey('chests-after-reveal'), height: 0)
+            : unopened.isEmpty
             ? RewardsEmptyState(
                 key: const ValueKey('empty-chests'),
                 icon: Icons.inventory_2_outlined,

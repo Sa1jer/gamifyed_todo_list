@@ -6237,6 +6237,49 @@ void main() {
     await tester.pump();
   });
 
+  testWidgets('opening the last chest does not deny the reward just given', (
+    WidgetTester tester,
+  ) async {
+    final storage = InMemoryStorageService().._onboardingSeen = true;
+    await storage.init();
+    final state = AppState(storage: storage, seedDefaults: false);
+    state.rewardChests.add(
+      RewardChest(
+        id: 'last-chest',
+        title: 'Сундук дисциплины',
+        description: 'За сильный день',
+        rarity: RewardRarity.common,
+        sourceKey: 'strong-day',
+        unlockedAt: DateTime(2026, 9, 5),
+      ),
+    );
+    state.refresh();
+
+    await tester.pumpWidget(
+      MaterialApp(home: Scaffold(body: Center(child: RewardsDialog(state: state)))),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.byKey(const ValueKey('empty-chests')), findsNothing);
+
+    await tester.tap(find.text('Открыть').first);
+    // Не pumpAndSettle: карточка награды держит собственную анимацию, и
+    // ожидание покоя здесь не заканчивается.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+
+    // Последний сундук уходит из списка ровно в тот момент, когда его
+    // открыли, и «Пока нет сундуков» под сообщением о награде читалось как
+    // отрицание того, что только что произошло.
+    expect(find.text('Сундук открыт'), findsOneWidget);
+    expect(find.byKey(const ValueKey('empty-chests')), findsNothing);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    state.dispose();
+  });
+
   testWidgets('Rewards places one Effects section above chest list', (
     WidgetTester tester,
   ) async {
