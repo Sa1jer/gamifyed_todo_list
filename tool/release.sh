@@ -34,6 +34,13 @@ fi
 # ── Номер сборки ─────────────────────────────────────────────────────────────
 # Android ставит обновление поверх установленного, только если versionCode
 # строго больше. Одинаковый номер — установщик молча откажет.
+#
+# Проверка правит файлы, поэтому при --dry-run и при любом обрыве они
+# возвращаются как были: иначе следующий запуск упрётся в грязное дерево,
+# которое сам же и создал.
+restore_version() {
+  git checkout -- pubspec.yaml lib/utils.dart 2>/dev/null || true
+}
 
 CURRENT=$(grep '^version:' pubspec.yaml | sed 's/version: *//')
 NAME="${CURRENT%%+*}"
@@ -48,6 +55,8 @@ echo "Версия: $CURRENT → $VERSION"
 # соврёт, что оно последнее.
 perl -pi -e "s/^version: .*/version: $VERSION/" pubspec.yaml
 perl -pi -e "s/^const String kAppVersionLabel = .*/const String kAppVersionLabel = 'v$VERSION';/" lib/utils.dart
+
+trap restore_version EXIT
 
 flutter test test/app_version_test.dart >/dev/null ||
   fail "версия в приложении разошлась с pubspec"
@@ -86,9 +95,12 @@ TAG="v$VERSION"
 
 if $DRY_RUN; then
   echo "--dry-run: не публикую. Тег был бы $TAG"
-  echo "Версия в pubspec и lib/utils.dart уже поднята — откатите, если не нужно."
+  echo "Версия в файлах вернётся к $CURRENT — проверка ничего за собой не оставляет."
   exit 0
 fi
+
+# Дальше изменения нужны: снимаем восстановление.
+trap - EXIT
 
 git add pubspec.yaml lib/utils.dart
 git commit -m "chore: release $VERSION"
