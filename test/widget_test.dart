@@ -179,6 +179,11 @@ void main() {
     expect(badgeRect.top, greaterThanOrEqualTo(orbRect.bottom));
     // Между бейджем и подписью есть зазор.
     expect(labelRect.top, greaterThanOrEqualTo(badgeRect.bottom));
+
+    // Бейдж обжимает «0/3», а не растягивается в полосу во весь узел: с
+    // заданным `alignment` Container занимал всю доступную ширину.
+    expect(badgeRect.width, lessThan(orbRect.width));
+    expect(badgeRect.width, lessThan(labelRect.width));
     expect(tester.takeException(), isNull);
   });
   testWidgets('mobile next action panel is compact and can be hidden', (

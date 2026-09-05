@@ -536,7 +536,10 @@ class _MapNodeButtonState extends State<_MapNodeButton> {
                   key: ValueKey(
                     'map-node-progress-${widget.skill.id}-${widget.node.id}',
                   ),
-                  alignment: Alignment.center,
+                  // Без `alignment`: заданный, он заставляет Container занять
+                  // всю доступную ширину вместо того, чтобы обжать текст, и
+                  // бейдж растягивался в полосу во весь узел. В прежнем
+                  // `Positioned` это не было видно.
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   decoration: BoxDecoration(
                     color: widget.isDark
