@@ -574,10 +574,40 @@ class _DesktopSettingsWorkspace extends StatelessWidget {
             _DesktopSettingsSection(
               tokens: tokens,
               title: 'Данные на устройстве',
-              child: _DesktopSettingsStatus(
-                tokens: tokens,
-                hasError: state.hasPersistenceError,
-                dirty: state.persistenceStatus.isDirty,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _DesktopSettingsStatus(
+                    tokens: tokens,
+                    hasError: state.hasPersistenceError,
+                    dirty: state.persistenceStatus.isDirty,
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Один файл со всеми навыками, квестами, историей и '
+                          'настройками. Экспортируйте на одном устройстве и '
+                          'импортируйте на другом.',
+                          style: TextStyle(
+                            color: tokens.mutedText,
+                            fontSize: 12,
+                            height: 1.35,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        // Тот же виджет, что и в профиле: точка входа
+                        // продублирована сознательно, логика — нет.
+                        UserDataTransferControls(
+                          key: const ValueKey('desktop-settings-data-transfer'),
+                          state: state,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 16),

@@ -5421,6 +5421,40 @@ void main() {
     );
   });
 
+  testWidgets('desktop Settings offers data transfer next to storage status', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1400, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = InMemoryStorageService().._onboardingSeen = true;
+    await storage.init();
+
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    await tester.tap(find.byKey(const ValueKey('desktop-settings')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('desktop-settings-workspace')),
+      findsOneWidget,
+    );
+    // Перенос данных продублирован в настройки сознательно, рядом с состоянием
+    // хранилища: «переезжаю на другое устройство» и «что-то с данными» — это
+    // два разных повода, и второй ведёт сюда, а не в профиль.
+    expect(
+      find.byKey(const ValueKey('desktop-settings-data-transfer')),
+      findsOneWidget,
+    );
+    // Кнопки против объяснения — это выбор самого виджета по возможностям
+    // хранилища, и он закрыт в user_data_transfer_controls_test.dart. Здесь
+    // проверяется только то, что раздел вообще смонтирован в настройках.
+  });
+
   testWidgets('desktop RoadMap toggles horizontal and vertical layouts', (
     WidgetTester tester,
   ) async {

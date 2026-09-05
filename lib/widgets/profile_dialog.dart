@@ -7,8 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../models.dart';
 import '../app_state.dart';
-import '../storage_snapshot.dart';
-import '../user_data_transfer.dart';
 import '../tutorial/guided_tour_session.dart';
 import '../utils.dart';
 import 'character_timeline_dialog.dart';
@@ -46,7 +44,6 @@ class _ProfileDialogState extends State<ProfileDialog> {
   late TextEditingController _ageCtrl;
   bool _editingName = false;
   bool _didInitControllers = false;
-  bool _transferBusy = false;
 
   @override
   void initState() {
@@ -1186,124 +1183,6 @@ class _ProfileDialogState extends State<ProfileDialog> {
 
   /// Messenger и Navigator берутся до первого await: диалог профиля может
   /// закрыться, пока пользователь выбирает файл.
-  void _notify(
-    ScaffoldMessengerState messenger,
-    bool isDark,
-    String message, {
-    bool error = false,
-  }) {
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: error ? const Color(0xFFD83651) : surface(isDark),
-        showCloseIcon: true,
-      ),
-    );
-  }
-
-  Future<void> _exportUserData(BuildContext context, AppState state) async {
-    if (_transferBusy) return;
-    final messenger = ScaffoldMessenger.of(context);
-    final isDark = state.isDark;
-    setState(() => _transferBusy = true);
-    try {
-      // Незаписанные изменения не должны потеряться в экспорте.
-      await state.flushSaves();
-      final path = await UserDataTransfer.exportToFile(
-        json: state.exportUserData(),
-        fileName: UserDataTransfer.suggestedFileName(DateTime.now()),
-      );
-      if (path == null) return;
-      _notify(messenger, isDark, 'Данные сохранены в $path');
-    } catch (error) {
-      _notify(
-        messenger,
-        isDark,
-        'Не удалось сохранить файл: $error',
-        error: true,
-      );
-    } finally {
-      if (mounted) setState(() => _transferBusy = false);
-    }
-  }
-
-  Future<void> _importUserData(BuildContext context, AppState state) async {
-    if (_transferBusy) return;
-    final messenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
-    final isDark = state.isDark;
-    final confirmed = await _confirmImport(context, isDark);
-    if (confirmed != true) return;
-    setState(() => _transferBusy = true);
-    try {
-      final raw = await UserDataTransfer.pickImportFile();
-      if (raw == null) return;
-      final loaded = await state.importUserData(raw);
-      if (!loaded) {
-        _notify(
-          messenger,
-          isDark,
-          'Файл прочитан, но данные не загрузились',
-          error: true,
-        );
-        return;
-      }
-      _notify(messenger, state.isDark, 'Данные восстановлены из файла');
-      await navigator.maybePop();
-    } on UserDataImportException catch (error) {
-      _notify(messenger, isDark, switch (error.reason) {
-        UserDataImportFailure.versionMismatch =>
-          'Файл сделан другой версией приложения. Обновите RPG To-Do на '
-              'обоих устройствах и экспортируйте заново.',
-        UserDataImportFailure.unreadable =>
-          'Это не файл с данными RPG To-Do или он повреждён',
-      }, error: true);
-    } catch (error) {
-      _notify(
-        messenger,
-        isDark,
-        'Не удалось прочитать файл: $error',
-        error: true,
-      );
-    } finally {
-      if (mounted) setState(() => _transferBusy = false);
-    }
-  }
-
-  Future<bool?> _confirmImport(BuildContext context, bool isDark) {
-    final txt = textColor(isDark);
-    final sub = subtext(isDark);
-    return showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: surface(isDark),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Заменить все данные?', style: TextStyle(color: txt)),
-        content: Text(
-          'Навыки, квесты, история и прогресс на этом устройстве будут '
-          'заменены содержимым файла. Отменить это будет нечем — сначала '
-          'сохраните текущие данные экспортом.',
-          style: TextStyle(color: sub, height: 1.35),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Отмена'),
-          ),
-          FilledButton(
-            key: const ValueKey('profile-import-confirm'),
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFD83651),
-            ),
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Заменить'),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildDataTransfer(
     BuildContext context,
     AppState state,
@@ -1323,48 +1202,7 @@ class _ProfileDialogState extends State<ProfileDialog> {
           style: TextStyle(color: sub, fontSize: 12, height: 1.35),
         ),
         const SizedBox(height: 12),
-        if (!state.supportsDataTransfer)
-          Text(
-            'Перенос недоступен: хранилище этого устройства работает в '
-            'устаревшем режиме без единого документа состояния.',
-            style: TextStyle(color: sub, fontSize: 12, height: 1.35),
-          )
-        else
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  key: const ValueKey('profile-export-data'),
-                  onPressed: _transferBusy
-                      ? null
-                      : () => _exportUserData(context, state),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: txt,
-                    side: BorderSide(color: bdr),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  icon: const Icon(Icons.upload_file_outlined, size: 18),
-                  label: const Text('Экспорт'),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: OutlinedButton.icon(
-                  key: const ValueKey('profile-import-data'),
-                  onPressed: _transferBusy
-                      ? null
-                      : () => _importUserData(context, state),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: txt,
-                    side: BorderSide(color: bdr),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  icon: const Icon(Icons.download_outlined, size: 18),
-                  label: const Text('Импорт'),
-                ),
-              ),
-            ],
-          ),
+        UserDataTransferControls(state: state, popOnImport: true),
       ],
     );
   }

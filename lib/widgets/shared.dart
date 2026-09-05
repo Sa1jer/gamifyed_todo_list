@@ -14,6 +14,7 @@ export 'shared/progress_badges.dart';
 export 'shared/dashed_border.dart';
 export 'shared/destructive_confirm.dart';
 export 'shared/undo_delete.dart';
+export 'shared/user_data_transfer_controls.dart';
 
 class MotionFadeSlideSwitcher extends StatelessWidget {
   final Widget child;
