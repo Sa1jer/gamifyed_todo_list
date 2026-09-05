@@ -290,54 +290,6 @@ class _DesktopRewardsWorkspaceState extends State<_DesktopRewardsWorkspace> {
             achievements: state.achievements,
             isDark: state.isDark,
           ),
-          const SizedBox(height: 24),
-          Text(
-            'КАК ПОЛУЧИТЬ ТРОФЕИ',
-            style: TextStyle(
-              color: tokens.mutedText,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.7,
-            ),
-          ),
-          const SizedBox(height: 12),
-          LayoutBuilder(
-            builder: (context, constraints) => GridView.count(
-              key: const ValueKey('desktop-trophies-how-to'),
-              crossAxisCount: constraints.maxWidth >= 720 ? 3 : 1,
-              childAspectRatio: constraints.maxWidth >= 720 ? 2.35 : 4.8,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-                _DesktopTrophyHowToCard(
-                  tokens: tokens,
-                  icon: Icons.bolt_rounded,
-                  color: tokens.streakAmberGraphic,
-                  title: 'Сильный день',
-                  description:
-                      'Закрой 5 квестов за день, чтобы получить сундук дисциплины.',
-                ),
-                _DesktopTrophyHowToCard(
-                  tokens: tokens,
-                  icon: Icons.local_fire_department_outlined,
-                  color: tokens.rewardGoldGraphic,
-                  title: 'Серия дней',
-                  description:
-                      'Удерживай повторяющийся квест 7 или 30 дней для редких сундуков.',
-                ),
-                _DesktopTrophyHowToCard(
-                  tokens: tokens,
-                  icon: Icons.shield_outlined,
-                  color: tokens.danger,
-                  title: 'Победа над сопротивлением',
-                  description:
-                      'Заверши активное событие сопротивления, чтобы открыть трофей.',
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );
@@ -428,74 +380,6 @@ class _DesktopTrophyProgressCard extends StatelessWidget {
           ),
         ],
       ),
-    ),
-  );
-}
-
-class _DesktopTrophyHowToCard extends StatelessWidget {
-  final DesktopJournalTokens tokens;
-  final IconData icon;
-  final Color color;
-  final String title;
-  final String description;
-
-  const _DesktopTrophyHowToCard({
-    required this.tokens,
-    required this.icon,
-    required this.color,
-    required this.title,
-    required this.description,
-  });
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: tokens.cardSurface,
-      borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: color.withValues(alpha: 0.18)),
-    ),
-    child: Row(
-      children: [
-        Container(
-          width: 38,
-          height: 38,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: color, size: 19),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: tokens.text,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                description,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: tokens.mutedText,
-                  fontSize: 10.5,
-                  height: 1.25,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     ),
   );
 }

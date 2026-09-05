@@ -1410,8 +1410,14 @@ void main() {
     expect(tester.getSize(effects).width, tester.getSize(chests).width);
     expect(tester.getSize(effects).height, lessThan(240));
     expect(tester.getSize(chests).height, lessThan(240));
+    // Блок «Как получить трофеи» убран: две из трёх его карточек повторяли
+    // достижения из «В процессе», только без прогресса.
     expect(
       find.byKey(const ValueKey('desktop-trophies-how-to')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('desktop-trophies-collection')),
       findsOneWidget,
     );
 
