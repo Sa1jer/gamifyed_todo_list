@@ -12,13 +12,16 @@ name: Windows release build
 on:
   release:
     types: [published]
-  # Ручной запуск: пересобрать Windows для уже опубликованного релиза,
-  # не выпуская новый.
+  # Ручной запуск: пересобрать Windows для уже опубликованного релиза либо
+  # просто проверить, что сборка вообще проходит.
   workflow_dispatch:
     inputs:
+      ref:
+        description: 'Что собирать (ветка, тег, коммит). По умолчанию — tag'
+        required: false
       tag:
-        description: 'Тег релиза, к которому приложить сборку'
-        required: true
+        description: 'Тег релиза для приложения сборки. Пусто — только собрать'
+        required: false
 
 permissions:
   contents: write
@@ -27,15 +30,21 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      - name: Определить тег
+      - name: Определить, что собирать и куда класть
         id: release
         shell: bash
-        run: echo "tag=${{ github.event.release.tag_name || inputs.tag }}" >> "$GITHUB_OUTPUT"
+        run: |
+          tag="${{ github.event.release.tag_name || inputs.tag }}"
+          ref="${{ inputs.ref }}"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "ref=${ref:-$tag}" >> "$GITHUB_OUTPUT"
 
-      # Собираем именно то, что выпущено, а не то, что сейчас на ветке.
+      # По умолчанию собираем именно то, что выпущено, а не то, что сейчас на
+      # ветке. Ручной запуск может указать другой ref — например, чтобы
+      # проверить исправление сборки, ничего не публикуя.
       - uses: actions/checkout@v4
         with:
-          ref: ${{ steps.release.outputs.tag }}
+          ref: ${{ steps.release.outputs.ref }}
 
       - uses: subosito/flutter-action@v2
         with:
@@ -58,7 +67,15 @@ jobs:
           }
           Compress-Archive -Path "$out/*" -DestinationPath "rpg-todo-windows.zip"
 
+      # Сборку сохраняем всегда: запуск без тега — это проверка, что Windows
+      # вообще собирается, и её результат должен быть виден.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rpg-todo-windows
+          path: rpg-todo-windows.zip
+
       - name: Приложить к релизу
+        if: steps.release.outputs.tag != ''
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}

@@ -32,6 +32,15 @@ set(CMAKE_CXX_FLAGS_PROFILE "${CMAKE_CXX_FLAGS_RELEASE}")
 # Use Unicode for all projects.
 add_definitions(-DUNICODE -D_UNICODE)
 
+# audioplayers_windows и flutter_local_notifications_windows подключают
+# <experimental/coroutine>. Начиная с MSVC 14.51 это не предупреждение, а
+# жёсткая ошибка компиляции, и сборка Windows падает целиком.
+#
+# Это чужой код, который мы не правим, поэтому определение стоит здесь — до
+# include(flutter/generated_plugins.cmake), чтобы дойти до плагинов. Убрать,
+# когда оба плагина перейдут на <coroutine> из C++20.
+add_definitions(-D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)
+
 # Compilation settings that should be applied to most targets.
 #
 # Be cautious about adding new options here, as plugins use this function by
