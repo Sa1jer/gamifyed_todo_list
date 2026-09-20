@@ -62,4 +62,14 @@
             <data android:mimeType="text/plain"/>
         </intent>
     </queries>
+
+    <!-- Начиная с Android 11 приложение не видит чужие активности, пока не
+         объявит, что именно ищет. Без этого уведомление об обновлении не
+         смогло бы открыть страницу релиза: браузер просто не найдётся. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
+        </intent>
+    </queries>
 </manifest>

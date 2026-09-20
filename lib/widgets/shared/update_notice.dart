@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../update_check.dart';
 import '../../utils.dart';
@@ -8,8 +9,11 @@ import '../../utils.dart';
 ///
 /// Только уведомление: скачивание и установка APK изнутри требуют разрешения
 /// `REQUEST_INSTALL_PACKAGES`, а оно чувствительное и закрывает дорогу в
-/// магазин. Ссылка копируется в буфер — открыть браузер приложение сейчас не
-/// умеет, для этого нужна отдельная зависимость.
+/// магазин. Приложение открывает страницу релиза, а ставит сборку человек.
+///
+/// Если браузер открыть не удалось — на устройстве его нет, система отказала —
+/// ссылка уходит в буфер обмена. Сказать «не получилось» и на этом закончить
+/// значило бы оставить человека без единственного способа обновиться.
 ///
 /// Пока обновления нет — и пока проверка не ответила — виджет ничего не
 /// занимает: молчание здесь норма, а не пустая рамка.
@@ -80,21 +84,36 @@ class _UpdateNoticeState extends State<UpdateNotice> {
           ),
           const SizedBox(width: 8),
           TextButton(
-            key: const ValueKey('profile-update-copy-link'),
-            onPressed: () async {
-              await Clipboard.setData(ClipboardData(text: update.url));
-              if (!context.mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('Ссылка на сборку скопирована'),
-                  behavior: SnackBarBehavior.floating,
-                  backgroundColor: surface(isDark),
-                ),
-              );
-            },
-            child: const Text('Скопировать ссылку'),
+            key: const ValueKey('profile-update-open'),
+            onPressed: () => _open(context, update.url, isDark),
+            child: const Text('Открыть'),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _open(BuildContext context, String url, bool isDark) async {
+    final messenger = ScaffoldMessenger.of(context);
+    var opened = false;
+    try {
+      opened = await launchUrl(
+        Uri.parse(url),
+        mode: LaunchMode.externalApplication,
+      );
+    } catch (_) {
+      opened = false;
+    }
+    if (opened) return;
+
+    // Запасной путь, а не сообщение об ошибке: без ссылки человек не сможет
+    // обновиться вовсе.
+    await Clipboard.setData(ClipboardData(text: url));
+    messenger.showSnackBar(
+      SnackBar(
+        content: const Text('Не удалось открыть браузер — ссылка скопирована'),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: surface(isDark),
       ),
     );
   }
