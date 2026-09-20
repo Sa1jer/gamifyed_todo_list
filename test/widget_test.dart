@@ -5533,6 +5533,107 @@ void main() {
     expect(find.byKey(const ValueKey('profile-import-data')), findsOneWidget);
   });
 
+  testWidgets('deleting a RoadMap stage asks first and can be refused', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final root = SkillTreeNode(id: 'confirm-root', title: 'Основа');
+    final second = SkillTreeNode(
+      id: 'confirm-second',
+      title: 'Практика',
+      prerequisiteIds: [root.id],
+    );
+    final storage = InMemoryStorageService()
+      ..onboardingSeen = true
+      ..skills = [
+        Skill(
+          id: 'confirm-skill',
+          name: 'Удаление этапа',
+          goal: 'Проверить подтверждение',
+          color: const Color(0xFF4A9EFF),
+          icon: Icons.route_rounded,
+          treeNodes: [root, second],
+        ),
+      ]
+      ..tasks = [
+        Task(
+          id: 'confirm-task',
+          title: 'Связанный квест',
+          skillId: 'confirm-skill',
+          treeNodeId: second.id,
+          xpReward: 20,
+          type: TaskType.shortTerm,
+        ),
+      ];
+    await storage.init();
+
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(find.byIcon(Icons.account_tree).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('map-skill-orb-confirm-skill')));
+    await tester.pumpAndSettle();
+
+    // Бить надо по самому орбу. Ключ `node-button-…` покрывает весь бокс узла
+    // (155×163), а центр этого бокса приходится в пустоту между бейджем и
+    // подписью: `deferToChild` там ничего не ловит, и тап уходит в никуда.
+    Future<void> selectStage() async {
+      await tester.tapAt(
+        tester
+            .getRect(
+              find.byKey(
+                const ValueKey('map-node-surface-confirm-skill-confirm-second'),
+              ),
+            )
+            .center,
+      );
+      await tester.pumpAndSettle();
+    }
+
+    await selectStage();
+    await tester.tap(find.byTooltip('Удалить этап'));
+    await tester.pumpAndSettle();
+
+    // Вопрос назван, и потеря описана честно: этап пропадёт, квест — нет.
+    expect(find.text('Удалить этап?'), findsOneWidget);
+    expect(find.textContaining('1 квест'), findsOneWidget);
+
+    await tester.tap(find.text('Отмена'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(
+        const ValueKey('map-node-surface-confirm-skill-confirm-second'),
+      ),
+      findsOneWidget,
+      reason: 'отказ должен оставить этап на месте',
+    );
+
+    // Повторно выбирать этап не нужно и нельзя: он остался выбранным, а
+    // второй тап по орбу снял бы выбор — это задуманное переключение.
+    await tester.tap(find.byTooltip('Удалить этап'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(ValueKey('confirm-delete-node-${second.id}')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(
+        const ValueKey('map-node-surface-confirm-skill-confirm-second'),
+      ),
+      findsNothing,
+    );
+    // Квест переживает удаление этапа, он только теряет привязку.
+    expect(
+      storage.tasks.singleWhere((task) => task.id == 'confirm-task').treeNodeId,
+      isNull,
+    );
+  });
+
   testWidgets('desktop RoadMap toggles horizontal and vertical layouts', (
     WidgetTester tester,
   ) async {
