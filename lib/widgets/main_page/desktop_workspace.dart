@@ -88,7 +88,7 @@ class DesktopWorkspaceShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tokens = DesktopJournalTokens.resolve(state.isDark);
+    final tokens = DesktopJournalTokens.of(context);
     final selected = state.selectedSkill;
     final actMode = mode == WorkspaceMode.act;
 

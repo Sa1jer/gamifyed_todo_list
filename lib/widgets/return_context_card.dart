@@ -32,6 +32,7 @@ class ReturnContextCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = _ReturnContextColors.resolve(
+      context,
       isDark: isDark,
       desktop: desktop,
     );
@@ -415,12 +416,15 @@ class _ReturnContextColors {
     dense: value,
   );
 
-  factory _ReturnContextColors.resolve({
+  factory _ReturnContextColors.resolve(
+    BuildContext context, {
     required bool isDark,
     required bool desktop,
   }) {
     if (desktop) {
-      final tokens = DesktopJournalTokens.resolve(isDark);
+      // Через тему, а не по яркости: сменная тема подменяет палитру, и
+      // карточка должна переезжать вместе с ней.
+      final tokens = DesktopJournalTokens.of(context);
       return _ReturnContextColors(
         surface: tokens.cardSurface,
         border: tokens.profilePurple.withValues(alpha: isDark ? 0.42 : 0.3),

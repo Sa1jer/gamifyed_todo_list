@@ -1100,9 +1100,7 @@ class _MainPageState extends State<MainPage> {
                                       'desktop-rewards-workspace',
                                     ),
                                     state: s,
-                                    tokens: DesktopJournalTokens.resolve(
-                                      isDark,
-                                    ),
+                                    tokens: DesktopJournalTokens.of(context),
                                     summaryTutorialKey: _guidedTour.anchors
                                         .keyFor(
                                           TutorialAnchorId.trophiesSummary,
@@ -1117,8 +1115,8 @@ class _MainPageState extends State<MainPage> {
                                             'desktop-statistics-workspace',
                                           ),
                                           state: s,
-                                          tokens: DesktopJournalTokens.resolve(
-                                            isDark,
+                                          tokens: DesktopJournalTokens.of(
+                                            context,
                                           ),
                                           summaryTutorialKey: _guidedTour
                                               .anchors
@@ -1137,8 +1135,8 @@ class _MainPageState extends State<MainPage> {
                                             'desktop-settings-workspace',
                                           ),
                                           state: s,
-                                          tokens: DesktopJournalTokens.resolve(
-                                            isDark,
+                                          tokens: DesktopJournalTokens.of(
+                                            context,
                                           ),
                                           onToggleTheme: widget.onToggleTheme,
                                         ),

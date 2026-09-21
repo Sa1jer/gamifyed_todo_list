@@ -9,6 +9,7 @@ import 'package:flutter/rendering.dart';
 import 'storage_service.dart';
 import 'notification_service.dart';
 import 'app_state.dart';
+import 'theme/app_palette.dart';
 import 'theme/app_typography.dart';
 import 'utils.dart';
 import 'widgets/main_page.dart';
@@ -196,7 +197,10 @@ class _RPGAppState extends State<RPGApp>
           : const Color(0xFFF0F2F8),
       colorScheme: colorScheme,
       textTheme: textTheme,
-      extensions: [AppTextRoles.fromTheme(textTheme, brightness: brightness)],
+      extensions: [
+        AppTextRoles.fromTheme(textTheme, brightness: brightness),
+        AppPalette.forBrightness(brightness),
+      ],
       cardColor: surface(dark),
       dividerColor: borderColor(dark),
     );

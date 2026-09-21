@@ -21,7 +21,11 @@ class MomentumEvidenceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = _MomentumColors.resolve(isDark: isDark, desktop: desktop);
+    final colors = _MomentumColors.resolve(
+      context,
+      isDark: isDark,
+      desktop: desktop,
+    );
     final textScale = MediaQuery.textScalerOf(context).scale(1);
     final compact = desktop && textScale < 1.6;
     return Semantics(
@@ -78,7 +82,11 @@ class MomentumEvidenceLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = _MomentumColors.resolve(isDark: isDark, desktop: desktop);
+    final colors = _MomentumColors.resolve(
+      context,
+      isDark: isDark,
+      desktop: desktop,
+    );
     return Row(
       key: const ValueKey('momentum-evidence-line'),
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -142,12 +150,15 @@ class _MomentumColors {
   final Color muted;
   final Color accent;
 
-  factory _MomentumColors.resolve({
+  factory _MomentumColors.resolve(
+    BuildContext context, {
     required bool isDark,
     required bool desktop,
   }) {
     if (desktop) {
-      final tokens = DesktopJournalTokens.resolve(isDark);
+      // Через тему, а не по яркости: смысловые цвета приходят из палитры,
+      // и сменная тема подменит их здесь вместе со всем остальным.
+      final tokens = DesktopJournalTokens.of(context);
       return _MomentumColors(
         surface: tokens.semanticBlue.withValues(alpha: isDark ? 0.055 : 0.05),
         border: tokens.semanticBlue.withValues(alpha: isDark ? 0.24 : 0.2),

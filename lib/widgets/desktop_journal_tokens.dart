@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_palette.dart';
+
 /// Единственные разрешённые значения геометрии в desktop-ветке.
 ///
 /// Любое значение вне этих шкал — дефект: разница в 1–2 px не несёт смысла,
@@ -166,9 +168,23 @@ class DesktopJournalTokens {
     required this.danger,
   });
 
-  factory DesktopJournalTokens.resolve(bool isDark) {
+  /// Токены текущей темы: поверхности берутся по яркости, а смысловые цвета —
+  /// из [AppPalette], то есть из темы. Это и есть шов, в который подключается
+  /// сменная тема: поверхности у неё свои, роли — тоже, а виджеты не меняются.
+  factory DesktopJournalTokens.of(BuildContext context) {
+    final theme = Theme.of(context);
+    return DesktopJournalTokens.resolve(
+      theme.brightness == Brightness.dark,
+      palette: AppPalette.of(context),
+    );
+  }
+
+  factory DesktopJournalTokens.resolve(bool isDark, {AppPalette? palette}) {
+    final roles =
+        palette ??
+        AppPalette.forBrightness(isDark ? Brightness.dark : Brightness.light);
     if (!isDark) {
-      return const DesktopJournalTokens(
+      return DesktopJournalTokens(
         background: Color(0xFFF5F6FA),
         sidebarSurface: Color(0xFFFBFBFD),
         mainSurface: Color(0xFFF8F9FC),
@@ -179,26 +195,26 @@ class DesktopJournalTokens {
         subtleOutline: Color(0xFFE8EAF1),
         text: Color(0xFF181923),
         mutedText: Color(0xFF6F7282),
-        profilePurple: Color(0xFF6D55E8),
+        profilePurple: roles.accent,
         // Золото — решение владельца: блестящий жёлтый #FFCF40, тот же
         // оттенок, что и в тёмной теме. Контраст на белом 1.55:1, то есть
         // ниже AA (4.5:1); выбран ради узнаваемого золота, а не читаемости.
         // Любой цвет, проходящий AA на белом, неизбежно уходит в коричневый:
         // потолок насыщенного золота при 4.5:1 — #946800.
-        rewardGold: Color(0xFFFFCF40),
+        rewardGold: roles.rewardInk,
         // Зелень и янтарь остаются на пороге AA: их владелец не оспаривал.
-        successGreen: Color(0xFF00802F),
-        streakAmber: Color(0xFFB25300),
-        rewardGoldGraphic: Color(0xFFFFCF40),
-        successGreenGraphic: Color(0xFF00A83E),
-        streakAmberGraphic: Color(0xFFEB6D00),
+        successGreen: roles.successInk,
+        streakAmber: roles.streakInk,
+        rewardGoldGraphic: roles.rewardGraphic,
+        successGreenGraphic: roles.successGraphic,
+        streakAmberGraphic: roles.streakGraphic,
         rewardGoldSurface: Color(0x14FAAD00),
         rewardGoldGlow: Color(0x1DFAAD00),
         semanticBlue: Color(0xFF1268C7),
-        danger: Color(0xFFD83651),
+        danger: roles.danger,
       );
     }
-    return const DesktopJournalTokens(
+    return DesktopJournalTokens(
       background: Color(0xFF090A11),
       sidebarSurface: Color(0xFF0C0D15),
       mainSurface: Color(0xFF090A11),
@@ -209,17 +225,17 @@ class DesktopJournalTokens {
       subtleOutline: Color(0xFF1C1E29),
       text: Color(0xFFF3F1F8),
       mutedText: Color(0xFF9491A4),
-      profilePurple: Color(0xFF765BFF),
-      rewardGold: Color(0xFFFFC21A),
-      successGreen: Color(0xFF2ED36F),
-      streakAmber: Color(0xFFFF8A1F),
-      rewardGoldGraphic: Color(0xFFFFC21A),
-      successGreenGraphic: Color(0xFF2ED36F),
-      streakAmberGraphic: Color(0xFFFF8A1F),
+      profilePurple: roles.accent,
+      rewardGold: roles.rewardInk,
+      successGreen: roles.successInk,
+      streakAmber: roles.streakInk,
+      rewardGoldGraphic: roles.rewardGraphic,
+      successGreenGraphic: roles.successGraphic,
+      streakAmberGraphic: roles.streakGraphic,
       rewardGoldSurface: Color(0x17FFC21A),
       rewardGoldGlow: Color(0x57FFC21A),
       semanticBlue: Color(0xFF2D8CFF),
-      danger: Color(0xFFFF315B),
+      danger: roles.danger,
     );
   }
 
