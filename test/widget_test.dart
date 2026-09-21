@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:todo_list_app/app_state.dart';
@@ -184,6 +185,37 @@ void main() {
     // заданным `alignment` Container занимал всю доступную ширину.
     expect(badgeRect.width, lessThan(orbRect.width));
     expect(badgeRect.width, lessThan(labelRect.width));
+
+    // И текст стоит в нём по центру. Высота бейджа входит в геометрию узла и
+    // приходит к тексту жёстким ограничением: строка занимает только высоту
+    // шрифта и без центрирования рисуется по верхнему краю — снизу оставалось
+    // вчетверо больше воздуха, чем сверху.
+    //
+    // Мерить прямоугольник самого `Text` бесполезно: он растягивался на всю
+    // высоту, и по нему бейдж выглядел ровным. Смотреть надо на строку внутри
+    // него — её и возвращает `getBoxesForSelection`.
+    final textFinder = find.descendant(of: badge, matching: find.text('0/3'));
+    final textRect = tester.getRect(textFinder);
+    final line = tester
+        .renderObject<RenderParagraph>(textFinder)
+        .getBoxesForSelection(
+          const TextSelection(baseOffset: 0, extentOffset: 3),
+        )
+        .single;
+    expect(
+      textRect.top + line.top - badgeRect.top,
+      moreOrLessEquals(
+        badgeRect.bottom - (textRect.top + line.bottom),
+        epsilon: 0.5,
+      ),
+    );
+    expect(
+      textRect.left + line.left - badgeRect.left,
+      moreOrLessEquals(
+        badgeRect.right - (textRect.left + line.right),
+        epsilon: 0.5,
+      ),
+    );
     expect(tester.takeException(), isNull);
   });
   testWidgets('mobile next action panel is compact and can be hidden', (

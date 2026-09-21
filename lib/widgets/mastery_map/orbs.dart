@@ -551,13 +551,23 @@ class _MapNodeButtonState extends State<_MapNodeButton> {
                       width: DesktopScale.borderThin,
                     ),
                   ),
-                  child: Text(
-                    '${math.min(completed, target)}/$target',
-                    style: TextStyle(
-                      color: statusColor,
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w700,
-                      height: 1,
+                  // Высота бейджа задана снаружи и входит в геометрию узла,
+                  // поэтому текст получает её целиком как жёсткое ограничение,
+                  // а строка занимает только высоту шрифта и рисуется по
+                  // верхнему краю: снизу оставалось вчетверо больше воздуха,
+                  // чем сверху. `Center` ставит строку по центру, а
+                  // `widthFactor: 1` не даёт ему растянуть бейдж в полосу —
+                  // ради этого `alignment` у Container и не задан.
+                  child: Center(
+                    widthFactor: 1,
+                    child: Text(
+                      '${math.min(completed, target)}/$target',
+                      style: TextStyle(
+                        color: statusColor,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                        height: 1,
+                      ),
                     ),
                   ),
                 ),
