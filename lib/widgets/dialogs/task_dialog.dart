@@ -220,6 +220,14 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
             onChanged: (value) =>
                 setState(() => _form.xp = _form.normalizeXp(value)),
           ),
+          // Этап — это не поведение квеста, а его место, поэтому он в основной
+          // форме, а не в свёрнутых «Настройках». Пока он лежал там, блок
+          // раскрывался только у квестов, этап у которых уже есть: квесту без
+          // этапа его было неоткуда назначить, хотя сам выбор существовал.
+          if (widget.skill?.treeNodes.isNotEmpty ?? false) ...[
+            const SizedBox(height: 16),
+            _buildTreeNodeSection(fBg, txt, sub, bdr, c, isDark),
+          ],
           const SizedBox(height: 16),
           _buildAdvancedSection(fBg, txt, sub, bdr, c, isDark),
           const SizedBox(height: 24),
@@ -373,10 +381,6 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                     onTextChanged: (_) => setState(() {}),
                   ),
                   const SizedBox(height: 12),
-                  if (widget.skill?.treeNodes.isNotEmpty ?? false) ...[
-                    _buildTreeNodeSection(fBg, txt, sub, bdr, color, isDark),
-                    const SizedBox(height: 12),
-                  ],
                   if (_form.showBigQuestTools) ...[
                     _buildTextListEditor(
                       title: 'Большой квест',

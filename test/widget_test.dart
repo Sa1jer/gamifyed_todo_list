@@ -5634,6 +5634,94 @@ void main() {
     );
   });
 
+  testWidgets('a quest created without a stage can be given one later', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final skill = Skill(
+      id: 'assign-skill',
+      name: 'Навык',
+      goal: 'Цель',
+      color: const Color(0xFF4A9EFF),
+      icon: Icons.star,
+      treeNodes: [SkillTreeNode(id: 'assign-stage', title: 'Первый этап')],
+    );
+    final loose = Task(
+      id: 'loose-task',
+      title: 'Квест без этапа',
+      skillId: skill.id,
+      xpReward: 20,
+      type: TaskType.shortTerm,
+    );
+    String? savedNodeId;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AddTaskDialog(
+            isDark: true,
+            skillColor: skill.color,
+            skill: skill,
+            existing: loose,
+            onSave:
+                (
+                  title,
+                  description,
+                  xp,
+                  type,
+                  freq,
+                  customDays,
+                  priority,
+                  minimumAction,
+                  subtasks,
+                  tags,
+                  notificationsEnabled,
+                  notificationHour,
+                  notificationMinute,
+                  treeNodeId,
+                ) => savedNodeId = treeNodeId,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Выбор этапа лежал в свёрнутых «Настройках квеста», а те раскрывались
+    // только у квеста, этап у которого уже есть. Ровно тому квесту, которому
+    // этап нужно назначить, назначить его было неоткуда.
+    expect(find.text('Этап в дорожной карте'), findsOneWidget);
+
+    await tester.tap(find.text('Первый этап'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Сохранить изменения').last);
+    await tester.pumpAndSettle();
+
+    expect(savedNodeId, 'assign-stage');
+  });
+
+  testWidgets('white ink on a filled button carries a shadow', (
+    WidgetTester tester,
+  ) async {
+    final storage = InMemoryStorageService()..onboardingSeen = true;
+    await storage.init();
+    await tester.pumpWidget(RPGApp(storage: storage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    // Подложку выбирает пользователь, и на светлых цветах белая надпись даёт
+    // около 1.5:1 при пороге 4.5. Цвет менять владелец не хочет; тень —
+    // единственное, что возвращает читаемость, не трогая его решение.
+    // Задана в теме, а не в кнопке: так её нельзя забыть в новой.
+    final theme = Theme.of(tester.element(find.byType(Scaffold).first));
+    final style = theme.filledButtonTheme.style?.textStyle?.resolve(const {});
+    expect(style?.shadows, isNotNull, reason: 'тень задаётся темой');
+    expect(style!.shadows, isNotEmpty);
+  });
+
   testWidgets('desktop RoadMap toggles horizontal and vertical layouts', (
     WidgetTester tester,
   ) async {
@@ -8153,6 +8241,10 @@ void main() {
       expect(find.text('Ручной фокус'), findsNothing);
       expect(find.text('Повторяемость'), findsNothing);
 
+      // Выбор этапа переехал в основную форму, и «Привычка» уехала ниже.
+      // Без доскролла тап бьёт мимо: элемент за пределами экрана.
+      await tester.ensureVisible(find.text('Привычка'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Привычка'));
       await tester.pumpAndSettle();
 

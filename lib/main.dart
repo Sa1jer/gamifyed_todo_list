@@ -203,6 +203,24 @@ class _RPGAppState extends State<RPGApp>
       ],
       cardColor: surface(dark),
       dividerColor: borderColor(dark),
+      // Подложка залитых кнопок — цвет навыка, который выбирает пользователь,
+      // и на светлых он оставляет белую надпись почти без контраста. Тень
+      // задаётся здесь, а не в каждой кнопке: так её нельзя забыть в новой.
+      // На тёмной подложке она невидима и ничего не стоит.
+      filledButtonTheme: FilledButtonThemeData(
+        style: ButtonStyle(
+          textStyle: WidgetStatePropertyAll(
+            textTheme.labelLarge?.copyWith(shadows: onColorInkShadows),
+          ),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ButtonStyle(
+          textStyle: WidgetStatePropertyAll(
+            textTheme.labelLarge?.copyWith(shadows: onColorInkShadows),
+          ),
+        ),
+      ),
     );
   }
 

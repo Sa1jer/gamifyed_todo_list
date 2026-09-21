@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../theme/app_palette.dart';
+
 import '../../utils.dart';
 import 'motion_controls.dart';
 
@@ -266,6 +268,7 @@ class DlgActions extends StatelessWidget {
               color: Colors.white,
               fontWeight: FontWeight.w500,
               fontSize: 14,
+              shadows: onColorInkShadows,
             ),
           ),
         ),
