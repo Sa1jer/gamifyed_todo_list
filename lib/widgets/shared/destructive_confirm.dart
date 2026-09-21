@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../theme/app_palette.dart';
+
 import '../../utils.dart';
 
 /// One confirmation for actions that destroy content the user cannot rebuild.
@@ -42,7 +44,7 @@ Future<bool> confirmDestructiveAction(
             foregroundColor: Colors.white,
           ),
           onPressed: () => Navigator.of(dialogContext).pop(true),
-          icon: Icon(confirmIcon, size: 18),
+          icon: Icon(confirmIcon, size: 18, shadows: onColorInkShadows),
           label: Text(confirmLabel),
         ),
       ],

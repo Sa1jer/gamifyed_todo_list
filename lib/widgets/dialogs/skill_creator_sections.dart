@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../theme/app_palette.dart';
+
 import '../../app_state.dart';
 import '../../utils.dart';
 import '../desktop_journal_tokens.dart';
@@ -109,7 +111,11 @@ class _DesktopSkillIconPickerDialogState
                   IconButton(
                     tooltip: 'Закрыть',
                     onPressed: () => Navigator.pop(context),
-                    icon: Icon(Icons.close_rounded, color: secondary),
+                    icon: Icon(
+                      Icons.close_rounded,
+                      color: secondary,
+                      shadows: onColorInkShadows,
+                    ),
                   ),
                 ],
               ),

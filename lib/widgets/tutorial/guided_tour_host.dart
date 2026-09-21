@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+
+import '../../theme/app_palette.dart';
 import 'package:flutter/services.dart';
 
 import '../../tutorial/guided_tour_plan.dart';
@@ -520,7 +522,12 @@ class _GuidedTourCard extends StatelessWidget {
                     tooltip: 'Закрыть обучение',
                     visualDensity: VisualDensity.compact,
                     onPressed: onDismiss,
-                    icon: Icon(Icons.close_rounded, color: secondary, size: 19),
+                    icon: Icon(
+                      Icons.close_rounded,
+                      color: secondary,
+                      size: 19,
+                      shadows: onColorInkShadows,
+                    ),
                   ),
                 ],
               ),

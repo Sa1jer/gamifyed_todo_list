@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_palette.dart';
+
 import '../app_state.dart';
 import '../feedback_service.dart';
 import '../models.dart';
@@ -627,7 +629,12 @@ class _InboxTaskRow extends StatelessWidget {
                 ),
               ),
               child: task.isDone
-                  ? const Icon(Icons.check, size: 13, color: Colors.white)
+                  ? const Icon(
+                      Icons.check,
+                      size: 13,
+                      color: Colors.white,
+                      shadows: onColorInkShadows,
+                    )
                   : null,
             ),
           ),
@@ -656,7 +663,12 @@ class _InboxTaskRow extends StatelessWidget {
             tooltip: 'Удалить из Задачника',
             onPressed: onDelete,
             visualDensity: VisualDensity.compact,
-            icon: Icon(Icons.close_rounded, color: sub, size: 17),
+            icon: Icon(
+              Icons.close_rounded,
+              color: sub,
+              size: 17,
+              shadows: onColorInkShadows,
+            ),
           ),
         ],
       ),

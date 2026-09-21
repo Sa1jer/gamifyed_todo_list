@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+
+import '../theme/app_palette.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 import '../app_state.dart';

@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../theme/app_palette.dart';
+
 import '../../app_state.dart';
 import '../../models.dart';
 import '../../theme/app_typography.dart';
@@ -458,6 +460,7 @@ class _FocusTaskState extends State<_FocusTask> {
                                 Icons.check_rounded,
                                 color: Colors.white,
                                 size: 15,
+                                shadows: onColorInkShadows,
                               )
                             : null,
                       ),

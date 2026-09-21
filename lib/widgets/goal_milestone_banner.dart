@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../theme/app_palette.dart';
+
 import '../app_state.dart';
 import '../models.dart';
 import '../utils.dart';
@@ -187,6 +189,7 @@ class _GoalMilestoneBannerState extends State<GoalMilestoneBanner>
                                   Icons.close_rounded,
                                   color: secondary,
                                   size: 18,
+                                  shadows: onColorInkShadows,
                                 ),
                               ),
                             ],

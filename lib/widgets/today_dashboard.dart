@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../theme/app_palette.dart';
 import '../app_state.dart';
 import '../models.dart';
 import '../presentation/today_dashboard_view_data.dart';
@@ -784,7 +786,12 @@ class _MobileSummaryButton extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(icon, color: Colors.white, size: 16),
+                  Icon(
+                    icon,
+                    color: Colors.white,
+                    size: 16,
+                    shadows: onColorInkShadows,
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     label,
@@ -792,6 +799,7 @@ class _MobileSummaryButton extends StatelessWidget {
                       color: Colors.white,
                       fontSize: 11.5,
                       fontWeight: FontWeight.w700,
+                      shadows: onColorInkShadows,
                     ),
                   ),
                 ],

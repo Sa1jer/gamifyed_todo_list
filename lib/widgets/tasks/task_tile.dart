@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../theme/app_palette.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
 import '../../feedback_service.dart';
@@ -196,6 +198,7 @@ class _TaskTileState extends State<TaskTile> {
                               Icons.check,
                               size: 13,
                               color: Colors.white,
+                              shadows: onColorInkShadows,
                             )
                           : null,
                     ),

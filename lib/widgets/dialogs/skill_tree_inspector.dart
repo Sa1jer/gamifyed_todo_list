@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../theme/app_palette.dart';
+
 import '../../app_state.dart';
 import '../../models.dart';
 import '../../utils.dart';
@@ -455,7 +457,12 @@ class _MasterNodeButton extends StatelessWidget {
         child: const Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.workspace_premium, color: Colors.white, size: 14),
+            Icon(
+              Icons.workspace_premium,
+              color: Colors.white,
+              size: 14,
+              shadows: onColorInkShadows,
+            ),
             SizedBox(width: 4),
             Text(
               'Освоить',
@@ -463,6 +470,7 @@ class _MasterNodeButton extends StatelessWidget {
                 color: Colors.white,
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
+                shadows: onColorInkShadows,
               ),
             ),
           ],

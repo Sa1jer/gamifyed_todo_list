@@ -724,6 +724,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
                       ? Icons.expand_less_rounded
                       : Icons.apps_rounded,
                   size: 17,
+                  shadows: onColorInkShadows,
                 ),
                 label: Text(
                   widget.fullScreen && _showAllIcons
@@ -944,6 +945,7 @@ class _AddSkillDialogState extends State<AddSkillDialog> {
                     ? Icons.auto_awesome_rounded
                     : Icons.save_rounded,
                 size: 19,
+                shadows: onColorInkShadows,
               ),
               label: Text(
                 widget.existing == null

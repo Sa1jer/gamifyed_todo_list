@@ -424,6 +424,7 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
                           Icons.add_road,
                           color: Colors.white,
                           size: 15,
+                          shadows: onColorInkShadows,
                         ),
                         const SizedBox(width: 4),
                         Flexible(
@@ -435,6 +436,7 @@ class _RoadmapTemplatePanelState extends State<_RoadmapTemplatePanel> {
                               color: Colors.white,
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
+                              shadows: onColorInkShadows,
                             ),
                           ),
                         ),

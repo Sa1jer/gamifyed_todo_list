@@ -90,6 +90,26 @@ void main() {
     );
   });
 
+  test('white ink gets two shadows: a wide centre and a tight edge', () {
+    expect(onColorInkShadows, hasLength(2));
+
+    final wide = onColorInkShadows.first;
+    final edge = onColorInkShadows.last;
+
+    // Широкий лежит ровно по центру и глушит подложку под всей надписью;
+    // узкий смещён вниз и даёт кромку. Одного мало: без кромки буквы
+    // размыты, без центра подложка просвечивает над буквой.
+    expect(wide.offset, Offset.zero);
+    expect(edge.offset.dy, greaterThan(0));
+    expect(wide.blurRadius, greaterThan(edge.blurRadius));
+
+    // Порядок важен: широкий рисуется первым, узкий поверх него.
+    expect(
+      onColorInkShadows.indexOf(wide),
+      lessThan(onColorInkShadows.indexOf(edge)),
+    );
+  });
+
   test('lerp moves through colours, never through transparent black', () {
     final middle = AppPalette.light.lerp(AppPalette.dark, 0.5);
 

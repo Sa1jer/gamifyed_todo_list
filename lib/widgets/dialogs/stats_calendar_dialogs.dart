@@ -1020,6 +1020,9 @@ class _CalendarDialogState extends State<CalendarDialog> {
                     ? FontWeight.w700
                     : FontWeight.normal,
                 fontSize: 13,
+                // Только у выбранного дня: у остальных текст лежит на
+                // обычной поверхности, и тень там была бы грязью.
+                shadows: isSelected ? onColorInkShadows : null,
               ),
             ),
             if (completionCount > 0 && !isSelected)

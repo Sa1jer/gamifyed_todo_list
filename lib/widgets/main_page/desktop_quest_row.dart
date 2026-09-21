@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../theme/app_palette.dart';
+
 import '../../app_state.dart';
 import '../../models.dart';
 import '../../theme/app_typography.dart';
@@ -191,6 +193,7 @@ class _DesktopQuestRowState extends State<DesktopQuestRow> {
                           Icons.more_vert_rounded,
                           color: tokens.mutedText,
                           size: 19,
+                          shadows: onColorInkShadows,
                         ),
                         color: tokens.cardSurface,
                         shape: desktopMenuShape(tokens),
@@ -323,7 +326,12 @@ class _DesktopQuestCheckState extends State<_DesktopQuestCheck> {
               ),
             ),
             child: widget.done
-                ? const Icon(Icons.check_rounded, color: Colors.white, size: 18)
+                ? const Icon(
+                    Icons.check_rounded,
+                    color: Colors.white,
+                    size: 18,
+                    shadows: onColorInkShadows,
+                  )
                 : null,
           ),
         ),

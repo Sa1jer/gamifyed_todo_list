@@ -8,6 +8,7 @@ import '../analytics/analytics_read_model.dart';
 import '../app_state.dart';
 import '../feedback_service.dart';
 import '../models.dart';
+import '../theme/app_palette.dart';
 import '../theme/app_typography.dart';
 import '../utils.dart';
 import 'shared.dart';

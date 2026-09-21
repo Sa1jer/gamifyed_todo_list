@@ -387,7 +387,12 @@ class _DesktopCourseNudgeCard extends StatelessWidget {
           IconButton(
             tooltip: 'Скрыть рекомендацию',
             onPressed: onDismiss,
-            icon: Icon(Icons.close_rounded, color: tokens.mutedText, size: 18),
+            icon: Icon(
+              Icons.close_rounded,
+              color: tokens.mutedText,
+              size: 18,
+              shadows: onColorInkShadows,
+            ),
           ),
         ],
       ),

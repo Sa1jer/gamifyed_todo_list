@@ -12,6 +12,7 @@ import '../feedback_service.dart';
 import '../models.dart';
 import '../presentation/mobile_roadmap_ascent_layout.dart';
 import '../presentation/roadmap_vertical_geometry.dart';
+import '../theme/app_palette.dart';
 import '../theme/app_typography.dart';
 import '../utils.dart';
 import 'desktop_journal_tokens.dart';

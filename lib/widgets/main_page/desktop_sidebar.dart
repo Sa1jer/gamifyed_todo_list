@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../theme/app_palette.dart';
+
 import '../../app_state.dart';
 import '../../models.dart';
 import '../../theme/app_typography.dart';
@@ -289,6 +291,7 @@ class _DesktopBrand extends StatelessWidget {
                     Icons.bolt_rounded,
                     color: Colors.white,
                     size: compact ? 17 : 19,
+                    shadows: onColorInkShadows,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -384,6 +387,7 @@ class _DesktopProfileSummary extends StatelessWidget {
                                 color: Colors.white,
                                 fontSize: compact ? 15 : 18,
                                 fontWeight: FontWeight.w700,
+                                shadows: onColorInkShadows,
                               ),
                             )
                           : null,
@@ -776,6 +780,7 @@ class _DesktopSkillRowState extends State<_DesktopSkillRow> {
                                     Icons.route_rounded,
                                     size: 16,
                                     color: skill.color,
+                                    shadows: onColorInkShadows,
                                   ),
                                 ),
                               ),
@@ -799,6 +804,7 @@ class _DesktopSkillRowState extends State<_DesktopSkillRow> {
                                     Icons.more_vert_rounded,
                                     size: 17,
                                     color: tokens.mutedText,
+                                    shadows: onColorInkShadows,
                                   ),
                                   color: tokens.cardSurface,
                                   shape: desktopMenuShape(tokens),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../theme/app_palette.dart';
+
 import '../../models.dart';
 import '../desktop_journal_tokens.dart';
 import '../shared.dart';
@@ -385,7 +387,7 @@ class _DesktopSelectedSkillPrimaryButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
-      icon: Icon(icon, size: 18),
+      icon: Icon(icon, size: 18, shadows: onColorInkShadows),
       label: Text(
         label,
         style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),

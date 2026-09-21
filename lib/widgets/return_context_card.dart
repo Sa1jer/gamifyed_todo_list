@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_palette.dart';
+
 import '../engines/return_context_resolver.dart';
 import '../engines/momentum_resolver.dart';
 import '../theme/app_typography.dart';
@@ -287,7 +289,11 @@ class _ReturnContextActions extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: colors.dense ? 12 : 18),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
       ),
-      icon: Icon(Icons.arrow_forward_rounded, size: colors.dense ? 17 : 19),
+      icon: Icon(
+        Icons.arrow_forward_rounded,
+        size: colors.dense ? 17 : 19,
+        shadows: onColorInkShadows,
+      ),
       label: const Text(
         'Продолжить',
         maxLines: 1,

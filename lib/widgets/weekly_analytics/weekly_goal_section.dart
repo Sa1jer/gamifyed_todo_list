@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../theme/app_palette.dart';
+
 import '../../analytics/weekly_analytics_read_model.dart';
 import '../../models.dart';
 import '../../utils.dart';
@@ -229,7 +231,12 @@ class _WeeklyKeyResultRow extends StatelessWidget {
                   ),
                 ),
                 child: result.isDone
-                    ? const Icon(Icons.check, color: Colors.white, size: 12)
+                    ? const Icon(
+                        Icons.check,
+                        color: Colors.white,
+                        size: 12,
+                        shadows: onColorInkShadows,
+                      )
                     : null,
               ),
               const SizedBox(width: 10),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../theme/app_palette.dart';
+
 import '../../feedback_service.dart';
 import '../../models.dart';
 import '../../theme/app_typography.dart';
@@ -403,6 +405,7 @@ class MasteryQuestToggleCircle extends StatelessWidget {
                 key: const ValueKey('done'),
                 size: size * 0.58,
                 color: Colors.white,
+                shadows: onColorInkShadows,
               )
             : const SizedBox(key: ValueKey('active')),
       ),

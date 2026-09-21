@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../theme/app_palette.dart';
 import '../utils.dart';
 import 'shared.dart';
 
@@ -338,6 +340,7 @@ class _StepPill extends StatelessWidget {
                   color: Colors.white,
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
+                  shadows: onColorInkShadows,
                 ),
               ),
             ),

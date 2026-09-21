@@ -507,6 +507,7 @@ class _ProfileAvatar extends StatelessWidget {
                   color: Colors.white,
                   fontWeight: FontWeight.w700,
                   fontSize: size * 0.42,
+                  shadows: onColorInkShadows,
                 ),
               ),
             )

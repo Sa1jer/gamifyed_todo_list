@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../theme/app_palette.dart';
+
 import '../../models/tutorial_progress.dart';
 import '../../tutorial/guided_tour_plan.dart';
 import '../../tutorial/guided_tour_session.dart';
@@ -213,6 +215,7 @@ class _FullTourCard extends StatelessWidget {
                   ),
                   icon: Icon(
                     resumable ? Icons.play_arrow_rounded : Icons.route_rounded,
+                    shadows: onColorInkShadows,
                   ),
                   label: Text(
                     resumable

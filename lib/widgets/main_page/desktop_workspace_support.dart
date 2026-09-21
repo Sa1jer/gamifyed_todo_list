@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../theme/app_palette.dart';
+
 import '../../app_state.dart';
 import '../../models.dart';
 import '../../utils.dart';
@@ -36,7 +38,7 @@ class DesktopCompactButton extends StatelessWidget {
           side: BorderSide(color: color.withValues(alpha: 0.35)),
         ),
       ),
-      icon: Icon(icon, size: 15),
+      icon: Icon(icon, size: 15, shadows: onColorInkShadows),
       label: Text(
         label,
         style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../theme/app_palette.dart';
+
 import '../../utils.dart';
 import 'motion_controls.dart';
 
@@ -86,7 +88,12 @@ class _SmallBtnState extends State<SmallBtn> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(widget.icon, color: Colors.white, size: 15),
+              Icon(
+                widget.icon,
+                color: Colors.white,
+                size: 15,
+                shadows: onColorInkShadows,
+              ),
               const SizedBox(width: 4),
               Flexible(
                 child: Text(
@@ -97,6 +104,7 @@ class _SmallBtnState extends State<SmallBtn> {
                     color: Colors.white,
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
+                    shadows: onColorInkShadows,
                   ),
                 ),
               ),

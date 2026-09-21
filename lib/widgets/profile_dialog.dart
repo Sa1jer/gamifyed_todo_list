@@ -4,6 +4,8 @@
 
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+
+import '../theme/app_palette.dart';
 import 'package:file_picker/file_picker.dart';
 import '../models.dart';
 import '../app_state.dart';
@@ -535,7 +537,12 @@ class _ProfileDialogState extends State<ProfileDialog> {
                     color: Colors.black.withAlpha(120),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.close, color: Colors.white, size: 16),
+                  child: const Icon(
+                    Icons.close,
+                    color: Colors.white,
+                    size: 16,
+                    shadows: onColorInkShadows,
+                  ),
                 ),
               ),
             ),
@@ -590,6 +597,7 @@ class _ProfileDialogState extends State<ProfileDialog> {
                     Icons.add_a_photo_outlined,
                     color: Colors.white.withAlpha(120),
                     size: 28,
+                    shadows: onColorInkShadows,
                   ),
                 ),
               ),
@@ -651,6 +659,7 @@ class _ProfileDialogState extends State<ProfileDialog> {
                           color: Colors.white,
                           fontWeight: FontWeight.w700,
                           fontSize: 32,
+                          shadows: onColorInkShadows,
                         ),
                       ),
                     )
@@ -666,7 +675,12 @@ class _ProfileDialogState extends State<ProfileDialog> {
                   color: Color(0xFF4A9EFF),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.edit, color: Colors.white, size: 13),
+                child: const Icon(
+                  Icons.edit,
+                  color: Colors.white,
+                  size: 13,
+                  shadows: onColorInkShadows,
+                ),
               ),
             ),
           ],

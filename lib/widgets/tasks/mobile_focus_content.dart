@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../theme/app_palette.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
 import '../../feedback_service.dart';
@@ -353,6 +355,7 @@ class _MobileFocusTaskTileState extends State<MobileFocusTaskTile> {
                               Icons.check_rounded,
                               size: 16,
                               color: Colors.white,
+                              shadows: onColorInkShadows,
                             )
                           : null,
                     ),

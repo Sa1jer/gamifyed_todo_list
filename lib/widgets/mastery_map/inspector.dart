@@ -1055,7 +1055,12 @@ class _MasterNodeAction extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.workspace_premium, color: Colors.white, size: 14),
+            Icon(
+              Icons.workspace_premium,
+              color: Colors.white,
+              size: 14,
+              shadows: onColorInkShadows,
+            ),
             SizedBox(width: 4),
             Text(
               'Освоить',
@@ -1063,6 +1068,7 @@ class _MasterNodeAction extends StatelessWidget {
                 color: Colors.white,
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
+                shadows: onColorInkShadows,
               ),
             ),
           ],

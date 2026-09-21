@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../theme/app_palette.dart';
 import '../models.dart';
 import '../app_state.dart';
 import '../presentation/tasks_panel_view_data.dart';
@@ -430,6 +432,7 @@ class _TasksPanelState extends State<TasksPanel> {
                                       ? Icons.expand_less_rounded
                                       : Icons.expand_more_rounded,
                                   size: 18,
+                                  shadows: onColorInkShadows,
                                 ),
                                 label: Text('Выполнено (${archived.length})'),
                               ),
@@ -740,6 +743,7 @@ class _TasksPanelState extends State<TasksPanel> {
                             ? Icons.expand_less_rounded
                             : Icons.expand_more_rounded,
                         size: 18,
+                        shadows: onColorInkShadows,
                       ),
                       label: Text('Выполнено (${archived.length})'),
                     ),

@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../theme/app_palette.dart';
+
 import '../../utils.dart';
 import '../desktop_journal_tokens.dart';
 import '../shared/motion_controls.dart';
@@ -299,7 +301,12 @@ class _RewardNoticePopoverState extends State<RewardNoticePopover>
                         key: const ValueKey('reward-notice-close'),
                         tooltip: 'Скрыть уведомление',
                         onPressed: () => _dismiss(force: true),
-                        icon: Icon(Icons.close, color: sub, size: 18),
+                        icon: Icon(
+                          Icons.close,
+                          color: sub,
+                          size: 18,
+                          shadows: onColorInkShadows,
+                        ),
                       ),
                     ],
                   ),
